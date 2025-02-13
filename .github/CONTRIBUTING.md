@@ -1,1 +1,22 @@
-# How to Contribute (Work in progress)
+To maintain consistency regarding __commits__ and __branch__ usage.
+
+---
+## Commit Rules
+
+We strictly use [conventionnal commit](https://www.conventionalcommits.org/en/v1.0.0/#summary) as a reference to ensure ensure the commit history is easier to read.
+
+## Recommended commit message structure
+
+```sh
+<type>: <description>
+
+[optional body]
+```
+__type__: Indicates the nature of the commit:  
+- `feat`:	to implement a new feature
+- `fix`:	to fix a bug or a typo
+- `docs`:	to make documentation changes
+- `style`:	formatting changes that do not affect functionality
+- `refactor`: refactoring code without changing functionality
+- `test`: adding or modifying tests
+- `chore`: miscellaneous tasks that do not affect the production code
