@@ -20,3 +20,5 @@ __type__: Indicates the nature of the commit:
 - `refactor`: refactoring code without changing functionality
 - `test`: adding or modifying tests
 - `chore`: miscellaneous tasks that do not affect the production code
+
+Each commit should ideally contain a __single__, __coherant__ change.
