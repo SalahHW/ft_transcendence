@@ -22,3 +22,15 @@ __type__: Indicates the nature of the commit:
 - `chore`: miscellaneous tasks that do not affect the production code
 
 Each commit should ideally contain a __single__, __coherant__ change.
+
+
+## Branching Rules
+
+We use the following branching model:
+- `main`: the main branch, always stable and deployable
+- `dev`: the development branch, where all the features are merged
+- `feature/...`: a branch for a new feature
+- `bugfix/...[/#issue]`: a branch for a bug fix
+- `hotfix/...[/#issue]`: a branch for a critical bug fix
+- `chore/...`: a branch for miscellaneous tasks
+- `experiment/...`: a branch for experiments
