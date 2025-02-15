@@ -5,7 +5,7 @@ To maintain consistency regarding __commits__ and __branch__ usage.
 
 We strictly use [conventionnal commit](https://www.conventionalcommits.org/en/v1.0.0/#summary) as a reference to ensure ensure the commit history is easier to read.
 
-## Recommended commit message structure
+## Mandatory commit message structure
 
 ```sh
 <type>: <description>
