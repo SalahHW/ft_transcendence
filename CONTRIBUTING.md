@@ -33,4 +33,5 @@ We use the following branching model:
 - `bugfix/...[/#issue]`: a branch for a bug fix
 - `hotfix/...[/#issue]`: a branch for a critical bug fix
 - `chore/...`: a branch for miscellaneous tasks
+- `docs/...`: a branch for documentation changes
 - `experiment/...`: a branch for experiments
