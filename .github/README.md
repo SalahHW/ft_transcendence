@@ -5,3 +5,15 @@ __ft_transcendence__ is a project that aims to build a full-featured web applica
 ## Contributions
 
 Refer to the [CONTRIBUTING.md](CONTRIBUTING.md) file for more information on how to contribute to the project.
+
+## Running the project
+
+To run the project, you will need to have Docker installed on your machine. Once you have Docker installed, you can run the following command to start the project:
+
+```bash
+make start		# Start the project
+make stop		# Stop the project
+make restart	# Restart the project
+make clean		# Remove all containers
+make re			# Remove all containers and restart the project
+```
