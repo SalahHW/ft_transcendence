@@ -10,7 +10,7 @@ Refer to the [CONTRIBUTING.md](CONTRIBUTING.md) file for more information on how
 
 To run the project, you will need to have Docker installed on your machine. Once you have Docker installed, you can run the following command to start the project:
 
-```bash
+```make
 make start    # Start the project
 make stop     # Stop the project
 make restart  # Restart the project
