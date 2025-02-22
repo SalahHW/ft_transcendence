@@ -1,5 +1,6 @@
 services:
   nginx:
+    container_name: frontend
     build: ./frontend/
     ports:
       - "80:80"
