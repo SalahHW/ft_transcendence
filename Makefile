@@ -13,6 +13,7 @@ stop:
 restart: stop start
 
 clean: stop
-	docker system prune -af
+	@docker system prune -af
+	@rm -f .images
 
 re: clean start
