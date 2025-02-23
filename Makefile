@@ -17,3 +17,5 @@ clean: stop
 	@rm -f .images
 
 re: clean start
+
+.PHONY: start images stop restart clean re
