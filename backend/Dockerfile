@@ -6,7 +6,7 @@ WORKDIR /app
 
 RUN npm install fastify
 
-COPY ./app/ /app/
+COPY ./src/ /app/
 
 EXPOSE 3000
 
