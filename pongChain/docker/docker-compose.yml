@@ -1,0 +1,12 @@
+services:
+  hardhat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: hardhat-env
+    container_name: my-hardhat
+    volumes:
+      - ~/ft_transcendence/pongChain/:/app
+    tty: true
+    stdin_open: true
+
