@@ -27,5 +27,14 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
         require(msg.sender == minter, "PongToken: only the minter can mint");
         _mint(to, amount);
     }
+
+    /**
+     * @dev Burn amount tokens from address
+     */
+    function burnTokens(address account, uint256 amount) external onlyOwner {
+    _burn(account, amount);
+}
+
+
  }
 
