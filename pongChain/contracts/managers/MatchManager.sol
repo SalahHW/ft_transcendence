@@ -67,7 +67,7 @@ contract MatchManager is Ownable {
         emit MatchReported(matchId, player1, player2, winner, 2 * STAKE, block.timestamp);
 
         uint256 winnerBalance = pongToken.balanceOf(winner);
-        uint256 currentGoatBalance = masterContract.getGoatBalance();
+        uint256 currentGoatBalance = masterContract.getGoatBalance(address(pongToken));
         if (winnerBalance > currentGoatBalance) {
             masterContract.updateGoat(winner, winnerBalance);
 }
