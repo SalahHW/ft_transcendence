@@ -20,10 +20,10 @@ contract GoatNft is ERC721, Ownable {
         uint256 newBalance
     );
 
-    constructor(
-        address initialGoat,
-        uint256 initialBalance
-    ) ERC721("GOAT NFT", "GOAT") Ownable(msg.sender) {
+    constructor(address initialGoat, uint256 initialBalance) 
+        ERC721("GOAT NFT", "GOAT") 
+        Ownable(msg.sender) 
+    {
         _mint(initialGoat, TOKEN_ID);
         goatBalance = initialBalance;
         _transferOwnership(initialGoat);
@@ -52,5 +52,4 @@ contract GoatNft is ERC721, Ownable {
         ) internal view virtual override returns (bool) {
             return (spender == authorizedUpdater);
             }
-
 }
