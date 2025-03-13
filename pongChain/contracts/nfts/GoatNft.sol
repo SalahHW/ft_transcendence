@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title GoatNft
@@ -44,6 +45,10 @@ contract GoatNft is ERC721, Ownable {
         goatBalance = newBalance;
         emit GoatUpdated(currentGoat, newGoat, newBalance);
     }
+
+    function getGoatBalance(address pongTokenAddress) external view returns (uint256) {
+        return IERC20(pongTokenAddress).balanceOf(ownerOf(TOKEN_ID));
+        }
 
     function _isAuthorized(
         address owner,
