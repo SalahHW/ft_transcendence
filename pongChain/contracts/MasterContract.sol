@@ -21,9 +21,9 @@ contract MasterContract is Ownable {
         matchManager = MatchManager(_matchManager);
     }
 
-    function getGoatBalance() external view returns (uint256) {
-    return goatNft.goatBalance();
-    }
+function getGoatBalance(address pongTokenAddress) external view returns (uint256) {
+    return goatNft.getGoatBalance(pongTokenAddress);
+}
 
     function updateGoat(address newGoat, uint256 newBalance) external {
         require(msg.sender == address(matchManager), "MasterContract: Only MatchManager can call this");
