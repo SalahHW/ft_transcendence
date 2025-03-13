@@ -1,1 +1,4 @@
 .images
+pongChain/node_modules/
+pongChain/.env
+
