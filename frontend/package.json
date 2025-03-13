@@ -1,0 +1,14 @@
+{
+  "name": "transcendence-frontend",
+  "version": "1.0.0",
+  "description": "Frontend SPA for ft_transcendence project",
+  "main": "",
+  "scripts": {
+	"build": ""
+  },
+  "dependencies": {},
+  "devDependencies": {
+	"tailwindcss": "^4.0.14",
+	"typescript": "5.8.2"
+  }
+}
