@@ -15,8 +15,8 @@ clean:
 	docker-compose down --volumes --remove-orphans
 	docker system prune -a --volumes -f
 
-shell:
-	docker-compose exec $(SERVICE_NAME) bash
+exec:
+	docker exec -ti my-hardhat bash
 
-all: build up shell
+all: build up exec
 
