@@ -13,18 +13,18 @@ describe("GoatNft", function () {
         goatNft = await GoatNftFactory.deploy(initialGoat.address, initialBalance);
     });
 
-    it("doit définir correctement le GOAT initial et son solde", async function () {
+    it("should correctly set the initial GOAT and its balance", async function () {
         expect(await goatNft.ownerOf(TOKEN_ID)).to.equal(initialGoat.address);
         expect(await goatNft.goatBalance()).to.equal(initialBalance);
         expect(await goatNft.owner()).to.equal(initialGoat.address);
     });
 
-    it("doit permettre seulement au propriétaire de définir l'authorizedUpdater", async function () {
-        // initialGoat (propriétaire) peut définir authorizedUpdater
+    it("should only allow the owner to set the authorized updater", async function () {
+        // initialGoat (owner) can set authorizedUpdater
         await goatNft.connect(initialGoat).setAuthorizedUpdater(authorizedUpdater.address);
         expect(await goatNft.authorizedUpdater()).to.equal(authorizedUpdater.address);
 
-        // Un autre compte ne doit pas pouvoir définir authorizedUpdater
+        // Another account should not be able to set authorizedUpdater
         await expect(
             goatNft.connect(other).setAuthorizedUpdater(other.address)
         ).to.be.reverted;
@@ -32,36 +32,36 @@ describe("GoatNft", function () {
 
     describe("updateGoat", function () {
         beforeEach(async function () {
-            // Définir authorizedUpdater par le propriétaire
+            // Set authorizedUpdater by the owner
             await goatNft.connect(initialGoat).setAuthorizedUpdater(authorizedUpdater.address);
         });
 
-        it("doit rejeter updateGoat si l'appelant n'est pas l'authorizedUpdater", async function () {
+        it("should revert updateGoat if the caller is not the authorized updater", async function () {
             await expect(
                 goatNft.connect(other).updateGoat(newGoat.address, 2000)
             ).to.be.reverted;
         });
 
-        it("doit mettre à jour le GOAT sans transférer le NFT si le nouveau GOAT est identique à l'actuel", async function () {
+        it("should update the GOAT without transferring the NFT if the new GOAT is the same as the current one", async function () {
             await expect(
                 goatNft.connect(authorizedUpdater).updateGoat(initialGoat.address, 1500)
             )
                 .to.emit(goatNft, "GoatUpdated")
                 .withArgs(initialGoat.address, initialGoat.address, 1500);
 
-            // Le propriétaire du NFT reste inchangé et le solde est mis à jour
+            // The NFT owner remains unchanged and the balance is updated
             expect(await goatNft.ownerOf(TOKEN_ID)).to.equal(initialGoat.address);
             expect(await goatNft.goatBalance()).to.equal(1500);
         });
 
-        it("doit transférer le NFT et mettre à jour le solde quand le nouveau GOAT est différent", async function () {
+        it("should transfer the NFT and update the balance when the new GOAT is different", async function () {
             await expect(
                 goatNft.connect(authorizedUpdater).updateGoat(newGoat.address, 2000)
             )
                 .to.emit(goatNft, "GoatUpdated")
                 .withArgs(initialGoat.address, newGoat.address, 2000);
 
-            // Le propriétaire du NFT devient newGoat et le solde est mis à jour
+            // The NFT owner becomes newGoat and the balance is updated
             expect(await goatNft.ownerOf(TOKEN_ID)).to.equal(newGoat.address);
             expect(await goatNft.goatBalance()).to.equal(2000);
         });
@@ -72,18 +72,17 @@ describe("GoatNft", function () {
         beforeEach(async function () {
             const PongTokenFactory = await ethers.getContractFactory("PongToken");
             pongToken = await PongTokenFactory.deploy();
-            await pongToken.waitForDeployment(); // Attendre que le contrat soit déployé
+            await pongToken.waitForDeployment(); // Wait for the contract to be deployed
 
             const mintAmount = ethers.parseEther("1000");
             await pongToken.mint(initialGoat.address, mintAmount);
         });
 
-        it("doit retourner le solde du GOAT actuel pour l'ERC20 donné", async function () {
-            // Utilisez pongToken.target pour obtenir l'adresse déployée
+        it("should return the GOAT's balance for the given ERC20 token", async function () {
+            // Use pongToken.target to get the deployed address
             const balanceFromContract = await goatNft.getGoatBalance(pongToken.target);
             const actualBalance = await pongToken.balanceOf(initialGoat.address);
             expect(balanceFromContract).to.equal(actualBalance);
         });
     });
-
 });
