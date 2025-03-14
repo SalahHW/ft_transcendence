@@ -21,10 +21,10 @@ contract GoatNft is ERC721, Ownable {
         uint256 newBalance
     );
 
-    constructor(address initialGoat, uint256 initialBalance) 
-        ERC721("GOAT NFT", "GOAT") 
-        Ownable(msg.sender) 
-    {
+    constructor(
+        address initialGoat,
+        uint256 initialBalance
+    ) ERC721("GOAT NFT", "GOAT") Ownable(msg.sender) {
         _mint(initialGoat, TOKEN_ID);
         goatBalance = initialBalance;
         _transferOwnership(initialGoat);
@@ -35,7 +35,10 @@ contract GoatNft is ERC721, Ownable {
     }
 
     function updateGoat(address newGoat, uint256 newBalance) external {
-        require(msg.sender == authorizedUpdater, "GoatNft: caller not authorized");
+        require(
+            msg.sender == authorizedUpdater,
+            "GoatNft: caller not authorized"
+        );
 
         address currentGoat = ownerOf(TOKEN_ID);
         if (newGoat != currentGoat) {
@@ -46,15 +49,17 @@ contract GoatNft is ERC721, Ownable {
         emit GoatUpdated(currentGoat, newGoat, newBalance);
     }
 
-    function getGoatBalance(address pongTokenAddress) external view returns (uint256) {
+    function getGoatBalance(
+        address pongTokenAddress
+    ) external view returns (uint256) {
         return IERC20(pongTokenAddress).balanceOf(ownerOf(TOKEN_ID));
-        }
+    }
 
     function _isAuthorized(
-        address owner,
+        address /*owner*/,
         address spender,
-        uint256 tokenId
-        ) internal view virtual override returns (bool) {
-            return (spender == authorizedUpdater);
-            }
+        uint256 /*tokenId*/
+    ) internal view virtual override returns (bool) {
+        return (spender == authorizedUpdater);
+    }
 }
