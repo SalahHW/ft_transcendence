@@ -8,12 +8,12 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 /**
  * @title PongToken
  * @dev PongToken is a ERC20 token that:
-    *  - Mintable
-    *  - Burnable
-    *  - Has no max supply
+ *  - Mintable
+ *  - Burnable
+ *  - Has no max supply
  */
 
- contract PongToken is ERC20, ERC20Burnable, Ownable {
+contract PongToken is ERC20, ERC20Burnable, Ownable {
     address public minter;
 
     constructor() ERC20("PongToken", "PONG") Ownable(msg.sender) {
@@ -23,7 +23,7 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
     /**
      * @dev Mint amount tokens to address
      */
-    function mint(address to, uint256 amount) external {
+    function mint(address to, uint256 amount) external onlyOwner {
         require(msg.sender == minter, "PongToken: only the minter can mint");
         _mint(to, amount);
     }
@@ -32,9 +32,6 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
      * @dev Burn amount tokens from address
      */
     function burnTokens(address account, uint256 amount) external onlyOwner {
-    _burn(account, amount);
+        _burn(account, amount);
+    }
 }
-
-
- }
-
