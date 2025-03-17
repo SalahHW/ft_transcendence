@@ -4,3 +4,17 @@ services:
     build: ./nginx/
     ports:
       - "80:80"
+    networks:
+      - users
+
+  users:
+    container_name: users
+    build: ./users-service
+    env_file:
+      - ./.env
+      - ./users-service/.env
+    networks:
+      - users
+
+networks:
+  users:
