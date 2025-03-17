@@ -15,6 +15,8 @@ services:
       - ./users-service/.env
     networks:
       - users
+    volumes:
+      - ./users-service/database:/app/database
 
 networks:
   users:
