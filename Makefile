@@ -1,11 +1,11 @@
-DOCKERFILES = ./frontend/Dockerfile		\
-			  			./backend/Dockerfile
+DOCKERFILES = ./nginx/Dockerfile					\
+			  			./users-service/Dockerfile
 
 start: images
 	@docker compose -f ./docker-compose.yml up -d
 
 images: $(DOCKERFILES)
-	@docker compose -f ./docker-compose.yml build
+	@COMPOSE_BAKE=true docker compose -f ./docker-compose.yml build
 	@touch .images
 
 stop:
