@@ -1,11 +1,16 @@
 import Fastify from 'fastify';
+import { initializeDatabase } from './models/db.js';
+
 const fastify = Fastify();
 
+// Initialize the database
+initializeDatabase();
+
 // Process env variables
-const PORT=process.env.USERS_SERVICE_PORT;
+const PORT = process.env.USERS_SERVICE_PORT;
 const validEnvironement = PORT;
 
-if(!validEnvironement) {
+if (!validEnvironement) {
   console.error('Unable to load environement variables');
   process.exit(1);
 }
@@ -13,7 +18,7 @@ if(!validEnvironement) {
 fastify.route({
   method: 'GET',
   url: '/',
-  handler: function(req, res) {
+  handler: function (req, res) {
     res.send({ hello: 'world' });
   }
 })
