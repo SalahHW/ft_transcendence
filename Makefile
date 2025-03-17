@@ -1,5 +1,5 @@
 DOCKERFILES = ./frontend/Dockerfile		\
-			  ./backend/Dockerfile
+			  			./backend/Dockerfile
 
 start: images
 	@docker compose -f ./docker-compose.yml up -d
