@@ -115,6 +115,32 @@ struct Match {
 
 ---
 
+## 🔸 Contrat : **TournamentManager**
+
+**Rôle :** Gestion des tournois.
+
+**Attributs :**
+- `mapping(uint256 => Tournament) public tournaments;`
+
+### Structure :
+
+```solidity
+struct Tournament {
+    string name;
+    uint256 startTimestamp;
+    uint256 endTimestamp;
+    address[] participants;
+    address winner;
+}
+```
+
+**Fonctions :**
+- `createTournament(string memory name, uint256 startTimestamp, uint256 endTimestamp)`
+- `addParticipant(uint256 tournamentId, address participant)`
+- `setTournamentWinner(uint256 tournamentId, address winner)`
+
+---
+
 ## 🔒 Sécurité et Permissions
 - Le wallet de déploiement reste propriétaire de tous les contrats.
 - Le `MasterContract` possède uniquement les autorisations nécessaires pour interagir avec les autres contrats via des fonctions dédiées.
