@@ -3,6 +3,20 @@
 ## 📌 Objectif
 Créer une plateforme blockchain dédiée au jeu Pong avec des tokens (PONG), des NFTs, et un système de gestion complet via un contrat maître (`MasterContract`).
 
+## 📂 Structure du dossier `contracts`
+
+```
+contracts/
+├── MasterContract.sol
+├── managers/
+│   ├── MatchManager.sol
+│   └── TournamentManager.sol
+├── nfts/
+│   ├── GoatNft.sol
+│   └── TournamentNft.sol
+└── tokens/
+    └── PongToken.sol
+
 ## 📋 Contrats et Attributs
 
 ### 🔹 MasterContract
