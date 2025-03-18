@@ -40,37 +40,37 @@ struct Match {
 ### Fonctions :
 - **addPlayer**
   ```solidity
-  function addPlayer(string memory name, address player) external;
+  function addPlayer(string memory name, address player) external onlyOwner;
   ```
   Ajoute un joueur et lui assigne des tokens.
 
 - **getPlayerAddress**
   ```solidity
-  function getPlayerAddress(string memory name) public view returns (address);
+  function getPlayerAddress(string memory name) public view returns (address) onlyOwner;
   ```
   Retourne l'adresse Ethereum associée au joueur.
 
 - **mintTokens**
   ```solidity
-  function mintTokens(address player, uint256 amount) external;
+  function mintTokens(address player, uint256 amount) external onlyOwner;
   ```
   Mint des tokens (PONG) pour un joueur spécifique.
 
 - **reportMatch**
   ```solidity
-  function reportMatch(uint256 matchId, string memory player1, string memory player2, address winner) external;
+  function reportMatch(uint256 matchId, string memory player1, string memory player2, address winner) external onlyOwner;
   ```
   Enregistre les résultats d'un match et effectue les transferts de tokens.
 
 - **mintTournamentNft**
   ```solidity
-  function mintTournamentNft(address winner, uint256 tournamentId) external;
+  function mintTournamentNft(address winner, uint256 tournamentId) external onlyOwner;
   ```
   Mint un NFT pour récompenser le gagnant d'un tournoi.
 
 - **getGoatBalance**
   ```solidity
-  function getGoatBalance(address pongTokenAddress) external view returns (uint256);
+  function getGoatBalance(address pongTokenAddress) external view returns (uint256) onlyOwner;
   ```
   Récupère le solde du joueur désigné comme GOAT.
 
@@ -83,12 +83,12 @@ struct Match {
 ### Fonctions :
 - **mint**
   ```solidity
-  function mint(address to, uint256 amount) external;
+  function mint(address to, uint256 amount) external onlyOwner;
   ```
 
 - **burnTokens**
   ```solidity
-  function burnTokens(address account, uint256 amount) external;
+  function burnTokens(address account, uint256 amount) external onlyOwner;
   ```
 
 ---
@@ -98,7 +98,7 @@ struct Match {
 ### Fonctions :
 - **updateGoat**
   ```solidity
-  function updateGoat(address newGoat, uint256 newBalance) external;
+  function updateGoat(address newGoat, uint256 newBalance) external onlyOwner;
   ```
 
 ---
@@ -110,7 +110,7 @@ struct Match {
 ### Fonctions :
 - **mintTournamentNft**
   ```solidity
-  function mintTournamentNft(address winner, uint256 tournamentId) external;
+  function mintTournamentNft(address winner, uint256 tournamentId) external onlyOwner;
   ```
 
 ---
@@ -122,7 +122,7 @@ struct Match {
 ### Fonctions :
 - **reportMatchResult1v1**
   ```solidity
-  function reportMatchResult1v1(address player1, address player2, address winner) external returns (Match memory);
+  function reportMatchResult1v1(address player1, address player2, address winner) external returns (Match memory) onlyOwner;
   ```
 
 ### Attributs :
