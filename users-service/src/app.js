@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import { initializeDatabase } from './models/db.js';
+import registerRoutes from './routes/index.js';
 
 const fastify = Fastify();
 
@@ -15,13 +16,7 @@ if (!validEnvironement) {
   process.exit(1);
 }
 
-fastify.route({
-  method: 'GET',
-  url: '/',
-  handler: function (req, res) {
-    res.send({ hello: 'world' });
-  }
-})
+fastify.register(registerRoutes);
 
 fastify.listen({
   port: 3000,
