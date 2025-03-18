@@ -18,3 +18,5 @@ services:
 networks:
   front_to_back:
     driver: bridge
+  block_to_back:
+    driver: bridge

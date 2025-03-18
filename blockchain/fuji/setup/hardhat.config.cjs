@@ -7,7 +7,7 @@ module.exports = {
     fuji: {
       url: "https://ava-testnet.public.blastapi.io/ext/bc/C/rpc",
       accounts: [
-        "0x35da811fc499d4a125ee41edfc4359475d7e7b4ddb811ac8bb157a6deec7cbba"
+        "0x5AB6354E10f8bda8DC8CCc7c32C218b68455d9A10x8528eaa3abd6f40d396de1d677924b03b4b232ce10afd9627c79c1660c4cbca6"
       ]
     }
   },
