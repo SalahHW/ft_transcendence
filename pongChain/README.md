@@ -150,9 +150,11 @@ struct Tournament {
 ```
 
 **Fonctions :**
-- `createTournament(string memory name, uint256 startTimestamp, uint256 endTimestamp)`
-- `addParticipant(uint256 tournamentId, address participant)`
-- `setTournamentWinner(uint256 tournamentId, address winner)`
+```solidity
+- function createTournament(string memory name, uint256 startTimestamp, uint256 endTimestamp) external onlyOwner;
+- function addParticipant(uint256 tournamentId, address participant) external onlyOwner;
+- function setTournamentWinner(uint256 tournamentId, address winner) external onlyOwner;
+```
 
 ---
 
