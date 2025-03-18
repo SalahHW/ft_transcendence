@@ -20,6 +20,10 @@ contract PongToken is ERC20, ERC20Burnable, Ownable {
         minter = msg.sender;
     }
 
+    function updateMinter(address newMinter) external onlyOwner {
+        minter = newMinter;
+    }
+
     /**
      * @dev Mint amount tokens to address
      */
