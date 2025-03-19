@@ -53,7 +53,7 @@ contract MasterContract is Ownable {
     }
 
     /**
-     * @dev Mapping to store player name to address
+     * @dev Mapping to store player
      * string: player name to address mapping
      * address: player address
      */
@@ -61,22 +61,35 @@ contract MasterContract is Ownable {
     mapping(string => address) private players;
 
     /**
-     * @dev Mapping to store matchId to match data
-     * uint256: matchId
-     * Match: match struct
-     * No getter needed since it is public
+     * @dev Event to log match reported
+     * @param matchId: match id
+     * @param player1: player1 name
+     * @param player2: player2 name
+     * @param winner: winner address
      */
 
-    mapping(uint256 => Match) public matches;
+    event MatchReported(
+        uint256 indexed matchId,
+        string player1,
+        string player2,
+        address winner
+    );
 
     /**
-     * @dev Mapping to store tournamentId to tournament data
-     * uint256: tournamentId
-     * uint256: tournament data
-     * No getter needed since it is public
+     * @dev Event to log tournament reported
+     * @param tournamentId: tournament id
+     * @param winner: winner address
      */
 
-    mapping(uint256 => Tournament) public tournaments;
+    event TournamentReported(uint256 indexed tournamentId, address winner);
+
+    /**
+     * @dev Event to log player added
+     * @param name: player name
+     * @param playerAddress: player address
+     */
+
+    event PlayerAdded(string name, address playerAddress);
 
     /**
      * @dev tournamentTokenIds to store tournament token ids
@@ -114,6 +127,7 @@ contract MasterContract is Ownable {
     function addPlayer(string memory _name, address _player) public onlyOwner {
         players[_name] = _player;
         mintTokens(_player, 100);
+        emit PlayerAdded(_name, _player);
     }
 
     /**
@@ -123,7 +137,7 @@ contract MasterContract is Ownable {
      */
 
     function getPlayerAddress(
-        string _name
+        string memory _name
     ) public view onlyOwner returns (address) {
         return players[_name];
     }
@@ -160,6 +174,7 @@ contract MasterContract is Ownable {
         if (goatNft.getNftBalance() < pongToken.balanceOf(winner)) {
             updateGoatNft(winner);
         }
+        emit MatchReported(matchId, player1, player2, winner);
     }
 
     /**
@@ -208,7 +223,7 @@ contract MasterContract is Ownable {
 
     function reportTournament(
         uint256 endTimestamp,
-        uint256[] matchIds,
+        uint256[] memory matchIds,
         address winner
     ) public onlyOwner {
         tournaments[tournamentTokenIds] = tournamentManager
@@ -219,5 +234,6 @@ contract MasterContract is Ownable {
                 winner
             );
         mintTournamentNft(winner, tournamentId);
+        emit TournamentReported(tournamentTokenIds, winner);
     }
 }
