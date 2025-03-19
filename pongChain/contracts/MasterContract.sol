@@ -7,6 +7,11 @@ import "./nfts/GoatNft.sol";
 import "./nfts/TournamentNft.sol";
 import "./tokens/PongToken.sol";
 
+/**
+ * @title MasterContract
+ * @dev MasterContract to manage all the contracts
+ */
+
 contract MasterContract is Ownable {
     /**
      * @dev Variables to store contract addresses
@@ -31,6 +36,14 @@ contract MasterContract is Ownable {
         address winner;
         uint256 timestamp;
     }
+
+    /**
+     * @dev Struct to store tournament data
+     * tournamentId: tournament id
+     * endTimestamp: end timestamp of the tournament
+     * matchIds: array of match ids
+     * winner: winner address
+     */
 
     struct Tournament {
         uint256 tournamentId;
@@ -144,6 +157,9 @@ contract MasterContract is Ownable {
             player2,
             winner
         );
+        if (goatNft.getNftBalance() < pongToken.balanceOf(winner)) {
+            updateGoatNft(winner);
+        }
     }
 
     /**
@@ -171,6 +187,15 @@ contract MasterContract is Ownable {
 
     function getGoatBalance() public view returns (uint256) {
         return goatNft.getNftBalance();
+    }
+
+    /**
+     * @dev Function to update Goat NFT
+     * @param winner: winner address
+     */
+
+    function updateGoatNft(address winner) internal onlyOwner {
+        goatNft.updateGoatNft(winner);
     }
 
     /**
