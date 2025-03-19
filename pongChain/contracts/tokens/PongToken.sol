@@ -4,10 +4,9 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin./contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract PongToken is ERC20, ERC20Burnable, Ownable {
+contract PongToken is ERC20, Ownable {
     /**
      * @dev Constructor to mint initial supply
      * @param: name of the token
@@ -32,7 +31,7 @@ contract PongToken is ERC20, ERC20Burnable, Ownable {
      * @param address: address to burn tokens
      */
 
-    function burn(uint256 amount, address _from) public onlyOwner {
+    function burn(address _from, uint256 amount) public onlyOwner {
         _burn(_from, amount);
     }
 }
