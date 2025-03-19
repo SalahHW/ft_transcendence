@@ -156,7 +156,7 @@ contract MasterContract is Ownable {
             ? getPlayerAddress(player1)
             : getPlayerAddress(player2);
         uint256 amountToBurn = calculateBurnAmount(pongToken.balanceOf(loser));
-        pongToken.burn(loser, amountToBurn);
+        pongToken._burn(loser, amountToBurn);
         emit MatchReported(
             matchId,
             getPlayerAddress(player1),
