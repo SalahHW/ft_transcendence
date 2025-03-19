@@ -179,6 +179,12 @@ contract MasterContract is Ownable {
         if (goatNft.getNftBalance() < pongToken.balanceOf(winner)) {
             updateGoatNft(winner);
         }
+        mintTokens(winner, 10);
+        if (getPlayerAddress(player1) != winner) {
+            pongToken.burn(getPlayerAddress(player1), 10);
+        } else {
+            pongToken.burn(getPlayerAddress(player2), 10);
+        }
         emit MatchReported(matchId, player1, player2, winner);
     }
 
