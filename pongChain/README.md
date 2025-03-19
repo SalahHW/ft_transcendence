@@ -95,6 +95,7 @@ struct Match {
   function updateGoat(address newGoat, uint256 newBalance) external onlyOwner;
   ```
   ```
+  constuctor a deux argument initialGoat et initialBalance qui serve a attribuer le nft a une personne en premier (nous msg.sender)
   Attention il faut faire en sorte que le nft ne soit que transferable par nous (msg.sender) (override ;)
   ```
 
