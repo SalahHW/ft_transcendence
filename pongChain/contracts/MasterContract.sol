@@ -23,36 +23,6 @@ contract MasterContract is Ownable {
     PongToken public pongToken;
 
     /**
-     * @dev Struct to store match data
-     * player1: player1 name
-     * player2: player2 name
-     * winner: winner address
-     * timestamp: timestamp of the match
-     */
-
-    struct Match {
-        string player1;
-        string player2;
-        address winner;
-        uint256 timestamp;
-    }
-
-    /**
-     * @dev Struct to store tournament data
-     * tournamentId: tournament id
-     * endTimestamp: end timestamp of the tournament
-     * matchIds: array of match ids
-     * winner: winner address
-     */
-
-    struct Tournament {
-        uint256 tournamentId;
-        uint256 endTimestamp;
-        uint256[] matchIds;
-        address winner;
-    }
-
-    /**
      * @dev Mapping to store player
      * string: player name to address mapping
      * address: player address
@@ -105,19 +75,16 @@ contract MasterContract is Ownable {
     /**
      * @dev Constructor to initialize the contract
      * @param _goatNft: address of GoatNft contract
-     * @param _matchManager: address of MatchManager contract
      * @param _pongToken: address of PongToken contract
      * @param _tournamentNft: address of TournamentNft contract
      */
 
     constructor(
         address _goatNft,
-        address _matchManager,
         address _pongToken,
         address _tournamentNft
     ) Ownable(msg.sender) {
         goatNft = GoatNft(_goatNft);
-        matchManager = MatchManager(_matchManager);
         pongToken = PongToken(_pongToken);
         tournamentNft = TournamentNft(_tournamentNft);
         tournamentTokenIds = 1;
@@ -171,11 +138,6 @@ contract MasterContract is Ownable {
         string memory player2,
         address winner
     ) public onlyOwner {
-        matches[matchId] = matchManager.reportMatchResult1v1(
-            player1,
-            player2,
-            winner
-        );
         if (goatNft.getNftBalance() < pongToken.balanceOf(winner)) {
             updateGoatNft(winner);
         }
