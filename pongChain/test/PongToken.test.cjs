@@ -7,7 +7,7 @@ describe("PongToken", function () {
     beforeEach(async function () {
         PongToken = await ethers.getContractFactory("PongToken");
         [owner, addr1, addr2] = await ethers.getSigners();
-        pongToken = await PongToken.deploy(); // Deploy the contract
+        pongToken = await PongToken.deploy();
     });
 
     it("Should have the correct name and symbol", async function () {
