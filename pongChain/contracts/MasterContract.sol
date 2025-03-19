@@ -70,9 +70,9 @@ contract MasterContract is Ownable {
 
     event MatchReported(
         uint256 indexed matchId,
-        string player1,
-        string player2,
-        address winner
+        string indexed player1,
+        string indexed player2,
+        address indexed winner
     );
 
     /**
@@ -81,7 +81,12 @@ contract MasterContract is Ownable {
      * @param winner: winner address
      */
 
-    event TournamentReported(uint256 indexed tournamentId, address winner);
+    event TournamentReported(
+        uint256 indexed tournamentId,
+        uint256 endTimestamp,
+        uint256[] matchIds,
+        address indexed winner
+    );
 
     /**
      * @dev Event to log player added
@@ -162,8 +167,8 @@ contract MasterContract is Ownable {
 
     function reportMatch(
         uint256 matchId,
-        string player1,
-        string player2,
+        string memory player1,
+        string memory player2,
         address winner
     ) public onlyOwner {
         matches[matchId] = matchManager.reportMatchResult1v1(
@@ -226,14 +231,12 @@ contract MasterContract is Ownable {
         uint256[] memory matchIds,
         address winner
     ) public onlyOwner {
-        tournaments[tournamentTokenIds] = tournamentManager
-            .reportTournamentResult(
-                tournamentTokenIds,
-                endTimestamp,
-                matchIds,
-                winner
-            );
-        mintTournamentNft(winner, tournamentId);
-        emit TournamentReported(tournamentTokenIds, winner);
+        mintTournamentNft(winner, tournamentIds);
+        emit TournamentReported(
+            tournamentTokenIds,
+            endTimestamp,
+            matchIds,
+            winner
+        );
     }
 }
