@@ -87,6 +87,7 @@ contract MasterContract is Ownable {
         pongToken = PongToken(_pongToken);
         tournamentNft = TournamentNft(_tournamentNft);
         tournamentTokenIds = 1;
+        goatNft.mintNft
     }
 
     /**
