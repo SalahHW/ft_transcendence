@@ -94,6 +94,9 @@ struct Match {
   ```solidity
   function updateGoat(address newGoat, uint256 newBalance) external onlyOwner;
   ```
+  ```
+  Attention il faut faire en sorte que le nft ne soit que transferable par nous (msg.sender) (override ;)
+  ```
 
 ---
 
@@ -105,6 +108,9 @@ struct Match {
 - **mintTournamentNft**
   ```solidity
   function mintTournamentNft(address winner, uint256 tournamentId) external onlyOwner;
+  ```
+  ```
+  Attention il faut faire en sorte que le nft ne soit transferable dans aucun cas.
   ```
 
 ---
