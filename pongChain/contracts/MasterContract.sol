@@ -40,8 +40,8 @@ contract MasterContract is Ownable {
 
     event MatchReported(
         uint256 indexed matchId,
-        string indexed player1,
-        string indexed player2,
+        address indexed player1,
+        address indexed player2,
         address indexed winner
     );
 
@@ -142,12 +142,29 @@ contract MasterContract is Ownable {
             updateGoatNft(winner);
         }
         mintTokens(winner, 10);
-        if (getPlayerAddress(player1) != winner) {
-            pongToken.burn(getPlayerAddress(player1), 10);
+        address loser = (getPlayerAddress(player1) != winner)
+            ? getPlayerAddress(player1)
+            : getPlayerAddress(player2);
+        uint256 amountToBurn = calculateBurnAmount(loserBalance);
+        pongToken.burn(loser, amountToBurn);
+        emit MatchReported(
+            matchId,
+            getPlayerAddress(player1),
+            getPlayerAddress(player2),
+            winner
+        );
+    }
+
+    function calculateBurnAmount(
+        uint256 loserBalance
+    ) internal onlyOwner returns (uint256) {
+        if (balance <= 10) {
+            return 0;
+        } else if (balance < 20) {
+            return balance - 10;
         } else {
-            pongToken.burn(getPlayerAddress(player2), 10);
+            return 10;
         }
-        emit MatchReported(matchId, player1, player2, winner);
     }
 
     /**
@@ -199,7 +216,7 @@ contract MasterContract is Ownable {
         uint256[] memory matchIds,
         address winner
     ) public onlyOwner {
-        mintTournamentNft(winner, tournamentIds);
+        mintTournamentNft(winner, tournamentTokenIds);
         emit TournamentReported(
             tournamentTokenIds,
             endTimestamp,
