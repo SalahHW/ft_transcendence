@@ -85,12 +85,6 @@ struct Match {
   ```solidity
   function mint(address to, uint256 amount) external onlyOwner;
   ```
-
-- **burnTokens**
-  ```solidity
-  function burnTokens(address account, uint256 amount) external onlyOwner;
-  ```
-
 ---
 
 ## 🔸 Contrat : **GoatNft**
