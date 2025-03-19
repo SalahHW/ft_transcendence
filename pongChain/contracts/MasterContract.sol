@@ -1,8 +1,8 @@
-// SPDX-License-Identifier: MIT
+//SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./managers/MatchManager.sol";
 import "./nfts/GoatNft.sol";
 import "./nfts/TournamentNft.sol";
 import "./tokens/PongToken.sol";
@@ -17,7 +17,6 @@ contract MasterContract is Ownable {
      * @dev Variables to store contract addresses
      */
 
-    MatchManager public matchManager;
     GoatNft public goatNft;
     TournamentNft public tournamentNft;
     PongToken public pongToken;
@@ -97,6 +96,7 @@ contract MasterContract is Ownable {
      */
 
     function addPlayer(string memory _name, address _player) public onlyOwner {
+        require(players[_name] == address(0), "Player already exists");
         players[_name] = _player;
         mintTokens(_player, 100);
         emit PlayerAdded(_name, _player);
@@ -138,6 +138,16 @@ contract MasterContract is Ownable {
         string memory player2,
         address winner
     ) public onlyOwner {
+        require(
+            getPlayerAddress(player1) != address(0),
+            "Player1 not registered"
+        );
+        require(
+            getPlayerAddress(player2) != address(0),
+            "Player2 not registered"
+        );
+        require(winner != address(0), "Winner address is invalid");
+        require(matches[matchId] == address(0), "Match ID already exists");
         if (goatNft.getNftBalance() < pongToken.balanceOf(winner)) {
             updateGoatNft(winner);
         }
@@ -145,7 +155,7 @@ contract MasterContract is Ownable {
         address loser = (getPlayerAddress(player1) != winner)
             ? getPlayerAddress(player1)
             : getPlayerAddress(player2);
-        uint256 amountToBurn = calculateBurnAmount(loserBalance);
+        uint256 amountToBurn = calculateBurnAmount(pongToken.balanceOf(loser));
         pongToken.burn(loser, amountToBurn);
         emit MatchReported(
             matchId,
@@ -156,7 +166,7 @@ contract MasterContract is Ownable {
     }
 
     function calculateBurnAmount(
-        uint256 loserBalance
+        uint256 balance
     ) internal onlyOwner returns (uint256) {
         if (balance <= 10) {
             return 0;
@@ -223,5 +233,6 @@ contract MasterContract is Ownable {
             matchIds,
             winner
         );
+        tournamentTokenIds++;
     }
 }
