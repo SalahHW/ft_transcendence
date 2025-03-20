@@ -253,6 +253,24 @@ contract MasterContract is Ownable {
     }
 
     /**
+     * @dev Function to get all matches won by a player
+     * @param winner: winner address
+     * @return array of matches won by the player
+     */
+
+    function getMatchsByWinner(
+        address winner
+    ) public view returns (globalMatchesArray) {
+        Match[] memory playerMatches;
+        for (uint i = 0; i < globalMatchesArray.length; i++) {
+            if (globalMatchesArray[i].winner == winner) {
+                playerMatches.push(globalMatchesArray[i]);
+            }
+        }
+        return playerMatches;
+    }
+
+    /**
      * @dev Function to calculate amount to burn
      * @param balance: balance of the player
      * @return amount to burn
