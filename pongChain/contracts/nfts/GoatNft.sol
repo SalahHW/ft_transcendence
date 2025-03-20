@@ -6,30 +6,38 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract GoatNFT is ERC721, Ownable {
 
-	string public initialGoat;
 	address public goat;
-	uint256 public newBalance;
-	uint256 public GoatNFT_id = 299;
+	uint256 public balance;
+	uint256 public tokenId = 299;
 
 	event Transfert(address indexed from, address indexed to, uint256 amount);
 
-	constructor(string memory _initialGoat, uint256 _newBalance) ERC721("GoatToken", "GOAT") {
-		initialGoat = _initialGoat;
-		newBalance = _newBalance;
+	constructor(uint256 _newBalance) ERC721("GoatToken", "GOAT") {
+		goat = msg.sender;
+		balance = _newBalance;
+		_mint(msg.sender, tokenId);
 	}
 
-	function _transferNFT(address _from, address _to) public onlyOwner() {
+	function updateGoat(address _newGoat, uint256 _newBalance) external onlyOwner {
+		transferNFT(goat, _newGoat);
+		goat = _newGoat;
+		balance = _newBalance;
+	}
+
+	function transferNFT(address _from, address _to) public onlyOwner {
 		if (_from != msg.sender) {
-			approve(_to, GoatNFT_id);
+			approve(_to, tokenId);
 		}
-		safeTransferFrom(_from, _to, GoatNFT_id);
-		Transfert(_from, _to, 299);
+		safeTransferFrom(_from, _to, tokenId);
+		emit Transfert(_from, _to, tokenId);
 		goat = _to;
 	}
 
-	function _getGoatAddress() public returns(address) {
+	function getGoatAddress() public returns(address) {
 		return goat;
 	}
 
-
+	function getBalance() public returns(uint256) {
+		return balance;
+	}
 }
