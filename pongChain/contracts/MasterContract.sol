@@ -41,12 +41,35 @@ contract MasterContract is Ownable {
     }
 
     /**
-     * @dev Mapping to store all matches
+     * @dev Struct to store tournament details
+     * endTimestamp: end timestamp of the tournament
+     * matchIds: array of match ids
+     * winner: winner address
+     * tournamentId: tournament id
+     */
+
+    struct Tournament {
+        uint32 endTimestamp;
+        uint16[] matchIds;
+        uint16 tournamentId;
+        address winner;
+    }
+
+    /**
+     * @dev Array to store all matches
      * uint16: match id
      * Match: match details
      */
 
     Match[] public globalMatchesArray;
+
+    /**
+     * @dev Array to store all tournaments
+     * uint256: tournament id
+     * Tournament: tournament details
+     */
+
+    Tournament[] public globalTournamentsArray;
 
     /**
      * @dev Mapping to store player
@@ -82,9 +105,9 @@ contract MasterContract is Ownable {
      */
 
     event TournamentReported(
-        uint256 indexed tournamentId,
-        uint256 endTimestamp,
-        uint256[] matchIds,
+        uint16 indexed tournamentId,
+        uint32 endTimestamp,
+        uint16[] matchIds,
         address indexed winner
     );
 
@@ -153,6 +176,8 @@ contract MasterContract is Ownable {
      * @param player2: player2 name
      * @param winner: winner address
      */
+
+    // SINTERESSE PARAM CASH OBJET MATCH CAR PROVIENDRAIT DUN JSON
 
     function reportMatch(
         string memory player1,
@@ -352,6 +377,13 @@ contract MasterContract is Ownable {
         address winner
     ) public onlyOwner {
         mintTournamentNft(winner, tournamentTokenIds);
+        Tournament tempTournament = fillTournamentStruct(
+            endTimestamp,
+            matchIds,
+            tournamentId,
+            winner
+        );
+        globalTournamentsArray.push(tempTournament);
         emit TournamentReported(
             tournamentTokenIds,
             endTimestamp,
@@ -359,5 +391,20 @@ contract MasterContract is Ownable {
             winner
         );
         tournamentTokenIds++;
+    }
+
+    function fillTournamentStruct(
+        uint32 endTimestamp,
+        uint16[] memory matchIds,
+        uint16 tournamentId,
+        address winner
+    ) internal returns (Tournament) {
+        Tournament memory tempTournament = Tournament({
+            endTimestamp: endTimestamp,
+            matchIds: matchIds,
+            tournamentId: tournamentId,
+            winner: winner
+        });
+        return tempTournament;
     }
 }
