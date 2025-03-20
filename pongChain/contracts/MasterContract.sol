@@ -393,6 +393,15 @@ contract MasterContract is Ownable {
         tournamentTokenIds++;
     }
 
+    /**
+     * @dev Function to fill tournament struct
+     * @param endTimestamp: end timestamp of the tournament
+     * @param matchIds: array of match ids
+     * @param winner: winner address
+     * @param tournamentId: tournament id
+     * @return Tournament struct
+     */
+
     function fillTournamentStruct(
         uint32 endTimestamp,
         uint16[] memory matchIds,
