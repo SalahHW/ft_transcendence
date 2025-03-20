@@ -271,6 +271,20 @@ contract MasterContract is Ownable {
     }
 
     /**
+     * @dev Function to get match by match id
+     * @param matchId: match id
+     * @return match details
+     */
+
+    function getMatchsByMatchId(uint16 matchId) public view returns (Match) {
+        for (uint i = 0; i < globalMatchesArray.length; i++) {
+            if (globalMatchesArray[i].matchId == matchId) {
+                return globalMatchesArray[i];
+            }
+        }
+    }
+
+    /**
      * @dev Function to calculate amount to burn
      * @param balance: balance of the player
      * @return amount to burn
