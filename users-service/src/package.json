@@ -6,7 +6,8 @@
     "start": "node app.js"
   },
   "dependencies": {
-    "fastify": "^4.0.0",
-    "sqlite3": "^5.1.7"
+    "fastify": "4.0.0",
+    "sqlite3": "5.1.7",
+    "@fastify/jwt": "9.1.0"
   }
 }
