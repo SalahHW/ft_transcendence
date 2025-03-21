@@ -16,7 +16,7 @@ services:
     networks:
       - users
     volumes:
-      - ./users-service/database:/app/database
+      - ./database:/app/database
 
 networks:
   users:
