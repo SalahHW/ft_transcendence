@@ -123,7 +123,7 @@ contract MasterContract is Ownable {
      * @dev tournamentTokenIds to store tournament token ids
      */
 
-    uint256 public tournamentTokenIds;
+    uint16 public tournamentTokenIds;
 
     /**
      * @dev Constructor to initialize the contract
@@ -263,13 +263,27 @@ contract MasterContract is Ownable {
     function getMatchsByPlayer(
         string memory player
     ) public view returns (Match[] memory) {
-        Match[] memory playerMatches;
+        uint256 size = 0;
         for (uint i = 0; i < globalMatchesArray.length; i++) {
             if (
                 globalMatchesArray[i].player1 == getPlayerAddress(player) ||
                 globalMatchesArray[i].player2 == getPlayerAddress(player)
             ) {
-                playerMatches.push(globalMatchesArray[i]);
+                size++;
+            }
+        }
+        if(size == 0){
+            revert("No matches found for the player");
+        }
+        Match[] memory playerMatches = new Match[](size);
+        uint256 index = 0;
+        for (uint i = 0; i < globalMatchesArray.length; i++) {
+            if (
+                globalMatchesArray[i].player1 == getPlayerAddress(player) ||
+                globalMatchesArray[i].player2 == getPlayerAddress(player)
+            ) {
+                playerMatches[index] = globalMatchesArray[i];
+                index++;
             }
         }
         return playerMatches;
@@ -284,10 +298,21 @@ contract MasterContract is Ownable {
     function getMatchsByWinner(
         address winner
     ) public view returns (Match[] memory) {
-        Match[] memory playerMatches;
+        uint256 size = 0;
         for (uint i = 0; i < globalMatchesArray.length; i++) {
             if (globalMatchesArray[i].winner == winner) {
-                playerMatches.push(globalMatchesArray[i]);
+                size++;
+            }
+        }
+        if(size == 0){
+            revert("No matches found for the winner");
+        }
+        Match[] memory playerMatches = new Match[](size);
+        uint256 index = 0;
+        for (uint i = 0; i < globalMatchesArray.length; i++) {
+            if (globalMatchesArray[i].winner == winner) {
+                playerMatches[index] = globalMatchesArray[i];
+                index++;
             }
         }
         return playerMatches;
@@ -299,12 +324,13 @@ contract MasterContract is Ownable {
      * @return match details
      */
 
-    function getMatchsByMatchId(uint16 matchId) public view returns (Match) {
+    function getMatchsByMatchId(uint16 matchId) public view returns (Match memory) {
         for (uint i = 0; i < globalMatchesArray.length; i++) {
             if (globalMatchesArray[i].matchId == matchId) {
                 return globalMatchesArray[i];
             }
         }
+        revert("Match not found");
     }
 
     /**
@@ -335,14 +361,14 @@ contract MasterContract is Ownable {
 
     function reportTournament(
         uint256 endTimestamp,
-        uint256[] memory matchIds,
+        uint16[] memory matchIds,
         address winner
     ) public onlyOwner {
         mintTournamentNft(winner, tournamentTokenIds); //replace with matt implementation
         Tournament tempTournament = fillTournamentStruct(
             endTimestamp,
             matchIds,
-            tournamentId,
+            tournamentTokenIds,
             winner
         );
         globalTournamentsArray.push(tempTournament);
@@ -389,13 +415,14 @@ contract MasterContract is Ownable {
     function getTournamentById(uint16 tournamentId)
         public
         view
-        returns (Tournament)
+        returns (Tournament memory)
     {
         for (uint i = 0; i < globalTournamentsArray.length; i++) {
             if (globalTournamentsArray[i].tournamentId == tournamentId) {
                 return globalTournamentsArray[i];
             }
         }
+        revert("Tournament not found");
     }
 
     /**
@@ -409,10 +436,21 @@ contract MasterContract is Ownable {
         view
         returns (Tournament[] memory)
     {
-        Tournament[] memory playerTournaments;
+        uint256 size = 0;
         for (uint i = 0; i < globalTournamentsArray.length; i++) {
             if (globalTournamentsArray[i].winner == winner) {
-                playerTournaments.push(globalTournamentsArray[i]);
+                size++;
+            }
+        }
+        if(size == 0){
+            revert("No tournaments found for the winner");
+        }
+        Tournament[] memory playerTournaments = new Tournament[](size);
+        uint256 index = 0;
+        for (uint i = 0; i < globalTournamentsArray.length; i++) {
+            if (globalTournamentsArray[i].winner == winner) {
+                playerTournaments[index] = globalTournamentsArray[i];
+                index++;
             }
         }
         return playerTournaments;
