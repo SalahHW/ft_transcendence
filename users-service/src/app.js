@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import fastifyJwt from '@fastify/jwt';
 import { initializeDatabase } from './models/db.js';
 import registerRoutes from './routes/index.js';
 
@@ -9,6 +10,7 @@ initializeDatabase();
 
 // Process env variables
 const PORT = process.env.USERS_SERVICE_PORT;
+const SECRETKEY = process.env.SECRETKEY;
 const validEnvironement = PORT;
 
 if (!validEnvironement) {
