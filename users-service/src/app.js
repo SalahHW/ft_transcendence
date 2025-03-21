@@ -1,3 +1,4 @@
+import config from './config/config.js';
 import Fastify from 'fastify';
 import fastifyJwt from '@fastify/jwt';
 import { initializeDatabase } from './models/db.js';
@@ -8,20 +9,10 @@ const fastify = Fastify();
 // Initialize the database
 initializeDatabase();
 
-// Process env variables
-const PORT = process.env.USERS_SERVICE_PORT;
-const SECRETKEY = process.env.SECRETKEY;
-const validEnvironement = PORT;
-
-if (!validEnvironement) {
-  console.error('Unable to load environement variables');
-  process.exit(1);
-}
-
 fastify.register(registerRoutes);
 
 fastify.listen({
-  port: 3000,
+  port: config.PORT,
   host: '0.0.0.0'
 }, (err, address) => {
   if (err) {
