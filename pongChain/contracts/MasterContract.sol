@@ -196,7 +196,7 @@ contract MasterContract is Ownable {
         );
         require(winner != address(0), "Winner address is invalid");
         if (goatNft.getBalance() < pongToken.balanceOf(winner)) {
-            transferNFT(winner, goatNft.getGoatAddress());
+            transferNft(winner, goatNft.getGoatAddress());
         }
         pongToken.mint(winner, 10);
         address loser = (getPlayerAddress(player1) != winner)
@@ -272,7 +272,7 @@ contract MasterContract is Ownable {
                 size++;
             }
         }
-        if(size == 0){
+        if (size == 0) {
             revert("No matches found for the player");
         }
         Match[] memory playerMatches = new Match[](size);
@@ -304,7 +304,7 @@ contract MasterContract is Ownable {
                 size++;
             }
         }
-        if(size == 0){
+        if (size == 0) {
             revert("No matches found for the winner");
         }
         Match[] memory playerMatches = new Match[](size);
@@ -324,7 +324,9 @@ contract MasterContract is Ownable {
      * @return match details
      */
 
-    function getMatchsByMatchId(uint16 matchId) public view returns (Match memory) {
+    function getMatchsByMatchId(
+        uint16 matchId
+    ) public view returns (Match memory) {
         for (uint i = 0; i < globalMatchesArray.length; i++) {
             if (globalMatchesArray[i].matchId == matchId) {
                 return globalMatchesArray[i];
@@ -405,18 +407,15 @@ contract MasterContract is Ownable {
         return tempTournament;
     }
 
-
     /**
      * @dev Function to get tournament by id
      * @param tournamentId: tournament id
      * @return array of tournaments
      */
 
-    function getTournamentById(uint16 tournamentId)
-        public
-        view
-        returns (Tournament memory)
-    {
+    function getTournamentById(
+        uint16 tournamentId
+    ) public view returns (Tournament memory) {
         for (uint i = 0; i < globalTournamentsArray.length; i++) {
             if (globalTournamentsArray[i].tournamentId == tournamentId) {
                 return globalTournamentsArray[i];
@@ -426,23 +425,21 @@ contract MasterContract is Ownable {
     }
 
     /**
-        * @dev Function to get tournament by winner
-        * @param winner: winner address
-        * @return array of tournaments
+     * @dev Function to get tournament by winner
+     * @param winner: winner address
+     * @return array of tournaments
      */
 
-    function getTournamentByWinner(address winner)
-        public
-        view
-        returns (Tournament[] memory)
-    {
+    function getTournamentByWinner(
+        address winner
+    ) public view returns (Tournament[] memory) {
         uint256 size = 0;
         for (uint i = 0; i < globalTournamentsArray.length; i++) {
             if (globalTournamentsArray[i].winner == winner) {
                 size++;
             }
         }
-        if(size == 0){
+        if (size == 0) {
             revert("No tournaments found for the winner");
         }
         Tournament[] memory playerTournaments = new Tournament[](size);
