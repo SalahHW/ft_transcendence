@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract TournamentNft is ERC721, Ownable {
     mapping(uint256 => address) tntTracking;
 
-    constructor() ERC721("TournamentToken", "TNT") {}
+    constructor() ERC721("TournamentToken", "TNT") Ownable(msg.sender) {}
 
     function mintTnt(address winner, uint256 tournamentId) public onlyOwner {
         _mint(winner, tournamentId);
@@ -15,9 +15,9 @@ contract TournamentNft is ERC721, Ownable {
     }
 
     function _checkAuthorized(
-        address owner,
+        address /*owner*/,
         address spender,
-        uint256 tokenId
+        uint256 /*tokenId*/
     ) internal view override {
         if (spender != Ownable.owner()) {
             revert("Only admin can transfer tokens");
