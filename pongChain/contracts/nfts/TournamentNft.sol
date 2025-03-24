@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract TournamentNft is ERC721, Ownable {
-
     mapping(uint256 => address) tntTracking;
 
     constructor() ERC721("TournamentToken", "TNT") {}
