@@ -369,7 +369,7 @@ contract MasterContract is Ownable {
         uint16[] memory matchIds,
         address winner
     ) public onlyOwner {
-        mintTournamentNft(winner, tournamentTokenIds); //replace with matt implementation
+        mintTnt(winner, tournamentTokenIds);
         Tournament tempTournament = fillTournamentStruct(
             endTimestamp,
             matchIds,
