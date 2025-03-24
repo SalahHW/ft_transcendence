@@ -27,9 +27,6 @@ contract GoatNft is ERC721, Ownable {
     }
 
     function transferNft(address _from, address _to) public onlyOwner {
-        if (_from != msg.sender) {
-            approve(_to, tokenId);
-        }
         safeTransferFrom(_from, _to, tokenId);
         emit Transfert(_from, _to, tokenId);
         goat = _to;
@@ -39,11 +36,21 @@ contract GoatNft is ERC721, Ownable {
         return goat;
     }
 
-	function getGoatAddress() public view returns(address) {
-		return goat;
-	}
+    function getGoatAddress() public view returns (address) {
+        return goat;
+    }
 
-	function getBalance() public view returns(uint256) {
-		return balance;
-	}
+    function getBalance() public view returns (uint256) {
+        return balance;
+    }
+
+    function _checkAuthorized(
+        address owner,
+        address spender,
+        uint256 tokenId
+    ) internal view override {
+        if (spender != owner()) {
+            revert("Only admin can transfer tokens");
+        }
+    }
 }

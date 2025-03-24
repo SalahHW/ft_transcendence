@@ -173,6 +173,8 @@ contract MasterContract is Ownable {
      * @param matchId: match id
      * @param player1: player1 name
      * @param player2: player2 name
+     * @param player1Score: player1 score
+     * @param player2Score: player2 score
      * @param winner: winner address
      */
 
@@ -195,10 +197,10 @@ contract MasterContract is Ownable {
             "Player2 not registered"
         );
         require(winner != address(0), "Winner address is invalid");
+        pongToken.mint(winner, 10);
         if (goatNft.getBalance() < pongToken.balanceOf(winner)) {
             transferNft(winner, goatNft.getGoatAddress());
         }
-        pongToken.mint(winner, 10);
         address loser = (getPlayerAddress(player1) != winner)
             ? getPlayerAddress(player1)
             : getPlayerAddress(player2);
