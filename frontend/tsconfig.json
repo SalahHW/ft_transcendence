@@ -1,6 +1,18 @@
 {
 	"compilerOptions": {
-		"outDir": "./public/js/"
+		"outDir": "./public/js/",
+		"module": "ES6",
+		"strict": true, // active tous les flags strict
+		"noImplicitAny": true, // signale les types implicites
+		"noImplicitReturns": true, // signale les fonctions sans return
+		"noFallthroughCasesInSwitch": true, // signale les cas de switch sans break
+        "noUnusedLocals": true, // signale les variables non utilisées
+        "noUnusedParameters": true, // signale les paramètres non utilisés
+        "forceConsistentCasingInFileNames": true, // assure une casse(=>MAJ/min) cohérente
+		"lib": ["dom", "dom.iterable", "es2019"],
 	},
-	"include": ["./src/ts/*"]
+	"include": [
+		"./src/ts/*.ts",
+		"./src/ts/*/*.ts"
+	]
 }

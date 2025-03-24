@@ -2,8 +2,8 @@
   "name": "transcendence-frontend",
   "version": "1.0.0",
   "description": "Frontend SPA for ft_transcendence project",
-  "main": "",
   "scripts": {
+  "build": "tsc && npx @tailwindcss/cli -i ./src/input.css -o ./public/style.css",
   "ts-build": "tsc",
   "ts-watch": "tsc --watch",
   "tw-build": "npx @tailwindcss/cli -i ./src/input.css -o ./public/style.css",
