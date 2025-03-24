@@ -19,7 +19,7 @@ contract TournamentNft is ERC721, Ownable {
         address spender,
         uint256 tokenId
     ) internal view override {
-        if (spender != owner()) {
+        if (spender != Ownable.owner()) {
             revert("Only admin can transfer tokens");
         }
     }
