@@ -5,6 +5,27 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract TournamentNft is ERC721, Ownable {
-    uint256 public newBalance;
-    uint256 public tokenId = 1069;
+
+    mapping(uint256 => address) tntTracking;
+
+    constructor() ERC721("TournamentToken", "TNT") {}
+
+    function mintTnt(address winner, uint256 tournamentId) public onlyOwner {
+        _mint(winner, tournamentId);
+        tntTracking[tournamentId] = winner;
+    }
+
+    function _checkAuthorized(
+        address owner,
+        address spender,
+        uint256 tokenId
+    ) internal view override {
+        if (spender != owner()) {
+            revert("Only admin can transfer tokens");
+        }
+    }
+
+    function getTracking(uint256 tokenId) public view returns(address) {
+        return tntTracking[tokenId];
+    }
 }
