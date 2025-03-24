@@ -3,8 +3,9 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 
-contract GoatNft is ERC721, Ownable {
+contract GoatNft is ERC721, ERC721URIStorage, Ownable {
     address public goat;
     uint256 public TnttokenId = 299;
 
@@ -12,7 +13,11 @@ contract GoatNft is ERC721, Ownable {
 
     constructor() ERC721("GoatToken", "GOAT") Ownable(msg.sender) {
         goat = msg.sender;
-        _mint(msg.sender, TnttokenId);
+        _mint(msg.sender, tokenId);
+        _setTokenURI(
+            tokenId,
+            "ipfs://bafkreidxqrthlwphtx4lmxyzg7spjv4m3qrymxradrn3446gz6u727mtfy/goat.png"
+        );
     }
 
     function updateGoat(address _newGoat) external onlyOwner {
