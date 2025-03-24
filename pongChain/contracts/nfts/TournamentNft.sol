@@ -7,4 +7,12 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract TournamentNft is ERC721, Ownable {
     uint256 public newBalance;
     uint256 public tokenId = 1069;
+
+    function _checkAuthorized(
+        address owner,
+        address spender,
+        uint256 tokenId
+    ) internal view override {
+        revert("No one can transfer tokens");
+    }
 }
