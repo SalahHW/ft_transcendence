@@ -10,7 +10,7 @@ contract GoatNft is ERC721, Ownable {
 
     event Transfert(address indexed from, address indexed to, uint256 amount);
 
-    constructor() ERC721("GoatToken", "GOAT") {
+    constructor() ERC721("GoatToken", "GOAT") Ownable(msg.sender) {
         goat = msg.sender;
         _mint(msg.sender, TnttokenId);
     }
@@ -31,9 +31,9 @@ contract GoatNft is ERC721, Ownable {
     }
 
     function _checkAuthorized(
-        address owner,
+        address /*owner*/,
         address spender,
-        uint256 tokenId
+        uint256 /*tokenId*/
     ) internal view override {
         if (spender != Ownable.owner()) {
             revert("Only admin can transfer tokens");
