@@ -178,8 +178,6 @@ contract MasterContract is Ownable {
      * @param winner: winner address
      */
 
-    // SINTERESSE PARAM CASH OBJET MATCH CAR PROVIENDRAIT DUN JSON
-
     function reportMatch(
         string memory player1,
         string memory player2,
