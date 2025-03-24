@@ -27,9 +27,6 @@ contract GoatNft is ERC721, Ownable {
     }
 
     function transferNft(address _from, address _to) public onlyOwner {
-        if (_from != msg.sender) {
-            approve(_to, tokenId);
-        }
         safeTransferFrom(_from, _to, tokenId);
         emit Transfert(_from, _to, tokenId);
         goat = _to;
