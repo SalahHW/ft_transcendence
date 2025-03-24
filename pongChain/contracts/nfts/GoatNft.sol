@@ -46,4 +46,15 @@ contract GoatNft is ERC721, Ownable {
     function getBalance() public view returns (uint256) {
         return balance;
     }
+
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId,
+        uint256 batchSize
+    ) internal override {
+        super._beforeTokenTransfer(from, to, tokenId, batchSize);
+
+        require(msg.sender == owner(), "Only admin can transfer this NFT");
+    }
 }
