@@ -6,24 +6,20 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract GoatNft is ERC721, Ownable {
     address public goat;
-    uint256 public balance;
     uint256 public tokenId = 299;
 
     event Transfert(address indexed from, address indexed to, uint256 amount);
 
-    constructor(uint256 _newBalance) ERC721("GoatToken", "GOAT") {
+    constructor() ERC721("GoatToken", "GOAT") {
         goat = msg.sender;
-        balance = _newBalance;
         _mint(msg.sender, tokenId);
     }
 
     function updateGoat(
-        address _newGoat,
-        uint256 _newBalance
+        address _newGoat
     ) external onlyOwner {
         transferNft(goat, _newGoat);
         goat = _newGoat;
-        balance = _newBalance;
     }
 
     function transferNft(address _from, address _to) public onlyOwner {
@@ -34,10 +30,6 @@ contract GoatNft is ERC721, Ownable {
 
     function getGoatAddress() public view returns (address) {
         return goat;
-    }
-
-    function getBalance() public view returns (uint256) {
-        return balance;
     }
 
     function _checkAuthorized(
