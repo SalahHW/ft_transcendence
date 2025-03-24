@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.20;
 
@@ -41,12 +41,35 @@ contract MasterContract is Ownable {
     }
 
     /**
-     * @dev Mapping to store all matches
+     * @dev Struct to store tournament details
+     * endTimestamp: end timestamp of the tournament
+     * matchIds: array of match ids
+     * winner: winner address
+     * tournamentId: tournament id
+     */
+
+    struct Tournament {
+        uint32 endTimestamp;
+        uint16[] matchIds;
+        uint16 tournamentId;
+        address winner;
+    }
+
+    /**
+     * @dev Array to store all matches
      * uint16: match id
      * Match: match details
      */
 
     Match[] public globalMatchesArray;
+
+    /**
+     * @dev Array to store all tournaments
+     * uint256: tournament id
+     * Tournament: tournament details
+     */
+
+    Tournament[] public globalTournamentsArray;
 
     /**
      * @dev Mapping to store player
@@ -82,9 +105,9 @@ contract MasterContract is Ownable {
      */
 
     event TournamentReported(
-        uint256 indexed tournamentId,
-        uint256 endTimestamp,
-        uint256[] matchIds,
+        uint16 indexed tournamentId,
+        uint32 endTimestamp,
+        uint16[] matchIds,
         address indexed winner
     );
 
@@ -95,12 +118,12 @@ contract MasterContract is Ownable {
      */
 
     event PlayerAdded(string name, address playerAddress);
-j
+
     /**
      * @dev tournamentTokenIds to store tournament token ids
      */
 
-    uint256 public tournamentTokenIds;
+    uint16 public tournamentTokenIds;
 
     /**
      * @dev Constructor to initialize the contract
@@ -118,7 +141,6 @@ j
         pongToken = PongToken(_pongToken);
         tournamentNft = TournamentNft(_tournamentNft);
         tournamentTokenIds = 1;
-        goatNft.mintNft;
     }
 
     /**
@@ -154,6 +176,8 @@ j
      * @param winner: winner address
      */
 
+    // SINTERESSE PARAM CASH OBJET MATCH CAR PROVIENDRAIT DUN JSON
+
     function reportMatch(
         string memory player1,
         string memory player2,
@@ -171,9 +195,8 @@ j
             "Player2 not registered"
         );
         require(winner != address(0), "Winner address is invalid");
-        require(matches[matchId] == address(0), "Match ID already exists");
-        if (goatNft.getNftBalance() < pongToken.balanceOf(winner)) {
-            updateGoatNft(winner);
+        if (goatNft.getBalance() < pongToken.balanceOf(winner)) {
+            transferNft(winner, goatNft.getGoatAddress());
         }
         pongToken.mint(winner, 10);
         address loser = (getPlayerAddress(player1) != winner)
@@ -181,7 +204,7 @@ j
             : getPlayerAddress(player2);
         uint256 amountToBurn = calculateBurnAmount(pongToken.balanceOf(loser));
         pongToken._burn(loser, amountToBurn);
-        Match tempMatchStruct = fillMatchStruct(
+        Match tempMatch = fillMatchStruct(
             player1,
             player2,
             winner,
@@ -239,14 +262,28 @@ j
 
     function getMatchsByPlayer(
         string memory player
-    ) public view returns (globalMatchesArray) {
-        Match[] memory playerMatches;
+    ) public view returns (Match[] memory) {
+        uint256 size = 0;
         for (uint i = 0; i < globalMatchesArray.length; i++) {
             if (
                 globalMatchesArray[i].player1 == getPlayerAddress(player) ||
                 globalMatchesArray[i].player2 == getPlayerAddress(player)
             ) {
-                playerMatches.push(globalMatchesArray[i]);
+                size++;
+            }
+        }
+        if (size == 0) {
+            revert("No matches found for the player");
+        }
+        Match[] memory playerMatches = new Match[](size);
+        uint256 index = 0;
+        for (uint i = 0; i < globalMatchesArray.length; i++) {
+            if (
+                globalMatchesArray[i].player1 == getPlayerAddress(player) ||
+                globalMatchesArray[i].player2 == getPlayerAddress(player)
+            ) {
+                playerMatches[index] = globalMatchesArray[i];
+                index++;
             }
         }
         return playerMatches;
@@ -260,11 +297,22 @@ j
 
     function getMatchsByWinner(
         address winner
-    ) public view returns (globalMatchesArray) {
-        Match[] memory playerMatches;
+    ) public view returns (Match[] memory) {
+        uint256 size = 0;
         for (uint i = 0; i < globalMatchesArray.length; i++) {
             if (globalMatchesArray[i].winner == winner) {
-                playerMatches.push(globalMatchesArray[i]);
+                size++;
+            }
+        }
+        if (size == 0) {
+            revert("No matches found for the winner");
+        }
+        Match[] memory playerMatches = new Match[](size);
+        uint256 index = 0;
+        for (uint i = 0; i < globalMatchesArray.length; i++) {
+            if (globalMatchesArray[i].winner == winner) {
+                playerMatches[index] = globalMatchesArray[i];
+                index++;
             }
         }
         return playerMatches;
@@ -276,12 +324,15 @@ j
      * @return match details
      */
 
-    function getMatchsByMatchId(uint16 matchId) public view returns (Match) {
+    function getMatchsByMatchId(
+        uint16 matchId
+    ) public view returns (Match memory) {
         for (uint i = 0; i < globalMatchesArray.length; i++) {
             if (globalMatchesArray[i].matchId == matchId) {
                 return globalMatchesArray[i];
             }
         }
+        revert("Match not found");
     }
 
     /**
@@ -303,42 +354,6 @@ j
     }
 
     /**
-     * @dev Function to mint tournament nft
-     * @param _to: address to mint nft
-     * @param tournamentId: tournament id
-     */
-
-    function mintTournamentNft(
-        string _to,
-        uint256 tournamentId
-    ) public onlyOwner {
-        tournamentNft.mint(
-            getPlayerAddress(_to),
-            tournamentTokenIds,
-            tournamentId
-        );
-        tournamentTokenIds++;
-    }
-
-    /**
-     * @dev Function to get amont of Pong the Goat owns
-     * @return amount of Pong the Goat owns
-     */
-
-    function getGoatBalance() public view returns (uint256) {
-        return goatNft.getNftBalance();
-    }
-
-    /**
-     * @dev Function to update Goat NFT
-     * @param winner: winner address
-     */
-
-    function updateGoatNft(address winner) internal onlyOwner {
-        goatNft.updateGoatNft(winner);
-    }
-
-    /**
      * @dev Function to report tournament
      * @param endTimestamp: end timestamp of the tournament
      * @param matchIds: array of match ids (match have to be already
@@ -348,10 +363,17 @@ j
 
     function reportTournament(
         uint256 endTimestamp,
-        uint256[] memory matchIds,
+        uint16[] memory matchIds,
         address winner
     ) public onlyOwner {
-        mintTournamentNft(winner, tournamentTokenIds);
+        mintTournamentNft(winner, tournamentTokenIds); //replace with matt implementation
+        Tournament tempTournament = fillTournamentStruct(
+            endTimestamp,
+            matchIds,
+            tournamentTokenIds,
+            winner
+        );
+        globalTournamentsArray.push(tempTournament);
         emit TournamentReported(
             tournamentTokenIds,
             endTimestamp,
@@ -359,5 +381,75 @@ j
             winner
         );
         tournamentTokenIds++;
+    }
+
+    /**
+     * @dev Function to fill tournament struct
+     * @param endTimestamp: end timestamp of the tournament
+     * @param matchIds: array of match ids
+     * @param winner: winner address
+     * @param tournamentId: tournament id
+     * @return Tournament struct
+     */
+
+    function fillTournamentStruct(
+        uint32 endTimestamp,
+        uint16[] memory matchIds,
+        uint16 tournamentId,
+        address winner
+    ) internal returns (Tournament) {
+        Tournament memory tempTournament = Tournament({
+            endTimestamp: endTimestamp,
+            matchIds: matchIds,
+            tournamentId: tournamentId,
+            winner: winner
+        });
+        return tempTournament;
+    }
+
+    /**
+     * @dev Function to get tournament by id
+     * @param tournamentId: tournament id
+     * @return array of tournaments
+     */
+
+    function getTournamentById(
+        uint16 tournamentId
+    ) public view returns (Tournament memory) {
+        for (uint i = 0; i < globalTournamentsArray.length; i++) {
+            if (globalTournamentsArray[i].tournamentId == tournamentId) {
+                return globalTournamentsArray[i];
+            }
+        }
+        revert("Tournament not found");
+    }
+
+    /**
+     * @dev Function to get tournament by winner
+     * @param winner: winner address
+     * @return array of tournaments
+     */
+
+    function getTournamentByWinner(
+        address winner
+    ) public view returns (Tournament[] memory) {
+        uint256 size = 0;
+        for (uint i = 0; i < globalTournamentsArray.length; i++) {
+            if (globalTournamentsArray[i].winner == winner) {
+                size++;
+            }
+        }
+        if (size == 0) {
+            revert("No tournaments found for the winner");
+        }
+        Tournament[] memory playerTournaments = new Tournament[](size);
+        uint256 index = 0;
+        for (uint i = 0; i < globalTournamentsArray.length; i++) {
+            if (globalTournamentsArray[i].winner == winner) {
+                playerTournaments[index] = globalTournamentsArray[i];
+                index++;
+            }
+        }
+        return playerTournaments;
     }
 }
