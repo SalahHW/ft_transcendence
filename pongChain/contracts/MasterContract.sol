@@ -95,7 +95,7 @@ contract MasterContract is Ownable {
         address indexed winner,
         uint8 player1Score,
         uint8 player2Score,
-        uint16 indexed matchId
+        uint16 matchId
     );
 
     /**
@@ -200,14 +200,14 @@ contract MasterContract is Ownable {
             pongToken.balanceOf(goatNft.getGoatAddress()) <
             pongToken.balanceOf(winner)
         ) {
-            transferNft(winner);
+            goatNft.transferNft(goatNft.getGoatAddress(), winner);
         }
         address loser = (getPlayerAddress(player1) != winner)
             ? getPlayerAddress(player1)
             : getPlayerAddress(player2);
         uint256 amountToBurn = calculateBurnAmount(pongToken.balanceOf(loser));
-        pongToken._burn(loser, amountToBurn);
-        Match tempMatch = fillMatchStruct(
+        pongToken.burn(loser, amountToBurn);
+        Match memory tempMatch = fillMatchStruct(
             player1,
             player2,
             winner,
@@ -222,7 +222,6 @@ contract MasterContract is Ownable {
             winner,
             player1Score,
             player2Score,
-            matchId,
             matchId
         );
     }
@@ -245,7 +244,7 @@ contract MasterContract is Ownable {
         uint8 player1Score,
         uint8 player2Score,
         uint16 matchId
-    ) internal returns (Match) {
+    ) internal returns (Match memory) {
         Match memory tempMatch = Match({
             player1: getPlayerAddress(player1),
             player2: getPlayerAddress(player2),
@@ -365,12 +364,12 @@ contract MasterContract is Ownable {
      */
 
     function reportTournament(
-        uint256 endTimestamp,
+        uint32 endTimestamp,
         uint16[] memory matchIds,
         address winner
     ) public onlyOwner {
-        mintTnt(winner, tournamentTokenIds);
-        Tournament tempTournament = fillTournamentStruct(
+        tournamentNft.mintTnt(winner, tournamentTokenIds);
+        Tournament memory tempTournament = fillTournamentStruct(
             endTimestamp,
             matchIds,
             tournamentTokenIds,
@@ -400,7 +399,7 @@ contract MasterContract is Ownable {
         uint16[] memory matchIds,
         uint16 tournamentId,
         address winner
-    ) internal returns (Tournament) {
+    ) internal returns (Tournament memory) {
         Tournament memory tempTournament = Tournament({
             endTimestamp: endTimestamp,
             matchIds: matchIds,
