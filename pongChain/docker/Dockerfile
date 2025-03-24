@@ -1,6 +1,6 @@
 FROM node:18
 
-RUN apt-get update && apt-get upgrade && apt-get install -y \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y \
     git \
     build-essential \
     python3 \
