@@ -29,4 +29,14 @@ contract PongToken is ERC20, Ownable {
     function mint(address to, uint256 amount) public onlyOwner {
         _mint(to, amount);
     }
+
+    /**
+     * @dev Function to burn tokens
+     * @param from: address to burn tokens
+     * @param amount: amount to burn
+     */
+
+    function burn(address from, uint256 amount) public onlyOwner {
+        _burn(from, amount);
+    }
 }
