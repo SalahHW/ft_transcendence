@@ -14,8 +14,12 @@ contract GoatNft is ERC721, ERC721URIStorage, Ownable {
     constructor() ERC721("GoatToken", "GOAT") {
         goat = msg.sender;
         _mint(msg.sender, tokenId);
-		_setTokenURI(tokenId, "ipfs://bafkreidxqrthlwphtx4lmxyzg7spjv4m3qrymxradrn3446gz6u727mtfy/goat.png");
+		_setTokenURI(tokenId, "ipfs://bafkreigyctqe5fb456qcfydg6pfy6zdh626eid4f5znwf6yj6rnjlzbq5a/GoatNFT.json");
     }
+
+	function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
+    	return super.tokenURI(tokenId);
+	}
 
     function updateGoat(
         address _newGoat
