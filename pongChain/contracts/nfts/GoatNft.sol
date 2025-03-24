@@ -39,7 +39,11 @@ contract GoatNft is ERC721, Ownable {
         return goat;
     }
 
-    function getBalance() public returns (uint256) {
+    function getGoatAddress() public view returns (address) {
+        return goat;
+    }
+
+    function getBalance() public view returns (uint256) {
         return balance;
     }
 }
