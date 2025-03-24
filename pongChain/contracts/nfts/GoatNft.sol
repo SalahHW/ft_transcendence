@@ -6,25 +6,23 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract GoatNft is ERC721, Ownable {
     address public goat;
-    uint256 public tokenId = 299;
+    uint256 public TnttokenId = 299;
 
     event Transfert(address indexed from, address indexed to, uint256 amount);
 
     constructor() ERC721("GoatToken", "GOAT") {
         goat = msg.sender;
-        _mint(msg.sender, tokenId);
+        _mint(msg.sender, TnttokenId);
     }
 
-    function updateGoat(
-        address _newGoat
-    ) external onlyOwner {
+    function updateGoat(address _newGoat) external onlyOwner {
         transferNft(goat, _newGoat);
         goat = _newGoat;
     }
 
     function transferNft(address _from, address _to) public onlyOwner {
-        safeTransferFrom(_from, _to, tokenId);
-        emit Transfert(_from, _to, tokenId);
+        safeTransferFrom(_from, _to, TnttokenId);
+        emit Transfert(_from, _to, TnttokenId);
         goat = _to;
     }
 
@@ -37,7 +35,7 @@ contract GoatNft is ERC721, Ownable {
         address spender,
         uint256 tokenId
     ) internal view override {
-        if (spender != owner()) {
+        if (spender != Ownable.owner()) {
             revert("Only admin can transfer tokens");
         }
     }
