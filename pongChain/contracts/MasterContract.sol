@@ -244,7 +244,7 @@ contract MasterContract is Ownable {
         uint8 player1Score,
         uint8 player2Score,
         uint16 matchId
-    ) internal returns (Match memory) {
+    ) internal view returns (Match memory) {
         Match memory tempMatch = Match({
             player1: getPlayerAddress(player1),
             player2: getPlayerAddress(player2),
@@ -345,7 +345,7 @@ contract MasterContract is Ownable {
 
     function calculateBurnAmount(
         uint256 balance
-    ) internal onlyOwner returns (uint256) {
+    ) internal pure returns (uint256) {
         if (balance <= 10) {
             return 0;
         } else if (balance < 20) {
@@ -399,7 +399,7 @@ contract MasterContract is Ownable {
         uint16[] memory matchIds,
         uint16 tournamentId,
         address winner
-    ) internal returns (Tournament memory) {
+    ) internal pure returns (Tournament memory) {
         Tournament memory tempTournament = Tournament({
             endTimestamp: endTimestamp,
             matchIds: matchIds,
