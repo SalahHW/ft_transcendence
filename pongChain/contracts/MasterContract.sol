@@ -198,8 +198,11 @@ contract MasterContract is Ownable {
         );
         require(winner != address(0), "Winner address is invalid");
         pongToken.mint(winner, 10);
-        if (goatNft.getBalance() < pongToken.balanceOf(winner)) {
-            transferNft(winner, goatNft.getGoatAddress());
+        if (
+            pongToken.balanceOf(goatNft.getGoatAddress()) <
+            pongToken.balanceOf(winner)
+        ) {
+            transferNft(winner);
         }
         address loser = (getPlayerAddress(player1) != winner)
             ? getPlayerAddress(player1)
