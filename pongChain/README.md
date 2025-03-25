@@ -99,7 +99,6 @@ Une couverture **intégrale (100 %)** est attendue ; vous verrez un tableau se
 \`\`\`
 npx hardhat coverage
 
----------------------|----------|----------|----------|----------|----------------|
 File                 |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
 ---------------------|----------|----------|----------|----------|----------------|
  contracts/          |      100 |      100 |      100 |      100 |                |
