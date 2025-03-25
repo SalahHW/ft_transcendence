@@ -61,10 +61,22 @@ Ce dépôt propose une architecture complète pour :
 - **Hardhat Test** : commande `npx hardhat test` qui exécute la suite Mocha de tests unitaires.  
 - **Hardhat Coverage** : via le plugin [solidity-coverage](https://github.com/sc-forks/solidity-coverage), qui mesure la couverture du code Solidity (statements, branches, fonctions, lignes).
 
+**Resultat npx hardhat coverage**
+
+---------------------|----------|----------|----------|----------|----------------|
+File                 |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
+---------------------|----------|----------|----------|----------|----------------|
+ contracts/          |      100 |      100 |      100 |      100 |                |
+  MasterContract.sol |      100 |      100 |      100 |      100 |                |
+ contracts/nfts/     |      100 |      100 |      100 |      100 |                |
+  GoatNft.sol        |      100 |      100 |      100 |      100 |                |
+  TournamentNft.sol  |      100 |      100 |      100 |      100 |                |
+ contracts/tokens/   |      100 |      100 |      100 |      100 |                |
+  PongToken.sol      |      100 |      100 |      100 |      100 |                |
+---------------------|----------|----------|----------|----------|----------------|
+All files            |      100 |      100 |      100 |      100 |                |
+---------------------|----------|----------|----------|----------|----------------|
+
 ---
 
-## Installation
 
-1. **Installer** les dépendances (Hardhat, etc.) :  
-   ```bash
-   npm install
