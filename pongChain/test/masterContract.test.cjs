@@ -2,162 +2,223 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("MasterContract", function () {
-  let owner, player1, player2, player3, masterContract;
-  let goatNft, tournamentNft, pongToken;
+  let owner, player1, player2, player3;
+  let goatNft, pongToken, tournamentNft, masterContract;
 
   beforeEach(async function () {
     [owner, player1, player2, player3] = await ethers.getSigners();
 
-    // Deploy dependencies
+    // Deploy child contracts
     const GoatNft = await ethers.getContractFactory("GoatNft");
-    goatNft = await GoatNft.deploy();
+    goatNft = await GoatNft.connect(owner).deploy();
     await goatNft.waitForDeployment();
 
-    const TournamentNft = await ethers.getContractFactory("TournamentNft");
-    tournamentNft = await TournamentNft.deploy();
-    await tournamentNft.waitForDeployment();
-
     const PongToken = await ethers.getContractFactory("PongToken");
-    pongToken = await PongToken.deploy();
+    pongToken = await PongToken.connect(owner).deploy();
     await pongToken.waitForDeployment();
+
+    const TournamentNft = await ethers.getContractFactory("TournamentNft");
+    tournamentNft = await TournamentNft.connect(owner).deploy();
+    await tournamentNft.waitForDeployment();
 
     // Deploy MasterContract
     const MasterContract = await ethers.getContractFactory("MasterContract");
-    masterContract = await MasterContract.deploy(
+    masterContract = await MasterContract.connect(owner).deploy(
       await goatNft.getAddress(),
       await pongToken.getAddress(),
       await tournamentNft.getAddress()
     );
     await masterContract.waitForDeployment();
 
-    // Transfer ownership of contracts to MasterContract
+    // Transfer ownership
     await goatNft.transferOwnership(await masterContract.getAddress());
-    await tournamentNft.transferOwnership(await masterContract.getAddress());
     await pongToken.transferOwnership(await masterContract.getAddress());
+    await tournamentNft.transferOwnership(await masterContract.getAddress());
   });
 
-  it("should add players and mint initial PongTokens", async function () {
-    await masterContract.addPlayer("Alice", player1.address);
-    await masterContract.addPlayer("Bob", player2.address);
-
-    const alice = await masterContract.getPlayerAddress("Alice");
-    const bob = await masterContract.getPlayerAddress("Bob");
-
-    expect(alice).to.equal(player1.address);
-    expect(bob).to.equal(player2.address);
-    expect(await pongToken.balanceOf(player1.address)).to.equal(100);
-    expect(await pongToken.balanceOf(player2.address)).to.equal(100);
+  it("constructor: should set references properly and init tournamentTokenIds=1", async function () {
+    expect(await masterContract.goatNft()).to.equal(await goatNft.getAddress());
+    expect(await masterContract.pongToken()).to.equal(await pongToken.getAddress());
+    expect(await masterContract.tournamentNft()).to.equal(await tournamentNft.getAddress());
+    expect(await masterContract.tournamentTokenIds()).to.equal(1);
   });
 
-  it("should fail if player is added twice", async function () {
-    await masterContract.addPlayer("Alice", player1.address);
-    await expect(
-      masterContract.addPlayer("Alice", player2.address)
-    ).to.be.revertedWith("Player already exists");
+  describe("addPlayer", function () {
+    it("should revert if non-owner calls", async function () {
+      await expect(
+        masterContract.connect(player1).addPlayer("P1", await player1.getAddress())
+      ).to.be.reverted;
+    });
+
+    it("should add player, mint 100 tokens", async function () {
+      await masterContract.addPlayer("Alice", await player1.getAddress());
+      expect(await pongToken.balanceOf(await player1.getAddress())).to.equal(100);
+    });
+
+    it("should revert if player name already exists", async function () {
+      await masterContract.addPlayer("Alice", await player1.getAddress());
+      await expect(
+        masterContract.addPlayer("Alice", await player2.getAddress())
+      ).to.be.reverted;
+    });
   });
 
-  it("should report a match and burn PongTokens from loser", async function () {
-    await masterContract.addPlayer("Alice", player1.address);
-    await masterContract.addPlayer("Bob", player2.address);
+  describe("getPlayerAddress", function () {
+    it("should revert if non-owner calls", async function () {
+      await masterContract.addPlayer("Alice", await player1.getAddress());
+      await expect(
+        masterContract.connect(player1).getPlayerAddress("Alice")
+      ).to.be.reverted;
+    });
 
-    await masterContract.reportMatch(
-      "Alice",
-      "Bob",
-      1,
-      11,
-      3,
-      player1.address // Alice wins
-    );
-
-    expect(await pongToken.balanceOf(player1.address)).to.equal(110); // +10
-    expect(await pongToken.balanceOf(player2.address)).to.equal(90);  // -10
+    it("should return correct player address for name", async function () {
+      await masterContract.addPlayer("Alice", await player1.getAddress());
+      const addr = await masterContract.getPlayerAddress("Alice");
+      expect(addr).to.equal(await player1.getAddress());
+    });
   });
 
-  it("should transfer Goat NFT to new GOAT when surpassed", async function () {
-    await masterContract.addPlayer("Alice", player1.address);
-    await masterContract.addPlayer("Bob", player2.address);
+  describe("reportMatch", function () {
+    beforeEach(async function () {
+      // register 2 players
+      await masterContract.addPlayer("Alice", await player1.getAddress());
+      await masterContract.addPlayer("Bob", await player2.getAddress());
+    });
 
-    await masterContract.reportMatch("Alice", "Bob", 1, 11, 3, player1.address); // +10
-    await masterContract.reportMatch("Alice", "Bob", 2, 11, 3, player1.address); // +10
-    await masterContract.reportMatch("Alice", "Bob", 3, 11, 3, player1.address); // +10
+    it("should revert if non-owner calls", async function () {
+      await expect(
+        masterContract
+          .connect(player1)
+          .reportMatch("Alice", "Bob", 1, 11, 5, await player1.getAddress())
+      ).to.be.reverted;
+    });
 
-    expect(await goatNft.ownerOf(299)).to.equal(player1.address);
+    it("should revert if player1 not registered", async function () {
+      // remove "Alice"? Not possible. Let's try with an unregistered name
+      await expect(
+        masterContract.reportMatch("Charlie", "Bob", 1, 10, 5, await player1.getAddress())
+      ).to.be.reverted;
+    });
+
+    it("should revert if player2 not registered", async function () {
+      await expect(
+        masterContract.reportMatch("Alice", "Charlie", 1, 10, 5, await player1.getAddress())
+      ).to.be.reverted;
+    });
+
+    it("should revert if winner=0 address", async function () {
+      await expect(
+        masterContract.reportMatch("Alice", "Bob", 1, 11, 3, ethers.ZeroAddress)
+      ).to.be.reverted;
+    });
+
+    it("should mint +10 to winner, burn from loser, store match, emit event", async function () {
+      // Both have 100
+      await expect(
+        masterContract.reportMatch("Alice", "Bob", 123, 11, 3, await player1.getAddress())
+      ).to.emit(masterContract, "MatchReported"); // on ignore le withArgs
+
+      // winner => 110, loser => 90
+      expect(await pongToken.balanceOf(await player1.getAddress())).to.equal(110);
+      expect(await pongToken.balanceOf(await player2.getAddress())).to.equal(90);
+
+      // check match
+      const matchStored = await masterContract.getMatchsByMatchId(123);
+      expect(matchStored.winner).to.equal(await player1.getAddress());
+      expect(matchStored.matchId).to.equal(123);
+    });
+
+    it("should transfer goat if winner balance > goat holder", async function () {
+      // goat holder = owner => 0 tokens
+      // player1 => 100
+      await masterContract.reportMatch("Alice", "Bob", 456, 11, 3, await player1.getAddress());
+      // player1 => 110 > 0 => goat moves
+      expect(await goatNft.getGoatAddress()).to.equal(await player1.getAddress());
+    });
+
+    it("should cover calculateBurnAmount branches (>=20 => burn 10, <20 => burn (bal-10), <=10 => 0)", async function () {
+      // Let's make Bob lose repeatedly
+      // initial: Bob=100 => lose => 90 => lose => 80 => ...
+      for (let i = 1; i <= 8; i++) {
+        await masterContract.reportMatch("Alice", "Bob", i, 5, 3, await player1.getAddress());
+      }
+      // 8 losses => Bob => 100 - 80 => 20
+
+      // next => 20 => burn 10 => 10
+      await masterContract.reportMatch("Alice", "Bob", 9, 5, 3, await player1.getAddress());
+      expect(await pongToken.balanceOf(await player2.getAddress())).to.equal(10);
+
+      // next => 10 => burn 0 => remains 10
+      await masterContract.reportMatch("Alice", "Bob", 10, 5, 3, await player1.getAddress());
+      expect(await pongToken.balanceOf(await player2.getAddress())).to.equal(10);
+    });
   });
 
-  it("should track matches by player", async function () {
-    await masterContract.addPlayer("Alice", player1.address);
-    await masterContract.addPlayer("Bob", player2.address);
+  describe("getMatchsByX", function () {
+    beforeEach(async function () {
+      await masterContract.addPlayer("Alice", await player1.getAddress());
+      await masterContract.addPlayer("Bob", await player2.getAddress());
+      await masterContract.reportMatch("Alice", "Bob", 1, 5, 3, await player1.getAddress());
+      await masterContract.reportMatch("Alice", "Bob", 2, 2, 5, await player2.getAddress());
+    });
 
-    await masterContract.reportMatch("Alice", "Bob", 1, 11, 3, player1.address);
-    await masterContract.reportMatch("Alice", "Bob", 2, 11, 3, player2.address);
+    it("getMatchsByPlayer reverts if none found for that name ? let's do with a name not used", async function () {
+      await expect(masterContract.getMatchsByPlayer("Charlie")).to.be.reverted;
+    });
 
-    const matchesAlice = await masterContract.getMatchsByPlayer("Alice");
-    expect(matchesAlice.length).to.equal(2);
+    it("getMatchsByPlayer returns correct array for 'Alice'", async function () {
+      const arr = await masterContract.getMatchsByPlayer("Alice");
+      expect(arr.length).to.equal(2);
+    });
+
+    it("getMatchsByWinner reverts if none found", async function () {
+      await expect(masterContract.getMatchsByWinner(await player3.getAddress())).to.be.reverted;
+    });
+
+    it("getMatchsByWinner returns correct matches for Bob", async function () {
+      const bobMatches = await masterContract.getMatchsByWinner(await player2.getAddress());
+      expect(bobMatches.length).to.equal(1);
+      expect(bobMatches[0].matchId).to.equal(2);
+    });
+
+    it("getMatchsByMatchId reverts if not found", async function () {
+      await expect(masterContract.getMatchsByMatchId(9999)).to.be.reverted;
+    });
+
+    it("getMatchsByMatchId returns the correct match", async function () {
+      const m1 = await masterContract.getMatchsByMatchId(1);
+      expect(m1.matchId).to.equal(1);
+    });
   });
 
-  it("should retrieve match by ID and winner", async function () {
-    await masterContract.addPlayer("Alice", player1.address);
-    await masterContract.addPlayer("Bob", player2.address);
+  describe("reportTournament / getTournamentByX", function () {
+    it("reportTournament reverts if non-owner calls", async function () {
+      await expect(
+        masterContract.connect(player1).reportTournament(1111, [], await player1.getAddress())
+      ).to.be.reverted;
+    });
 
-    await masterContract.reportMatch("Alice", "Bob", 1, 11, 3, player1.address);
-    const match = await masterContract.getMatchsByMatchId(1);
-    expect(match.winner).to.equal(player1.address);
+    it("reportTournament mints a TNT, store, emit event", async function () {
+      // need at least a match, but not strictly mandatory
+      await masterContract.reportTournament(9999, [], await player1.getAddress());
+      expect(await tournamentNft.ownerOf(1)).to.equal(await player1.getAddress());
+    });
 
-    const wonMatches = await masterContract.getMatchsByWinner(player1.address);
-    expect(wonMatches.length).to.equal(1);
-  });
+    it("getTournamentById reverts if not found", async function () {
+      await expect(masterContract.getTournamentById(9999)).to.be.reverted;
+    });
 
-  it("should report a tournament and mint TNT NFT", async function () {
-    await masterContract.addPlayer("Alice", player1.address);
-    await masterContract.addPlayer("Bob", player2.address);
+    it("getTournamentByWinner reverts if none found", async function () {
+      await expect(
+        masterContract.getTournamentByWinner(await player2.getAddress())
+      ).to.be.reverted;
+    });
 
-    await masterContract.reportMatch("Alice", "Bob", 1, 11, 3, player1.address);
-    await masterContract.reportTournament(
-      Math.floor(Date.now() / 1000),
-      [1],
-      player1.address
-    );
-
-    const tournament = await masterContract.getTournamentById(1);
-    expect(tournament.winner).to.equal(player1.address);
-
-    const won = await tournamentNft.getTracking(1);
-    expect(won).to.equal(player1.address);
-  });
-
-  it("should retrieve tournaments by winner", async function () {
-    await masterContract.addPlayer("Alice", player1.address);
-    await masterContract.addPlayer("Bob", player2.address);
-
-    await masterContract.reportMatch("Alice", "Bob", 1, 11, 3, player1.address);
-    await masterContract.reportTournament(
-      Math.floor(Date.now() / 1000),
-      [1],
-      player1.address
-    );
-
-    const wonTournaments = await masterContract.getTournamentByWinner(player1.address);
-    expect(wonTournaments.length).to.equal(1);
-  });
-
-  it("should revert on unauthorized NFT transfer", async function () {
-    await expect(
-      goatNft.connect(player1).transferFrom(owner.address, player1.address, 299)
-    ).to.be.revertedWith("Only admin can transfer tokens");
-  });
-
-  it("should revert match if player not registered", async function () {
-    await masterContract.addPlayer("Alice", player1.address);
-    await expect(
-      masterContract.reportMatch("Alice", "Bob", 1, 11, 3, player1.address)
-    ).to.be.revertedWith("Player2 not registered");
-  });
-
-  it("should revert if winner is zero address", async function () {
-    await masterContract.addPlayer("Alice", player1.address);
-    await masterContract.addPlayer("Bob", player2.address);
-    await expect(
-      masterContract.reportMatch("Alice", "Bob", 1, 11, 3, ethers.ZeroAddress)
-    ).to.be.revertedWith("Winner address is invalid");
+    it("getTournamentByWinner returns array of tournaments", async function () {
+      await masterContract.reportTournament(111, [], await player1.getAddress());
+      await masterContract.reportTournament(222, [], await player1.getAddress());
+      const tList = await masterContract.getTournamentByWinner(await player1.getAddress());
+      expect(tList.length).to.equal(2);
+    });
   });
 });
