@@ -1,128 +1,70 @@
-# Cahier des Charges – Projet Blockchain Pong
-
-## 📌 Objectif
-Créer une plateforme blockchain dédiée au jeu Pong avec des tokens (PONG), des NFTs, et un système de gestion complet via un contrat maître (`MasterContract`).
-
-## 📂 Structure du dossier `contracts`
-
-```
-contracts/
-├── MasterContract.sol
-├── managers/
-│   ├── MatchManager.sol
-│   └── TournamentManager.sol
-├── nfts/
-│   ├── GoatNft.sol
-│   └── TournamentNft.sol
-└── tokens/
-    └── PongToken.sol
-```
-
-## 📋 Contrats et Attributs
-
-### 🔹 MasterContract
-**Attributs :**
-- `mapping(string => address) public players;`
-- `mapping(uint256 => Match) public matches;`
-- `mapping(uint256 => uint256) public tournamentIds;`
-- `uint256 public tournamentTokenId;`
-
-### Struct :
-```solidity
-struct Match {
-  address player1;
-  address player2;
-  address winner;
-  uint256 timestamp;
-}
-```
-
-### Fonctions :
-- **addPlayer**
-  ```solidity
-  function addPlayer(string memory name, address player) external onlyOwner;
-  ```
-  Ajoute un joueur et lui assigne des tokens.
-
-- **getPlayerAddress**
-  ```solidity
-  function getPlayerAddress(string memory name) public view returns (address) onlyOwner;
-  ```
-  Retourne l'adresse Ethereum associée au joueur.
-
-- **mintTokens**
-  ```solidity
-  function mintTokens(address player, uint256 amount) external onlyOwner;
-  ```
-  Mint des tokens (PONG) pour un joueur spécifique.
-
-- **reportMatch**
-  ```solidity
-  function reportMatch(uint256 matchId, string memory player1, string memory player2, address winner) external onlyOwner;
-  ```
-  Enregistre les résultats d'un match et effectue les transferts de tokens.
-
-- **mintTournamentNft**
-  ```solidity
-  function mintTournamentNft(address winner, uint256 tournamentId) external onlyOwner;
-  ```
-  Mint un NFT pour récompenser le gagnant d'un tournoi.
-
-- **getGoatBalance**
-  ```solidity
-  function getGoatBalance(address pongTokenAddress) external view returns (uint256) onlyOwner;
-  ```
-  Récupère le solde du joueur désigné comme GOAT.
+# Projet : Suite de Contrats pour Jeu Pong et Tournois
 
 ---
 
-## 🔸 Contrat : PongToken
+## Table des matières
 
-**Rôle :** Jeton ERC20 du jeu.
-
-### Fonctions :
-- **mint**
-  ```solidity
-  function mint(address to, uint256 amount) external onlyOwner;
-  ```
----
-
-## 🔸 Contrat : **GoatNft**
-
-### Fonctions :
-- **updateGoat**
-  ```solidity
-  function updateGoat(address newGoat, uint256 newBalance) external onlyOwner;
-  ```
-  ```
-  constuctor a deux argument initialGoat et initialBalance qui serve a attribuer le nft a une personne en premier (nous msg.sender) // msg.sender suffit, initialGoat inutile //
-  Attention il faut faire en sorte que le nft ne soit que transferable par nous (msg.sender) (override ;)
-  ```
+1. [Aperçu](#aperçu)  
+2. [Contrats](#contrats)  
+3. [Hardhat & Outils](#hardhat--outils)  
+4. [Installation](#installation)  
+5. [Tests & Couverture](#tests--couverture)  
+6. [Déploiement](#déploiement)  
+7. [Licence](#licence)  
+8. [Contact](#contact)
 
 ---
 
-## 🔸 Contrat : **TournamentNft**
+## Aperçu
 
-**Rôle :** NFT décerné aux vainqueurs de tournois.
+Ce dépôt propose une architecture complète pour :
 
-### Fonctions :
-- **mintTournamentNft**
-  ```solidity
-  function mintTournamentNft(address winner, uint256 tournamentId) external onlyOwner;
-  ```
-  ```
-  Attention il faut faire en sorte que le nft ne soit transferable dans aucun cas.
-  ```
+- Gérer un jeton ERC20 servant de reward/pénalité (PongToken),  
+- Définir des NFT (ERC721) pour symboliser un objet spécial (GoatNft) et des trophées de tournois (TournamentNft),  
+- Piloter la logique centrale (MasterContract) : gestion des matchs, attribution/burn de tokens, transfert conditionnel du GoatNft, mint de TournamentNft, etc.
 
 ---
 
-## 🔒 Sécurité et Permissions
-- Le wallet de déploiement reste propriétaire de tous les contrats.
-- Le `MasterContract` possède uniquement les autorisations nécessaires pour interagir avec les autres contrats via des fonctions dédiées.
+## Contrats
+
+### 1. **GoatNft**
+
+- Contrat ERC721 (NFT) représentant un unique token «Goat» (ID=299 minté au déploiement).  
+- Transfert restreint via `_checkAuthorized(...)`, n’autorisant que l’owner du contrat.
+
+### 2. **PongToken**
+
+- Contrat ERC20 “PONG”.  
+- `onlyOwner` sur `mint`/`burn` (ownership transférable, par ex. au MasterContract).  
+- Sert à récompenser ou pénaliser les joueurs (gain/burn après un match).
+
+### 3. **TournamentNft**
+
+- Contrat ERC721 pour récompenser la victoire dans un tournoi.  
+- `mintTnt(...)` : `onlyOwner`.  
+- `_checkAuthorized(...)` limite aussi les transferts de ces NFT à l’owner du contrat (souvent le MasterContract).
+
+### 4. **MasterContract**
+
+- Contrat “chef d’orchestre” :  
+  - `addPlayer(...)` : inscrit un joueur, mint initial de PongToken.  
+  - `reportMatch(...)` : déclare un match, fait burn/mint de PongToken, transfère GoatNft si un joueur dépasse le solde du Goat holder.  
+  - `reportTournament(...)` : minter un TournamentNft pour le vainqueur d’un tournoi.  
+- Peut se voir transférer l’ownership des trois autres contrats (GoatNft, PongToken, TournamentNft) pour exécuter leurs fonctions `onlyOwner` de façon centralisée.
 
 ---
 
-## 🛠️ Déploiement
-Un script de déploiement assurera que :
-- Le wallet de déploiement reste le propriétaire.
-- `MasterContract` reçoit les autorisations nécessaires sur les contrats secondaires via des appels appropriés après déploiement.
+## Hardhat & Outils
+
+**Hardhat** est un framework de développement pour Ethereum.  
+- Il facilite la compilation de contrats, l’exécution de tests (Mocha + Chai), et le déploiement.  
+- **Hardhat Test** : commande `npx hardhat test` qui exécute la suite Mocha de tests unitaires.  
+- **Hardhat Coverage** : via le plugin [solidity-coverage](https://github.com/sc-forks/solidity-coverage), qui mesure la couverture du code Solidity (statements, branches, fonctions, lignes).
+
+---
+
+## Installation
+
+1. **Installer** les dépendances (Hardhat, etc.) :  
+   ```bash
+   npm install
