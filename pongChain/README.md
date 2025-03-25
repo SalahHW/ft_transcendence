@@ -117,16 +117,7 @@ All files            |      100 |      100 |      100 |      100 |              
 
 ## Déploiement
 
-Un script \`scripts/deploy.js\` peut être fourni pour :
-
-- Déployer \`GoatNft\`, \`PongToken\`, \`TournamentNft\`, \`MasterContract\`.  
-- Gérer un mécanisme de lecture/écriture d’adresses si vous ne souhaitez pas re-déployer systématiquement.  
-
-Exemple (sur un réseau local) :
-
-\`\`\`bash
-npx hardhat run scripts/deploy.js --network localhost
-\`\`\`
+work in progress
 
 ---
 
