@@ -94,7 +94,6 @@ describe("MasterContract", function () {
     });
 
     it("should revert if player1 not registered", async function () {
-      // remove "Alice"? Not possible. Let's try with an unregistered name
       await expect(
         masterContract.reportMatch("Charlie", "Bob", 1, 10, 5, await player1.getAddress())
       ).to.be.reverted;
@@ -113,42 +112,30 @@ describe("MasterContract", function () {
     });
 
     it("should mint +10 to winner, burn from loser, store match, emit event", async function () {
-      // Both have 100
       await expect(
         masterContract.reportMatch("Alice", "Bob", 123, 11, 3, await player1.getAddress())
-      ).to.emit(masterContract, "MatchReported"); // on ignore le withArgs
+      ).to.emit(masterContract, "MatchReported");
 
-      // winner => 110, loser => 90
       expect(await pongToken.balanceOf(await player1.getAddress())).to.equal(110);
       expect(await pongToken.balanceOf(await player2.getAddress())).to.equal(90);
 
-      // check match
       const matchStored = await masterContract.getMatchsByMatchId(123);
       expect(matchStored.winner).to.equal(await player1.getAddress());
       expect(matchStored.matchId).to.equal(123);
     });
 
     it("should transfer goat if winner balance > goat holder", async function () {
-      // goat holder = owner => 0 tokens
-      // player1 => 100
       await masterContract.reportMatch("Alice", "Bob", 456, 11, 3, await player1.getAddress());
-      // player1 => 110 > 0 => goat moves
       expect(await goatNft.getGoatAddress()).to.equal(await player1.getAddress());
     });
 
     it("should cover calculateBurnAmount branches (>=20 => burn 10, <20 => burn (bal-10), <=10 => 0)", async function () {
-      // Let's make Bob lose repeatedly
-      // initial: Bob=100 => lose => 90 => lose => 80 => ...
       for (let i = 1; i <= 8; i++) {
         await masterContract.reportMatch("Alice", "Bob", i, 5, 3, await player1.getAddress());
       }
-      // 8 losses => Bob => 100 - 80 => 20
-
-      // next => 20 => burn 10 => 10
       await masterContract.reportMatch("Alice", "Bob", 9, 5, 3, await player1.getAddress());
       expect(await pongToken.balanceOf(await player2.getAddress())).to.equal(10);
 
-      // next => 10 => burn 0 => remains 10
       await masterContract.reportMatch("Alice", "Bob", 10, 5, 3, await player1.getAddress());
       expect(await pongToken.balanceOf(await player2.getAddress())).to.equal(10);
     });
@@ -199,7 +186,6 @@ describe("MasterContract", function () {
     });
 
     it("reportTournament mints a TNT, store, emit event", async function () {
-      // need at least a match, but not strictly mandatory
       await masterContract.reportTournament(9999, [], await player1.getAddress());
       expect(await tournamentNft.ownerOf(1)).to.equal(await player1.getAddress());
     });
