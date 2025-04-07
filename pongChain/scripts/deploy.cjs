@@ -78,12 +78,31 @@ async function main() {
 
     // Step 6 — Export .env file for the Fastify server
     const envPath = path.join(__dirname, "..", ".env");
-    let envContent = "";
-    for (const [key, value] of Object.entries(addressesData[chainId])) {
-        envContent += `${key.toUpperCase()}_ADDRESS=${value}\n`;
+
+    // 1. Load existing lines
+    let existingEnv = {};
+    if (fs.existsSync(envPath)) {
+        const lines = fs.readFileSync(envPath, "utf-8").split("\n");
+        for (const line of lines) {
+            const [key, value] = line.split("=");
+            if (key && value) {
+                existingEnv[key] = value;
+            }
+        }
     }
-    fs.writeFileSync(envPath, envContent);
-    console.log("✅ .env file generated!");
+
+    // 2. Inject contract addresses
+    for (const [key, value] of Object.entries(addressesData[chainId])) {
+        existingEnv[`${key.toUpperCase()}_ADDRESS`] = value;
+    }
+
+    // 3. Rebuild and write back to .env
+    const newEnvContent = Object.entries(existingEnv)
+        .map(([key, value]) => `${key}=${value}`)
+        .join("\n") + "\n";
+
+    fs.writeFileSync(envPath, newEnvContent);
+    console.log("✅ .env file updated without losing PRIVATE_KEY / RPC_URL");
 
     // Step 7 — Write a deployment report for this chain
     const reportPath = path.join(__dirname, "..", `report-${chainId}.txt`);
