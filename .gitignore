@@ -1,5 +1,8 @@
-pongChain/node_modules/
+pongChain/node_modules
+pongChain/backend-blockchain/node_modules
 pongChain/.env
 pongChain/backend-blockchain/.env
 pongChain/coverage
+pongChain/coverage.json
+pongChain/artifacts
 
