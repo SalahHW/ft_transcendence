@@ -17,7 +17,7 @@ module.exports = async (fastify, opts) => {
         }
 
         try {
-            const player = await contract.getPlayer(request.params.name)
+            const player = await contract.getPlayerAddress(request.params.name)
             reply.send({ success: true, player })
         } catch (error) {
             request.log.error(error)

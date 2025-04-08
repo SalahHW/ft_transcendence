@@ -28,7 +28,7 @@ module.exports = async (fastify, opts) => {
             const receipt = await tx.wait();
             reply.send({
                 success: true,
-                transactionHash: receipt.transactionHash
+                transactionHash: tx.hash
             });
         } catch (error) {
             request.log.error(error);

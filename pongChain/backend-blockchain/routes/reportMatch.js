@@ -28,7 +28,7 @@ module.exports = async (fastify, opts) => {
             const receipt = await tx.wait();
             reply.send({
                 success: true,
-                transactionHash: receipt.transactionHash // copy paste in SnowTrace
+                transactionHash: tx.hash // copy paste in SnowTrace
             });
         } catch (error) {
             request.log.error(error);

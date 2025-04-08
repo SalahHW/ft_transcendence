@@ -186,6 +186,11 @@ contract MasterContract is Ownable {
         uint8 player2Score,
         address winner
     ) public onlyOwner {
+        for (uint i = 0; i < globalMatchesArray.length; i++) {
+            if (globalMatchesArray[i].matchId == matchId) {
+                revert("Match ID already used");
+            }
+        }
         require(
             getPlayerAddress(player1) != address(0),
             "Player1 not registered"
