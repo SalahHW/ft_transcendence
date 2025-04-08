@@ -267,7 +267,7 @@ contract MasterContract is Ownable {
      * @return array of matches played by the player
      */
 
-    function getMatchsByPlayer(
+    function getMatchesByPlayer(
         string memory player
     ) public view returns (Match[] memory) {
         uint256 size = 0;
@@ -302,7 +302,7 @@ contract MasterContract is Ownable {
      * @return array of matches won by the player
      */
 
-    function getMatchsByWinner(
+    function getMatchesByWinner(
         address winner
     ) public view returns (Match[] memory) {
         uint256 size = 0;
@@ -331,7 +331,7 @@ contract MasterContract is Ownable {
      * @return match details
      */
 
-    function getMatchsByMatchId(
+    function getMatchesByMatchId(
         uint16 matchId
     ) public view returns (Match memory) {
         for (uint i = 0; i < globalMatchesArray.length; i++) {
