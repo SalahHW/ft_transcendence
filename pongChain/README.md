@@ -137,6 +137,81 @@ Cela déploiera tous les contrats, transférera leur propriété au MasterContra
 ### Fuji (Avalanche Testnet)
 
 > *À venir : configuration réseau + script de déploiement conditionnel pour Fuji.*
+---
+## API Fastify
+
+L’API Fastify permet d’interagir avec le `MasterContract` sans toucher directement à Web3. Elle expose les fonctions du smart contract via des routes HTTP.
+
+### 📍 Base URL : `http://localhost:3000`
+
+### ▶️ POST `/add-player`
+Ajoute un joueur au système, enregistre son nom et son adresse, puis lui envoie 100 PongTokens.
+
+```json
+{
+  "name": "alice",
+  "address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+}
+```
+
+---
+
+### ▶️ POST `/report-match`
+Déclare un match, distribue les récompenses et met à jour l’état.
+
+```json
+{
+  "player1": "alice",
+  "player2": "bob",
+  "matchId": 1,
+  "player1Score": 10,
+  "player2Score": 6,
+  "winner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+}
+```
+
+---
+
+### ▶️ POST `/report-tournament`
+Déclare un tournoi terminé, minte un NFT pour le vainqueur.
+
+```json
+{
+  "endTimestamp": 1712345678,
+  "matchIds": [1],
+  "winner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+}
+```
+
+---
+
+### ▶️ GET `/player/:name`  
+Renvoie l’adresse Ethereum liée au nom du joueur.
+
+### ▶️ GET `/match/player/:name`  
+Liste les matchs où le joueur a participé.
+
+### ▶️ GET `/match/winner/:address`  
+Liste les matchs remportés par une adresse.
+
+### ▶️ GET `/match/:id`  
+Renvoie les détails d’un match via son ID.
+
+### ▶️ GET `/tournament/:id`  
+Renvoie les détails d’un tournoi par ID.
+
+### ▶️ GET `/tournament/winner/:address`  
+Liste tous les tournois gagnés par une adresse donnée.
+
+---
+
+### 🐳 Scripts intégrés au conteneur :
+
+- Démarrage de Hardhat local sur `localhost:3001`
+- Compilation automatique des contrats
+- Déploiement conditionnel des contrats (`scripts/deploy.cjs`)
+- Exportation des ABIs (`scripts/exportAbis.cjs`)
+- Lancement du serveur Fastify (`backend-blockchain/server.js`)
 
 ---
 
