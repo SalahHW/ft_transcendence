@@ -14,6 +14,8 @@ down:
 clean:
 	docker-compose down --volumes --remove-orphans
 	docker system prune -a --volumes -f
+	rm -rf ../artifacts/contracts
+	rm -rf ../addresses.json
 
 exec:
 	docker exec -ti my-hardhat bash

@@ -1,53 +1,51 @@
-// scripts/deploy.js
 const fs = require("fs");
 const path = require("path");
 const { ethers } = require("hardhat");
 
-// Fichier où l'on stocke les adresses déployées
+// Path to the addresses storage file
 const ADDRESSES_FILE = path.join(__dirname, "..", "addresses.json");
 
 async function main() {
-    // 1) Récupère le réseau (chainId)
+    // Step 1 — Detect the current network
     const network = await ethers.provider.getNetwork();
     const chainId = network.chainId.toString();
-    console.log(`Réseau actuel : ${network.name} (chainId: ${chainId})`);
+    console.log(`Current network: ${network.name} (chainId: ${chainId})`);
 
-    // 2) Charger (ou init) le JSON des adresses
+    // Step 2 — Load (or initialize) the address storage
     let addressesData;
     try {
         addressesData = JSON.parse(fs.readFileSync(ADDRESSES_FILE, "utf8"));
     } catch (err) {
-        console.log("Fichier addresses.json inexistant, on en crée un...");
+        console.log("addresses.json not found. Creating a new one...");
         addressesData = {};
     }
     if (!addressesData[chainId]) {
         addressesData[chainId] = {};
     }
 
-    // Fonction qui ne déploie un contrat que s'il n'est pas déjà déployé
+    // Deploy only if the contract is not already deployed
     async function deployIfNeeded(contractName, saveKey, ...constructorArgs) {
         if (addressesData[chainId][saveKey]) {
-            console.log(`[${contractName}] déjà déployé à : ${addressesData[chainId][saveKey]}`);
+            console.log(`[${contractName}] already deployed at: ${addressesData[chainId][saveKey]}`);
             return addressesData[chainId][saveKey];
         }
-        console.log(`[${contractName}] pas encore déployé, déploiement...`);
+
+        console.log(`[${contractName}] not deployed yet. Deploying...`);
         const Factory = await ethers.getContractFactory(contractName);
         const contract = await Factory.deploy(...constructorArgs);
         await contract.waitForDeployment();
         const deployedAddr = await contract.getAddress();
         addressesData[chainId][saveKey] = deployedAddr;
-        console.log(`[${contractName}] déployé à : ${deployedAddr}`);
+        console.log(`[${contractName}] deployed at: ${deployedAddr}`);
         return deployedAddr;
     }
 
-    // ───────────────────────────────────────────────────────────
-    // Déploiements
-    // ───────────────────────────────────────────────────────────
+    console.log("\n──────── Deploying contracts ────────");
+
+    // Step 3 — Deploy contracts in proper order
     const goatNftAddr = await deployIfNeeded("GoatNft", "goatNft");
     const pongTokenAddr = await deployIfNeeded("PongToken", "pongToken");
     const tournamentNftAddr = await deployIfNeeded("TournamentNft", "tournamentNft");
-
-    // MasterContract (supposons un constructor : (goatAddr, pongAddr, tournamentAddr))
     const masterContractAddr = await deployIfNeeded(
         "MasterContract",
         "masterContract",
@@ -56,43 +54,74 @@ async function main() {
         tournamentNftAddr
     );
 
-    // ───────────────────────────────────────────────────────────
-    // 3) Transférer l'ownership de GoatNft, PongToken, TournamentNft
-    //    vers le MasterContract (si ce n'est pas déjà fait)
-    // ───────────────────────────────────────────────────────────
-
-    // Helper pour un "transferOwnership" conditionnel
+    // Step 4 — Transfer ownership to MasterContract if necessary
     async function transferOwnershipIfNeeded(contractName, contractAddr) {
         const contract = await ethers.getContractAt(contractName, contractAddr);
         const currentOwner = await contract.owner();
         if (currentOwner.toLowerCase() !== masterContractAddr.toLowerCase()) {
-            console.log(`[${contractName}] transfert ownership -> MasterContract...`);
+            console.log(`[${contractName}] Transferring ownership to MasterContract...`);
             const tx = await contract.transferOwnership(masterContractAddr);
             await tx.wait();
-            console.log(`[${contractName}] ownership transféré au MasterContract`);
+            console.log(`[${contractName}] Ownership transferred to MasterContract`);
         } else {
-            console.log(`[${contractName}] ownership déjà au MasterContract`);
+            console.log(`[${contractName}] Ownership already belongs to MasterContract`);
         }
     }
 
-    // Transferer l’ownership de GoatNft
     await transferOwnershipIfNeeded("GoatNft", goatNftAddr);
-
-    // Transferer l’ownership de PongToken
     await transferOwnershipIfNeeded("PongToken", pongTokenAddr);
-
-    // Transferer l’ownership de TournamentNft
     await transferOwnershipIfNeeded("TournamentNft", tournamentNftAddr);
 
-    // 4) Écrire / Sauvegarder addresses.json
+    // Step 5 — Save updated addresses.json
     fs.writeFileSync(ADDRESSES_FILE, JSON.stringify(addressesData, null, 2));
-    console.log("addresses.json mis à jour !");
+    console.log("✅ addresses.json updated!");
+
+    // Step 6 — Export .env file for the Fastify server
+    const envPath = path.join(__dirname, "..", ".env");
+
+    // 1. Load existing lines
+    let existingEnv = {};
+    if (fs.existsSync(envPath)) {
+        const lines = fs.readFileSync(envPath, "utf-8").split("\n");
+        for (const line of lines) {
+            const [key, value] = line.split("=");
+            if (key && value) {
+                existingEnv[key] = value;
+            }
+        }
+    }
+
+    // 2. Inject contract addresses
+    for (const [key, value] of Object.entries(addressesData[chainId])) {
+        existingEnv[`${key.toUpperCase()}_ADDRESS`] = value;
+    }
+
+    // 3. Rebuild and write back to .env
+    const newEnvContent = Object.entries(existingEnv)
+        .map(([key, value]) => `${key}=${value}`)
+        .join("\n") + "\n";
+
+    fs.writeFileSync(envPath, newEnvContent);
+    console.log("✅ .env file updated without losing PRIVATE_KEY / RPC_URL");
+
+    // Step 7 — Write a deployment report for this chain
+    const reportPath = path.join(__dirname, "..", `report-${chainId}.txt`);
+    const reportContent = `
+Deployment report for chainId ${chainId}
+────────────────────────────────────────────
+GoatNft         : ${goatNftAddr}
+PongToken       : ${pongTokenAddr}
+TournamentNft   : ${tournamentNftAddr}
+MasterContract  : ${masterContractAddr}
+`.trim();
+    fs.writeFileSync(reportPath, reportContent);
+    console.log(`✅ Deployment report written to report-${chainId}.txt`);
 }
 
-// Appel principal
+// Execute the script
 main()
     .then(() => process.exit(0))
     .catch((err) => {
-        console.error("Erreur de déploiement:", err);
+        console.error("Deployment error:", err);
         process.exit(1);
     });

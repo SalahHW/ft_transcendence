@@ -186,6 +186,11 @@ contract MasterContract is Ownable {
         uint8 player2Score,
         address winner
     ) public onlyOwner {
+        for (uint i = 0; i < globalMatchesArray.length; i++) {
+            if (globalMatchesArray[i].matchId == matchId) {
+                revert("Match ID already used");
+            }
+        }
         require(
             getPlayerAddress(player1) != address(0),
             "Player1 not registered"
@@ -262,7 +267,7 @@ contract MasterContract is Ownable {
      * @return array of matches played by the player
      */
 
-    function getMatchsByPlayer(
+    function getMatchesByPlayer(
         string memory player
     ) public view returns (Match[] memory) {
         uint256 size = 0;
@@ -297,7 +302,7 @@ contract MasterContract is Ownable {
      * @return array of matches won by the player
      */
 
-    function getMatchsByWinner(
+    function getMatchesByWinner(
         address winner
     ) public view returns (Match[] memory) {
         uint256 size = 0;
@@ -326,7 +331,7 @@ contract MasterContract is Ownable {
      * @return match details
      */
 
-    function getMatchsByMatchId(
+    function getMatchesByMatchId(
         uint16 matchId
     ) public view returns (Match memory) {
         for (uint i = 0; i < globalMatchesArray.length; i++) {
