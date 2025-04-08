@@ -2,3 +2,6 @@
 *.env
 
 database
+
+package-lock.json
+node_modules
