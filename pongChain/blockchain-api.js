@@ -1,16 +1,32 @@
 import Fastify from 'fastify';
 import { ethers } from 'ethers';
 import dotenv from 'dotenv';
-
-console.log("Clé privée utilisée :", process.env.PRIVATE_KEY);
+dotenv.config();
 
 const fastify = Fastify({ logger: true });
+//const deployModule = await import(process.env.DEPLOY_PATH);
 
-const deployModule = await import(process.env.DEPLOY_PATH);
-const deploy = deployModule.default; // Récupérer la fonction exportée
-deploy();
-const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
-const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+ 
+
+
+
+
+
+
+
+
+
+
+
+//const deployModule = await import(process.env.DEPLOY_PATH);
+//const deploy = deployModule.default; // Récupérer la fonction exportée
+//deploy();
+//const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+//const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+
+//console.log("Clé privée utilisée :", wallet);
+
+
 
 // const contractAddress = process.env.CONTRACT_ADDRESS;
 // const abi = [
@@ -30,7 +46,7 @@ const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 //     }
 // });
 
-// Creation joueur
+//Creation joueur
 // fastify.post('/player', async function (request, reply) {
 //     try {
 //         const { playerName } = request.body;
@@ -40,7 +56,7 @@ const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 //     }
 // });
 
-// // Route pour récupérer le solde d'un joueur
+// Route pour récupérer le solde d'un joueur
 // fastify.get('/balance/:address', async function (request, reply) {
 //     try {
 //         const { address } = request.params;
@@ -78,7 +94,7 @@ const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 const start = async () => {
   try {
     await fastify.listen({ port: 3001 });
-    console.log(`🚀 Server running at http://127.0.0.1:3000`);
+    console.log(`🚀 Server running at http://127.0.0.1:3001`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
