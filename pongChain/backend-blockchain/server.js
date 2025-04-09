@@ -43,8 +43,6 @@ try {
     fastify.decorate('pongToken', pongToken);
     fastify.decorate('tournamentNft', tournamentNft);
 
-    // Register plugins
-    fastify.register(require('./plugins/bigIntSerializer'));
     // Register routes
     fastify.register(require('./routes/addPlayer'));
     fastify.register(require('./routes/reportMatch'));
