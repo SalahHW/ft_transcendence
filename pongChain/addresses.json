@@ -1,8 +1,8 @@
 {
-  "31337": {
-    "goatNft": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-    "pongToken": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
-    "tournamentNft": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
-    "masterContract": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
+  "43113": {
+    "goatNft": "0x86988934a4060D4FA64B55A035cB73Ca14f8ECA2",
+    "pongToken": "0x2FAF059e5A7d5B6dE38dBD274b8111643dFda36C",
+    "tournamentNft": "0x21B7887E803383495cA05eC80182Ec4F8741a65f",
+    "masterContract": "0x84EE6C1e3d79bd1Ea8C3f0e940058FCBFF6f84f2"
   }
 }
