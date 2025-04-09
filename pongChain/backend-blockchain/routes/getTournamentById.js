@@ -1,3 +1,6 @@
+const bigIntToString = require("../utils/bigIntToString");
+
+
 module.exports = async (fastify, opts) => {
     const contract = fastify.masterContract
 
@@ -18,7 +21,7 @@ module.exports = async (fastify, opts) => {
 
         try {
             const tournament = await contract.getTournamentById(request.params.id)
-            reply.send({ success: true, tournament })
+            reply.send(bigIntToString({ success: true, tournament }))
         } catch (error) {
             request.log.error(error)
             reply.status(500).send({ success: false, error: error.message })
