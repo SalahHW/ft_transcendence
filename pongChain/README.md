@@ -219,7 +219,7 @@ Renvoie l'addresse du propriétaire du nft lié au tournoi en question.
 - Déploiement conditionnel des contrats (`scripts/deploy.cjs`)
 - Exportation des ABIs (`scripts/exportAbis.cjs`)
 - Lancement du serveur Fastify (`backend-blockchain/server.js`)
-- Lancement du projet final (`start.cjs`) via `npm run start`
+- Lancement du projet final en une seule commande (`start.cjs`) via `npm run start`
 
 ---
 
