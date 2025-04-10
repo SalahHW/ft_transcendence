@@ -53,6 +53,9 @@ try {
     fastify.register(require('./routes/getMatchById'));
     fastify.register(require('./routes/getTournamentById'));
     fastify.register(require('./routes/getTournamentByWinner'));
+    fastify.register(require('./routes/getGoatOwner'));
+    fastify.register(require('./routes/getTournamentNftOwner'));
+
 
 
     // Optional health check
