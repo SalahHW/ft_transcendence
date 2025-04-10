@@ -1,6 +1,5 @@
 import config from './config/config.js';
 import Fastify from 'fastify';
-import fastifyJwt from '@fastify/jwt';
 import { initializeDatabase } from './models/db.js';
 import registerRoutes from './routes/index.js';
 
