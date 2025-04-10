@@ -5,14 +5,15 @@ module.exports = async (fastify, opts) => {
         schema: {
             body: {
                 type: 'object',
-                required: ['endTimestamp', 'matchIds', 'winner'],
+                required: ['endTimestamp', 'matchIds', 'winner', 'tournamentTokenIds'],
                 properties: {
                     endTimestamp: { type: 'integer', minimum: 0 },
                     matchIds: {
                         type: 'array',
                         items: { type: 'integer', minimum: 0 }
                     },
-                    winner: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' }
+                    winner: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' },
+                    tournamentTokenIds: { type: 'integer', minimum: 0 }
                 }
             }
         }
@@ -21,10 +22,10 @@ module.exports = async (fastify, opts) => {
             return reply.status(500).send({ error: 'Contract not initialized' });
         }
 
-        const { endTimestamp, matchIds, winner } = request.body;
+        const { endTimestamp, matchIds, winner, tournamentTokenIds } = request.body;
 
         try {
-            const tx = await contract.reportTournament(endTimestamp, matchIds, winner);
+            const tx = await contract.reportTournament(endTimestamp, matchIds, winner, tournamentTokenIds);
             const receipt = await tx.wait();
             reply.send({
                 success: true,
