@@ -120,12 +120,6 @@ contract MasterContract is Ownable {
     event PlayerAdded(string name, address playerAddress);
 
     /**
-     * @dev tournamentTokenIds to store tournament token ids
-     */
-
-    uint16 public tournamentTokenIds;
-
-    /**
      * @dev Constructor to initialize the contract
      * @param _goatNft: address of GoatNft contract
      * @param _pongToken: address of PongToken contract
@@ -140,7 +134,6 @@ contract MasterContract is Ownable {
         goatNft = GoatNft(_goatNft);
         pongToken = PongToken(_pongToken);
         tournamentNft = TournamentNft(_tournamentNft);
-        tournamentTokenIds = 1;
     }
 
     /**
@@ -371,8 +364,14 @@ contract MasterContract is Ownable {
     function reportTournament(
         uint32 endTimestamp,
         uint16[] memory matchIds,
-        address winner
+        address winner,
+        uint16 tournamentTokenIds
     ) public onlyOwner {
+        for (uint i = 0; i < globalTournamentsArray.length; i++) {
+            if (globalTournamentsArray[i].endTimestamp == endTimestamp) {
+                revert("Tournament already exists");
+            }
+        }
         tournamentNft.mintTnt(winner, tournamentTokenIds);
         Tournament memory tempTournament = fillTournamentStruct(
             endTimestamp,
@@ -387,7 +386,6 @@ contract MasterContract is Ownable {
             matchIds,
             winner
         );
-        tournamentTokenIds++;
     }
 
     /**
