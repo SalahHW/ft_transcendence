@@ -44,7 +44,6 @@ try {
     fastify.decorate('tournamentNft', tournamentNft);
 
     // Register routes
-    fastify.register(require('./plugins/bigIntSerializer'));
     fastify.register(require('./routes/addPlayer'));
     fastify.register(require('./routes/reportMatch'));
     fastify.register(require('./routes/reportTournament'));
@@ -54,6 +53,9 @@ try {
     fastify.register(require('./routes/getMatchById'));
     fastify.register(require('./routes/getTournamentById'));
     fastify.register(require('./routes/getTournamentByWinner'));
+    fastify.register(require('./routes/getGoatOwner'));
+    fastify.register(require('./routes/getTournamentNftOwner'));
+
 
 
     // Optional health check

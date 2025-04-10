@@ -203,6 +203,12 @@ Renvoie les détails d’un tournoi par ID.
 ### ▶️ GET `/tournament/winner/:address`  
 Liste tous les tournois gagnés par une adresse donnée.
 
+### ▶️ GET `/nft/goat/299`
+Renvoie l'addresse du propriétaire du GOAT nft.
+
+### ▶️ GET `/nft/tournament/:tournamentId`
+Renvoie l'addresse du propriétaire du nft lié au tournoi en question.
+
 ---
 
 ### 🐳 Scripts intégrés au conteneur :
@@ -212,6 +218,7 @@ Liste tous les tournois gagnés par une adresse donnée.
 - Déploiement conditionnel des contrats (`scripts/deploy.cjs`)
 - Exportation des ABIs (`scripts/exportAbis.cjs`)
 - Lancement du serveur Fastify (`backend-blockchain/server.js`)
+- Lancement du projet final (`start.cjs`) via `npm run start`
 
 ---
 
