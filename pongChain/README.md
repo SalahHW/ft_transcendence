@@ -179,7 +179,8 @@ Déclare un tournoi terminé, minte un NFT pour le vainqueur.
 {
   "endTimestamp": 1712345678,
   "matchIds": [1],
-  "winner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+  "winner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "tournamentTokenIds": 1
 }
 ```
 
