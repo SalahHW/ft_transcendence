@@ -7,7 +7,12 @@ import registerRoutes from './routes/index.js';
 const fastify = Fastify();
 
 // Initialize the database
-initializeDatabase();
+try {
+  initializeDatabase();
+} catch (err) {
+  console.error('Failed to initialize the database:');
+  process.exit(1);
+}
 
 fastify.register(registerRoutes);
 

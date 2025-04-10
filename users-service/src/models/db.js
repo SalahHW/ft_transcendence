@@ -2,7 +2,7 @@ import sqlite3 from 'sqlite3';
 
 const db = new sqlite3.Database('./database/db.sqlite', (err) => {
   if (err) {
-    console.error('Connection error to SQLite:', err.message);
+    throw new Error('Connection error to SQLite: ', err.message);
   } else {
     console.log('Connected to SQLite');
   }
@@ -20,7 +20,7 @@ const initializeDatabase = () => {
 
   db.run(createUsersTable, (err) => {
     if (err) {
-      console.log('Error creating users table:', err.message);
+      throw new Error('Error creating users table: ', err.message);
     } else {
       console.log('Database initialized');
     };
