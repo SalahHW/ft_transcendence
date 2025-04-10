@@ -1,43 +1,49 @@
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const fs = require('fs');
 const fastify = require('fastify')({ logger: true });
-
 const { JsonRpcProvider, Wallet, Contract } = require("ethers");
 
-// Load environment variables
-const {
-    RPC_URL,
-    PRIVATE_KEY,
-    GOATNFT_ADDRESS,
-    PONGTOKEN_ADDRESS,
-    TOURNAMENTNFT_ADDRESS,
-    MASTERCONTRACT_ADDRESS
-} = process.env;
+// Load minimal env (.env)
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
-// Initialize provider and signer
+const { RPC_URL, PRIVATE_KEY } = process.env;
+
+// Load contract addresses from addresses.json
+const ADDRESSES_PATH = path.join(__dirname, '..', 'addresses.json');
+const chainId = "43113"; // Fuji testnet
+
+let addresses = {};
+try {
+    addresses = JSON.parse(fs.readFileSync(ADDRESSES_PATH, 'utf-8'))[chainId];
+    if (!addresses) throw new Error("No addresses found for chainId 43113");
+} catch (err) {
+    console.error("❌ Failed to read addresses.json:", err.message);
+    process.exit(1);
+}
+
+// Setup provider and signer
 const provider = new JsonRpcProvider(RPC_URL);
 const wallet = new Wallet(PRIVATE_KEY, provider);
 
-// Load ABI from abi/ directory
-function loadAbi(contractName) {
-    const abiPath = path.join(__dirname, 'abi', `${contractName}.json`);
+// Load ABI from backend-blockchain/abi/
+function loadAbi(name) {
+    const abiPath = path.join(__dirname, 'abi', `${name}.json`);
     return JSON.parse(fs.readFileSync(abiPath, 'utf-8'));
 }
 
-// Instantiate contracts
 function loadContract(name, address) {
     const abi = loadAbi(name);
     return new Contract(address, abi, wallet);
 }
 
+// Load contracts
 try {
-    const masterContract = loadContract("MasterContract", MASTERCONTRACT_ADDRESS);
-    const goatNft = loadContract("GoatNft", GOATNFT_ADDRESS);
-    const pongToken = loadContract("PongToken", PONGTOKEN_ADDRESS);
-    const tournamentNft = loadContract("TournamentNft", TOURNAMENTNFT_ADDRESS);
+    const masterContract = loadContract("MasterContract", addresses.MASTERCONTRACT_ADDRESS);
+    const goatNft = loadContract("GoatNft", addresses.GOATNFT_ADDRESS);
+    const pongToken = loadContract("PongToken", addresses.PONGTOKEN_ADDRESS);
+    const tournamentNft = loadContract("TournamentNft", addresses.TOURNAMENTNFT_ADDRESS);
 
-    // Make contracts available to routes
+    // Make contracts accessible in routes
     fastify.decorate('masterContract', masterContract);
     fastify.decorate('goatNft', goatNft);
     fastify.decorate('pongToken', pongToken);
@@ -56,14 +62,12 @@ try {
     fastify.register(require('./routes/getGoatOwner'));
     fastify.register(require('./routes/getTournamentNftOwner'));
 
-
-
-    // Optional health check
-    fastify.get('/status', async (request, reply) => {
-        reply.send({ status: 'online', network: RPC_URL });
+    // Health check route
+    fastify.get('/status', async () => {
+        return { status: 'online', network: RPC_URL };
     });
 
-    // Launch the Fastify server
+    // Start the Fastify server
     const start = async () => {
         try {
             await fastify.listen({ port: 3000, host: '0.0.0.0' });
@@ -75,9 +79,7 @@ try {
     };
 
     start();
-
 } catch (error) {
     console.error("❌ Failed to initialize contracts:", error.message);
     process.exit(1);
 }
-
