@@ -1,4 +1,4 @@
-import { db } from '../models/db.js';
+import { db } from '../models/initDb.js';
 
 export const fetchUsers = async () => {
   return new Promise((resolve, reject) => {

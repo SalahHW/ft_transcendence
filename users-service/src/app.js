@@ -1,6 +1,6 @@
 import config from './config/config.js';
 import Fastify from 'fastify';
-import { initializeDatabase } from './models/db.js';
+import { initializeDatabase } from './models/initDb.js';
 import registerRoutes from './routes/index.js';
 
 const fastify = Fastify();
