@@ -13,9 +13,11 @@ export const createUser = async (request, reply) => {
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = await insertUser(username, hashedPassword);
+    console.log(`new user created (#${newUser.id} ${newUser.username})`);
     reply.statusCode = 201;
     reply.send({ id: newUser.id, username: newUser.username });
   } catch (err) {
+    console.error(err.message);
     if (err.code === "SQLITE_CONSTRAINT") {
       reply.statusCode = 409;
       reply.send({ error: "Username already exists" });
