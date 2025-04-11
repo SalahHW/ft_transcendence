@@ -1,6 +1,8 @@
-import { renderLogin } from "./components/login";
+import ApiTestPage from "./components/testsAPI/ApiTestPage"
 
-const appElement = document.getElementById("app");
-if (appElement) {
-	appElement.appendChild(renderLogin());
-}
+document.addEventListener("DOMContentLoaded", () => {
+	const apiTestPage = new ApiTestPage("app");
+	apiTestPage.render();
+	console.log("API Test Page loaded ✅");
+});
+
