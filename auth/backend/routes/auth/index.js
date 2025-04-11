@@ -3,4 +3,5 @@ export default async function authRoutes(app) {
     await app.register(import('./me.js'));
     await app.register(import('./register.js'));
     await app.register(import('./verifyToken.js'));
+    await app.register(import('./refresh.js'));
 }
