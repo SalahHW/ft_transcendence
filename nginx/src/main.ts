@@ -1,4 +1,4 @@
-import ApiTestPage from "./components/testsAPI/ApiTestPage"
+import ApiTestPage from "./page/ApiTestPage"
 
 document.addEventListener("DOMContentLoaded", () => {
 	const apiTestPage = new ApiTestPage("app");

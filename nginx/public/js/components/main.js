@@ -1,4 +1,4 @@
-import ApiTestPage from "./page/ApiTestPage";
+import ApiTestPage from "./ApiTestPage";
 document.addEventListener("DOMContentLoaded", function () {
     var apiTestPage = new ApiTestPage("app");
     apiTestPage.render();

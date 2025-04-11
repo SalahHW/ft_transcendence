@@ -34,14 +34,16 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+import UserServiceAPI from "../api/userService";
 var UserForm = /** @class */ (function () {
     function UserForm(containerId) {
         this._container = document.getElementById(containerId);
+        this._userService = new UserServiceAPI();
         if (!this._container)
             throw new Error("Container ".concat(containerId, " note found"));
     }
     UserForm.prototype.render = function () {
-        this._container.innerHTML = /* HTML */ "\n\t\t<form id=\"create-user-form\" class=\"space-y-4\">\n\t\t\t<div>\n\t\t\t<label class=\"block text-sm font-medium text-gray-700\">Name</label>\n\t\t\t<input type=\"text\" id=\"user-name\" class=\"mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500\" required>\n\t\t\t</div>\n\n\t\t\t<div>\n\t\t\t<label class=\"block text-sm font-medium text-gray-700\">Email</label>\n\t\t\t<input type=\"email\" id=\"user-email\" class=\"mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500\" required>\n\t\t\t</div>\n\n\t\t\t<button type=\"submit\" class=\"inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500\">\n\t\t\tCreate User\n\t\t\t</button>\n\t\t</form>\n\t\t";
+        this._container.innerHTML = /* HTML */ "\n\t\t\t<form id=\"create-user-form\" class=\"space-y-4\">\n\t\t\t\t<div>\n\t\t\t\t\t<label class=\"block text-sm font-medium text-gray-700\">Name</label>\n\t\t\t\t\t<input type=\"text\" id=\"user-name\" class=\"mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500\" required>\n\t\t\t\t</div>\n\n\t\t\t\t<div>\n\t\t\t\t\t<label class=\"block text-sm font-medium text-gray-700\">Email</label>\n\t\t\t\t\t<input type=\"email\" id=\"user-email\" class=\"mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500\" required>\n\t\t\t\t</div>\n\n\t\t\t\t<button type=\"submit\" class=\"inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500\">\n\t\t\t\t\tCreate User\n\t\t\t\t</button>\n\t\t\t</form>\n\t\t";
         this._attachEventListeners();
     };
     UserForm.prototype._attachEventListeners = function () {
@@ -61,16 +63,60 @@ var UserForm = /** @class */ (function () {
                     /*
                     - insert create user API from user-service
                     - console.log the result
-                    - throw if error
-                    */
+    
                 }
                 catch (error) {
-                    console.log("Failed to create user ".concat(userData, ":"), error);
+                    console.log(`Failed to create user ${userData}:`, error);
+                }
+            })
+        }
+    
+    }
+                     }
+                /*
+                - insert create user API from user-service
+                - console.log the result
+
+            }
+            catch (error) {
+                console.log(`Failed to create user ${userData}:`, error);
+            }
+        })
+    }
+
+}
+                 finally {
                 }
                 return [2 /*return*/];
             });
         }); });
+        /*
+        - insert create user API from user-service
+        - console.log the result
+
+    }
+    catch (error) {
+        console.log(`Failed to create user ${userData}:`, error);
+    }
+})
+}
+
+}
+         
     };
     return UserForm;
 }());
 export default UserForm;
+/*
+- insert create user API from user-service
+- console.log the result
+
+}
+catch (error) {
+console.log(`Failed to create user ${userData}:`, error);
+}
+})
+}
+
+}
+ 

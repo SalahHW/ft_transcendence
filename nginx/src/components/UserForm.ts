@@ -1,4 +1,4 @@
-import UserServiceAPI from "./userService";
+import UserServiceAPI from "../api/userService";
 
 export default class UserForm {
 	private _container: HTMLElement;

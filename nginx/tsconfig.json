@@ -12,8 +12,8 @@
 		"lib": ["dom", "dom.iterable", "es2019"],
 	},
 	"include": [
-		"./src/ts/*.ts",
-		"./src/ts/*/*.ts",
-		"./src/ts/*/*/*.ts"
+		"./src/*.ts",
+		"./src/*/*.ts",
+		"./src/*/*/*.ts"
 	]
 }

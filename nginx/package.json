@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "description": "Frontend SPA for ft_transcendence project",
   "scripts": {
-  "build": "tsc && npx @tailwindcss/cli -i ./src/input.css -o ./public/style.css",
+  "build": "npx @tailwindcss/cli -i ./src/style/input.css -o ./public/style/style.css && tsc",
   "ts-build": "tsc",
   "ts-watch": "tsc --watch",
-  "tw-build": "npx @tailwindcss/cli -i ./src/input.css -o ./public/style.css",
-  "tw-watch": "npx @tailwindcss/cli -i ./src/input.css -o ./public/style.css --watch"
+  "tw-build": "npx @tailwindcss/cli -i ./src/style/input.css -o ./public/style/style.css",
+  "tw-watch": "npx @tailwindcss/cli -i ./src/style/input.css -o ./public/style/style.css --watch"
   },
   "dependencies": {},
   "devDependencies": {
