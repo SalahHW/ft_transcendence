@@ -1,7 +1,7 @@
 import {
   getAllUsers as fetchAllUsers,
   getUserById as fetchUserById,
-} from "../../models/userModels/read.js";
+} from "../../models/userModels/readModels.js";
 
 export const getAllUsers = async (request, reply) => {
   try {

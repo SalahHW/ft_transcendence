@@ -1,5 +1,6 @@
-import config from "./config/config.js";
+import { PORT } from "./config/config.js";
 import Fastify from "fastify";
+import jwtPlugin from "./plugins/jwt.js";
 import { initializeDatabase } from "./models/initDb.js";
 import registerRoutes from "./routes/index.js";
 
@@ -7,19 +8,22 @@ const fastify = Fastify();
 
 // Initialize the database
 try {
+  // TODO: make it async
   initializeDatabase();
 } catch (err) {
   console.error("Failed to initialize the database:");
   process.exit(1);
 }
 
+// Register plugins
+await fastify.register(jwtPlugin);
 // Registers routes
-fastify.register(registerRoutes);
+await fastify.register(registerRoutes);
 
 // Start the server
 fastify.listen(
   {
-    port: config.PORT,
+    port: PORT,
     host: "0.0.0.0",
   },
   (err, address) => {

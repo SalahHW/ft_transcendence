@@ -1,5 +1,5 @@
-import getUsersRoutes from "./users/read.js";
-import postUsersRoutes from "./users/create.js";
+import getUsersRoutes from "./users/readRoutes.js";
+import postUsersRoutes from "./users/createRoutes.js";
 
 export default async function registerRoutes(fastify, options) {
   fastify.register(getUsersRoutes);

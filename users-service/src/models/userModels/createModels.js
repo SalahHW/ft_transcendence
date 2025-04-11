@@ -8,8 +8,8 @@ export const insertUser = async (username, password) => {
         console.error(err.message);
         reject(err);
       } else {
-        console.log(`New user created: ${username}`);
-        resolve({ id: this.lastID });
+        console.log(`New user created: #${this.lastID}:${username}`);
+        resolve({ id: this.lastID, username });
       }
     });
   });
