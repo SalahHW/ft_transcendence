@@ -48,7 +48,7 @@ POST /auth/login
 
 POST /auth/refresh  
 → À utiliser quand l’access token expire.  
-→ Prend un refresh token valide et renvoie une nouvelle paire access + refresh token.  
+→ Prend un refresh token valide dans le body et renvoie une nouvelle paire access + refresh token.  
 → Ne nécessite pas d’authentification préalable (le token suffit dans le body).
 
 GET /auth/me  
