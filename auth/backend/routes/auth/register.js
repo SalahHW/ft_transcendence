@@ -35,6 +35,6 @@ export default async function registerRoute(app) {
             { expiresIn: '7d' }
         );
 
-        return reply.status(201).send({ token });
+        return reply.status(201).send({ accessToken, refreshToken });
     });
 }
