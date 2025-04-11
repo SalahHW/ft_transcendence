@@ -1,9 +1,9 @@
-import { createUser } from "../../controllers/users/create.js";
+import { createUser } from "../../controllers/auth/register.js";
 
 export default async function postUsersRoutes(fastify, options) {
   fastify.route({
     method: "POST",
-    url: "/users",
+    url: "/register",
     handler: createUser,
   });
 }
