@@ -1,0 +1,6 @@
+Deployment report for chainId 43113
+────────────────────────────────────────────
+GoatNft         : 0x7CBEDf93993F3b9e150c65c0C28EF7912C1A17E0
+PongToken       : 0xE593686343fd730eb853B8f41ae2814093dc6Cc9
+TournamentNft   : 0x2FfD1e931d362f4aD6A72815fFAA81B74538a3ae
+MasterContract  : 0x28362E4FD7FbE7029BB4f480CbBDcA57F43B6eB9

@@ -599,6 +599,11 @@
         "internalType": "address",
         "name": "winner",
         "type": "address"
+      },
+      {
+        "internalType": "uint16",
+        "name": "tournamentTokenIds",
+        "type": "uint16"
       }
     ],
     "name": "reportTournament",
@@ -614,19 +619,6 @@
         "internalType": "contract TournamentNft",
         "name": "",
         "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "tournamentTokenIds",
-    "outputs": [
-      {
-        "internalType": "uint16",
-        "name": "",
-        "type": "uint16"
       }
     ],
     "stateMutability": "view",

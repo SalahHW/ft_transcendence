@@ -167,7 +167,7 @@ Déclare un match, distribue les récompenses et met à jour l’état.
   "player1Score": 10,
   "player2Score": 6,
   "winner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-}
+}x
 ```
 
 ---

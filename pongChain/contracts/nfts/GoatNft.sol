@@ -37,7 +37,7 @@ contract GoatNft is ERC721, ERC721URIStorage, Ownable {
         _mint(msg.sender, goatTokenId);
         _setTokenURI(
             goatTokenId,
-            "ipfs://bafkreigyctqe5fb456qcfydg6pfy6zdh626eid4f5znwf6yj6rnjlzbq5a/GoatNFT.json"
+            "https://aquamarine-able-possum-658.mypinata.cloud/ipfs/bafkreidjiakwmrwll7jcxkoxtltkoz76rnfdpcn5gqdg37747sdb7zrsua"
         );
     }
 
