@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import users from '../../models/users.js';
 
-export default async function authRoutes(app, options) {
+export default async function loginRoute(app) {
     app.post('/auth/login', async (request, reply) => {
         const { email, password } = request.body;
 
@@ -19,11 +19,16 @@ export default async function authRoutes(app, options) {
             return reply.status(401).send({ error: 'Invalid email or password' });
         }
 
-        const token = app.jwt.sign({
-            id: user.id,
-            email: user.email
-        });
+        const accessToken = app.jwt.sign(
+            { id: user.id, email: user.email },
+            { expiresIn: '15m' }
+        );
 
-        return reply.send({ token });
+        const refreshToken = app.jwt.sign(
+            { id: user.id },
+            { expiresIn: '7d' }
+        );
+
+        return reply.send({ accessToken, refreshToken });
     });
 }

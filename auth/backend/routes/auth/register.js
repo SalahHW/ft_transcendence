@@ -23,12 +23,17 @@ export default async function registerRoute(app) {
             is2fa: false
         };
 
-        users.push(newUser); // Ajout en mémoire (mock DB)
+        users.push(newUser); // In futur add to DB
 
-        const token = app.jwt.sign({
-            id: newUser.id,
-            email: newUser.email
-        });
+        const accessToken = app.jwt.sign(
+            { id: newUser.id, email: newUser.email },
+            { expiresIn: '15m' }
+        );
+
+        const refreshToken = app.jwt.sign(
+            { id: newUser.id },
+            { expiresIn: '7d' }
+        );
 
         return reply.status(201).send({ token });
     });
