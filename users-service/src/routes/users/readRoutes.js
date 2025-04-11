@@ -1,4 +1,4 @@
-import { getAllUsers, getUserById } from "../../controllers/users/read.js";
+import { getAllUsers, getUserById } from "../../controllers/users/readControllers.js";
 
 export default async function userRoutes(fastify, options) {
   fastify.route({
