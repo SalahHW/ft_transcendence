@@ -24,13 +24,40 @@ Microservice d'authentification basé sur Fastify avec support JWT.
 ⚙️ Fonctionnalités
 ===============================
 
-- Authentification via JWT
+- Authentification via JWT (access token + refresh token)
 - Middleware app.authenticate pour sécuriser les routes
 - Routes disponibles :
   POST /auth/register       → créer un compte
   POST /auth/login          → se connecter
+  POST /auth/refresh        → obtenir un nouveau access token à partir du refresh token
   GET  /auth/me             → récupérer les infos utilisateur à partir du token
-  GET  /auth/verify-token   → vérifier un token (pour les autres services)
+  GET  /auth/verify-token   → vérifier un token (usage par les autres services)
+
+===============================
+📚 Description des routes
+===============================
+
+POST /auth/register  
+→ Enregistre un nouvel utilisateur (email + mot de passe).  
+→ Retourne un access token (15 min) et un refresh token (7 jours).  
+⚠️ Si l’email est déjà utilisé, la requête échoue.
+
+POST /auth/login  
+→ Permet à un utilisateur existant de se connecter.  
+→ Si l’email + mot de passe sont corrects, retourne un access token et un refresh token.
+
+POST /auth/refresh  
+→ À utiliser quand l’access token expire.  
+→ Prend un refresh token valide et renvoie une nouvelle paire access + refresh token.  
+→ Ne nécessite pas d’authentification préalable (le token suffit dans le body).
+
+GET /auth/me  
+→ Route protégée. Retourne les informations de l’utilisateur connecté, extraites du token JWT.  
+→ Nécessite un header Authorization: Bearer <accessToken> valide.
+
+GET /auth/verify-token  
+→ Route protégée. Permet aux autres services de vérifier un token JWT et d’en extraire les infos utilisateur.  
+→ Retourne les données du user si le token est valide.
 
 ===============================
 🚀 Lancer le service
@@ -54,7 +81,8 @@ POST /auth/register
 
   Réponse :
     {
-      "token": "eyJhbGciOiJIUzI1NiIs..."
+      "accessToken": "...",
+      "refreshToken": "..."
     }
 
 POST /auth/login
@@ -67,13 +95,27 @@ POST /auth/login
 
   Réponse :
     {
-      "token": "eyJhbGciOiJIUzI1NiIs..."
+      "accessToken": "...",
+      "refreshToken": "..."
+    }
+
+POST /auth/refresh
+
+  Body JSON :
+    {
+      "refreshToken": "..."
+    }
+
+  Réponse :
+    {
+      "accessToken": "...",
+      "refreshToken": "..."
     }
 
 GET /auth/me
 
   Headers requis :
-    Authorization: Bearer <token>
+    Authorization: Bearer <accessToken>
 
   Réponse :
     {
@@ -87,7 +129,7 @@ GET /auth/me
 GET /auth/verify-token
 
   Headers requis :
-    Authorization: Bearer <token>
+    Authorization: Bearer <accessToken>
 
   Réponse si valide :
     {
@@ -120,6 +162,7 @@ backend/
 │       ├── login.js
 │       ├── me.js
 │       ├── register.js
+│       ├── refresh.js
 │       └── verify-token.js
 ├── models/
 │   └── users.js
@@ -130,10 +173,11 @@ backend/
 🧠 Fonctionnement interne
 ===============================
 
-- Création du token :
+- Création des tokens :
 
   Dans login.js ou register.js :
-    const token = app.jwt.sign({ id: user.id, email: user.email });
+    const accessToken = app.jwt.sign({ id: user.id, email: user.email }, { expiresIn: '15m' });
+    const refreshToken = app.jwt.sign({ id: user.id }, { expiresIn: '7d' });
 
 - Middleware authenticate (dans server.js) :
 
@@ -155,6 +199,7 @@ backend/
       await app.register(import('./login.js'));
       await app.register(import('./me.js'));
       await app.register(import('./register.js'));
+      await app.register(import('./refresh.js'));
       await app.register(import('./verify-token.js'));
     }
 
@@ -168,3 +213,4 @@ backend/
 - Les utilisateurs sont non persistés (mock JS).
 - Pour une vraie application, connecter une base de données.
 - JWT est stocké côté client (ex : navigateur ou microservice frontend).
+- Le système est entièrement stateless : aucun token n’est stocké côté serveur.
