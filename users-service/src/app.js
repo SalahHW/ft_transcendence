@@ -13,8 +13,10 @@ try {
   process.exit(1);
 }
 
+// Registers routes
 fastify.register(registerRoutes);
 
+// Start the server
 fastify.listen(
   {
     port: config.PORT,
