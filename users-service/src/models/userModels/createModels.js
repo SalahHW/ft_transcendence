@@ -4,11 +4,7 @@ export const insertUser = async (username, password) => {
   return new Promise((resolve, reject) => {
     const query = "INSERT INTO users (username, password) VALUES (?, ?)";
     db.run(query, [username, password], function (err) {
-      if (err) {
-        console.error(err.message);
-        reject(err);
-      }
-      console.log(`new user created: #${this.lastID}:${username}`);
+      if (err) reject(err);
       resolve({ id: this.lastID, username });
     });
   });
