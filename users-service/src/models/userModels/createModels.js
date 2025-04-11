@@ -7,10 +7,9 @@ export const insertUser = async (username, password) => {
       if (err) {
         console.error(err.message);
         reject(err);
-      } else {
-        console.log(`New user created: #${this.lastID}:${username}`);
-        resolve({ id: this.lastID, username });
       }
+      console.log(`new user created: #${this.lastID}:${username}`);
+      resolve({ id: this.lastID, username });
     });
   });
 };
