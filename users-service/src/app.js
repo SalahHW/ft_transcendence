@@ -1,7 +1,7 @@
-import config from './config/config.js';
-import Fastify from 'fastify';
-import { initializeDatabase } from './models/initDb.js';
-import registerRoutes from './routes/index.js';
+import config from "./config/config.js";
+import Fastify from "fastify";
+import { initializeDatabase } from "./models/initDb.js";
+import registerRoutes from "./routes/index.js";
 
 const fastify = Fastify();
 
@@ -9,19 +9,22 @@ const fastify = Fastify();
 try {
   initializeDatabase();
 } catch (err) {
-  console.error('Failed to initialize the database:');
+  console.error("Failed to initialize the database:");
   process.exit(1);
 }
 
 fastify.register(registerRoutes);
 
-fastify.listen({
-  port: config.PORT,
-  host: '0.0.0.0'
-}, (err, address) => {
-  if (err) {
-    fastify.log.error(err);
-    process.exit(1);
+fastify.listen(
+  {
+    port: config.PORT,
+    host: "0.0.0.0",
+  },
+  (err, address) => {
+    if (err) {
+      fastify.log.error(err);
+      process.exit(1);
+    }
+    fastify.log.info(`server listening on ${address}`);
   }
-  fastify.log.info(`server listening on ${address}`);
-})
+);
