@@ -1,1 +1,6 @@
 .images
+.DS_Store
+.vscode
+nginx/public/js
+nginx/public/style
+nginx/node_modules
