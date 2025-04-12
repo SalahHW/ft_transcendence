@@ -3,6 +3,7 @@ export default class CustomTerminal {
     private _outputElement!: HTMLElement; // Using definite assignment assertion
     private static _instance: CustomTerminal | null = null;
     private static _originalConsoleLog: (...data: any[]) => void;
+    private _keydownHandler: (event: KeyboardEvent) => void;
 
     constructor(containerId: string) {
         this._container = document.getElementById(containerId) as HTMLElement;
@@ -32,6 +33,19 @@ export default class CustomTerminal {
                 CustomTerminal._instance.log(message);
             }
         };
+
+        // Create keyboard event handler for Ctrl+L
+        this._keydownHandler = (event: KeyboardEvent) => {
+            // Check if Ctrl+L is pressed
+            if (event.ctrlKey && event.key === 'l') {
+                event.preventDefault(); // Prevent browser from handling this shortcut
+                this.clear();
+                console.log("Terminal cleared (Ctrl+L)");
+            }
+        };
+
+        // Add global keyboard event listener
+        document.addEventListener('keydown', this._keydownHandler);
     }
 
     // Method to restore the original console.log
@@ -39,16 +53,27 @@ export default class CustomTerminal {
         if (CustomTerminal._originalConsoleLog) {
             console.log = CustomTerminal._originalConsoleLog;
         }
+
+        // Remove keyboard event listener if instance exists
+        if (CustomTerminal._instance) {
+            document.removeEventListener('keydown', CustomTerminal._instance._keydownHandler);
+        }
     }
 
     private _createTerminal(): void {
         this._container.innerHTML = /* HTML */`
             <div class="custom-terminal flex flex-col h-full overflow-hidden rounded-lg bg-gray-900 text-gray-100">
-                <div class="custom-terminal-header flex justify-between items-center p-2 bg-gray-800 border-b border-gray-700">
-                    <h3 class="custom-terminal-title m-0 text-base font-medium">Terminal</h3>
-                    <button id="terminal-clear-btn" class="terminal-clear-btn bg-gray-700 text-white border-0 rounded px-2 py-1 text-sm cursor-pointer hover:bg-gray-600 transition-colors">Clear</button>
+                <div class="custom-terminal-header flex justify-between items-center px-3 py-2 bg-gradient-to-r from-gray-800 to-gray-900 border-b border-gray-700">
+                    <div class="flex items-center">
+                        <span class="text-green-400 mr-2">❯</span>
+                        <h3 class="m-0 font-mono font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">API Console</h3>
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        <button id="terminal-clear-btn" class="bg-gray-700 text-gray-300 border-0 rounded px-2 py-1 text-xs cursor-pointer hover:bg-gray-600 transition-colors">Clear (Ctrl+L)</button>
+                    </div>
                 </div>
-                <div id="terminal-output" class="custom-terminal-output flex-1 p-3 overflow-y-auto font-mono text-sm leading-6"></div>
+                <div id="terminal-output" class="flex-1 p-3 overflow-y-auto font-mono text-sm leading-6"></div>
             </div>
         `;
 
@@ -63,7 +88,7 @@ export default class CustomTerminal {
 
     log(message: string): void {
         const line = document.createElement('p');
-        line.className = 'terminal-line';
+        line.className = 'm-0 py-0.5 whitespace-pre-wrap break-words';
         line.textContent = message;
         this._outputElement.appendChild(line);
 
