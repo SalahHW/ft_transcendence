@@ -1,8 +1,7 @@
-import ApiTestPage from "./page/ApiTestPage"
+import ApiTestPage from "./views/ApiTestPage.js"
 
 document.addEventListener("DOMContentLoaded", () => {
-	const apiTestPage = new ApiTestPage("app");
+	const apiTestPage = new ApiTestPage("app-container");
 	apiTestPage.render();
 	console.log("API Test Page loaded ✅");
 });
-
