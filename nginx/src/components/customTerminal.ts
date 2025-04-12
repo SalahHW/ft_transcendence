@@ -40,7 +40,6 @@ export default class CustomTerminal {
             if (event.ctrlKey && event.key === 'l') {
                 event.preventDefault(); // Prevent browser from handling this shortcut
                 this.clear();
-                console.log("Terminal cleared (Ctrl+L)");
             }
         };
 
