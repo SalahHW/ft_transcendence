@@ -29,6 +29,11 @@ export default class UserServiceAPI {
 		return response.json();
 	}
 
+	/**
+	 * Creates a new user
+	 * @param user - The user object to create
+	 * @returns A promise that resolves to the created user
+	 */
 	async createUser(user: User): Promise<User> {
 		const response = await fetch(`${this._baseUrl}`, {
 			method: "POST",
@@ -44,6 +49,10 @@ export default class UserServiceAPI {
 		return response.json();
 	}
 
+	/**
+	 * Gets the current user
+	 * @returns A promise that resolves to the current user
+	 */
 	async getCurrentUser(): Promise<User> {
 		const response = await fetch(`${this._baseUrl}/me`, {
 			method: "GET",
@@ -57,6 +66,11 @@ export default class UserServiceAPI {
 		return response.json();
 	}
 
+	/**
+	 * Gets a user by ID
+	 * @param id - The ID of the user to get
+	 * @returns A promise that resolves to the user
+	 */
 	async getUser(id: number): Promise<User> {
 		const response = await fetch(`${this._baseUrl}/${id}`, {
 			method: "GET",
@@ -108,6 +122,11 @@ export default class UserServiceAPI {
 		}
 	}
 
+	/**
+	 * Gets users by username
+	 * @param username - The username of the users to get
+	 * @returns A promise that resolves to the users
+	 */
 	async getUsersByUsername(username: string): Promise<User[]> {
 		const response = await fetch(`${this._baseUrl}/list/username/${username}`, {
 			method: "GET",
