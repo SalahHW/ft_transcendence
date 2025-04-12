@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
 		"outDir": "./public/js/",
-		"module": "ES6",
+		"module": "ES2020",
 		"strict": true, // active tous les flags strict
 		"noImplicitAny": true, // signale les types implicites
 		"noImplicitReturns": true, // signale les fonctions sans return
@@ -13,6 +13,5 @@
 	},
 	"include": [
 		"./src/*.ts",
-		"./src/*/*.ts"
 	]
 }
