@@ -1,8 +1,16 @@
-interface User {
-	id: number;
-	username: string;
-	email: string;
-	created_at: string;
+export interface User {
+	id?: number;
+	username?: string;
+	email?: string;
+	created_at?: Date;
+}
+
+export interface Match {
+	userId?: number;
+	opponentId?: number;
+	userScore?: number;
+	opponentScore?: number;
+	date?: Date;
 }
 
 export default class UserServiceAPI {
@@ -18,7 +26,6 @@ export default class UserServiceAPI {
 		if (response.status !== 200) {
 			throw new Error(`Failed to fetch users: ${response.statusText}`);
 		}
-		console.log(`Users fetched: ${response.json()}`);
 		return response.json();
 	}
 
@@ -34,7 +41,6 @@ export default class UserServiceAPI {
 		if (response.status !== 201) {
 			throw new Error(`Failed to create user: ${response.statusText}`);
 		}
-		console.log(`User created: ${response.json()}`);
 		return response.json();
 	}
 
@@ -48,7 +54,6 @@ export default class UserServiceAPI {
 		if (response.status !== 200) {
 			throw new Error(`Failed to get current user: ${response.statusText}`);
 		}
-		console.log(`Current user: ${response.json()}`);
 		return response.json();
 	}
 
@@ -62,10 +67,15 @@ export default class UserServiceAPI {
 		if (response.status !== 200) {
 			throw new Error(`Failed to get user: ${response.statusText}`);
 		}
-		console.log(`User fetched: ${response.json()}`);
 		return response.json();
 	}
 
+	/**
+	 * Updates a user by ID
+	 * @param id - The ID of the user to update
+	 * @param user - The updated user object
+	 * @returns A promise that resolves to the updated user
+	 */
 	async updateUser(id:number, user: User): Promise<User> {
 		const response = await fetch(`${this._baseUrl}/${id}`, {
 			method: "PUT",
@@ -75,13 +85,17 @@ export default class UserServiceAPI {
 			},
 			body: JSON.stringify(user)
 		});
-			if (response.status !== 200) {
+		if (response.status !== 200) {
 			throw new Error(`Failed to update user: ${response.statusText}`);
 		}
-		console.log(`User updated: ${response.json()}`);
 		return response.json();
 	}
 
+	/**
+	 * Deletes a user by ID
+	 * @param id - The ID of the user to delete
+	 * @returns A promise that resolves to the deleted user
+	 */
 	async deleteUser(id: number): Promise<void> {
 		const response = await fetch(`${this._baseUrl}/${id}`, {
 			method: "DELETE",
@@ -92,7 +106,6 @@ export default class UserServiceAPI {
 		if (response.status !== 204) {
 			throw new Error(`Failed to delete user: ${response.statusText}`);
 		}
-		console.log(`User deleted: ${response.status}`);
 	}
 
 	async getUsersByUsername(username: string): Promise<User[]> {
@@ -105,7 +118,6 @@ export default class UserServiceAPI {
 		if (response.status !== 200) {
 			throw new Error(`Failed to get users by username: ${response.statusText}`);
 		}
-		console.log(`Users fetched by username: ${response.json()}`);
 		return response.json();
 	}
 }
