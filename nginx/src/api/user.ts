@@ -1,20 +1,35 @@
+/**
+ * Enum for user roles
+*/
+export enum UserRole {
+	USER = "user",
+	ADMIN = "admin",
+	MODERATOR = "moderator"
+}
+
+/**
+ * User object.
+ * @property `id` - The user's ID
+ * @property `username` - The user's username
+ * @property `email` - The user's email
+ * @property `createdAt` - The date and time the user was created
+ * @property `role` - Permission level of the user
+ * @property `matchesId` - The IDs of the matches the user has played (not match objects avoid surcharge. Use `MatchServiceAPI` to get match objects)
+ */
 export interface User {
 	id?: number;
 	username?: string;
 	email?: string;
-	created_at?: Date;
+	matcheId?: number[];
+	createdAt?: Date;
+	role?: UserRole;
 }
 
-export interface Match {
-	userId?: number;
-	opponentId?: number;
-	userScore?: number;
-	opponentScore?: number;
-	date?: Date;
-}
-
-export default class UserServiceAPI {
-	private _baseUrl: string = "http://localhost:3000/users";
+/**
+ * User service API.
+ */
+export default class UsersApi {
+	private _baseUrl: string = "http://localhost:3000/api/users";
 
 	async getAllUsers(): Promise<User[]> {
 		const response = await fetch(`${this._baseUrl}`, {
@@ -140,4 +155,3 @@ export default class UserServiceAPI {
 		return response.json();
 	}
 }
-

@@ -1,12 +1,12 @@
-import UserServiceAPI, { User } from "../api/userService.js";
+import UsersApi, { User } from "../../api/user.js";
 
 export default class CreateUserForm {
 	private _container: HTMLElement;
-	private _userService: UserServiceAPI;
+	private _userService: UsersApi;
 
 	constructor(containerId: string) {
 		this._container = document.getElementById(containerId) as HTMLElement;
-		this._userService = new UserServiceAPI();
+		this._userService = new UsersApi();
 		if (!this._container)
 			throw new Error(`Container ${containerId} not found`);
 	}
@@ -59,7 +59,8 @@ export default class CreateUserForm {
 			catch (error) {
 				if (error instanceof Error) {
 					console.log(`Failed to create user ${userData}:`, error.message);
-				} else {
+				}
+				else {
 					console.log(`Failed to create user ${userData}:`, error);
 				}
 			}

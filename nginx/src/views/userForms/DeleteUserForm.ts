@@ -1,12 +1,12 @@
-import UserServiceAPI from "../api/userService.js";
+import UsersApi from "../../api/user.js";
 
 export default class DeleteUserForm {
 	private _container: HTMLElement;
-	private _userService: UserServiceAPI;
+	private _userService: UsersApi;
 
 	constructor(containerId: string) {
 		this._container = document.getElementById(containerId) as HTMLElement;
-		this._userService = new UserServiceAPI();
+		this._userService = new UsersApi();
 		if (!this._container)
 			throw new Error(`Container ${containerId} not found`);
 	}
@@ -48,7 +48,8 @@ export default class DeleteUserForm {
 			catch (error) {
 				if (error instanceof Error) {
 					console.log(`Failed to delete user:`, error.message);
-				} else {
+				}
+				else {
 					console.log(`Failed to delete user:`, error);
 				}
 			}

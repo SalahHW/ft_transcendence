@@ -44,9 +44,15 @@ export default class Tabs {
 		// Create the base structure
 		this._createBaseStructure();
 
-		// Get the containers for the tabs and the content
-		const tabHeadersContainer = document.getElementById('tab-headers') as HTMLElement;
-		const tabContentsContainer = document.getElementById('tab-contents') as HTMLElement;
+		// Get the containers for the tabs and the content, relative to this component's container
+		const tabHeadersContainer = this._container.querySelector('#tab-headers') as HTMLElement;
+		const tabContentsContainer = this._container.querySelector('#tab-contents') as HTMLElement;
+
+		// Check if containers were found
+		if (!tabHeadersContainer || !tabContentsContainer) {
+			console.error("Tabs component internal structure not found within:", this._container);
+			return;
+		}
 
 		// Create the tabs and the content containers
 		tabTitles.forEach((title, index) => {
@@ -151,7 +157,8 @@ export default class Tabs {
 
 		if (typeof contentElement === 'string') {
 			this._contents[index].innerHTML = contentElement;
-		} else {
+		}
+		else {
 			this._contents[index].innerHTML = '';
 			this._contents[index].appendChild(contentElement);
 		}

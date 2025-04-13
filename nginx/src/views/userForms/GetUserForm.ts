@@ -1,12 +1,12 @@
-import UserServiceAPI from "../api/userService.js";
+import UsersApi from "../../api/user.js";
 
 export default class GetUserForm {
 	private _container: HTMLElement;
-	private _userService: UserServiceAPI;
+	private _userService: UsersApi;
 
 	constructor(containerId: string) {
 		this._container = document.getElementById(containerId) as HTMLElement;
-		this._userService = new UserServiceAPI();
+		this._userService = new UsersApi();
 		if (!this._container)
 			throw new Error(`Container ${containerId} not found`);
 	}
@@ -62,9 +62,10 @@ export default class GetUserForm {
 			}
 			catch (error) {
 				if (error instanceof Error) {
-					console.log(`Failed to get user by id or name:`, error.message);
-				} else {
-					console.log(`Failed to get user by id or name:`, error);
+					console.log(`Failed to get user by id or name: ${error.message}`);
+				}
+				else {
+					console.log(`Failed to get user by id or name: ${error}`);
 				}
 			}
 		});

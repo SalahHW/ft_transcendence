@@ -1,3 +1,5 @@
+import Tabs from "../components/tabs.js";
+
 export default class ApiTestPage {
 	private _container: HTMLElement;
 
@@ -36,50 +38,91 @@ export default class ApiTestPage {
 	}
 
 	private _renderLeftCardContent(): void {
-		import('../components/tabs.js').then((module) => {
-			const tabs = new module.default(
-				"left-card-content", ["Get User", "Create User", "Update User", "Delete User"]
-			);
+		const tabs = new Tabs(
+			"left-card-content", ["User API", "Match API"]
+		);
 
-			/* Get User */
-			const getUserContainer = document.createElement('div');
-			getUserContainer.id = "get-user-form-container";
-			tabs.setTabContent(0, getUserContainer);
+		const userContainer = document.createElement('div');
+		userContainer.id = "user-forms-container";
+		tabs.setTabContent(0, userContainer);
 
-			import('./GetUserForm.js').then((module) => {
-				const getUserForm = new module.default("get-user-form-container");
-				getUserForm.render();
-			});
+		this._renderUserForms();
 
-			/* Create User */
-			const createUserContainer = document.createElement('div');
-			createUserContainer.id = "create-user-form-container";
-			tabs.setTabContent(1, createUserContainer);
+		const matchContainer = document.createElement('div');
+		matchContainer.id = "match-forms-container";
+		tabs.setTabContent(1, matchContainer);
 
-			import('./CreateUserForm.js').then((module) => {
-				const userForm = new module.default("create-user-form-container");
-				userForm.render();
-			});
+		this._renderMatchForms();
+	}
 
-			/* Update User */
-			const updateUserContainer = document.createElement('div');
-			updateUserContainer.id = "update-user-form-container";
-			tabs.setTabContent(2, updateUserContainer);
+	private _renderUserForms(): void {
+		const tabs = new Tabs(
+			"user-forms-container", ["Get User", "Create User", "Update User", "Delete User"]
+		);
 
-			import('./UpdateUserForm.js').then((module) => {
-				const updateUserForm = new module.default("update-user-form-container");
-				updateUserForm.render();
-			});
+		/* Get User */
+		const getUserContainer = document.createElement('div');
+		getUserContainer.id = "get-user-form-container";
+		tabs.setTabContent(0, getUserContainer);
 
-			/* Delete User */
-			const deleteUserContainer = document.createElement('div');
-			deleteUserContainer.id = "delete-user-form-container";
-			tabs.setTabContent(3, deleteUserContainer);
+		import('./userForms/GetUserForm.js').then((module) => {
+			const getUserForm = new module.default("get-user-form-container");
+			getUserForm.render();
+		});
 
-			import('./DeleteUserForm.js').then((module) => {
-				const deleteUserForm = new module.default("delete-user-form-container");
-				deleteUserForm.render();
-			});
+		/* Create User */
+		const createUserContainer = document.createElement('div');
+		createUserContainer.id = "create-user-form-container";
+		tabs.setTabContent(1, createUserContainer);
+
+		import('./userForms/CreateUserForm.js').then((module) => {
+			const userForm = new module.default("create-user-form-container");
+			userForm.render();
+		});
+
+		/* Update User */
+		const updateUserContainer = document.createElement('div');
+		updateUserContainer.id = "update-user-form-container";
+		tabs.setTabContent(2, updateUserContainer);
+
+		import('./userForms/UpdateUserForm.js').then((module) => {
+			const updateUserForm = new module.default("update-user-form-container");
+			updateUserForm.render();
+		});
+
+		/* Delete User */
+		const deleteUserContainer = document.createElement('div');
+		deleteUserContainer.id = "delete-user-form-container";
+		tabs.setTabContent(3, deleteUserContainer);
+
+		import('./userForms/DeleteUserForm.js').then((module) => {
+			const deleteUserForm = new module.default("delete-user-form-container");
+			deleteUserForm.render();
+		});
+
+	}
+
+	private _renderMatchForms(): void {
+		const tabs = new Tabs(
+			"match-forms-container", ["Get Match", "Create Match"]
+		);
+
+		const getMatchContainer = document.createElement('div');
+		getMatchContainer.id = "get-match-form-container";
+		tabs.setTabContent(0, getMatchContainer);
+
+		import('./matchForms/GetMatchForm.js').then((module) => {
+			const getMatchForm = new module.default("get-match-form-container");
+			getMatchForm.render();
+		});
+
+		const createMatchContainer = document.createElement('div');
+		createMatchContainer.id = "create-match-form-container";
+		tabs.setTabContent(1, createMatchContainer);
+
+		import('./matchForms/CreateMatchForm.js').then((module) => {
+			const createMatchForm = new module.default("create-match-form-container");
+			createMatchForm.render();
 		});
 	}
 
