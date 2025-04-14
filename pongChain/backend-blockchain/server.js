@@ -49,6 +49,23 @@ try {
     fastify.decorate('pongToken', pongToken);
     fastify.decorate('tournamentNft', tournamentNft);
 
+    // Swagger plugins
+    fastify.register(require('@fastify/swagger'), {
+        mode: 'static',
+        specification: {
+            path: path.join(__dirname, 'openapi.yaml'), // ou change selon l'endroit où tu mets le fichier
+            baseDir: __dirname,
+        },
+    });
+
+    fastify.register(require('@fastify/swagger-ui'), {
+        routePrefix: '/docs',
+        uiConfig: {
+            docExpansion: 'list',
+            deepLinking: false,
+        },
+    });
+
     // Register routes
     fastify.register(require('./routes/addPlayer'));
     fastify.register(require('./routes/reportMatch'));
