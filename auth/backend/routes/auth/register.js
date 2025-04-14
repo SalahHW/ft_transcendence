@@ -4,6 +4,8 @@ import users from '../../models/users.js';
 export default async function registerRoute(app) {
     app.post('/auth/register', async (request, reply) => {
         const { email, password } = request.body;
+        console.log(email, password);
+        console.log('BODY:', request.body);
 
         if (!email || !password) {
             return reply.status(400).send({ error: 'Email and password are required' });
@@ -20,7 +22,8 @@ export default async function registerRoute(app) {
             id: users.length + 1,
             email,
             password: hashed,
-            is2fa: false
+            is2fa: false,
+            secret2fa: null
         };
 
         users.push(newUser); // In futur add to DB

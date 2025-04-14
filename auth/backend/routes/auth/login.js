@@ -19,6 +19,15 @@ export default async function loginRoute(app) {
             return reply.status(401).send({ error: 'Invalid email or password' });
         }
 
+        if (user.is2fa) {
+            const tempToken = app.jwt.sign(
+                { id: user.id, email: user.email, is2faValidated: false },
+                { expiresIn: '5m' }
+            );
+
+            return reply.send({ requires2fa: true, tempToken });
+        }
+
         const accessToken = app.jwt.sign(
             { id: user.id, email: user.email },
             { expiresIn: '15m' }
@@ -32,3 +41,4 @@ export default async function loginRoute(app) {
         return reply.send({ accessToken, refreshToken });
     });
 }
+
