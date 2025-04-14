@@ -1,231 +1,149 @@
-# Projet : Suite de Contrats pour Jeu Pong et Tournois
+# PongChain – Système Complet de Jeu et Tournois sur Blockchain
 
----
+## 🔍 Introduction
 
-## Table des matières
+PongChain est une suite de contrats intelligents développés en Solidity, destinés à gérer un écosystème de jeu compétitif basé sur des matchs de Pong et des tournois. L'infrastructure repose sur quatre contrats : GoatNft, PongToken, TournamentNft et MasterContract. Un backend Fastify expose ces fonctionnalités via une API REST pour une intégration facilitée.
 
-1. [Aperçu](#aperçu)  
-2. [Contrats](#contrats)  
-3. [Hardhat & Outils](#hardhat--outils)  
-4. [Installation](#installation)  
-5. [Tests & Couverture](#tests--couverture)  
-6. [Déploiement](#déploiement)  
-7. [Licence](#licence)  
+## ⚙️ Fonctionnalités principales
 
----
+- Jeton ERC20 utilisé pour les récompenses et pénalités (PongToken)
+- NFT ERC721 pour trophées de tournoi et possession GOAT (GoatNft, TournamentNft)
+- Contrat central (MasterContract) pour piloter les actions : matchs, tournois, mint/burn, transferts conditionnels
+- API Fastify exposant les méthodes du contrat
 
-## Aperçu
+## 💼 Contrats
 
-Ce dépôt propose une architecture complète pour :
+### GoatNft (ERC721)
+- NFT unique avec ID 299 minté au déploiement
+- Transfert réservé à l’owner via _checkAuthorized()
 
-- Gérer un jeton ERC20 servant de reward/pénalité (PongToken),  
-- Définir des NFT (ERC721) pour symboliser un objet spécial (GoatNft) et des trophées de tournois (TournamentNft),  
-- Piloter la logique centrale (MasterContract) : gestion des matchs, attribution/burn de tokens, transfert conditionnel du GoatNft, mint de TournamentNft, etc.
+### PongToken (ERC20)
+- Jeton utilitaire "PONG"
+- mint et burn protégés par onlyOwner
+- Transfert possible de l’ownership au MasterContract
 
----
+### TournamentNft (ERC721)
+- NFT à usage unique pour chaque tournoi gagné
+- Mint limité au owner (souvent MasterContract)
 
-## Contrats
+### MasterContract
+- Point d’entrée unique pour toute la logique du jeu
+- addPlayer : enregistre un joueur et lui attribue des tokens
+- reportMatch : traite un match, récompense le gagnant, transfère GoatNft si applicable
+- reportTournament : mint un NFT pour le gagnant
 
-### 1. **GoatNft**
+## 🤖 Backend API Fastify
 
-- Contrat ERC721 (NFT) représentant un unique token «Goat» (ID=299 minté au déploiement).  
-- Transfert restreint via `_checkAuthorized(...)`, n’autorisant que l’owner du contrat.
+### URL de base : http://localhost:3000
 
-### 2. **PongToken**
+#### POST /add-player
+Ajoute un joueur et lui attribue 100 PONG
 
-- Contrat ERC20 “PONG”.  
-- `onlyOwner` sur `mint`/`burn` (ownership transférable, par ex. au MasterContract).  
-- Sert à récompenser ou pénaliser les joueurs (gain/burn après un match).
-
-### 3. **TournamentNft**
-
-- Contrat ERC721 pour récompenser la victoire dans un tournoi.  
-- `mintTnt(...)` : `onlyOwner`.  
-- `_checkAuthorized(...)` limite aussi les transferts de ces NFT à l’owner du contrat (souvent le MasterContract).
-
-### 4. **MasterContract**
-
-- Contrat “chef d’orchestre” :  
-  - `addPlayer(...)` : inscrit un joueur, mint initial de PongToken.  
-  - `reportMatch(...)` : déclare un match, fait burn/mint de PongToken, transfère GoatNft si un joueur dépasse le solde du Goat holder.  
-  - `reportTournament(...)` : minter un TournamentNft pour le vainqueur d’un tournoi.  
-- Peut se voir transférer l’ownership des trois autres contrats (GoatNft, PongToken, TournamentNft) pour exécuter leurs fonctions `onlyOwner` de façon centralisée.
-
----
-
-## Hardhat & Outils
-
-**Hardhat** est un framework de développement pour Ethereum.  
-- Il facilite la compilation de contrats, l’exécution de tests (Mocha + Chai), et le déploiement.  
-- **Hardhat Test** : commande `npx hardhat test` qui exécute la suite Mocha de tests unitaires.  
-- **Hardhat Coverage** : via le plugin [solidity-coverage](https://github.com/sc-forks/solidity-coverage), qui mesure la couverture du code Solidity (statements, branches, fonctions, lignes).
-
----
-
-## Installation
-
-1. **Installer** les dépendances (Hardhat, etc.) :  
-   ```bash
-   npm install
-   ```
-   ou  
-   ```bash
-   yarn
-   ```
-
-2. **Compiler** :  
-   ```bash
-   npx hardhat compile
-   ```
-
----
-
-## Tests & Couverture
-
-- Pour exécuter les tests (Mocha/Chai) :  
-  ```bash
-  npx hardhat test
-  ```
-  Cela valide les fonctionnalités et les reverts attendus.
-
-- Pour **générer** le rapport de couverture (grâce à `solidity-coverage`) :  
-  ```bash
-  npx hardhat coverage
-  ```
-  Le rapport indique quelles parties de votre code ont été exécutées par les tests.  
-
-Une couverture **intégrale (100 %)** est attendue ; vous verrez un tableau semblable :
-
-```
-npx hardhat coverage
-
-File                 |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
----------------------|----------|----------|----------|----------|----------------|
- contracts/          |      100 |      100 |      100 |      100 |                |
-  MasterContract.sol |      100 |      100 |      100 |      100 |                |
- contracts/nfts/     |      100 |      100 |      100 |      100 |                |
-  GoatNft.sol        |      100 |      100 |      100 |      100 |                |
-  TournamentNft.sol  |      100 |      100 |      100 |      100 |                |
- contracts/tokens/   |      100 |      100 |      100 |      100 |                |
-  PongToken.sol      |      100 |      100 |      100 |      100 |                |
----------------------|----------|----------|----------|----------|----------------|
-All files            |      100 |      100 |      100 |      100 |                |
----------------------|----------|----------|----------|----------|----------------|
-```
-
----
-
-## Déploiement
-
-Le projet est conçu pour être déployé en premier lieu sur un réseau **local**, afin de tester l’ensemble des fonctionnalités avant toute mise en ligne sur le **Fuji Testnet** (Avalanche).
-
-### Déploiement local
-
-1. **Démarrer le réseau local avec 20 comptes** :
-```bash
-npx hardhat node
-```
-
-2. **Dans un autre terminal**, exécuter le script d’interaction :
-```bash
-npx hardhat run scripts/interact.cjs --network localhost
-```
-Cela déploiera tous les contrats, transférera leur propriété au MasterContract, et lancera une séquence de tests : ajout de joueur, match, tournoi.
-
-> 📝 Les adresses sont automatiquement sauvegardées dans `addresses.json` (créé si inexistant).
-
-### Fuji (Avalanche Testnet)
-
-> *À venir : configuration réseau + script de déploiement conditionnel pour Fuji.*
----
-## API Fastify
-
-L’API Fastify permet d’interagir avec le `MasterContract` sans toucher directement à Web3. Elle expose les fonctions du smart contract via des routes HTTP.
-
-### 📍 Base URL : `http://localhost:3000`
-
-### ▶️ POST `/add-player`
-Ajoute un joueur au système, enregistre son nom et son adresse, puis lui envoie 100 PongTokens.
-
-```json
+Body :
 {
   "name": "alice",
-  "address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+  "address": "0x..."
 }
-```
 
----
+#### POST /report-match
+Déclare un match
 
-### ▶️ POST `/report-match`
-Déclare un match, distribue les récompenses et met à jour l’état.
-
-```json
+Body :
 {
   "player1": "alice",
   "player2": "bob",
   "matchId": 1,
   "player1Score": 10,
   "player2Score": 6,
-  "winner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+  "winner": "0x..."
 }
-```
 
----
+#### POST /report-tournament
+Finalise un tournoi
 
-### ▶️ POST `/report-tournament`
-Déclare un tournoi terminé, minte un NFT pour le vainqueur.
-
-```json
+Body :
 {
   "endTimestamp": 1712345678,
   "matchIds": [1],
-  "winner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "winner": "0x...",
   "tournamentTokenIds": 1
 }
-```
 
----
+#### GET /player/:name
+Renvoie l'adresse du joueur
 
-### ▶️ GET `/player/:name`  
-Renvoie l’adresse Ethereum liée au nom du joueur.
+#### GET /match/player/:name
+Matchs joués par le joueur
 
-### ▶️ GET `/match/player/:name`  
-Liste les matchs où le joueur a participé.
+#### GET /match/winner/:address
+Matchs gagnés par adresse
 
-### ▶️ GET `/match/winner/:address`  
-Liste les matchs remportés par une adresse.
+#### GET /match/:id
+Détails d’un match
 
-### ▶️ GET `/match/:id`  
-Renvoie les détails d’un match via son ID.
+#### GET /tournament/:id
+Détails d’un tournoi
 
-### ▶️ GET `/tournament/:id`  
-Renvoie les détails d’un tournoi par ID.
+#### GET /tournament/winner/:address
+Tournois remportés par l’adresse
 
-### ▶️ GET `/tournament/winner/:address`  
-Liste tous les tournois gagnés par une adresse donnée.
+#### GET /nft/goat/299
+Propriétaire actuel du GoatNft
 
-### ▶️ GET `/nft/goat/299`
-Renvoie l'addresse du propriétaire du GOAT nft.
+#### GET /nft/tournament/:tournamentId
+Propriétaire du NFT de tournoi
 
-### ▶️ GET `/nft/tournament/:tournamentId`
-Renvoie l'addresse du propriétaire du nft lié au tournoi en question.
+## 🚀 Déploiement
 
----
+### Déploiement local
 
-### 🐳 Scripts intégrés au conteneur :
+npx hardhat node
 
-- Démarrage de Hardhat local sur `localhost:3001`
-- Compilation automatique des contrats
-- Déploiement conditionnel des contrats (`scripts/deploy.cjs`)
-- Exportation des ABIs (`scripts/exportAbis.cjs`)
-- Lancement du serveur Fastify (`backend-blockchain/server.js`)
-- Lancement du projet final en une seule commande (`start.cjs`) via `npm run start`
+npx hardhat run scripts/interact.cjs --network localhost
 
----
+Les adresses sont stockées dans addresses.json
 
-## Licence
+### Déploiement Fuji (Avalanche Testnet)
+WIP : script de déploiement conditionnel + configuration réseau
 
-Ce projet est sous licence **MIT** ou équivalente. Consultez le fichier `LICENSE` pour plus d’informations.
+## 📚 Tests & Couverture
 
----
+Lancer tous les tests :
+npx hardhat test
 
+Rapport de couverture :
+npx hardhat coverage
+
+Objectif : couverture 100% (statements, branches, fonctions, lignes)
+
+## 📁 Structure du projet
+
+project-root/
+├── contracts/
+│   ├── MasterContract.sol
+│   ├── nfts/
+│   │   ├── GoatNft.sol
+│   │   └── TournamentNft.sol
+│   └── tokens/
+│       └── PongToken.sol
+├── scripts/
+│   ├── interact.cjs
+│   ├── deploy.cjs
+│   └── exportAbis.cjs
+├── backend-blockchain/
+│   ├── server.js
+│   └── routes/
+├── addresses.json
+├── start.cjs
+└── hardhat.config.js
+
+## 🛠️ Lancement complet avec Docker
+
+Compilation + déploiement local + export ABIs + lancement serveur Fastify :
+npm run start
+
+Intégré dans l'image Docker avec Makefile supportant make all et make clean
+
+## 📄 Licence
+
+Ce projet est sous licence MIT. Voir le fichier LICENSE pour plus d’informations.
