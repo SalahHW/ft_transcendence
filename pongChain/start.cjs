@@ -3,7 +3,7 @@ const fs = require("fs");
 const { ethers, run } = require("hardhat");
 const { spawn } = require("child_process");
 
-const ROOT_DIR = __dirname; // <- racine du projet
+const ROOT_DIR = __dirname;
 const BACKEND_DIR = path.join(ROOT_DIR, "backend-blockchain");
 const SCRIPTS_DIR = path.join(ROOT_DIR, "scripts");
 const ADDRESSES_FILE = path.join(ROOT_DIR, "addresses.json");
