@@ -93,6 +93,17 @@ Propriétaire actuel du GoatNft
 #### GET /nft/tournament/:tournamentId
 Propriétaire du NFT de tournoi
 
+## 📖 Documentation Swagger
+
+Le service expose une documentation Swagger interactive sur :
+```
+http://localhost:3000/docs
+```
+
+Cette page vous permet de tester toutes les routes et d'explorer les schémas d'entrée et de sortie.
+
+Swagger est intégré via `@fastify/swagger` et `@fastify/swagger-ui`. Il lit les métadonnées (schemas) directement définies dans les routes.
+
 ## 🚀 Déploiement
 
 ### Déploiement local
