@@ -53,7 +53,7 @@ try {
     fastify.register(require('@fastify/swagger'), {
         mode: 'static',
         specification: {
-            path: path.join(__dirname, 'openapi.yaml'), // ou change selon l'endroit où tu mets le fichier
+            path: path.join(__dirname, 'openapi.yaml'),
             baseDir: __dirname,
         },
     });
