@@ -13,6 +13,10 @@ Microservice d'authentification basé sur Fastify avec support JWT.
   Framework web rapide et moderne pour Node.js, utilisé ici à la place d’Express.
   Il permet de gérer facilement les routes, middlewares et plugins (comme `@fastify/jwt`).
 
+- **2FA (Two-Factor Authentication)** :  
+  L'utilisateur peut activer une vérification par code TOTP (Google Authenticator, etc.)  
+  Même avec un mot de passe correct, il doit fournir un code temporaire à usage unique.
+
 - **Middleware authenticate** :
   Fonction enregistrée globalement qui vérifie la validité d’un JWT reçu.
   Si le token est bon, les données sont accessibles via `request.user`. Sinon, la route retourne `401 Unauthorized`.
@@ -20,6 +24,7 @@ Microservice d'authentification basé sur Fastify avec support JWT.
 ## ⚙️ Fonctionnalités
 
 - Authentification via JWT (access token + refresh token)
+- Authentification forte via 2FA (code TOTP)
 - Middleware `app.authenticate` pour sécuriser les routes
 - Routes disponibles :
   - `POST /auth/register`       → créer un compte
@@ -27,6 +32,10 @@ Microservice d'authentification basé sur Fastify avec support JWT.
   - `POST /auth/refresh`        → obtenir un nouveau access token à partir du refresh token
   - `GET  /auth/me`             → récupérer les infos utilisateur à partir du token
   - `GET  /auth/verify-token`   → vérifier un token (usage par les autres services)
+  - `POST /auth/2fa/setup`
+  - `POST /auth/2fa/verify`
+  - `GET /auth/2fa/status`
+  - `POST /auth/2fa/login` 
 
 ## 📚 Description des routes
 
@@ -51,6 +60,19 @@ Microservice d'authentification basé sur Fastify avec support JWT.
 ### `GET /auth/verify-token`
 → Route protégée. Permet aux autres services de vérifier un token JWT et d’en extraire les infos utilisateur.
 → Retourne les données du user si le token est valide.
+
+### `POST /auth/2fa/login`  
+→ À utiliser si la 2FA est activée. Prend un code TOTP et un `tempToken`, retourne alors access + refresh tokens.
+
+### `POST /auth/2fa/setup`  
+→ Génère une clé TOTP et retourne un QR Code + une clé manuelle.
+
+### `POST /auth/2fa/verify`  
+→ Active la 2FA si le code TOTP fourni est valide.
+
+### `GET /auth/2fa/status`  
+→ Retourne si 2FA est activée pour l’utilisateur courant.
+
 
 ## 🚀 Lancer le service
 
@@ -90,11 +112,87 @@ make all
 }
 ```
 
+**Réponse (si 2FA désactivée)** :
+```json
+{
+  "accessToken": "...",
+  "refreshToken": "..."
+}
+```
+
+**Réponse (si 2FA activée)** :
+```json
+{
+  "tempToken": "..."
+}
+```
+
+### POST `/auth/2fa/login`
+
+**Body JSON** :
+```json
+{
+  "tempToken": "...",
+  "code": "123456"
+}
+```
+
 **Réponse** :
 ```json
 {
   "accessToken": "...",
   "refreshToken": "..."
+}
+```
+
+### POST `/auth/2fa/setup`
+
+**Headers requis** :
+```
+Authorization: Bearer <accessToken>
+```
+
+**Réponse** :
+```json
+{
+  "qrCode": "data:image/png;base64,...",
+  "manualKey": "ABCD1234EFGH5678"
+}
+```
+
+### POST `/auth/2fa/verify`
+
+**Headers requis** :
+```
+Authorization: Bearer <accessToken>
+```
+
+**Body JSON** :
+```json
+{
+  "code": "123456"
+}
+```
+
+**Réponse** :
+```json
+{
+  "success": true,
+  "message": "2FA successfully enabled"
+}
+```
+
+### GET `/auth/2fa/status`
+
+**Headers requis** :
+```
+Authorization: Bearer <accessToken>
+```
+
+**Réponse** :
+```json
+{
+  "is2faEnabled": true
 }
 ```
 
