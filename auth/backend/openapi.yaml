@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Auth Service – ft_transcendence
   version: 1.0.0
-  description: API d’authentification basée sur Fastify avec JWT stateless.
+  description: API d’authentification basée sur Fastify avec JWT stateless + 2FA.
 
 servers:
   - url: http://localhost:4000
@@ -102,7 +102,7 @@ paths:
                   example: "123456"
       responses:
         '200':
-          description: Retourne access + refresh token si code correct
+          description: Access + refresh token si 2FA réussi
           content:
             application/json:
               schema:
@@ -169,7 +169,7 @@ paths:
 
   /auth/2fa/status:
     get:
-      summary: Vérifie si 2FA est activé pour l’utilisateur
+      summary: Vérifie si le 2FA est activé pour l’utilisateur
       security:
         - bearerAuth: []
       responses:
@@ -185,7 +185,7 @@ paths:
 
   /auth/refresh:
     post:
-      summary: Rafraîchit les tokens
+      summary: Rafraîchit les tokens JWT
       requestBody:
         required: true
         content:
@@ -210,16 +210,16 @@ paths:
                   refreshToken:
                     type: string
         '401':
-          description: Refresh token invalide
+          description: Refresh token invalide ou expiré
 
   /auth/me:
     get:
-      summary: Retourne les infos de l’utilisateur connecté
+      summary: Retourne les informations de l’utilisateur connecté
       security:
         - bearerAuth: []
       responses:
         '200':
-          description: Infos de l’utilisateur
+          description: Données utilisateur
           content:
             application/json:
               schema:
@@ -235,11 +235,11 @@ paths:
                       iat:
                         type: integer
         '401':
-          description: Token invalide ou manquant
+          description: Token manquant ou invalide
 
   /auth/verify-token:
     get:
-      summary: Vérifie la validité du token
+      summary: Vérifie un token JWT et retourne les infos utilisateur
       security:
         - bearerAuth: []
       responses:
@@ -252,6 +252,7 @@ paths:
                 properties:
                   valid:
                     type: boolean
+                    example: true
                   user:
                     type: object
                     properties:
@@ -262,7 +263,18 @@ paths:
                       iat:
                         type: integer
         '401':
-          description: Token invalide ou manquant
+          description: Token invalide
+
+  /auth/logout:
+    post:
+      summary: Déconnexion utilisateur (désactive le refresh token côté client)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Déconnexion réussie
+        '401':
+          description: Token invalide ou expiré
 
 components:
   securitySchemes:
