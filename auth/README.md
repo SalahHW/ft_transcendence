@@ -57,6 +57,9 @@ Microservice d'authentification basé sur Fastify avec support JWT.
 → Route protégée. Retourne les informations de l’utilisateur connecté, extraites du token JWT.
 → Nécessite un header `Authorization: Bearer <accessToken>` valide.
 
+### `GET /auth/logout`
+→ Deconnecte l'utilisateur.
+
 ### `GET /auth/verify-token`
 → Route protégée. Permet aux autres services de vérifier un token JWT et d’en extraire les infos utilisateur.
 → Retourne les données du user si le token est valide.
