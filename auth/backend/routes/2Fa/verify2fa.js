@@ -2,7 +2,7 @@ import speakeasy from 'speakeasy';
 import users from '../../models/users.js';
 
 export default async function verify2FARoute(app) {
-    app.post('/auth/verify-2fa', { preValidation: [app.authenticate] }, async (request, reply) => {
+    app.post('/auth/2fa/verify', { preValidation: [app.authenticate] }, async (request, reply) => {
         const { token } = request.body;
         const user = users.find(u => u.id === request.user.id);
 

@@ -3,7 +3,7 @@ import qrcode from 'qrcode';
 import users from '../../models/users.js';
 
 export default async function setup2FARoute(app) {
-    app.post('/auth/setup-2fa', { preValidation: [app.authenticate] }, async (request, reply) => {
+    app.post('/auth/2fa/setup', { preValidation: [app.authenticate] }, async (request, reply) => {
         const userId = request.user.id;
         const user = users.find(u => u.id === userId);
 
