@@ -1,4 +1,4 @@
-import users from '../../../models/users.js';
+import users from '../../models/users.js';
 
 export default async function twoFAStatusRoute(app) {
     app.get('/auth/2fa/status', { preValidation: [app.authenticate] }, async (request, reply) => {

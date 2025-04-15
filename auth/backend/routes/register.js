@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import users from '../../models/users.js';
+import users from '../models/users.js';
 
 export default async function registerRoute(app) {
     app.post('/auth/register', async (request, reply) => {

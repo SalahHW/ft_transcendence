@@ -1,5 +1,5 @@
 import speakeasy from 'speakeasy';
-import users from '../../../models/users.js';
+import users from '../../models/users.js';
 
 export default async function verify2FARoute(app) {
     app.post('/auth/verify-2fa', { preValidation: [app.authenticate] }, async (request, reply) => {

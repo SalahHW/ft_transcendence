@@ -1,4 +1,4 @@
-import users from '../../models/users.js';
+import users from '../models/users.js';
 
 export default async function logoutRoute(app) {
     app.post('/auth/logout', { preValidation: [app.authenticate] }, async (request, reply) => {

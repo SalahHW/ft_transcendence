@@ -1,5 +1,5 @@
 import speakeasy from 'speakeasy';
-import users from '../../../models/users.js';
+import users from '../../models/users.js';
 
 export default async function login2FARoute(app) {
     app.post('/auth/2fa/login', async (request, reply) => {

@@ -1,6 +1,6 @@
 import speakeasy from 'speakeasy';
 import qrcode from 'qrcode';
-import users from '../../../models/users.js';
+import users from '../../models/users.js';
 
 export default async function setup2FARoute(app) {
     app.post('/auth/setup-2fa', { preValidation: [app.authenticate] }, async (request, reply) => {

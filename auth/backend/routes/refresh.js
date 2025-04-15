@@ -1,4 +1,4 @@
-import users from '../../models/users.js';
+import users from '../models/users.js';
 
 export default async function refreshRoute(app) {
     app.post('/auth/refresh', async (request, reply) => {

@@ -50,7 +50,7 @@ app.get('/', async (request, reply) => {
 });
 
 // Routes d’auth
-await app.register(import('./routes/auth/index.js'));
+await app.register(import('./routes/index.js'));
 
 // Démarrage du serveur
 try {

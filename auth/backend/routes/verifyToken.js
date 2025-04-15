@@ -1,3 +1,5 @@
+import users from '../models/users.js';
+
 export default async function verifyTokenRoute(app) {
     app.get('/auth/verify-token', {
         preValidation: [app.authenticate]
