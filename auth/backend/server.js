@@ -22,7 +22,7 @@ const fastifySwaggerUI = (await import('@fastify/swagger-ui')).default;
 await app.register(fastifySwagger, {
     mode: 'static',
     specification: {
-        path: './backend/openapi.yaml', // <-- ajuste si le fichier est ailleurs
+        path: './backend/openapi.yaml',
         type: 'yaml',
     }
 });

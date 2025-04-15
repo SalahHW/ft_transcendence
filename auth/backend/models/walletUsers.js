@@ -1,10 +1,10 @@
 const users = {};
 
-function getUser(address) {
+export function getUser(address) {
     return users[address.toLowerCase()] || null;
 }
 
-function createOrGetUser(address) {
+export function createOrGetUser(address) {
     const addr = address.toLowerCase();
     if (!users[addr]) {
         users[addr] = {
@@ -15,15 +15,9 @@ function createOrGetUser(address) {
     return users[addr];
 }
 
-function updateNonce(address) {
+export function updateNonce(address) {
     const user = getUser(address);
     if (!user) return null;
     user.nonce = Math.floor(Math.random() * 1e6).toString();
     return user.nonce;
 }
-
-module.exports = {
-    getUser,
-    createOrGetUser,
-    updateNonce
-};
