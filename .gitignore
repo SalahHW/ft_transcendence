@@ -1,1 +1,4 @@
-.images
+*/node_modules/*
+jwt-auth/backend/keys/private.key
+jwt-auth/backend/keys/public.key
+jwt-auth/package-lock.json
