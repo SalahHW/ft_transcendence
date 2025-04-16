@@ -2,7 +2,7 @@ import { getUser, updateNonce } from '../models/walletUsers.js';
 import { verifyMessage } from 'ethers';
 
 export default async function verifyWallet(app) {
-    app.post('/wallet/verify', async (req, reply) => {
+    app.post('/verify', async (req, reply) => {
         const { address, signature } = req.body;
 
         if (!address || !signature) {
