@@ -237,6 +237,40 @@ The **public key** can be used to verify them.
 
 ---
 
+## 🚨 Running Automated Tests
+
+Automated tests are provided to verify that all routes in the JWT microservice behave correctly.
+
+### ✅ Run all tests
+
+`npm bash`
+
+
+### ▶️ Run individual tests
+
+`node test/sign.test.js node test/verify.test.js node test/logout.test.js node test/refresh.test.js`
+
+
+### 🧪 Test details
+
+- **sign.test.js**  
+  Verifies JWT generation and proper payload structure.
+
+- **verify.test.js**  
+  Validates token verification logic (valid tokens, expired tokens, invalid tokens).
+
+- **logout.test.js**  
+  Ensures tokens are correctly revoked upon logout.
+
+- **refresh.test.js**  
+  Tests the token refresh functionality, including handling revoked or invalid refresh tokens.
+
+### 🐞 Troubleshooting
+
+If tests fail:
+- Verify that the JWT keys (`private.key`, `public.key`) exist in `backend/keys`.
+- Ensure dependencies are installed (`npm install`).
+
 ## ✅ To do (future)
 
 - [ ] JTI-based blacklist (optional)
