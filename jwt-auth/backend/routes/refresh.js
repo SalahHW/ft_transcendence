@@ -20,11 +20,7 @@ export default async function refreshRoute(app) {
             }
 
             const now = Math.floor(Date.now() / 1000);
-
-            const payload = {
-                address: decoded.address,
-                iat: now
-            };
+            const payload = { address: decoded.address, iat: now };
 
             const newAccessToken = jwt.sign(payload, app.jwtKeys.private, {
                 algorithm: 'RS256',
@@ -36,12 +32,9 @@ export default async function refreshRoute(app) {
                 expiresIn: '7d'
             });
 
-            return reply.send({
-                accessToken: newAccessToken,
-                refreshToken: newRefreshToken
-            });
+            return reply.send({ accessToken: newAccessToken, refreshToken: newRefreshToken });
 
-        } catch (err) {
+        } catch {
             return reply.code(401).send({ error: 'Invalid or expired refresh token' });
         }
     });

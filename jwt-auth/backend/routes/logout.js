@@ -5,7 +5,7 @@ export default async function logoutRoute(app) {
     app.post('/jwt/logout', async (req, reply) => {
         const authHeader = req.headers.authorization;
 
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        if (!authHeader?.startsWith('Bearer ')) {
             return reply.code(401).send({ error: 'Missing or invalid Authorization header' });
         }
 
@@ -17,7 +17,6 @@ export default async function logoutRoute(app) {
             });
 
             revokeAll(decoded.address);
-
             return reply.send({ success: true });
 
         } catch {

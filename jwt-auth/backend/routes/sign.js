@@ -1,3 +1,5 @@
+import jwt from 'jsonwebtoken';
+
 export default async function signRoute(app) {
     app.post('/jwt/sign', async (req, reply) => {
         const { address } = req.body;
@@ -11,16 +13,14 @@ export default async function signRoute(app) {
             iat: Math.floor(Date.now() / 1000)
         };
 
-        const accessToken = app.jwt.sign(payload, {
+        const accessToken = jwt.sign(payload, app.jwtKeys.private, {
             algorithm: 'RS256',
-            expiresIn: '15m',
-            key: app.jwtKeys.private
+            expiresIn: '15m'
         });
 
-        const refreshToken = app.jwt.sign(payload, {
+        const refreshToken = jwt.sign(payload, app.jwtKeys.private, {
             algorithm: 'RS256',
-            expiresIn: '7d',
-            key: app.jwtKeys.private
+            expiresIn: '7d'
         });
 
         return reply.send({ accessToken, refreshToken });
