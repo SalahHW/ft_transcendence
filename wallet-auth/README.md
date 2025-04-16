@@ -129,6 +129,36 @@ wallet-auth/
 
 ---
 
+## 🧪 Run Tests
+
+This service includes a test suite using Fastify's native test engine via `inject()`.
+
+To run all tests:
+
+```bash
+npm test
+```
+
+This will execute all test files in the `test/` directory, including:
+
+- `request-message.test.js` → tests the `/auth/wallet/request-message` endpoint
+- `verify.test.js` → tests the `/auth/wallet/verify` endpoint
+
+Each test simulates actual requests using the Fastify instance, without launching a real HTTP server.
+
+If you need to run a specific test file manually:
+
+```bash
+node test/request-message.test.js
+```
+
+Make sure dependencies are installed beforehand:
+
+```bash
+npm install
+```
+
+
 ## 🧩 Next steps
 
 You can now connect `wallet-auth` to:
