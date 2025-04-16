@@ -6,7 +6,7 @@
     "scripts": {
         "prepare-env": "node backend/scripts/generate-keys.js",
         "start": "npm run prepare-env && node backend/server.js",
-        "test": "node test/sign.test.js"
+        "test": "node test/index.test.js"
     },
     "dependencies": {
         "fastify": "^4.26.2",
