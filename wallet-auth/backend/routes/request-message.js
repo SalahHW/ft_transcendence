@@ -1,7 +1,7 @@
 import { createOrGetUser } from '../models/walletUsers.js';
 
 export default async function requestMessage(app) {
-    app.post('/wallet/request-message', async (req, reply) => {
+    app.post('/request-message', async (req, reply) => {
         const { address } = req.body;
         if (!address) return reply.code(400).send({ error: 'Missing address' });
 
