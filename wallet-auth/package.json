@@ -4,11 +4,13 @@
     "type": "module",
     "main": "backend/server.js",
     "scripts": {
-        "start": "node backend/server.js"
+        "start": "node backend/server.js",
+        "test": "node test/index.test.js"
     },
     "dependencies": {
         "@fastify/swagger": "^8.11.0",
         "@fastify/swagger-ui": "^1.9.1",
+        "dotenv": "^16.5.0",
         "ethers": "^6.8.1",
         "fastify": "^4.26.2"
     }
