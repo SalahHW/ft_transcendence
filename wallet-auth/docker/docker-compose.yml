@@ -8,6 +8,6 @@ services:
     ports:
       - "4000:4000"
     volumes:
-      - ~/ft_transcendence/auth/:/app
+      - ~/ft_transcendence/wallet-auth/:/app
     tty: true
     stdin_open: true
