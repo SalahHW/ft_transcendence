@@ -9,7 +9,8 @@ export function createOrGetUser(address) {
     if (!users[addr]) {
         users[addr] = {
             address: addr,
-            nonce: Math.floor(Math.random() * 1e6).toString()
+            nonce: Math.floor(Math.random() * 1e6).toString(),
+            is2fa: false,
         };
     }
     return users[addr];
