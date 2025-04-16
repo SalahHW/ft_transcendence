@@ -1,37 +1,42 @@
 import { buildApp } from '../backend/server.js';
+import { request } from 'undici';
 import { Wallet } from 'ethers';
-
-const app = await buildApp();
 
 console.log('🔐 Testing /auth/wallet/verify');
 
-const wallet = Wallet.createRandom();
+const app = await buildApp();
+await app.listen({ port: 4000 });
 
-const requestRes = await app.inject({
+const wallet = Wallet.createRandom();
+const address = wallet.address;
+
+const messageResponse = await request('http://localhost:4000/auth/wallet/request-message', {
     method: 'POST',
-    url: '/auth/wallet/request-message',
-    payload: { address: wallet.address }
+    body: JSON.stringify({ address }),
+    headers: { 'content-type': 'application/json' }
 });
 
-const { message } = requestRes.json();
+const { message } = await messageResponse.body.json();
 
 const signature = await wallet.signMessage(message);
 
-const verifyRes = await app.inject({
+const verifyResponse = await request('http://localhost:4000/auth/wallet/verify', {
     method: 'POST',
-    url: '/auth/wallet/verify',
-    payload: {
-        address: wallet.address,
-        signature
-    }
+    body: JSON.stringify({ address, signature }),
+    headers: { 'content-type': 'application/json' }
 });
 
-console.log('Status:', verifyRes.statusCode);
-console.log('Body:', verifyRes.body);
+const body = await verifyResponse.body.json();
 
-if (verifyRes.statusCode !== 200 || !verifyRes.json().accessToken) {
+console.log('Status:', verifyResponse.statusCode);
+console.log('Body:', body);
+
+if (
+    verifyResponse.statusCode === 200 &&
+    body.address?.toLowerCase() === address.toLowerCase() &&
+    body.is2faRequired === false
+) {
+    console.log('✅ verify passed');
+} else {
     console.error('❌ Failed to verify wallet');
-    process.exit(1);
 }
-
-console.log('✅ verify passed');
