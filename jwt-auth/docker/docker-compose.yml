@@ -6,7 +6,7 @@ services:
     image: auth-env
     container_name: my-jwt-auth
     ports:
-      - "4000:4000"
+      - "5000:5000"
     volumes:
       - ~/ft_transcendence/jwt-auth/:/app
     tty: true

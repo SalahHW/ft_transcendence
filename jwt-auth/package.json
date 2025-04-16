@@ -1,0 +1,16 @@
+{
+    "name": "jwt-service",
+    "version": "1.0.0",
+    "type": "module",
+    "main": "backend/server.js",
+    "scripts": {
+        "prepare-env": "node backend/scripts/generate-keys.js",
+        "start": "npm run prepare-env && node backend/server.js"
+    },
+    "dependencies": {
+        "fastify": "^4.26.2",
+        "@fastify/swagger": "^8.11.0",
+        "@fastify/swagger-ui": "^1.9.1",
+        "jsonwebtoken": "^9.0.2"
+    }
+}

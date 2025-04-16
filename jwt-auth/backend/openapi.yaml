@@ -1,0 +1,122 @@
+openapi: 3.0.0
+info:
+  title: JWT Service API
+  version: 1.0.0
+  description: |
+    A microservice for issuing, verifying, refreshing, and revoking JWTs using RS256.
+
+paths:
+  /jwt/sign:
+    post:
+      summary: Issue a new access and refresh token
+      description: Accepts a verified wallet address and issues a signed JWT pair.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - address
+              properties:
+                address:
+                  type: string
+                  example: "0xAbC123..."
+      responses:
+        200:
+          description: JWTs successfully issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+        400:
+          description: Missing address
+
+  /jwt/verify:
+    get:
+      summary: Verify a JWT token
+      description: Validate an access or refresh token via Authorization header.
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+          example: "Bearer <token>"
+      responses:
+        200:
+          description: Valid token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  payload:
+                    type: object
+        401:
+          description: Invalid or expired token
+
+  /jwt/logout:
+    post:
+      summary: Revoke all tokens for a wallet address
+      description: Invalidates all previously issued tokens for the authenticated user.
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          schema:
+            type: string
+          example: "Bearer <token>"
+      responses:
+        200:
+          description: Tokens revoked successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        401:
+          description: Invalid or expired token
+
+  /jwt/refresh:
+    post:
+      summary: Refresh access and refresh tokens
+      description: Accepts a refresh token and returns a new pair of access and refresh tokens.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+                  example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+      responses:
+        200:
+          description: New tokens issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+        400:
+          description: Missing refresh token
+        401:
+          description: Invalid or expired refresh token
