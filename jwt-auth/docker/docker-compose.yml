@@ -1,0 +1,13 @@
+services:
+  auth-service:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+    image: auth-env
+    container_name: my-jwt-auth
+    ports:
+      - "4000:4000"
+    volumes:
+      - ~/ft_transcendence/jwt-auth/:/app
+    tty: true
+    stdin_open: true
