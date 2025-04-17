@@ -1,0 +1,21 @@
+{
+    "name": "2fa-service",
+    "version": "1.0.0",
+    "description": "Microservice handling 2FA (Two-Factor Authentication) logic",
+    "type": "module",
+    "scripts": {
+        "start": "node backend/server.js",
+        "test": "node test/index.test.js"
+    },
+    "dependencies": {
+        "fastify": "^4.25.2",
+        "@fastify/swagger": "^8.10.0",
+        "@fastify/swagger-ui": "^1.10.1",
+        "speakeasy": "^2.0.0",
+        "qrcode": "^1.5.4",
+        "dotenv": "^16.5.0"
+    },
+    "devDependencies": {
+        "undici": "^6.9.0"
+    }
+}
