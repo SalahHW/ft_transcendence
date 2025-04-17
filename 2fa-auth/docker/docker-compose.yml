@@ -1,0 +1,13 @@
+services:
+  auth-service:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+    image: auth-env
+    container_name: my-auth
+    ports:
+      - "4000:4000"
+    volumes:
+      - ~/ft_transcendence/2fa-auth/:/app
+    tty: true
+    stdin_open: true
