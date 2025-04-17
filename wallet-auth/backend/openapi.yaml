@@ -1,0 +1,82 @@
+openapi: 3.0.0
+info:
+  title: Wallet Auth API
+  version: 1.0.0
+  description: >
+    This API allows users to authenticate using their Ethereum wallet.
+    It provides a nonce-based message to sign and verifies the signature.
+
+paths:
+  /wallet/request-message:
+    post:
+      summary: Request message to sign for authentication
+      description: >
+        Returns a message containing a unique nonce that the user must sign using their Ethereum wallet.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - address
+              properties:
+                address:
+                  type: string
+                  example: "0xAbC123..."
+      responses:
+        200:
+          description: Message to be signed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Sign to login.\nNonce: 473829"
+        400:
+          description: Missing address
+
+  /wallet/verify:
+    post:
+      summary: Verify the signed message
+      description: >
+        Verifies that the message was correctly signed by the specified Ethereum address.
+        Returns the address and whether 2FA is required.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - address
+                - signature
+              properties:
+                address:
+                  type: string
+                  example: "0xAbC123..."
+                signature:
+                  type: string
+                  example: "0xdeadbeef..."
+      responses:
+        200:
+          description: Valid signature
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  address:
+                    type: string
+                    example: "0xAbC123..."
+                  is2faRequired:
+                    type: boolean
+                    example: false
+        400:
+          description: Invalid request or unknown address
+        401:
+          description: Signature does not match
+        500:
+          description: Internal server error
