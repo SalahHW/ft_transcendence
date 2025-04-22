@@ -8,3 +8,5 @@ pongChain/coverage.json
 pongChain/artifacts
 pongChain/package-lock.json
 pongChain/cache/
+pongChain/addresses.json
+pongChain/report*
