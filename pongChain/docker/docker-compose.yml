@@ -8,6 +8,6 @@ services:
     ports:
       - 3000:3000
     volumes:
-      - ~/ft_transcendence/pongChain/:/app
+      - ~/Desktop/blockchain/pongChain/:/app
     tty: true
     stdin_open: true

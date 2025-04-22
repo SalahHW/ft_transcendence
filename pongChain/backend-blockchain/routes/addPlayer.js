@@ -14,7 +14,7 @@ module.exports = async (fastify, opts) => {
         }
     }, async (request, reply) => {
         if (!contract) {
-            return reply.status(500).send({ error: 'Contract not initialized' });
+            return reply.status(503).send({ error: 'Contract not initialized' });
         }
 
         const { name, address } = request.body;
@@ -29,7 +29,7 @@ module.exports = async (fastify, opts) => {
             })
         } catch (error) {
             request.log.error(error)
-            reply.status(500).send({
+            reply.status(422).send({
                 success: false,
                 error: error.message
             })

@@ -16,7 +16,7 @@ module.exports = async (fastify, opts) => {
         }
     }, async (request, reply) => {
         if (!contract) {
-            return reply.status(500).send({ error: 'Contract not initialized' });
+            return reply.status(503).send({ error: 'Contract not initialized' });
         }
 
         try {
