@@ -4,3 +4,5 @@
 nginx/public/js
 nginx/public/style
 nginx/node_modules
+node_modules
+package-lock.json
