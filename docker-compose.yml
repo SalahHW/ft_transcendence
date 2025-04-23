@@ -24,8 +24,9 @@ services:
     env_file:
       - ./.env
       - ./pongChain/.env
-    # networks:
-    #   - networkName
+    networks:
+      - blockchain
 
 networks:
   users:
+  blockchain:
