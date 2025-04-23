@@ -34,7 +34,7 @@ PongChain est une suite de contrats intelligents développés en Solidity, desti
 
 ## 🤖 Backend API Fastify
 
-### URL de base : http://localhost:3000
+### URL de base : http://localhost:${PORT}
 
 #### POST /add-player
 Ajoute un joueur et lui attribue 100 PONG
@@ -97,7 +97,7 @@ Propriétaire du NFT de tournoi
 
 Le service expose une documentation Swagger interactive sur :
 ```
-http://localhost:3000/docs
+http://localhost:${PORT}/docs
 ```
 
 Cette page vous permet de tester toutes les routes et d'explorer les schémas d'entrée et de sortie.
