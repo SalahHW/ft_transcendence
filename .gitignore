@@ -1,8 +1,8 @@
+*.DS_Store
+*.vscode
 .images
-.DS_Store
-.vscode
-nginx/public/js
-nginx/public/style
-nginx/node_modules
-node_modules
-package-lock.json
+*.env
+*package-lock.json
+*node_modules
+
+database
