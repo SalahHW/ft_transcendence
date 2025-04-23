@@ -44,7 +44,7 @@ export default class CreateMatchForm {
 	}
 
 	private _attachEventListeners(): void {
-		const form = document.getElementById("create-user-form") as HTMLFormElement;
+		const form = document.getElementById("create-match-form") as HTMLFormElement;
 
 		form.addEventListener("submit", async (element) => {
 			element.preventDefault();
