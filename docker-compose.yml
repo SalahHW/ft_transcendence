@@ -1,3 +1,4 @@
+# TODO: create a shared image used by all containers
 services:
   nginx:
     container_name: nginx
