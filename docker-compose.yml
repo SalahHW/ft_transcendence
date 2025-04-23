@@ -22,10 +22,10 @@ services:
 
   blockchain:
     container_name: blockchain
-    build: ./pongChain
+    build: ./blockchain-service
     env_file:
       - ./.env
-      - ./pongChain/.env
+      - ./blockchain-service/.env
     networks:
       - blockchain
 

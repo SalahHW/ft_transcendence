@@ -4,11 +4,3 @@
 *node_modules
 
 database
-
-pongChain/backend-blockchain/abi
-pongChain/coverage
-pongChain/coverage.json
-pongChain/artifacts
-pongChain/cache/
-pongChain/addresses.json
-pongChain/report*
