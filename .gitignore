@@ -1,19 +1,14 @@
-pongChain/node_modules
-pongChain/backend-blockchain/node_modules
-pongChain/backend-blockchain/abi
-pongChain/.env
-pongChain/backend-blockchain/.env
-pongChain/coverage
-pongChain/coverage.json
-pongChain/artifacts
-pongChain/package-lock.json
-pongChain/cache/
-pongChain/addresses.json
-pongChain/report*
-
+.images
 *.env
+*package-lock.json
+*node_modules
 
 database
 
-package-lock.json
-node_modules
+pongChain/backend-blockchain/abi
+pongChain/coverage
+pongChain/coverage.json
+pongChain/artifacts
+pongChain/cache/
+pongChain/addresses.json
+pongChain/report*
