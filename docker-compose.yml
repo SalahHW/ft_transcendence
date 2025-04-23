@@ -18,5 +18,14 @@ services:
     volumes:
       - ./database:/app/database
 
+  blockchain:
+    container_name: blockchain
+    build: ./pongChain
+    env_file:
+      - ./.env
+      - ./pongChain/.env
+    # networks:
+    #   - networkName
+
 networks:
   users:
