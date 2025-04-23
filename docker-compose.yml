@@ -15,6 +15,7 @@ services:
       - ./users-service/.env
     networks:
       - users
+      - blockchain
     volumes:
       - ./database:/app/database
 
