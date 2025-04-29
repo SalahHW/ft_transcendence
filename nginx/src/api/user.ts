@@ -29,7 +29,7 @@ export interface User {
  * User service API.
  */
 export default class UsersApi {
-	private _baseUrl: string = "http://localhost:3000/api/users";
+	private _baseUrl: string = "http://localhost/api/users";
 
 	async getAllUsers(): Promise<User[]> {
 		const response = await fetch(`${this._baseUrl}`, {
