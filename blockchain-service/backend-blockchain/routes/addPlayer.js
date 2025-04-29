@@ -2,6 +2,7 @@ module.exports = async (fastify, opts) => {
     const contract = fastify.masterContract
 
     fastify.post('/add-player', {
+        preHandler: fastify.verifyJWT,
         schema: {
             body: {
                 type: 'object',
@@ -25,7 +26,7 @@ module.exports = async (fastify, opts) => {
 
             reply.send({
                 success: true,
-                transactionHash: tx.hash // Copy past in SnowTrace
+                transactionHash: tx.hash
             })
         } catch (error) {
             request.log.error(error)

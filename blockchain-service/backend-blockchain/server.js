@@ -78,6 +78,9 @@ try {
     fastify.register(require('./routes/getTournamentByWinner'));
     fastify.register(require('./routes/getGoatOwner'));
     fastify.register(require('./routes/getTournamentNftOwner'));
+    fastify.register(require('./plugins/jwtAuth'), {
+        jwtServiceUrl: process.env.JWT_SERVICE_URL
+    });
 
     // Health check route
     fastify.get('/status', async () => {
