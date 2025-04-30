@@ -12,7 +12,7 @@ We strictly use [conventionnal commit](https://www.conventionalcommits.org/en/v1
 
 [optional body]
 ```
-__type__: Indicates the nature of the commit:  
+__type__: Indicates the nature of the commit:
 - `feat`:	to implement a new feature
 - `fix`:	to fix a bug or a typo
 - `docs`:	to make documentation changes
