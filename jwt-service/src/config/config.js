@@ -1,4 +1,5 @@
 export const SECRETKEY = process.env.SECRETKEY;
+export const PORT = process.env.JWT_SERVICE_PORT;
 
 if (!SECRETKEY) {
 if (!PORT) {
