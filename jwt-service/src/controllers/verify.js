@@ -4,8 +4,8 @@ export const verifyToken = async (request, reply) => {
     reply.statusCode = 200;
     reply.send({ decoded });
   } catch (err) {
-    console.error("Failed to verify token:", err);
+    console.error(err);
     reply.statusCode = 401;
-    reply.send({ error: "Invalid token" });
+    reply.send({ error: "Invalid token", cause: err.message });
   }
 };
