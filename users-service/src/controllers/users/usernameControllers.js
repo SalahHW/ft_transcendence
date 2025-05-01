@@ -9,8 +9,11 @@ async function createUsername(request, reply) {
     try {
         const newUsername = await usernameModels.createUsername(username);
         return reply.code(200).send(newUsername);
-    } catch (err) {
-        return reply.code(500).send({ error: "Failed to create username" });
+    } catch (error) {
+        return reply.code(500).send({
+            error: "Failed to create username",
+            cause: error.message,
+        });
     }
 }
 
@@ -23,8 +26,11 @@ async function readUsername(request, reply) {
     try {
         const username = await usernameModels.readUsername(userId);
         return reply.code(200).send(username);
-    } catch (err) {
-        return reply.code(500).send({ error: "Failed to read username" });
+    } catch (error) {
+        return reply.code(500).send({
+            error: "Failed to read username",
+            cause: error.message,
+        });
     }
 }
 
@@ -37,7 +43,10 @@ async function updateUsername(request, reply) {
     try {
         const newUsername = await usernameModels.updateUsername(username);
         return reply.code(200).send(newUsername);
-    } catch (err) {
-        return reply.code(500).send({ error: "Failed to update username" });
+    } catch (error) {
+        return reply.code(500).send({
+            error: "Failed to update username",
+            cause: error.message,
+        });
     }
 }
