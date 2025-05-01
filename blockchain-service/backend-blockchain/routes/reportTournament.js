@@ -13,7 +13,7 @@ module.exports = async (fastify, opts) => {
                         items: { type: 'integer', minimum: 0 }
                     },
                     winner: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' },
-                    tournamentTokenIds: { type: 'integer', minimum: 0 }
+                    tournamentTokenId: { type: 'integer', minimum: 0 }
                 }
             }
         }
