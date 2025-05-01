@@ -6,7 +6,7 @@ const { JsonRpcProvider, Wallet, Contract } = require("ethers");
 // Load minimal env (.env)
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
-const { RPC_URL, PRIVATE_KEY, PORT } = process.env;
+const { RPC_URL, PRIVATE_KEY, BLOCKCHAIN_SERVICE_PORT } = process.env;
 
 // Load contract addresses from addresses.json
 const ADDRESSES_PATH = path.join(__dirname, '..', 'addresses.json');
@@ -90,8 +90,8 @@ try {
     // Start the Fastify server
     const start = async () => {
         try {
-            await fastify.listen({ port: PORT, host: '0.0.0.0' });
-            fastify.log.info(`Fastify server is listening on http://localhost:${PORT}`);
+            await fastify.listen({ port: BLOCKCHAIN_SERVICE_PORT, host: '0.0.0.0' });
+            fastify.log.info(`Fastify server is listening on http://localhost:${BLOCKCHAIN_SERVICE_PORT}`);
         } catch (err) {
             fastify.log.error(err);
             process.exit(1);
