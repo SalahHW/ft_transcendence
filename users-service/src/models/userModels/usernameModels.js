@@ -11,7 +11,7 @@ export const readUsername = async (id) => {
 
 export const updateUsername = async (id, newUsername) => {
   const query = `
-  UPDATE users,
+  UPDATE users
   SET username = ?
   WHERE id = ?`;
   const result = await database.run(query, [newUsername, id]);
