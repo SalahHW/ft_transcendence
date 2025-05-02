@@ -1,7 +1,7 @@
-import { userModels } from "../models/userModels/userModels.js";
+import * as userModels from "../models/userModels/userModels.js";
 
-async function createUser(request, reply) {
-    const { userId, username, password, email } = request.body;
+export async function createUser(request, reply) {
+    const { username, password, email } = request.body;
 
     if (!userId || !username || !password || !email) {
         return reply.code(400).send({ error: "Lack of information related to the user" });
@@ -17,14 +17,18 @@ async function createUser(request, reply) {
     }
 }
 
-async function readUser(request, reply) {
-    const { userId } = request.body;
+export async function readUser(request, reply) {
+    const { userId } = request.params.id;
 
     if (!userId) {
         return reply.code(400).send({ error: "UserId is required" });
     }
     try {
         const user = await userModels.readUser(userId);
+        if (!user) {
+            return reply.code(404).send({ error: "User not found" });
+        }
+        delete user.password;
         return reply.code(200).send(user);
     } catch (error) {
         return reply.code(500).send({ 
@@ -34,8 +38,8 @@ async function readUser(request, reply) {
     }
 }
 
-async function updateUser(request, reply) {
-    const { userId } = request.body;
+export async function updateUser(request, reply) {
+    const { userId } = request.params.id;
 
     if (!userId) {
         return reply.code(400).send({ error: "UserId is required" });
@@ -51,8 +55,8 @@ async function updateUser(request, reply) {
     }
 }
 
-async function deleteUser(request, reply) {
-    const { userId } = request.body;
+export async function deleteUser(request, reply) {
+    const { userId } = request.params.id;
 
     if (!userId) {
         return reply.code(400).send({ error: "UserId is required" });
