@@ -1,6 +1,6 @@
-import { usernameModels } from "../models/userModels/usernameModels.js";
+import * as usernameModels from "../models/userModels/usernameModels.js";
 
-async function createUsername(request, reply) {
+export async function createUsername(request, reply) {
     const { username } = request.body;
 
     if (!username) {
@@ -17,8 +17,8 @@ async function createUsername(request, reply) {
     }
 }
 
-async function readUsername(request, reply) {
-    const { userId } = request.body;
+export async function readUsername(request, reply) {
+    const { userId } = request.params.id;
 
     if (!userId) {
         return reply.code(400).send({ error: "UserId is required" });
@@ -34,7 +34,7 @@ async function readUsername(request, reply) {
     }
 }
 
-async function updateUsername(request, reply) {
+export async function updateUsername(request, reply) {
     const { username } = request.body;
 
     if (!username) {
