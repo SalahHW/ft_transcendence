@@ -17,9 +17,10 @@ export const initializeDatabase = async () => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
+      email TEXT UNIQUE NOT NUL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );`;
-
+      
     await database.exec(query);
     console.log("Database initialized");
   } catch (error) {
