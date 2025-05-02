@@ -17,8 +17,17 @@ services:
     networks:
       - users
       - blockchain
+      - transcendence
     volumes:
       - ./database:/app/database
+
+  jwt:
+    container_name: jwt
+    build: ./jwt-service
+    env_file:
+      - ./.env
+    networks:
+      - transcendence
 
   blockchain:
     container_name: blockchain
@@ -32,3 +41,4 @@ services:
 networks:
   users:
   blockchain:
+  transcendence:
