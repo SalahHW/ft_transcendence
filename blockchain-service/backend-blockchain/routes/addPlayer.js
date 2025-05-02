@@ -2,7 +2,6 @@ module.exports = async (fastify, opts) => {
     const contract = fastify.masterContract
 
     fastify.post('/add-player', {
-        preHandler: fastify.verifyJWT,
         schema: {
             body: {
                 type: 'object',
