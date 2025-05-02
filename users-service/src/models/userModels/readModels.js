@@ -1,4 +1,4 @@
-import { db } from "../initDb.js";
+import { db } from "../database.js";
 
 export const getAllUsers = () => {
   return new Promise((resolve, reject) => {

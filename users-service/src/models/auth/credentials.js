@@ -1,4 +1,4 @@
-import { db } from "../initDb.js";
+import { db } from "../database.js";
 
 export const getCredentialsByUsername = async (username) => {
   return new Promise((resolve, reject) => {

@@ -1,4 +1,4 @@
-import { db } from "../initDb.js";
+import { db } from "../database.js";
 
 export const insertUser = async (username, password) => {
   return new Promise((resolve, reject) => {
