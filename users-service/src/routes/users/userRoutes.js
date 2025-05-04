@@ -1,38 +1,27 @@
-import { getAllUsers, getUserById } from "../../controllers/users/readControllers.js";
-import { createUser, readUser, updateUser, deleteUser } from "../../controllers/users/userControllers.js";
+import * as userControllers from "../../controllers/users/userControllers.js";
 
-export default async function userRoutes(fastify, options) {
-    fastify.route({
-        method: "POST",
-        url: "/users/:user",
-        handler: createUser,
-    });
-    fastify.route({
-        method: "GET",
-        url: "/users/:user",
-        handler: readUser,
-    });
-    fastify.route({
-        method: "POST",
-        url: "/users/:user",
-        handler: updateUser,
-    });
-    fastify.route({
-        method: "DELETE",
-        url: "/users/:id",
-        handler: deleteUser
-    });
+export default async function userRoutes(fastify) {
+  fastify.route({
+    method: "POST",
+    url: "/users",
+    handler: userControllers.createUser,
+  });
+
+  fastify.route({
+    method: "GET",
+    url: "/users/:id",
+    handler: userControllers.readUser,
+  });
+
+  fastify.route({
+    method: "PUT",
+    url: "/users/:id",
+    handler: userControllers.updateUser,
+  });
+
+  fastify.route({
+    method: "DELETE",
+    url: "/users/:id",
+    handler: userControllers.deleteUser,
+  });
 }
-
-/*
-fastify.route({
-  method: "GET",
-  url: "/users",
-  handler: getAllUsers,
-});
-fastify.route({
-  method: "GET",
-  url: "/users/:id",
-  handler: getUserById,
-});
-*/
