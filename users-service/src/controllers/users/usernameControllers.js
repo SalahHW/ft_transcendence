@@ -18,7 +18,7 @@ export async function createUsername(request, reply) {
 }
 
 export async function readUsername(request, reply) {
-    const { userId } = request.params.id;
+    const userId = request.params.id;
 
     if (!userId) {
         return reply.code(400).send({ error: "UserId is required" });

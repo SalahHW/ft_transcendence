@@ -3,11 +3,15 @@ import * as userModels from "../models/userModels/userModels.js";
 export async function createUser(request, reply) {
     const { username, password, email } = request.body;
 
-    if (!userId || !username || !password || !email) {
+    if (!username || !password || !email) {
         return reply.code(400).send({ error: "Lack of information related to the user" });
     }
     try {
-        const newUser = await userModels.createUser(userId, username, password, email);
+        // appeler les fonctions controllers de creation ici
+        // createUsername();
+        // const hashedPassword
+        // createEmail();
+        const newUser = await userModels.createUser({ username, password, email });
         return reply.code(200).send(newUser);
     } catch (error) {
         return reply.code(500).send({
@@ -18,7 +22,7 @@ export async function createUser(request, reply) {
 }
 
 export async function readUser(request, reply) {
-    const { userId } = request.params.id;
+    const userId = request.params.id;
 
     if (!userId) {
         return reply.code(400).send({ error: "UserId is required" });
@@ -39,7 +43,7 @@ export async function readUser(request, reply) {
 }
 
 export async function updateUser(request, reply) {
-    const { userId } = request.params.id;
+    const userId = request.params.id;
 
     if (!userId) {
         return reply.code(400).send({ error: "UserId is required" });
@@ -56,7 +60,7 @@ export async function updateUser(request, reply) {
 }
 
 export async function deleteUser(request, reply) {
-    const { userId } = request.params.id;
+    const userId = request.params.id;
 
     if (!userId) {
         return reply.code(400).send({ error: "UserId is required" });
