@@ -1,24 +1,5 @@
 import * as passwordModels from "../models/userModels/passwordModels.js";
-
-// Deplacer dans userControllers
-export async function createPassword(request, reply) {
-    const { password } = request.body;
-    const userId = request.params.id;
-
-    if (!password) {
-        return reply.code(400).send({ error: "Password is required "});
-    }
-    try {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const result = await passwordModels.createPassword(userId, hashedPassword); // createPassword n'existe pas, le retourner
-        return reply.code(200).send(result);
-    } catch (error) {
-        return reply.code(500).send({
-            error: "Failed to create the password",
-            cause: error.message,
-        });
-    }
-}
+import { readUser } from "userControllers.js";
 
 export async function readPassword(request, reply) {
     const userId = request.params.id;
@@ -44,8 +25,7 @@ export async function updatePassword(request, reply) {
     if (!oldPassword || !newPassword) {
         return reply.code(400).send({ error: "Old and new password are required" });
     }
-    // appeler read readUser plutot que user.password
-    const sameOldPassword = await bcrypt.compare(oldPassword, user.password); // faire dossier utils, fichier password, pour hashPassword
+    const sameOldPassword = await bcrypt.compare(oldPassword, readUser());
     if (!sameOldPassword) {
         return reply.code(403).send({ error: "Old password doesn't match" });
     }
