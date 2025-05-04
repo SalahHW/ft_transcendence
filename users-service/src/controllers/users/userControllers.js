@@ -1,4 +1,6 @@
 import * as userModels from "../models/userModels/userModels.js";
+import { createUsername } from "usernameControllers.js";
+import { createEmail } from "emailControllers.js";
 
 export async function createUser(request, reply) {
     const { username, password, email } = request.body;
@@ -7,11 +9,10 @@ export async function createUser(request, reply) {
         return reply.code(400).send({ error: "Lack of information related to the user" });
     }
     try {
-        // appeler les fonctions controllers de creation ici
-        // createUsername();
-        // const hashedPassword
-        // createEmail();
-        const newUser = await userModels.createUser({ username, password, email });
+        createUsername();
+        createEmail();
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const newUser = await userModels.createUser({ username, hashedPassword, email });
         return reply.code(200).send(newUser);
     } catch (error) {
         return reply.code(500).send({
@@ -44,12 +45,13 @@ export async function readUser(request, reply) {
 
 export async function updateUser(request, reply) {
     const userId = request.params.id;
+    const { username, password, email } = request.body;
 
     if (!userId) {
         return reply.code(400).send({ error: "UserId is required" });
     }
     try {
-        const updatedUser = await userModels.updateUser(userId);
+        const updatedUser = await userModels.updateUser(userId, { username, password, email });
         return reply.code(200).send(updatedUser);
     } catch (error) {
         return reply.code(500).send({
