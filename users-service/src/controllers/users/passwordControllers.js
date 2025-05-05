@@ -1,4 +1,4 @@
-import * as passwordModels from "../models/userModels/passwordModels.js";
+import * as passwordModels from "../../models/userModels/passwordModels.js";
 import { readUser } from "userControllers.js";
 
 export async function readPassword(request, reply) {

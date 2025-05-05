@@ -1,4 +1,4 @@
-import * as usernameModels from "../models/userModels/usernameModels.js";
+import * as usernameModels from "../../models/userModels/usernameModels.js";
 
 export async function createUsername(request, reply) {
     const { username } = request.body;
