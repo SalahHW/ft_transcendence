@@ -13,7 +13,7 @@ export async function createUser(request, reply) {
         // createEmail();
         // const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = await userModels.createUser({ username, password, email });
-        return reply.code(200).send(newUser);
+        return reply.code(201).send(newUser);
     } catch (error) {
         return reply.code(500).send({
             error: "Failed to create the user",
