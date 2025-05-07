@@ -11,8 +11,8 @@ export async function createUser(request, reply) {
     try {
         // createUsername();
         // createEmail();
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = await userModels.createUser({ username, hashedPassword, email });
+        // const hashedPassword = await bcrypt.hash(password, 10);
+        const newUser = await userModels.createUser({ username, password, email });
         return reply.code(200).send(newUser);
     } catch (error) {
         return reply.code(500).send({
