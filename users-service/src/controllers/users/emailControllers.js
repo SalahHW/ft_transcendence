@@ -1,4 +1,4 @@
-import * as emailModels from "../models/usersModels/emailModels.js";
+import * as emailModels from "../../models/userModels/emailModels.js";
 
 export async function createEmail(request, reply) {
     const { email } = request.body;

@@ -1,6 +1,6 @@
-import * as userModels from "../models/userModels/userModels.js";
-import { createUsername } from "usernameControllers.js";
-import { createEmail } from "emailControllers.js";
+import * as userModels from "../../models/userModels/userModels.js";
+import { createUsername } from "./usernameControllers.js";
+import { createEmail } from "./emailControllers.js";
 
 export async function createUser(request, reply) {
   const { username, password, email } = request.body;
@@ -9,8 +9,8 @@ export async function createUser(request, reply) {
         return reply.code(400).send({ error: "Lack of information related to the user" });
     }
     try {
-        createUsername();
-        createEmail();
+        // createUsername();
+        // createEmail();
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = await userModels.createUser({ username, hashedPassword, email });
         return reply.code(200).send(newUser);
