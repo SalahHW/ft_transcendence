@@ -39,10 +39,11 @@ export default class UsersApi {
 				"Authorization": `Bearer CONNECTED_USER_TOKEN`,
 			}
 		});
-		if (response.status !== 200) {
-			throw new Error(`Failed to fetch users: ${response.statusText}`);
-		}
-		return response.json();
+		const responseData = await response.json();
+		if (response.status === 200)
+			return responseData;
+		else
+			throw new Error(`failed to fetch users:\n${JSON.stringify(responseData, null, 2)}`);
 	}
 
 	/**
@@ -59,10 +60,11 @@ export default class UsersApi {
 			},
 			body: JSON.stringify(user)
 		});
-		if (response.status !== 201) {
-			throw new Error(`Failed to create user: ${response.statusText}`);
-		}
-		return response.json();
+		const responseData = await response.json();
+		if (response.status === 201)
+			return responseData;
+		else
+			throw new Error(`failed to create user:\n${JSON.stringify(responseData, null, 2)}`);
 	}
 
 	/**
@@ -76,10 +78,11 @@ export default class UsersApi {
 				"Authorization": `Bearer CONNECTED_USER_TOKEN`,
 			}
 		});
-		if (response.status !== 200) {
-			throw new Error(`Failed to get current user: ${response.statusText}`);
-		}
-		return response.json();
+		const responseData = await response.json();
+		if (response.status === 200)
+			return responseData;
+		else
+			throw new Error(`failed to get current user:\n${JSON.stringify(responseData, null, 2)}`);
 	}
 
 	/**
@@ -94,10 +97,11 @@ export default class UsersApi {
 				"Authorization": `Bearer CONNECTED_USER_TOKEN`,
 			}
 		});
-		if (response.status !== 200) {
-			throw new Error(`Failed to get user: ${response.statusText}`);
-		}
-		return response.json();
+		const responseData = await response.json();
+		if (response.status === 200)
+			return responseData;
+		else
+			throw new Error(`failed to get user:\n${JSON.stringify(responseData, null, 2)}`);
 	}
 
 	/**
@@ -115,10 +119,11 @@ export default class UsersApi {
 			},
 			body: JSON.stringify(user)
 		});
-		if (response.status !== 200) {
-			throw new Error(`Failed to update user: ${response.statusText}`);
-		}
-		return response.json();
+		const responseData = await response.json();
+		if (response.status === 200)
+			return responseData;
+		else
+			throw new Error(`failed to update user:\n${JSON.stringify(responseData, null, 2)}`);
 	}
 
 	/**
@@ -133,9 +138,11 @@ export default class UsersApi {
 				"Authorization": `Bearer CONNECTED_USER_TOKEN`,
 			}
 		});
-		if (response.status !== 204) {
-			throw new Error(`Failed to delete user: ${response.statusText}`);
-		}
+		const responseData = await response.json();
+		if (response.status === 204)
+			return;
+		else
+			throw new Error(`failed to delete user:\n${JSON.stringify(responseData, null, 2)}`);
 	}
 
 	/**
@@ -150,9 +157,10 @@ export default class UsersApi {
 				"Authorization": `Bearer CONNECTED_USER_TOKEN`,
 			}
 		});
-		if (response.status !== 200) {
-			throw new Error(`Failed to get users by username: ${response.statusText}`);
-		}
-		return response.json();
+		const responseData = await response.json();
+		if (response.status === 200)
+			return responseData;
+		else
+			throw new Error(`failed to get users by username:\n${JSON.stringify(responseData, null, 2)}`);
 	}
 }

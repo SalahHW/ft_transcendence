@@ -60,15 +60,14 @@ export default class CreateUserForm {
 
 			try {
 				const response = await this._userService.createUser(userData);
-				console.log(`User created: ${response}`);
+				form.reset();
+				console.log(`User created:\n${JSON.stringify(response, null, 2)}`);
 			}
 			catch (error) {
-				if (error instanceof Error) {
-					console.log(`Failed to create user ${userData}:`, error.message);
-				}
-				else {
-					console.log(`Failed to create user ${userData}:`, error);
-				}
+				if (error instanceof Error)
+					console.log(error.message);
+				else
+					console.log(error);
 			}
 		});
 	}

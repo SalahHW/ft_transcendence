@@ -42,8 +42,12 @@ export default class GetUserForm {
 			const idInput = document.getElementById("getform-user-id") as HTMLInputElement;
 			const nameInput = document.getElementById("getform-user-name") as HTMLInputElement;
 
+			if (idInput.value && nameInput.value) {
+				console.log("Please provide only one field to get user (id or name)");
+				return;
+			}
 			if (!idInput.value && !nameInput.value) {
-				console.log("Please provide at least one field to get user (id or name)");
+				console.log("Please provide one field to get user (id or name)");
 				return;
 			}
 
@@ -51,22 +55,20 @@ export default class GetUserForm {
 				if (idInput.value) {
 					const userId = parseInt(idInput.value);
 					const response = await this._userService.getUser(userId);
-					console.log(`User found by id: ${response}`);
+					form.reset();
+					console.log(`User found by id:\n${JSON.stringify(response, null, 2)}`);
 				}
 				else if (nameInput.value) {
 					const response = await this._userService.getUsersByUsername(nameInput.value);
-					console.log(`User found by name: ${response}`);
+					form.reset();
+					console.log(`User found by name:\n${JSON.stringify(response, null, 2)}`);
 				}
-
-				form.reset();
 			}
 			catch (error) {
-				if (error instanceof Error) {
-					console.log(`Failed to get user by id or name: ${error.message}`);
-				}
-				else {
-					console.log(`Failed to get user by id or name: ${error}`);
-				}
+				if (error instanceof Error)
+					console.log(error.message);
+				else
+					console.log(error);
 			}
 		});
 	}

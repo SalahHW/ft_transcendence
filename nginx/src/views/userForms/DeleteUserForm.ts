@@ -42,21 +42,16 @@ export default class DeleteUserForm {
 			}
 
 			try {
-				if (idInput.value) {
-					const userId = parseInt(idInput.value);
-					const response = await this._userService.deleteUser(userId);
-					console.log(`User deleted: ${response}`);
-				}
-
+				const userId = parseInt(idInput.value);
+				await this._userService.deleteUser(userId);
 				form.reset();
+				console.log(`User ${userId} deleted`);
 			}
 			catch (error) {
-				if (error instanceof Error) {
-					console.log(`Failed to delete user:`, error.message);
-				}
-				else {
-					console.log(`Failed to delete user:`, error);
-				}
+				if (error instanceof Error)
+					console.log(error.message);
+				else
+					console.log(error);
 			}
 		});
 	}
