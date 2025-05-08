@@ -20,6 +20,7 @@ export interface User {
 	id?: number;
 	username?: string;
 	email?: string;
+	password?: string;
 	matcheId?: number[];
 	createdAt?: Date;
 	role?: UserRole;
