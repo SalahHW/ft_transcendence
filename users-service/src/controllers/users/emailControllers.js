@@ -7,8 +7,8 @@ export async function createEmail(request, reply) {
         return reply.code(400).send({ error: "UserId is required" });
     }
     try {
-        const email = await emailModels.createEmail(email);
-        return reply.code(200).send(email);
+        // verifs email
+        return reply.code(201).send(email);
     } catch (error) {
         return reply.code(500).send({
             error: "Failed to create an email",

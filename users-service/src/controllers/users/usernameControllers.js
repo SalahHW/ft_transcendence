@@ -7,8 +7,8 @@ export async function createUsername(request, reply) {
         return reply.code(400).send({ error: "Username is required" });
     }
     try {
-        const newUsername = await usernameModels.createUsername(username);
-        return reply.code(200).send(newUsername);
+        // ajouter verifs username
+        return reply.code(201).send(newUsername);
     } catch (error) {
         return reply.code(500).send({
             error: "Failed to create username",

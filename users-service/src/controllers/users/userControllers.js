@@ -1,6 +1,8 @@
 import * as userModels from "../../models/userModels/userModels.js";
 import { createUsername } from "usernameControllers.js";
 import { createEmail } from "emailControllers.js";
+import { encryptPassword, comparePassword } from "../../utils/password.js";
+import bcrypt from "bcrypt";
 
 export async function createUser(request, reply) {
   const { username, password, email } = request.body;
@@ -11,9 +13,9 @@ export async function createUser(request, reply) {
     try {
         createUsername();
         createEmail();
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await encryptPassword(password);
         const newUser = await userModels.createUser({ username, hashedPassword, email });
-        return reply.code(200).send(newUser);
+        return reply.code(201).send(newUser);
     } catch (error) {
         return reply.code(500).send({
             error: "Failed to create the user",
