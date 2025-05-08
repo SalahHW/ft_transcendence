@@ -1,16 +1,19 @@
 import bcrypt from "bcrypt";
-import { readUser } from "../controllers/userControllers.js";
 
 export async function encryptPassword(password) {
-
-    return await bcrypt.hash(password, 10);
+  try {
+    const encryptedPassword = await bcrypt.hash(password, 10);
+    return encryptedPassword;
+  } catch (error) {
+    throw new Error("Error encrypting password: " + error.message);
+  }
 }
 
-export async function comparePassword(oldPassword) {
-
-    const validPassword = await bcrypt.compare(oldPassword, readUser().password);
-
-    if (!validPassword) {
-        
-    }
+export async function comparePassword(password, oldPassword) {
+  try {
+    const isMatch = await bcrypt.compare(password, oldPassword);
+    return isMatch;
+  } catch (error) {
+    throw new Error("Error comparing password: ", error.message);
+  }
 }
