@@ -1,5 +1,6 @@
 import * as passwordModels from "../../models/userModels/passwordModels.js";
 import { readUser } from "userControllers.js";
+import { encryptPassword, comparePassword } from "../../utils/password.js";
 
 export async function readPassword(request, reply) {
     const userId = request.params.id;
@@ -25,12 +26,11 @@ export async function updatePassword(request, reply) {
     if (!oldPassword || !newPassword) {
         return reply.code(400).send({ error: "Old and new password are required" });
     }
-    const sameOldPassword = await bcrypt.compare(oldPassword, readUser());
-    if (!sameOldPassword) {
-        return reply.code(403).send({ error: "Old password doesn't match" });
-    }
+    
     try {
-        const newHashedPassword = await bcrypt.hash(newPassword, 10);
+        // Old password check before modification
+        await comparePassword(oldPassword, readUser());
+        const newHashedPassword = await encryptPassword(newPassword);
         const result = await passwordModels.updatePassword(userId, newHashedPassword);
         return reply.code(200).send(result);
     } catch (error) {

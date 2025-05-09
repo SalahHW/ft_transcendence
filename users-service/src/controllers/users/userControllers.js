@@ -1,6 +1,7 @@
 import * as userModels from "../../models/userModels/userModels.js";
 import { createUsername } from "./usernameControllers.js";
 import * as emailControllers from "./emailControllers.js";
+import { encryptPassword } from "../../utils/password.js";
 
 export async function createUser(request, reply) {
   	const { username, password, email } = request.body;
@@ -11,9 +12,9 @@ export async function createUser(request, reply) {
     try {
         createUsername();
         createEmail();
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await encryptPassword(password);
         const newUser = await userModels.createUser({ username, hashedPassword, email });
-        return reply.code(200).send(newUser);
+        return reply.code(201).send(newUser);
     } catch (error) {
         return reply.code(500).send({
             error: "Failed to create the user",
@@ -69,7 +70,7 @@ export async function deleteUser(request, reply) {
 	}
 	try {
     	const deletedUserId = await userModels.deleteUser(userId);
-    	return reply.code(200).send({ success: `User ${deletedUserId} has been deleted with success` });
+    	return reply.code(204).send({ success: `User ${deletedUserId} has been deleted with success` });
   	} catch (error) {
     	return reply.code(500).send({
       		error: "Failed to delete the user",
