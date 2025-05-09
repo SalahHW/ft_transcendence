@@ -1,22 +1,5 @@
 import * as usernameModels from "../../models/userModels/usernameModels.js";
 
-export async function createUsername(request, reply) {
-    const { username } = request.body;
-
-    if (!username) {
-        return reply.code(400).send({ error: "Username is required" });
-    }
-    try {
-        // ajouter verifs username
-        return reply.code(201).send(newUsername);
-    } catch (error) {
-        return reply.code(500).send({
-            error: "Failed to create username",
-            cause: error.message,
-        });
-    }
-}
-
 export async function readUsername(request, reply) {
     const userId = request.params.id;
 

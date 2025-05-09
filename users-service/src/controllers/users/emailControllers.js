@@ -1,21 +1,4 @@
-import * as emailModels from "../../models/usersModels/emailModels.js";
-
-export async function createEmail(request, reply) {
-    const { email } = request.body;
-
-    if (!email) {
-        return reply.code(400).send({ error: "UserId is required" });
-    }
-    try {
-        // verifs email
-        return reply.code(201).send(email);
-    } catch (error) {
-        return reply.code(500).send({
-            error: "Failed to create an email",
-            cause: error.message,
-        });
-    }
-}
+import * as emailModels from "../../models/userModels/emailModels.js";
 
 export async function readEmail(request, reply) {
     const userId = request.params.id;
