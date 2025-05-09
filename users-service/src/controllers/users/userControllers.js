@@ -9,11 +9,11 @@ export async function createUser(request, reply) {
         return reply.code(400).send({ error: "Lack of information related to the user" });
     }
     try {
-        createUsername();
-        createEmail();
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = await userModels.createUser({ username, hashedPassword, email });
-        return reply.code(200).send(newUser);
+        // createUsername();
+        // createEmail();
+        // const hashedPassword = await bcrypt.hash(password, 10);
+        const newUser = await userModels.createUser({ username, password, email });
+        return reply.code(201).send(newUser);
     } catch (error) {
         return reply.code(500).send({
             error: "Failed to create the user",
