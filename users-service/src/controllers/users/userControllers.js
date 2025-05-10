@@ -1,6 +1,6 @@
 import * as userModels from "../../models/userModels/userModels.js";
-import { createUsername } from "./usernameControllers.js";
-import { createEmail } from "./emailControllers.js";
+// import { createUsername } from "./usernameControllers.js";
+// import { createEmail } from "./emailControllers.js";
 import { encryptPassword } from "../../utils/password.js";
 
 export async function createUser(request, reply) {
@@ -11,8 +11,8 @@ export async function createUser(request, reply) {
     }
     try {
         // TODO: Use username and email controllers to verify username and email
-        createUsername();
-        createEmail();
+        // createUsername();
+        // createEmail();
         const hashedPassword = await encryptPassword(password);
         const newUser = await userModels.createUser({ username, hashedPassword, email });
         return reply.code(201).send(newUser);
@@ -53,7 +53,7 @@ export async function updateUser(request, reply) {
     return reply.code(400).send({ error: "UserId is required" });
   }
   try {
-    const updatedUser = await userModels.updateUser(userId);
+    const updatedUser = await userModels.updateUser(userId, { username, password, email });
     return reply.code(200).send(updatedUser);
   } catch (error) {
     return reply.code(500).send({
