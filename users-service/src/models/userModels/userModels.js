@@ -28,7 +28,7 @@ export const updateUser = async (id, newUser) => {
   UPDATE users
   SET username = ?,
   password = ?,
-  email = ?,
+  email = ?
   WHERE id = ?`;
   const result = await database.run(query, [username, password, email, id]);
   return result.changes;
