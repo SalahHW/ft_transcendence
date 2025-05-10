@@ -15,7 +15,7 @@ import * as emailModels from "../../models/userModels/emailModels.js";
 //             cause: error.message,
 //         });
 //     }
-//}
+// }
 
 export async function readEmail(request, reply) {
     const userId = request.params.id;
