@@ -1,5 +1,4 @@
 import bcrypt from "bcrypt";
-import { readUser } from "../controllers/userControllers.js";
 
 export async function encryptPassword(password) {
     if (!password) {
