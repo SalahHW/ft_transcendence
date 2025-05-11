@@ -43,6 +43,21 @@ export async function readUser(request, reply) {
   	}
 }
 
+export async function readAllUsers(request, reply) {
+    try {
+        const users = await userModels.readAllUsers();
+        if (!users) {
+            return reply.code(404).send({ error: "No users found" });
+        }
+        return reply.code(200).send(users);
+    } catch (error) {
+        return reply.code(500).send({
+            error: "Failed to read all users",
+            cause: error.message,
+        });
+    }
+}
+
 export async function updateUser(request, reply) {
     const userId = request.params.id;
     const { username, password, email } = request.body;
