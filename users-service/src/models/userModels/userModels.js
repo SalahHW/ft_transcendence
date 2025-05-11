@@ -22,13 +22,21 @@ export const readUser = async (id) => {
   return user;
 };
 
+export const readAllUsers = async () => {
+  const query = `
+  SELECT id, username, email
+  FROM users`;
+  const users = await database.all(query);
+  return users;
+};
+
 export const updateUser = async (id, newUser) => {
   const { username, password, email } = newUser;
   const query = `
   UPDATE users
   SET username = ?,
   password = ?,
-  email = ?,
+  email = ?
   WHERE id = ?`;
   const result = await database.run(query, [username, password, email, id]);
   return result.changes;
