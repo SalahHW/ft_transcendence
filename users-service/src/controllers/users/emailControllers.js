@@ -41,7 +41,8 @@ export async function updateEmail(request, reply) {
 	}
 	try {
 		const newEmail = await emailModels.updateEmail(email);
-		return reply.code(200).send(newEmail);
+		const updatedEmail = createEmail(newEmail);
+		return reply.code(200).send(updatedEmail);
 	} catch (error) {
 		return reply.code(500).send({
 			error: "Failed to update the email",
