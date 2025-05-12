@@ -9,7 +9,7 @@ export function createEmail(rawEmail) {
 	// Delete whitespaces
 	const email = rawEmail.trim();
 
-	// Norme RFC 5322 simplifiée
+	// Simplified RFC 5322 standard
 	if (!email || !validator.isEmail(email)) {
 		throw new Error("Invalid email address");
 	}
