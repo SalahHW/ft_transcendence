@@ -1,8 +1,7 @@
 import * as emailModels from "../../models/userModels/emailModels.js";
 import validator from 'validator';
 
-export async function createEmail(request, reply) {
-	const { rawEmail } = request.body;
+export function createEmail(rawEmail) {
 
 	if (typeof rawEmail !== 'string') {
 		throw new Error("Email must be a string");
@@ -24,7 +23,6 @@ export async function readEmail(request, reply) {
 		return reply.code(400).send({ error: "UserId is required" });
 	}
 	try {
-		//const clean = validator.escape(validator.stripLow(trimmed));
 		const email = await emailModels.readEmail(userId);
 		return reply.code(200).send(email);
 	} catch (error) {
