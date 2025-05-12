@@ -51,6 +51,28 @@ export async function readUser(request, reply) {
   }
 }
 
+export async function readUserByUsername(request, reply) {
+  const username = request.params.username;
+
+  if (!username) {
+    return reply.code(400).send({ error: "Username is required" });
+  }
+
+  try {
+    const user = await userModels.readUserByUsername(username);
+    if (!user) {
+      return reply.code(404).send({ error: "User not found" });
+    }
+    // delete user.password;
+    return reply.code;
+  } catch (error) {
+    return reply.code(500).send({
+      error: "Failed to read the user",
+      cause: error.message,
+    });
+  }
+}
+
 export async function readAllUsers(request, reply) {
   try {
     const users = await userModels.readAllUsers();
