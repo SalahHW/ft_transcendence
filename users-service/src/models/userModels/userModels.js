@@ -34,6 +34,20 @@ export const readUser = async (id) => {
   }
 };
 
+export const readUserByUsername = async (username) => {
+  const query = `
+  SELECT *
+  FROM users
+  WHERE username = ?`;
+
+  try {
+    const user = await database.get(query, [username]);
+    return user;
+  } catch (error) {
+    throw translateSqliteError(error);
+  }
+};
+
 export const readAllUsers = async () => {
   const query = `
   SELECT id, username, email
