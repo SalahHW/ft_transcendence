@@ -12,12 +12,12 @@ export async function encryptPassword(password) {
     return await bcrypt.hash(password, 10);
 }
 
-// export async function compareOldPassword(oldPassword, user) {
-//     // Boolean
-//     const isValidPassword = await bcrypt.compare(oldPassword, user.password);
+export async function comparePassword(passwordA, passwordB) {
+    // Boolean
+    const isValidPassword = await bcrypt.compare(passwordA, passwordB);
 
-//     if (!isValidPassword) {
-//         throw new Error("Old password doesn't match");
-//     }
-// }
-
+    if (!isValidPassword) {
+        return false;
+    }
+    return true;
+}
