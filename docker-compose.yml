@@ -7,6 +7,7 @@ services:
       - "80:80"
     networks:
       - users
+      - transcendence
 
   users:
     container_name: users
@@ -26,6 +27,7 @@ services:
     build: ./jwt-service
     env_file:
       - ./.env
+      - ./jwt-service/.env
     networks:
       - transcendence
 

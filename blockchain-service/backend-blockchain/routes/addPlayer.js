@@ -25,7 +25,7 @@ module.exports = async (fastify, opts) => {
 
             reply.send({
                 success: true,
-                transactionHash: tx.hash // Copy past in SnowTrace
+                transactionHash: tx.hash
             })
         } catch (error) {
             request.log.error(error)

@@ -1,9 +1,8 @@
 import Fastify from "fastify";
 import jwt from "@fastify/jwt";
-import { SECRETKEY } from "./config/config.js";
+import { SECRETKEY, PORT } from "./config/config.js";
 import registerRoutes from "./routes/index.js";
 
-const PORT = 3000;
 const fastify = Fastify();
 fastify.register(jwt, { secret: SECRETKEY });
 
