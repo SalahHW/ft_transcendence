@@ -3,9 +3,8 @@ export const verifyToken = async (request, reply) => {
     const decoded = await request.jwtVerify();
     reply.statusCode = 200;
     reply.send({ decoded });
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
     reply.statusCode = 401;
-    reply.send({ error: "Invalid token", cause: err.message });
+    reply.send({ error: "Invalid token", cause: error.message });
   }
 };
