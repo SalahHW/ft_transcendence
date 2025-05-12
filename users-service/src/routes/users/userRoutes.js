@@ -9,14 +9,20 @@ export default async function userRoutes(fastify) {
 
   fastify.route({
     method: "GET",
+    url: "/users",
+    handler: userControllers.readAllUsers,
+  });
+
+  fastify.route({
+    method: "GET",
     url: "/users/:id",
     handler: userControllers.readUser,
   });
 
   fastify.route({
     method: "GET",
-    url: "/users",
-    handler: userControllers.readAllUsers,
+    url: "/users/username/:username",
+    handler: userControllers.readUserByUsername,
   });
 
   fastify.route({
