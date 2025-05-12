@@ -4,6 +4,7 @@
 // import meRoute from "./auth/me.js";
 
 import userRoutes from "./users/userRoutes.js";
+import authenticationRoutes from "./authenticationRoutes.js";
 
 export default async function registerRoutes(fastify, options) {
   // fastify.register(getUsersRoutes);
@@ -12,4 +13,5 @@ export default async function registerRoutes(fastify, options) {
   // fastify.register(meRoute);
 
   fastify.register(userRoutes);
+  fastify.register(authenticationRoutes);
 }
