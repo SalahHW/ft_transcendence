@@ -1,19 +1,33 @@
 export const signToken = async (request, reply) => {
-  const payload = request.body;
+  const { userId, username, aud } = request.body;
 
-  if (!payload) {
-    reply.statusCode = 400;
-    reply.send({ error: "Payload is empty" });
+  if (!userId || !username || !aud) {
+    reply.statuscode = 400;
+    reply.send({
+      error:
+        "Invalid request: required fields (userId, username, aud) are missing",
+    });
     return;
   }
+
+  const payload = {
+    sub: userId,
+    username,
+    role: "user",
+    aud,
+    iss: "jwt-service",
+  };
 
   try {
     const token = await reply.jwtSign(payload);
     reply.statusCode = 200;
     reply.send({ token });
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.erroror(error);
     reply.statusCode = 500;
-    reply.send({ error: "Failed to generate token" });
+    reply.send({
+      error: "Failed to generate token",
+      cause: error.message,
+    });
   }
 };

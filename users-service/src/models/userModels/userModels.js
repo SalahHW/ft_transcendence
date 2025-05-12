@@ -1,16 +1,23 @@
 import { database } from "../database.js";
+import { translateSqliteError } from "../errors/translateSqliteError.js";
 
 export const createUser = async (user) => {
   const { username, password, email } = user;
+
   const query = `
   INSERT INTO users (username, password, email)
   VALUES (?, ?, ?);`;
-  const result = await database.run(query, [username, password, email]);
-  return {
-    id: result.lastID,
-    username,
-    email,
-  };
+
+  try {
+    const result = await database.run(query, [username, password, email]);
+    return {
+      id: result.lastID,
+      username,
+      email,
+    };
+  } catch (error) {
+    throw translateSqliteError(error);
+  }
 };
 
 export const readUser = async (id) => {
@@ -18,8 +25,26 @@ export const readUser = async (id) => {
   SELECT *
   FROM users
   WHERE id = ?`;
-  const user = await database.get(query, [id]);
-  return user;
+
+  try {
+    const user = await database.get(query, [id]);
+    return user;
+  } catch (error) {
+    throw translateSqliteError(error);
+  }
+};
+
+export const readAllUsers = async () => {
+  const query = `
+  SELECT id, username, email
+  FROM users`;
+
+  try {
+    const users = await database.all(query);
+    return users;
+  } catch (error) {
+    throw translateSqliteError(error);
+  }
 };
 
 export const updateUser = async (id, newUser) => {
@@ -28,16 +53,26 @@ export const updateUser = async (id, newUser) => {
   UPDATE users
   SET username = ?,
   password = ?,
-  email = ?,
+  email = ?
   WHERE id = ?`;
-  const result = await database.run(query, [username, password, email, id]);
-  return result.changes;
+
+  try {
+    const result = await database.run(query, [username, password, email, id]);
+    return result.changes;
+  } catch (error) {
+    throw translateSqliteError(error);
+  }
 };
 
 export const deleteUser = async (id) => {
   const query = `
   DELETE FROM users
   WHERE id = ?`;
-  const result = await database.run(query, [id]);
-  return result.changes;
+
+  try {
+    const result = await database.run(query, [id]);
+    return result.changes;
+  } catch (error) {
+    throw translateSqliteError(error);
+  }
 };

@@ -14,6 +14,12 @@ export default async function userRoutes(fastify) {
   });
 
   fastify.route({
+    method: "GET",
+    url: "/users",
+    handler: userControllers.readAllUsers,
+  });
+
+  fastify.route({
     method: "PUT",
     url: "/users/:id",
     handler: userControllers.updateUser,

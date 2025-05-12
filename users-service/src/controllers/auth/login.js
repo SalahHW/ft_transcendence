@@ -22,8 +22,9 @@ export const loginUser = async (request, reply) => {
 
     // ! Return 200 even when jwt service is down
     const token = request.server.signToken({
-      id: user.id,
+      sub: user.id,
       username: user.username,
+      aud: "users-service",
     });
 
     reply.statusCode = 200;
