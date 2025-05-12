@@ -63,8 +63,8 @@ export async function readUserByUsername(request, reply) {
     if (!user) {
       return reply.code(404).send({ error: "User not found" });
     }
-    // delete user.password;
-    return reply.code;
+    delete user.password;
+    return reply.code(200).send(user);
   } catch (error) {
     return reply.code(500).send({
       error: "Failed to read the user",
