@@ -1,7 +1,7 @@
 import * as userModels from "../../models/userModels/userModels.js";
 import { createUsername } from "./usernameControllers.js";
 import { createEmail } from "./emailControllers.js";
-import { encryptPassword } from "../../utils/password.js";
+import { createPassword } from "./passwordControllers.js";
 
 export async function createUser(request, reply) {
   const { username, password, email } = request.body;
@@ -12,13 +12,13 @@ export async function createUser(request, reply) {
       .send({ error: "Lack of information related to the user" });
   }
   try {
-    createUsername(username);
-    createEmail(email);
-    const hashedPassword = await encryptPassword(password);
+    const newUsername = createUsername(username);
+    const newEmail = createEmail(email);
+    const hashedPassword = createPassword(password);
     const newUser = await userModels.createUser({
-      username,
+      newUsername,
       password: hashedPassword,
-      email,
+      newEmail,
     });
     return reply.code(201).send(newUser);
   } catch (error) {
