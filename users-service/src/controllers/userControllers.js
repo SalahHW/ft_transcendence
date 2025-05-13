@@ -16,9 +16,9 @@ export async function createUser(request, reply) {
     const newEmail = createEmail(email);
     const hashedPassword = createPassword(password);
     const newUser = await userModels.createUser({
-      newUsername,
+      username: newUsername,
       password: hashedPassword,
-      newEmail,
+      email: newEmail,
     });
     return reply.code(201).send(newUser);
   } catch (error) {
