@@ -38,8 +38,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Add paddles to the scene at fixed X-positions and same Y/Z
-    player1.createPaddle(map.getScene, 19.5, 2, 10);  // Right side, speed 10 units/s
-    player2.createPaddle(map.getScene, -19.5, 2, 10); // Left side, speed 10 units/s
+    player1.createPaddle(map.getScene, 19.5, 2, 20);  // Right side, speed 20 units/s
+    player2.createPaddle(map.getScene, -19.5, 2, 20); // Left side, speed 20 units/s
 
     console.log(`P1 ID = ${player1.getPlayerId()} (role=${player1.role}, local=${player1.getPlayerId() === localPlayerId}), P2 ID = ${player2.getPlayerId()} (role=${player2.role}, local=${player2.getPlayerId() === localPlayerId})`);
 
@@ -49,10 +49,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const localPlayer = player1.getPlayerId() === localPlayerId ? player1 : player2;
       if (isUpPressed && !isDownPressed) {
         localPlayer.move(-1, map.getEngine.getDeltaTime() / 1000); // Move up
-        console.log(`Moved local player ${localPlayer.getPlayerId()} up`);
+        //console.log(`Moved local player ${localPlayer.getPlayerId()} up, z=${localPlayer.getPaddleBodyPos.z}`);
+        clientConnection.send({
+          type: 'paddlePosition',
+          playerId: localPlayerId,
+          positionZ: localPlayer.getPaddleBodyPos.z,
+        });
       } else if (isDownPressed && !isUpPressed) {
         localPlayer.move(1, map.getEngine.getDeltaTime() / 1000); // Move down
-        console.log(`Moved local player ${localPlayer.getPlayerId()} down`);
+        //console.log(`Moved local player ${localPlayer.getPlayerId()} down, z=${localPlayer.getPaddleBodyPos.z}`);
+        clientConnection.send({
+          type: 'paddlePosition',
+          playerId: localPlayerId,
+          positionZ: localPlayer.getPaddleBodyPos.z,
+        });
       }
       map.getScene.render();
     });
@@ -65,35 +75,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Listen for paddleMove updates from server
     clientConnection.onPaddleMove(({ playerId: pid, positionZ }) => {
-      console.log(`Received paddleMove for player ${pid}, positionZ: ${positionZ}`);
+      //console.log(`Received paddleMove for player ${pid}, positionZ: ${positionZ}`);
       // Skip updating local player (client-side prediction handles it)
       if (pid === localPlayerId) {
-        console.log(`Skipping update for local player ${pid}`);
+        //console.log(`Skipping update for local player ${pid}`);
         return;
       }
       if (player1.getPlayerId() === pid) {
-        console.log(`Updating player1 (P1 ID = ${player1.getPlayerId()}) to z=${positionZ}`);
+        //console.log(`Updating player1 (P1 ID = ${player1.getPlayerId()}) to z=${positionZ}`);
         player1.setZ(positionZ);
       } else if (player2.getPlayerId() === pid) {
-        console.log(`Updating player2 (P2 ID = ${player2.getPlayerId()}) to z=${positionZ}`);
+        //console.log(`Updating player2 (P2 ID = ${player2.getPlayerId()}) to z=${positionZ}`);
         player2.setZ(positionZ);
       } else {
-        console.log(`No matching player for ID ${pid} (P1 ID = ${player1.getPlayerId()}, P2 ID = ${player2.getPlayerId()})`);
+        //console.log(`No matching player for ID ${pid} (P1 ID = ${player1.getPlayerId()}, P2 ID = ${player2.getPlayerId()})`);
       }
     });
 
     // Listen for sync updates from server
     clientConnection.onSync(({ playerPositions }) => {
-      console.log(`Received sync:`, playerPositions);
+      //console.log(`Received sync:`, playerPositions);
       Object.entries(playerPositions).forEach(([pid, positionZ]) => {
         if (player1.getPlayerId() === pid) {
-          console.log(`Syncing player1 (P1 ID = ${player1.getPlayerId()}) to z=${positionZ}`);
-          player1.setZ(positionZ);
+          if (pid === localPlayerId) {
+            const currentZ = player1.getPaddleBodyPos.z;
+            const diff = Math.abs(positionZ - currentZ);
+            if (diff > 0.1) {
+              //console.log(`Syncing local player1 (P1 ID = ${pid}) to z=${positionZ}, was z=${currentZ}, diff=${diff}`);
+              player1.setZ(positionZ);
+            } else {
+              //console.log(`Skipping sync for local player1 (P1 ID = ${pid}), z=${currentZ}, server z=${positionZ}, diff=${diff}`);
+            }
+          } else {
+            //console.log(`Syncing opponent player1 (P1 ID = ${pid}) to z=${positionZ}`);
+            player1.setZ(positionZ);
+          }
         } else if (player2.getPlayerId() === pid) {
-          console.log(`Syncing player2 (P2 ID = ${player2.getPlayerId()}) to z=${positionZ}`);
-          player2.setZ(positionZ);
+          if (pid === localPlayerId) {
+            const currentZ = player2.getPaddleBodyPos.z;
+            const diff = Math.abs(positionZ - currentZ);
+            if (diff > 0.1) {
+              //console.log(`Syncing local player2 (P2 ID = ${pid}) to z=${positionZ}, was z=${currentZ}, diff=${diff}`);
+              player2.setZ(positionZ);
+            } else {
+              //console.log(`Skipping sync for local player2 (P2 ID = ${pid}), z=${currentZ}, server z=${positionZ}, diff=${diff}`);
+            }
+          } else {
+            //console.log(`Syncing opponent player2 (P2 ID = ${pid}) to z=${positionZ}`);
+            player2.setZ(positionZ);
+          }
         } else {
-          console.log(`No matching player for sync ID ${pid}`);
+          //console.log(`No matching player for sync ID ${pid}`);
         }
       });
     });
@@ -103,11 +135,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (event.key === 'ArrowUp' && !isUpPressed) {
         isUpPressed = true;
         clientConnection.send({ type: 'keyDown', direction: 'up' });
-        console.log('Sent keyDown: up');
+        //console.log('Sent keyDown: up');
       } else if (event.key === 'ArrowDown' && !isDownPressed) {
         isDownPressed = true;
         clientConnection.send({ type: 'keyDown', direction: 'down' });
-        console.log('Sent keyDown: down');
+        //console.log('Sent keyDown: down');
       }
     });
 
@@ -115,11 +147,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (event.key === 'ArrowUp' && isUpPressed) {
         isUpPressed = false;
         clientConnection.send({ type: 'keyUp', direction: 'up' });
-        console.log('Sent keyUp: up');
+        //console.log('Sent keyUp: up');
       } else if (event.key === 'ArrowDown' && isDownPressed) {
         isDownPressed = false;
         clientConnection.send({ type: 'keyUp', direction: 'down' });
-        console.log('Sent keyUp: down');
+        //console.log('Sent keyUp: down');
       }
     });
   });
