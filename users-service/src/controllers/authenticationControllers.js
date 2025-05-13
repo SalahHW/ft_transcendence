@@ -28,6 +28,7 @@ export const loginUser = async (request, reply) => {
       aud: "users-service",
     });
 
+    // TODO: fix response when jwt service is down
     reply.code(200).send(token);
   } catch (error) {
     return reply
