@@ -69,18 +69,6 @@ export const createScene = (engine, canvas) => {
     pipeline.bloomKernel = 64;
     pipeline.bloomScale = 0.5;
 
-    // Explosion trigger via keydown (for testing/demo)
-    //const explode = event => {
-    //    if (event.keyCode === 32) {
-    //        BABYLON.ParticleHelper.CreateAsync("explosion", scene).then(set => {
-    //            set.systems.forEach(s => {
-    //                s.disposeOnStop = true;
-    //            });
-    //            set.start();
-    //        });
-    //    }
-    //};
-
     document.addEventListener('keydown', explode);
 
     // Remove listener when scene is disposed
@@ -91,16 +79,6 @@ export const createScene = (engine, canvas) => {
     return scene;
 };
 
-// New explosion effect function to be called when a paddle is hit
-//export const createExplosion = (scene, position, options = {}) => {
-//    BABYLON.ParticleHelper.CreateAsync("explosion", scene).then(particleSet => {
-//        particleSet.systems.forEach(system => {
-//            system.emitter = position.clone();
-//            system.disposeOnStop = true;
-//        });
-//        particleSet.start();
-//    });
-//};
 export const createExplosion = (scene, position, options = {}) => {
     BABYLON.ParticleHelper.CreateAsync("explosion", scene).then(particleSet => {
         particleSet.systems.forEach(system => {
