@@ -1,4 +1,4 @@
-import { database } from "../database.js";
+import { database } from "./database.js";
 
 export const readPassword = async (id) => {
   const query = `

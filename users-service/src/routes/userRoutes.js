@@ -1,4 +1,4 @@
-import * as userControllers from "../../controllers/users/userControllers.js";
+import * as userControllers from "../controllers/userControllers.js";
 
 export default async function userRoutes(fastify) {
   fastify.route({

@@ -1,4 +1,4 @@
-import * as userModels from "../../models/userModels/userModels.js";
+import * as userModels from "../models/userModels.js";
 import { createUsername } from "./usernameControllers.js";
 import { createEmail } from "./emailControllers.js";
 import { createPassword } from "./passwordControllers.js";

@@ -1,4 +1,4 @@
-import * as usernameModels from "../../models/userModels/usernameModels.js";
+import * as usernameModels from "../models/usernameModels.js";
 
 export function createUsername(username) {
 

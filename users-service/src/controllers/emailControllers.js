@@ -1,4 +1,4 @@
-import * as emailModels from "../../models/userModels/emailModels.js";
+import * as emailModels from "../models/emailModels.js";
 import validator from 'validator';
 
 export function createEmail(rawEmail) {

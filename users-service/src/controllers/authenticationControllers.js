@@ -1,5 +1,5 @@
-import { createUser } from "./users/userControllers.js";
-import { readUserByUsername } from "../models/userModels/userModels.js";
+import { createUser } from "./userControllers.js";
+import { readUserByUsername } from "../models/userModels.js";
 import { comparePassword } from "../utils/password.js";
 
 export const registerUser = async (request, reply) => {

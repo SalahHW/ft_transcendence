@@ -1,5 +1,5 @@
-import { database } from "../database.js";
-import { translateSqliteError } from "../errors/translateSqliteError.js";
+import { database } from "./database.js";
+import { translateSqliteError } from "./errors/translateSqliteError.js";
 
 export const createUser = async (user) => {
   const { username, password, email } = user;
