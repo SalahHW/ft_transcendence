@@ -10,10 +10,10 @@ export async function createUser(request, reply) {
 				return reply.code(400).send({ error: "Lack of information related to the user" });
 		}
 		try {
-				createUsername();
-				createEmail();
+				createUsername(username);
+				createEmail(email);
 				const hashedPassword = await encryptPassword(password);
-				const newUser = await userModels.createUser({ username, hashedPassword, email });
+				const newUser = await userModels.createUser({ username, password: hashedPassword, email });
 				return reply.code(201).send(newUser);
 		} catch (error) {
 				return reply.code(500).send({
