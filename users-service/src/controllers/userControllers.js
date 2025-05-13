@@ -117,9 +117,10 @@ export async function deleteUser(request, reply) {
   }
   try {
     const deletedUserId = await userModels.deleteUser(userId);
-    return reply
-      .code(204)
-      .send({ success: `User ${deletedUserId} has been deleted with success` });
+    if (!deletedUserId) {
+      return reply.code(404).send({ error: "User not found" });
+    }
+    return reply.code(204).send();
   } catch (error) {
     return reply.code(500).send({
       error: "Failed to delete the user",
