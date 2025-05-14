@@ -3,8 +3,9 @@ import { createExplosion } from './ballEffects.js';
 
 class Ball {
     constructor(player1, player2) {
-        this.position = new BABYLON.Vector3(0, 1, 0);
+        this.position = new BABYLON.Vector3(0, -2, 0);
         this.velocity = new BABYLON.Vector3(0, 0, 0);
+        this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
         this.radius = 1;
         this.rebounds = 0;
         this.wasHitByPlayer = undefined;
@@ -14,30 +15,33 @@ class Ball {
         this.isGlowing = false;
         this.currentGlowIntensity = 0;
         this.currentGlowColor = new BABYLON.Color3(0, 0, 0);
-        this.isRespawning = false;
+        this.isRespawning = true;
         this.respawnTime = 0;
         this.respawnDuration = 2;
         this.player1 = player1;
         this.player2 = player2;
-        // For speed tracking
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
+        this.hasValidPosition = false;
+        console.log('Ball constructed: position=', this.position.asArray());
     }
 
     init() {
-        this.position = new BABYLON.Vector3(0, 1, 0);
+        this.position = new BABYLON.Vector3(0, -2, 0);
         this.velocity = new BABYLON.Vector3(0, 0, 0);
+        this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
         this.rebounds = 0;
-        this.isRespawning = false;
+        this.isRespawning = true;
         this.respawnTime = 0;
+        this.hasValidPosition = false;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
-        this.setFirstVelocity();
-        //console.log(`Ball initialized with velocity: ${this.velocity.x.toFixed(3)}, ${this.velocity.y.toFixed(3)}, ${this.velocity.z.toFixed(3)}`);
+        console.log('Ball initialized: position=', this.position.asArray());
     }
 
     setFirstVelocity() {
         this.velocity = new BABYLON.Vector3(Math.random() >= 0.5 ? 20 : -20, 0, 0);
+        this.previousVelocity.copyFrom(this.velocity);
     }
 
     createBall(scene) {
@@ -45,25 +49,46 @@ class Ball {
         this.ballMaterial = new BABYLON.StandardMaterial("glowMat", scene);
         this.ballBody.position.copyFrom(this.position);
         this.ballBody.material = this.ballMaterial;
+        this.ballBody.isVisible = false;
+        console.log('Ball created: position=', this.ballBody.position.asArray(), 'visible=', this.ballBody.isVisible);
+    }
+
+    handleBallRespawn(previousVelocity) {
+        this.position = new BABYLON.Vector3(
+            previousVelocity.x < 0 ? -0.2 : 0.2,
+            -2,
+            0
+        );
+        this.velocity = BABYLON.Vector3.Zero();
+        this.previousVelocity.copyFrom(previousVelocity);
+        this.isRespawning = true;
+        this.respawnTime = 0;
+        this.hasValidPosition = false;
+        console.log(`Ball respawn started: position=(${this.position.x.toFixed(3)}, ${this.position.y.toFixed(3)}, ${this.position.z.toFixed(3)}), previousVelocity=(${previousVelocity.x.toFixed(3)}, ${previousVelocity.y.toFixed(3)}, ${previousVelocity.z.toFixed(3)})`);
     }
 
     update(deltaTime, paddle1Pos, paddle2Pos) {
         if (this.isRespawning) {
             this.respawnTime += deltaTime;
-            this.position.y = -2 + 3 * (this.respawnTime / this.respawnDuration);
-            if (this.respawnTime >= this.respawnDuration) {
+            const t = Math.min(this.respawnTime / this.respawnDuration, 1);
+            this.position.y = -2 + 3 * t;
+            this.position.z = 0;
+            if (t >= 1) {
                 this.isRespawning = false;
                 this.position.y = 1;
-                this.setFirstVelocity();
-                //console.log(`Ball respawned with velocity: ${this.velocity.x.toFixed(3)}, ${this.velocity.y.toFixed(3)}, ${this.velocity.z.toFixed(3)}`);
+                this.velocity.copyFrom(this.previousVelocity);
+                if (this.velocity.length() === 0) {
+                    this.setFirstVelocity();
+                }
+                this.hasValidPosition = true;
+                console.log(`Ball respawn complete: position=(${this.position.x.toFixed(3)}, ${this.position.y.toFixed(3)}, ${this.position.z.toFixed(3)}), velocity=(${this.velocity.x.toFixed(3)}, ${this.velocity.y.toFixed(3)}, ${this.velocity.z.toFixed(3)})`);
             }
             return;
         }
 
-        // Track speed (units/s)
         const now = Date.now();
-        const timeElapsed = (now - this.lastUpdateTime) / 1000; // in seconds
-        if (timeElapsed > 0.01) { // Log every ~100ms
+        const timeElapsed = (now - this.lastUpdateTime) / 1000;
+        if (timeElapsed > 0.01) {
             const distance = BABYLON.Vector3.Distance(this.position, this.lastPosition);
             const speed = distance / timeElapsed;
             console.log(`Ball speed: ${speed.toFixed(3)} units/s, pos: (${this.position.x.toFixed(3)}, ${this.position.y.toFixed(3)}, ${this.position.z.toFixed(3)}), vel: (${this.velocity.x.toFixed(3)}, ${this.velocity.y.toFixed(3)}, ${this.velocity.z.toFixed(3)}), rebounds: ${this.rebounds}`);
@@ -83,32 +108,24 @@ class Ball {
         if (this.position.z >= mapHalfDepth - this.radius) {
             this.velocity.z *= -1;
             this.position.z = mapHalfDepth - this.radius;
-            //console.log(`Wall hit (z=${mapHalfDepth - this.radius}), velocity: (${this.velocity.x.toFixed(3)}, ${this.velocity.y.toFixed(3)}, ${this.velocity.z.toFixed(3)})`);
         } else if (this.position.z <= -mapHalfDepth + this.radius) {
             this.velocity.z *= -1;
             this.position.z = -mapHalfDepth + this.radius;
-            //console.log(`Wall hit (z=${-mapHalfDepth + this.radius}), velocity: (${this.velocity.x.toFixed(3)}, ${this.velocity.y.toFixed(3)}, ${this.velocity.z.toFixed(3)})`);
         }
     }
 
     handleAcceleration() {
         let speed;
         if (this.rebounds < 5) speed = 25;
-        else if (this.rebounds < 10) speed = 37.5;
-        else if (this.rebounds < 25) speed = 50;
-        else if (this.rebounds < 35) speed = 75;
-        else if (this.rebounds < 42) speed = 100;
-        else speed = 125;
+        else speed = 37.5;
 
-        // Preserve direction, set magnitude to desired speed (units/s)
         const currentSpeed = this.velocity.length();
         if (currentSpeed > 0) {
             this.velocity = this.velocity.scale(speed / currentSpeed);
         } else {
-            // If velocity is zero (e.g., after respawn), maintain initial direction
             this.velocity = new BABYLON.Vector3(this.velocity.x >= 0 ? speed : -speed, 0, this.velocity.z);
         }
-        //console.log(`Acceleration applied - rebounds: ${this.rebounds}, target speed: ${speed}, velocity: (${this.velocity.x.toFixed(3)}, ${this.velocity.y.toFixed(3)}, ${this.velocity.z.toFixed(3)})`);
+        this.previousVelocity.copyFrom(this.velocity);
     }
 
     handlePaddleCollisions(paddle1Pos, paddle2Pos) {
@@ -126,7 +143,7 @@ class Ball {
             this.rebounds++;
             this.wasHitByPlayer = isPaddle2 ? this.player2.playerId : this.player1.playerId;
             const isSideHit = Math.abs(dz) > paddleHalfDepth;
-            let speed = this.velocity.length(); // Preserve current speed post-acceleration
+            let speed = this.velocity.length();
             if (isSideHit) {
                 this.velocity.z *= -1;
                 const sign = dz > 0 ? 1 : -1;
@@ -144,7 +161,7 @@ class Ball {
                 const sign = dx > 0 ? 1 : -1;
                 this.position.x += sign * ((paddleHalfWidth + this.radius) - Math.abs(dx) + 0.01);
             }
-            //console.log(`Paddle hit - player: ${this.wasHitByPlayer}, rebounds: ${this.rebounds}, velocity: (${this.velocity.x.toFixed(3)}, ${this.velocity.y.toFixed(3)}, ${this.velocity.z.toFixed(3)})`);
+            this.previousVelocity.copyFrom(this.velocity);
         }
     }
 
@@ -156,11 +173,9 @@ class Ball {
             } else {
                 this.player1.playerScore++;
             }
-            this.position = new BABYLON.Vector3(wasGoingLeft ? -0.2 : 0.2, -2, 0);
-            this.velocity = BABYLON.Vector3.Zero();
-            this.isRespawning = true;
-            this.respawnTime = 0;
-            //console.log(`Score - P1: ${this.player1.playerScore}, P2: ${this.player2.playerScore}, respawning at x=${this.position.x}`);
+            const newVelocity = new BABYLON.Vector3(wasGoingLeft ? -25 : 25, 0, 0);
+            this.handleBallRespawn(newVelocity);
+            console.log(`Score - P1: ${this.player1.playerScore}, P2: ${this.player2.playerScore}, respawning at x=${this.position.x.toFixed(3)}`);
         }
     }
 
@@ -182,30 +197,28 @@ class Ball {
     }
 
     updateClient(scene) {
-        if (this.ballBody) {
+        if (this.ballBody && this.hasValidPosition) {
             this.ballBody.position.copyFrom(this.position);
-        }
-        if (this.rebounds >= 25 && !this.isGlowing) {
-            this.startGlowTransition(new BABYLON.Color3(0.5, 0.2, 0), 1500);
-        } else if (this.rebounds >= 42) {
-            this.startGlowTransition(new BABYLON.Color3(1, 1, 0.3), 8500);
-        }
-        if (this.rebounds > 55 && this.wasHitByPlayer) {
-            createExplosion(scene, this.position);
-            this.wasHitByPlayer = false;
+            this.ballBody.isVisible = true;
+            //console.log(`Ball rendered: position=(${this.ballBody.position.x.toFixed(3)}, ${this.ballBody.position.y.toFixed(3)}, ${this.ballBody.position.z.toFixed(3)}), visible=${this.ballBody.isVisible}`);
+        } else if (this.ballBody) {
+            this.ballBody.isVisible = false;
+            //console.log(`Ball not rendered: hasValidPosition=${this.hasValidPosition}, position=(${this.position.x.toFixed(3)}, ${this.position.y.toFixed(3)}, ${this.position.z.toFixed(3)})`);
         }
     }
 
     setState(state) {
         this.position.copyFrom(state.position);
         this.velocity.copyFrom(state.velocity);
+        this.previousVelocity.copyFrom(state.previousVelocity || this.velocity);
         this.rebounds = state.rebounds;
         this.isRespawning = state.isRespawning;
         this.respawnTime = state.respawnTime;
         this.wasHitByPlayer = state.wasHitByPlayer;
+        this.hasValidPosition = state.hasValidPosition;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
-        //console.log(`Client ball state updated - pos: (${this.position.x.toFixed(3)}, ${this.position.y.toFixed(3)}, ${this.position.z.toFixed(3)}), vel: (${this.velocity.x.toFixed(3)}, ${this.velocity.y.toFixed(3)}, ${this.velocity.z.toFixed(3)})`);
+        //console.log(`Ball state updated: position=(${this.position.x.toFixed(3)}, ${this.position.y.toFixed(3)}, ${this.position.z.toFixed(3)}), hasValidPosition=${this.hasValidPosition}`);
     }
 }
 
