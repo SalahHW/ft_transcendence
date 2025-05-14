@@ -71,17 +71,14 @@ export default class UpdateUserForm {
 
 			try {
 				const response = await this._userService.updateUser(userId, updateData);
-				console.log(`User updated: ${response}`);
-
 				form.reset();
+				console.log(`User updated:\n${JSON.stringify(response, null, 2)}`);
 			}
 			catch (error) {
-				if (error instanceof Error) {
-					console.log(`Failed to update user:`, error.message);
-				}
-				else {
-					console.log(`Failed to update user:`, error);
-				}
+				if (error instanceof Error)
+					console.log(error.message);
+				else
+					console.log(error);
 			}
 		});
 	}
