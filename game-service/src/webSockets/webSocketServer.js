@@ -52,7 +52,6 @@ export class webSocketGameServer {
         const roomPlayers = this.gameRooms.get(assignedRoom);
         if (roomPlayers.length === 2) {
             this.notifyPlayersGameStart(roomPlayers, assignedRoom);
-            // Initialize ball for the room
             roomPlayers.ball = new Ball(
                 { playerId: roomPlayers[0].id, playerScore: 0 },
                 { playerId: roomPlayers[1].id, playerScore: 0 }
@@ -145,6 +144,22 @@ export class webSocketGameServer {
                 player.positionZ = Number(clampedZ.toFixed(3));
             }
             player.lastUpdate = now;
+        } else if (msg.type === 'requestBallRespawn' && roomPlayers.ball) {
+            roomPlayers.ball.init();
+            this.broadcastToRoom(roomId, {
+                type: 'ballUpdate',
+                ballState: {
+                    position: roomPlayers.ball.position,
+                    velocity: roomPlayers.ball.velocity,
+                    previousVelocity: roomPlayers.ball.previousVelocity,
+                    rebounds: roomPlayers.ball.rebounds,
+                    isRespawning: roomPlayers.ball.isRespawning,
+                    respawnTime: roomPlayers.ball.respawnTime,
+                    wasHitByPlayer: roomPlayers.ball.wasHitByPlayer,
+                },
+                isInitialSpawn: true,
+            });
+            console.log(`Sent ballUpdate: position=(${roomPlayers.ball.position.x.toFixed(3)}, ${roomPlayers.ball.position.y.toFixed(3)}, ${roomPlayers.ball.position.z.toFixed(3)}), isInitialSpawn=true`);
         }
     }
 
@@ -162,7 +177,6 @@ export class webSocketGameServer {
             this.gameRooms.forEach((room, roomId) => {
                 if (room.length !== 2) return;
 
-                // Update player positions
                 room.forEach((player, index) => {
                     const speed = 20;
                     const halfD = 7.5;
@@ -187,7 +201,6 @@ export class webSocketGameServer {
                     }
                 });
 
-                // Update ball
                 if (room.ball) {
                     const paddle1Pos = new BABYLON.Vector3(19.5, 2, room[0].positionZ);
                     const paddle2Pos = new BABYLON.Vector3(-19.5, 2, room[1].positionZ);
@@ -202,10 +215,23 @@ export class webSocketGameServer {
                                 [room[1].id]: room.ball.player2.playerScore,
                             },
                         });
+                        this.broadcastToRoom(roomId, {
+                            type: 'ballUpdate',
+                            ballState: {
+                                position: room.ball.position,
+                                velocity: room.ball.velocity,
+                                previousVelocity: room.ball.previousVelocity,
+                                rebounds: room.ball.rebounds,
+                                isRespawning: room.ball.isRespawning,
+                                respawnTime: room.ball.respawnTime,
+                                wasHitByPlayer: room.ball.wasHitByPlayer,
+                            },
+                            isScoreRespawn: true,
+                        });
+                        console.log(`Sent ballUpdate: position=(${room.ball.position.x.toFixed(3)}, ${room.ball.position.y.toFixed(3)}, ${room.ball.position.z.toFixed(3)}), isScoreRespawn=true`);
                     }
                 }
 
-                // Send periodic sync
                 if (now - lastSync >= SYNC_INTERVAL) {
                     const playerPositions = {};
                     room.forEach(player => {
@@ -214,6 +240,7 @@ export class webSocketGameServer {
                     const ballState = room.ball ? {
                         position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
                         velocity: { x: room.ball.velocity.x, y: room.ball.velocity.y, z: room.ball.velocity.z },
+                        previousVelocity: { x: room.ball.previousVelocity.x, y: room.ball.previousVelocity.y, z: room.ball.previousVelocity.z },
                         rebounds: room.ball.rebounds,
                         isRespawning: room.ball.isRespawning,
                         respawnTime: room.ball.respawnTime,
@@ -224,6 +251,9 @@ export class webSocketGameServer {
                         playerPositions,
                         ballState,
                     });
+                    //if (ballState) {
+                    //    console.log(`Sent sync: ball position=(${ballState.position.x.toFixed(3)}, ${ballState.position.y.toFixed(3)}, ${ballState.position.z.toFixed(3)})`);
+                    //}
                     lastSync = now;
                 }
             });
