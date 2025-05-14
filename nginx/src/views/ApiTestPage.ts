@@ -57,7 +57,7 @@ export default class ApiTestPage {
 
 	private _renderUserForms(): void {
 		const tabs = new Tabs(
-			"user-forms-container", ["Get User", "Create User", "Update User", "Delete User"]
+			"user-forms-container", ["Get User", "Create User", "Update User", "Delete User", "Get Me"]
 		);
 
 		/* Get User */
@@ -98,6 +98,16 @@ export default class ApiTestPage {
 		import('./userForms/DeleteUserForm.js').then((module) => {
 			const deleteUserForm = new module.default("delete-user-form-container");
 			deleteUserForm.render();
+		});
+
+		/* Get Me */
+		const getMeContainer = document.createElement('div');
+		getMeContainer.id = "get-me-user-form-container";
+		tabs.setTabContent(4, getMeContainer);
+
+		import('./userForms/GetMeUserForm.js').then((module) => {
+			const getMeUserForm = new module.default("get-me-user-form-container");
+			getMeUserForm.render();
 		});
 
 	}
