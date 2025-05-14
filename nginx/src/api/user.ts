@@ -76,7 +76,7 @@ export default class UsersApi {
 		const responseData = await response.json();
 		if (response.status === 200)
 			return responseData;
-		else if (response.status === 401)
+		else if (response.status === 404)
 			return null as unknown as User;
 		else
 			throw new Error(`failed to get current user:\n${JSON.stringify(responseData, null, 2)}`);
