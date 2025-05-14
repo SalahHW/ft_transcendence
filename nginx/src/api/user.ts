@@ -90,8 +90,8 @@ export default class UsersApi {
 	 * @param id - The ID of the user to get
 	 * @returns A promise that resolves to the user
 	 */
-	async getUser(id: number): Promise<User> {
-		const response = await fetch(`${this._baseUrl}/${id}`, {
+	async getUserById(id: number): Promise<User> {
+		const response = await fetch(`${this._baseUrl}/id/${id}`, {
 			method: "GET",
 			headers: {
 				"Authorization": `Bearer CONNECTED_USER_TOKEN`,

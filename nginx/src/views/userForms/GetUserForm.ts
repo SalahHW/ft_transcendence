@@ -54,7 +54,7 @@ export default class GetUserForm {
 			try {
 				if (idInput.value) {
 					const userId = parseInt(idInput.value);
-					const response = await this._userService.getUser(userId);
+					const response = await this._userService.getUserById(userId);
 					form.reset();
 					console.log(`User found by id:\n${JSON.stringify(response, null, 2)}`);
 				}
