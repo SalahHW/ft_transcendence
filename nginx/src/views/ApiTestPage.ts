@@ -39,7 +39,7 @@ export default class ApiTestPage {
 
 	private _renderLeftCardContent(): void {
 		const tabs = new Tabs(
-			"left-card-content", ["User API", "Match API"]
+			"left-card-content", ["User API", "Match API", "Current User API"]
 		);
 
 		const userContainer = document.createElement('div');
@@ -53,6 +53,12 @@ export default class ApiTestPage {
 		tabs.setTabContent(1, matchContainer);
 
 		this._renderMatchForms();
+
+		const currentUserContainer = document.createElement('div');
+		currentUserContainer.id = "current-user-form-container";
+		tabs.setTabContent(2, currentUserContainer);
+
+		this._renderCurrentUserForms();
 	}
 
 	private _renderUserForms(): void {
@@ -99,7 +105,6 @@ export default class ApiTestPage {
 			const deleteUserForm = new module.default("delete-user-form-container");
 			deleteUserForm.render();
 		});
-
 	}
 
 	private _renderMatchForms(): void {
@@ -123,6 +128,39 @@ export default class ApiTestPage {
 		import('./matchForms/CreateMatchForm.js').then((module) => {
 			const createMatchForm = new module.default("create-match-form-container");
 			createMatchForm.render();
+		});
+	}
+
+	private _renderCurrentUserForms(): void {
+		const tabs = new Tabs(
+			"current-user-form-container", ["Get Me", "Login/Logout", "Register"]
+		);
+
+		const getMeContainer = document.createElement('div');
+		getMeContainer.id = "get-current-user-form-container";
+		tabs.setTabContent(0, getMeContainer);
+
+		import('./currentUserForms/GetCurrentUserForm.js').then((module) => {
+			const getMeUserForm = new module.default("get-current-user-form-container");
+			getMeUserForm.render();
+		});
+
+		const loginLogoutContainer = document.createElement('div');
+		loginLogoutContainer.id = "login-logout-form-container";
+		tabs.setTabContent(1, loginLogoutContainer);
+
+		import('./currentUserForms/LoginLogoutUserForm.js').then((module) => {
+			const loginLogoutUserForm = new module.default("login-logout-form-container");
+			loginLogoutUserForm.render();
+		});
+
+		const registerContainer = document.createElement('div');
+		registerContainer.id = "register-form-container";
+		tabs.setTabContent(2, registerContainer);
+
+		import('./currentUserForms/RegisterUserForm.js').then((module) => {
+			const registerUserForm = new module.default("register-form-container");
+			registerUserForm.render();
 		});
 	}
 

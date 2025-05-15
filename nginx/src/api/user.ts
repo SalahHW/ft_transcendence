@@ -34,10 +34,7 @@ export default class UsersApi {
 
 	async getAllUsers(): Promise<User[]> {
 		const response = await fetch(`${this._baseUrl}`, {
-			method: "GET",
-			headers: {
-				"Authorization": `Bearer CONNECTED_USER_TOKEN`,
-			}
+			method: "GET"
 		});
 		const responseData = await response.json();
 		if (response.status === 200)
@@ -70,17 +67,17 @@ export default class UsersApi {
 	/**
 	 * Gets the current user
 	 * @returns A promise that resolves to the current user
+	 * @returns `null` if the user is not logged in
 	 */
 	async getCurrentUser(): Promise<User> {
 		const response = await fetch(`${this._baseUrl}/me`, {
-			method: "GET",
-			headers: {
-				"Authorization": `Bearer CONNECTED_USER_TOKEN`,
-			}
+			method: "GET"
 		});
 		const responseData = await response.json();
 		if (response.status === 200)
 			return responseData;
+		else if (response.status === 404)
+			return null as unknown as User;
 		else
 			throw new Error(`failed to get current user:\n${JSON.stringify(responseData, null, 2)}`);
 	}
@@ -90,12 +87,9 @@ export default class UsersApi {
 	 * @param id - The ID of the user to get
 	 * @returns A promise that resolves to the user
 	 */
-	async getUser(id: number): Promise<User> {
-		const response = await fetch(`${this._baseUrl}/${id}`, {
-			method: "GET",
-			headers: {
-				"Authorization": `Bearer CONNECTED_USER_TOKEN`,
-			}
+	async getUserById(id: number): Promise<User> {
+		const response = await fetch(`${this._baseUrl}/id/${id}`, {
+			method: "GET"
 		});
 		const responseData = await response.json();
 		if (response.status === 200)
@@ -133,10 +127,7 @@ export default class UsersApi {
 	 */
 	async deleteUser(id: number): Promise<void> {
 		const response = await fetch(`${this._baseUrl}/${id}`, {
-			method: "DELETE",
-			headers: {
-				"Authorization": `Bearer CONNECTED_USER_TOKEN`,
-			}
+			method: "DELETE"
 		});
 		const responseData = await response.json();
 		if (response.status === 204)
@@ -152,15 +143,63 @@ export default class UsersApi {
 	 */
 	async getUsersByUsername(username: string): Promise<User[]> {
 		const response = await fetch(`${this._baseUrl}/list/username/${username}`, {
-			method: "GET",
-			headers: {
-				"Authorization": `Bearer CONNECTED_USER_TOKEN`,
-			}
+			method: "GET"
 		});
 		const responseData = await response.json();
 		if (response.status === 200)
 			return responseData;
 		else
 			throw new Error(`failed to get users by username:\n${JSON.stringify(responseData, null, 2)}`);
+	}
+
+	/**
+	 * Logs in a user
+	 * @param username - The username of the user to login
+	 * @param password - The password of the user to login
+	 * @returns A promise that resolves to the logged in user
+	 */
+	async login(username: string, password: string): Promise<User> {
+		const response = await fetch(`${this._baseUrl}/login`, {
+			method: "POST",
+			body: JSON.stringify({ username, password })
+		});
+		const responseData = await response.json();
+		if (response.status === 200)
+			return responseData;
+		else
+			throw new Error(`failed to login:\n${JSON.stringify(responseData, null, 2)}`);
+	}
+
+	/**
+	 * Logs out the current user
+	 * @returns A promise that resolves to the logged out user
+	 */
+	async logout(): Promise<void> {
+		const response = await fetch(`${this._baseUrl}/logout`, {
+			method: "POST"
+		});
+		const responseData = await response.json();
+		if (response.status === 200)
+			return;
+		else
+			throw new Error(`failed to logout:\n${JSON.stringify(responseData, null, 2)}`);
+	}
+
+	/**
+	 * Registers a new user
+	 * @param username - The username of the user to register
+	 * @param password - The password of the user to register
+	 * @returns A promise that resolves to the registered user
+	 */
+	async register(username: string, password: string): Promise<User> {
+		const response = await fetch(`${this._baseUrl}/register`, {
+			method: "POST",
+			body: JSON.stringify({ username, password })
+		});
+		const responseData = await response.json();
+		if (response.status === 201)
+			return responseData;
+		else
+			throw new Error(`failed to register:\n${JSON.stringify(responseData, null, 2)}`);
 	}
 }
