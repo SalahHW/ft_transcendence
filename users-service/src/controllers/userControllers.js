@@ -5,6 +5,8 @@ import { createPassword } from "./passwordControllers.js";
 
 export async function createUser(request, reply) {
   const { username, password, email } = request.body;
+  console.log(request.body);
+  console.log(username, password, email);
 
   if (!username || !password || !email) {
     return reply
