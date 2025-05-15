@@ -30,10 +30,15 @@ export interface User {
  * User service API.
  */
 export default class UsersApi {
-	private _baseUrl: string = "http://localhost/users";
+	private _host: string = "http://localhost";
+	private _userPath: string = "/users";
+	private _mePath: string = "/me";
+	private _loginPath: string = "/login";
+	private _registerPath: string = "/register";
+	private _usersBaseUrl: string = `${this._host}${this._userPath}`;
 
 	async getAllUsers(): Promise<User[]> {
-		const response = await fetch(`${this._baseUrl}`, {
+		const response = await fetch(`${this._usersBaseUrl}`, {
 			method: "GET"
 		});
 		const responseData = await response.json();
@@ -49,7 +54,7 @@ export default class UsersApi {
 	 * @returns A promise that resolves to the created user
 	 */
 	async createUser(user: User): Promise<User> {
-		const response = await fetch(`${this._baseUrl}`, {
+		const response = await fetch(`${this._usersBaseUrl}`, {
 			method: "POST",
 			headers: {
 				"Authorization": `Bearer CONNECTED_USER_TOKEN`,
@@ -70,7 +75,7 @@ export default class UsersApi {
 	 * @returns `null` if the user is not logged in
 	 */
 	async getCurrentUser(): Promise<User> {
-		const response = await fetch(`${this._baseUrl}/me`, {
+		const response = await fetch(`${this._host}${this._mePath}`, {
 			method: "GET"
 		});
 		const responseData = await response.json();
@@ -88,7 +93,7 @@ export default class UsersApi {
 	 * @returns A promise that resolves to the user
 	 */
 	async getUserById(id: number): Promise<User> {
-		const response = await fetch(`${this._baseUrl}/id/${id}`, {
+		const response = await fetch(`${this._usersBaseUrl}/id/${id}`, {
 			method: "GET"
 		});
 		const responseData = await response.json();
@@ -105,7 +110,7 @@ export default class UsersApi {
 	 * @returns A promise that resolves to the updated user
 	 */
 	async updateUser(id:number, user: User): Promise<User> {
-		const response = await fetch(`${this._baseUrl}/${id}`, {
+		const response = await fetch(`${this._usersBaseUrl}/${id}`, {
 			method: "PUT",
 			headers: {
 				"Authorization": `Bearer CONNECTED_USER_TOKEN`,
@@ -126,7 +131,7 @@ export default class UsersApi {
 	 * @returns A promise that resolves to the deleted user
 	 */
 	async deleteUser(id: number): Promise<void> {
-		const response = await fetch(`${this._baseUrl}/${id}`, {
+		const response = await fetch(`${this._usersBaseUrl}/${id}`, {
 			method: "DELETE"
 		});
 		const responseData = await response.json();
@@ -142,7 +147,7 @@ export default class UsersApi {
 	 * @returns A promise that resolves to the users
 	 */
 	async getUsersByUsername(username: string): Promise<User[]> {
-		const response = await fetch(`${this._baseUrl}/list/username/${username}`, {
+		const response = await fetch(`${this._usersBaseUrl}/username/${username}`, {
 			method: "GET"
 		});
 		const responseData = await response.json();
@@ -159,7 +164,7 @@ export default class UsersApi {
 	 * @returns A promise that resolves to the logged in user
 	 */
 	async login(username: string, password: string): Promise<User> {
-		const response = await fetch(`${this._baseUrl}/login`, {
+		const response = await fetch(`${this._host}${this._loginPath}`, {
 			method: "POST",
 			body: JSON.stringify({ username, password })
 		});
@@ -175,7 +180,7 @@ export default class UsersApi {
 	 * @returns A promise that resolves to the logged out user
 	 */
 	async logout(): Promise<void> {
-		const response = await fetch(`${this._baseUrl}/logout`, {
+		const response = await fetch(`${this._usersBaseUrl}/logout`, {
 			method: "POST"
 		});
 		const responseData = await response.json();
@@ -192,7 +197,7 @@ export default class UsersApi {
 	 * @returns A promise that resolves to the registered user
 	 */
 	async register(username: string, password: string): Promise<User> {
-		const response = await fetch(`${this._baseUrl}/register`, {
+		const response = await fetch(`${this._host}${this._registerPath}`, {
 			method: "POST",
 			body: JSON.stringify({ username, password })
 		});
