@@ -18,6 +18,11 @@ export default class RegisterUserForm {
 				</div>
 
 				<div>
+					<label class="block text-sm font-medium text-gray-700">Email</label>
+					<input type="email" id="register-user-form-email" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+				</div>
+
+				<div>
 					<label class="block text-sm font-medium text-gray-700">Password</label>
 					<input type="password" id="register-user-form-password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
 				</div>
@@ -39,14 +44,15 @@ export default class RegisterUserForm {
 
 			const usernameInput = document.getElementById("register-user-form-username") as HTMLInputElement;
 			const passwordInput = document.getElementById("register-user-form-password") as HTMLInputElement;
+			const emailInput = document.getElementById("register-user-form-email") as HTMLInputElement;
 
-			if (!usernameInput.value || !passwordInput.value) {
-				console.log("Please provide both username and password");
+			if (!usernameInput.value || !passwordInput.value || !emailInput.value) {
+				console.log("Please provide username, email and password");
 				return;
 			}
 
 			try {
-				const response = await this._userService.register(usernameInput.value, passwordInput.value);
+				const response = await this._userService.register(usernameInput.value, emailInput.value, passwordInput.value);
 				console.log(response);
 			}
 			catch (error) {
