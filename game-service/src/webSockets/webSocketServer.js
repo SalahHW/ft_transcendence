@@ -93,7 +93,7 @@ export class webSocketGameServer {
     }
 
     logPlayerConnection(playerId, roomId) {
-        console.log(`Player connected: ${playerId} in room ${roomId}`);
+        //console.log(`Player connected: ${playerId} in room ${roomId}`);
     }
 
     notifyPlayersGameStart(players, roomId) {
@@ -114,7 +114,7 @@ export class webSocketGameServer {
         try {
             msg = JSON.parse(data);
         } catch (e) {
-            return console.error('Bad JSON:', e);
+            return //console.error('Bad JSON:', e);
         }
 
         const player = this.players.get(playerId);
@@ -146,33 +146,49 @@ export class webSocketGameServer {
             player.lastUpdate = now;
         } else if (msg.type === 'requestBallRespawn' && roomPlayers.ball) {
             roomPlayers.ball.init();
-            this.broadcastToRoom(roomId, {
-                type: 'ballUpdate',
-                ballState: {
-                    position: roomPlayers.ball.position,
-                    velocity: roomPlayers.ball.velocity,
-                    previousVelocity: roomPlayers.ball.previousVelocity,
-                    rebounds: roomPlayers.ball.rebounds,
-                    isRespawning: roomPlayers.ball.isRespawning,
-                    respawnTime: roomPlayers.ball.respawnTime,
-                    wasHitByPlayer: roomPlayers.ball.wasHitByPlayer,
-                },
-                isInitialSpawn: true,
-            });
-            console.log(`Sent ballUpdate: position=(${roomPlayers.ball.position.x.toFixed(3)}, ${roomPlayers.ball.position.y.toFixed(3)}, ${roomPlayers.ball.position.z.toFixed(3)}), isInitialSpawn=true`);
+            const ballState = {
+                position: { x: roomPlayers.ball.position.x, y: roomPlayers.ball.position.y, z: roomPlayers.ball.position.z },
+                velocity: roomPlayers.ball.velocity,
+                previousVelocity: roomPlayers.ball.previousVelocity,
+                rebounds: roomPlayers.ball.rebounds,
+                isRespawning: roomPlayers.ball.isRespawning,
+                respawnTime: roomPlayers.ball.respawnTime,
+                wasHitByPlayer: roomPlayers.ball.wasHitByPlayer,
+                speed: roomPlayers.ball.speed,
+            };
+            if (ballState.isRespawning && ballState.respawnTime === 0 && ballState.position.y !== -2) {
+                //console.error(`Invalid initial ball position: y=${ballState.position.y}, expected y=-2`);
+                ballState.position.y = -2;
+            }
+            //console.log(`Sending initial ballUpdate: position=(${ballState.position.x.toFixed(3)}, ${ballState.position.y.toFixed(3)}, ${ballState.position.z.toFixed(3)}), isRespawning=${ballState.isRespawning}, respawnTime=${ballState.respawnTime}`);
+            setTimeout(() => {
+                this.broadcastToRoom(roomId, {
+                    type: 'ballUpdate',
+                    ballState,
+                    isInitialSpawn: true,
+                });
+            }, 1);
         }
     }
 
     startGameLoop() {
-        const FPS = 120;
+        const FPS = 1000;
         const BROADCAST_FPS = 60;
-        const SYNC_INTERVAL = 10;
+        const SYNC_INTERVAL = 5;
         let lastBroadcast = Date.now();
         let lastSync = Date.now();
+        let frameCount = 0;
+        let lastFrameTime = Date.now();
 
         const update = () => {
             const now = Date.now();
             const deltaTime = 1 / FPS;
+            frameCount++;
+            if (now - lastFrameTime >= 1000) {
+                //console.log(`Server FPS: ${frameCount}`);
+                frameCount = 0;
+                lastFrameTime = now;
+            }
 
             this.gameRooms.forEach((room, roomId) => {
                 if (room.length !== 2) return;
@@ -215,20 +231,26 @@ export class webSocketGameServer {
                                 [room[1].id]: room.ball.player2.playerScore,
                             },
                         });
+                        const ballState = {
+                            position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
+                            velocity: room.ball.velocity,
+                            previousVelocity: room.ball.previousVelocity,
+                            rebounds: room.ball.rebounds,
+                            isRespawning: room.ball.isRespawning,
+                            respawnTime: room.ball.respawnTime,
+                            wasHitByPlayer: room.ball.wasHitByPlayer,
+                            speed: room.ball.speed,
+                        };
+                        if (ballState.isRespawning && ballState.respawnTime === 0 && ballState.position.y !== -2) {
+                            //console.error(`Invalid score ball position: y=${ballState.position.y}, expected y=-2`);
+                            ballState.position.y = -2;
+                        }
+                        //console.log(`Sending score ballUpdate: position=(${ballState.position.x.toFixed(3)}, ${ballState.position.y.toFixed(3)}, ${ballState.position.z.toFixed(3)}), isRespawning=${ballState.isRespawning}, respawnTime=${ballState.respawnTime}`);
                         this.broadcastToRoom(roomId, {
                             type: 'ballUpdate',
-                            ballState: {
-                                position: room.ball.position,
-                                velocity: room.ball.velocity,
-                                previousVelocity: room.ball.previousVelocity,
-                                rebounds: room.ball.rebounds,
-                                isRespawning: room.ball.isRespawning,
-                                respawnTime: room.ball.respawnTime,
-                                wasHitByPlayer: room.ball.wasHitByPlayer,
-                            },
+                            ballState,
                             isScoreRespawn: true,
                         });
-                        console.log(`Sent ballUpdate: position=(${room.ball.position.x.toFixed(3)}, ${room.ball.position.y.toFixed(3)}, ${room.ball.position.z.toFixed(3)}), isScoreRespawn=true`);
                     }
                 }
 
@@ -245,15 +267,17 @@ export class webSocketGameServer {
                         isRespawning: room.ball.isRespawning,
                         respawnTime: room.ball.respawnTime,
                         wasHitByPlayer: room.ball.wasHitByPlayer,
+                        speed: room.ball.speed,
                     } : null;
                     this.broadcastToRoom(roomId, {
                         type: 'sync',
                         playerPositions,
                         ballState,
+                        serverTime: now,
                     });
-                    //if (ballState) {
-                    //    console.log(`Sent sync: ball position=(${ballState.position.x.toFixed(3)}, ${ballState.position.y.toFixed(3)}, ${ballState.position.z.toFixed(3)})`);
-                    //}
+                    if (ballState) {
+                        //console.log(`Sent sync: ball position=(${ballState.position.x.toFixed(3)}, ${ballState.position.y.toFixed(3)}, ${ballState.position.z.toFixed(3)}), speed=${ballState.speed}, isRespawning=${ballState.isRespawning}, respawnTime=${ballState.respawnTime}, serverTime=${now}`);
+                    }
                     lastSync = now;
                 }
             });
@@ -268,7 +292,7 @@ export class webSocketGameServer {
     }
 
     handlePlayerDisconnect(playerId, roomId) {
-        console.log(`Player disconnected: ${playerId} from room ${roomId}`);
+        //console.log(`Player disconnected: ${playerId} from room ${roomId}`);
         this.players.delete(playerId);
         const remaining = (this.gameRooms.get(roomId) || []).filter(p => p.id !== playerId);
         if (remaining.length === 0) {
@@ -289,7 +313,7 @@ export class webSocketGameServer {
             if (ws.readyState === 1) {
                 ws.send(json);
             } else {
-                console.log(`Failed to send to player in room ${roomId}: WebSocket not open`);
+                //console.log(`Failed to send to player in room ${roomId}: WebSocket not open`);
             }
         });
     }
