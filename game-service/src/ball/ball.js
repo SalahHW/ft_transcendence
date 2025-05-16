@@ -190,7 +190,7 @@ class Ball {
             }
             const newVelocity = new BABYLON.Vector3(wasGoingLeft ? -25 : 25, 0, 0);
             this.handleBallRespawn(newVelocity);
-            //console.log(`Score - P1: ${this.player1.playerScore}, P2: ${this.player2.playerScore}, respawning at x=${this.position.x.toFixed(3)}`);
+            console.log(`Score - P1: ${this.player1.playerScore}, P2: ${this.player2.playerScore}, respawning at x=${this.position.x.toFixed(3)}`);
         }
     }
 
@@ -215,10 +215,8 @@ class Ball {
         if (this.ballBody && this.hasValidPosition) {
             this.ballBody.position.copyFrom(this.position);
             this.ballBody.isVisible = true;
-            //console.log(`Ball rendered: position=(${this.ballBody.position.x.toFixed(3)}, ${this.ballBody.position.y.toFixed(3)}, ${this.ballBody.position.z.toFixed(3)}), visible=${this.ballBody.isVisible}`);
         } else if (this.ballBody) {
             this.ballBody.isVisible = false;
-            //console.log(`Ball not rendered: hasValidPosition=${this.hasValidPosition}, position=(${this.position.x.toFixed(3)}, ${this.position.y.toFixed(3)}, ${this.position.z.toFixed(3)})`);
         }
     }
 
@@ -234,7 +232,6 @@ class Ball {
         this.speed = state.speed || this.speed;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
-        //console.log(`Ball state updated: position=(${this.position.x.toFixed(3)}, ${this.position.y.toFixed(3)}, ${this.position.z.toFixed(3)}), speed=${this.speed}, hasValidPosition=${this.hasValidPosition}, isRespawning=${this.isRespawning}, respawnTime=${this.respawnTime}`);
     }
 }
 

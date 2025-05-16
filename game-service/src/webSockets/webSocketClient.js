@@ -16,7 +16,6 @@ export class webSocketClient {
 
       this.socket.addEventListener('message', ({ data }) => {
           const msg = JSON.parse(data);
-          //console.log('Received:', msg);
 
           if (msg.type === 'init' && this.initCallback) {
               this.initCallback(msg);
