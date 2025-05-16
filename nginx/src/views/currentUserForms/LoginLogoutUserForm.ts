@@ -29,12 +29,12 @@ export default class LoginLogoutUserForm {
 		this._container.innerHTML = /* HTML */ `
 			<form id="login-logout-user-form" class="space-y-4">
 				<div>
-					<label class="block text-sm font-medium text-gray-700">Username</label>
+					<label class="block text-sm font-medium text-gray-700">Username (required)</label>
 					<input type="text" id="login-logout-user-form-username" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
 				</div>
 
 				<div>
-					<label class="block text-sm font-medium text-gray-700">Password</label>
+					<label class="block text-sm font-medium text-gray-700">Password (required)</label>
 					<input type="password" id="login-logout-user-form-password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
 				</div>
 
