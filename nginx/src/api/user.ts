@@ -189,12 +189,13 @@ export default class UsersApi {
 	 * Registers a new user
 	 * @param username - The username of the user to register
 	 * @param password - The password of the user to register
+	 * @param email - The email of the user to register
 	 * @returns A promise that resolves to the registered user
 	 */
-	async register(username: string, password: string): Promise<User> {
+	async register(username: string, password: string, email: string): Promise<User> {
 		const response = await fetch(`${this._baseUrl}/register`, {
 			method: "POST",
-			body: JSON.stringify({ username, password })
+			body: JSON.stringify({ username, email, password })
 		});
 		const responseData = await response.json();
 		if (response.status === 201)
