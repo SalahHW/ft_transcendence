@@ -199,6 +199,7 @@ export default class UsersApi {
 	async register(username: string, email: string, password: string): Promise<User> {
 		const response = await fetch(`${this._host}${this._registerPath}`, {
 			method: "POST",
+			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ username, email, password })
 		});
 		const responseData = await response.json();
