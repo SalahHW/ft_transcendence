@@ -16,11 +16,11 @@ export const loginUser = async (request, reply) => {
   }
 
   try {
-    const user = await readUserByUsername(username);
+    const user = await readUserByUsername(username.toLowerCase());
+    if (!user) return reply.code(401).send({ error: "Invalid credentials" });
     const isValidPass = comparePassword(password, user.password);
-    if (!isValidPass) {
+    if (!isValidPass)
       return reply.code(401).send({ error: "Invalid credentials" });
-    }
 
     const token = request.server.signToken({
       sub: user.id,
