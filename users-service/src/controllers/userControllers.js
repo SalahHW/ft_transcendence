@@ -12,8 +12,8 @@ export async function createUser(request, reply) {
       .send({ error: "Lack of information related to the user" });
   }
   try {
-    const newUsername = createUsername(username);
-    const newEmail = createEmail(email);
+    const newUsername = createUsername(username).toLowerCase();
+    const newEmail = createEmail(email).toLowerCase();
     const hashedPassword = createPassword(password);
     const newUser = await userModels.createUser({
       username: newUsername,
@@ -58,7 +58,7 @@ export async function readUserByUsername(request, reply) {
   }
 
   try {
-    const user = await userModels.readUserByUsername(username);
+    const user = await userModels.readUserByUsername(username.toLowerCase());
     if (!user) {
       return reply.code(404).send({ error: "User not found" });
     }
