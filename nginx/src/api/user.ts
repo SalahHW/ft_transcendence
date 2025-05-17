@@ -166,6 +166,7 @@ export default class UsersApi {
 	async login(username: string, password: string): Promise<User> {
 		const response = await fetch(`${this._host}${this._loginPath}`, {
 			method: "POST",
+			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ username, password })
 		});
 		const responseData = await response.json();
