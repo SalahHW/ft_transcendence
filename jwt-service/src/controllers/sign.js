@@ -1,7 +1,7 @@
 export const signToken = async (request, reply) => {
-  const { userId, username, aud } = request.body;
+  const { sub, username, aud } = request.body;
 
-  if (!userId || !username || !aud) {
+  if (!sub || !username || !aud) {
     reply.statuscode = 400;
     reply.send({
       error:
@@ -11,7 +11,7 @@ export const signToken = async (request, reply) => {
   }
 
   const payload = {
-    sub: userId,
+    sub,
     username,
     role: "user",
     aud,
