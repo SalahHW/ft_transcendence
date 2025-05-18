@@ -5,11 +5,5 @@ export async function encryptPassword(password) {
 }
 
 export async function comparePassword(passwordA, passwordB) {
-	// Boolean
-	const isValidPassword = await bcrypt.compare(passwordA, passwordB);
-
-	if (!isValidPassword) {
-			return false;
-	}
-	return true;
+	return await bcrypt.compare(passwordA, passwordB);
 }
