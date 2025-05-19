@@ -36,7 +36,10 @@ export async function updatePassword(request, reply) {
 	if (!oldPassword || !newPassword) {
 		return reply.code(400).send({ error: "Old and new password are required" });
 	}
-	const passwordCompare = await comparePassword(oldPassword, readUser().password);
+  const passwordCompare = await comparePassword(
+    oldPassword,
+    readUser().password
+  );
 	if (!passwordCompare) {
 		return reply.code(401).send({ error: "Password doesn't match" });
 	}
