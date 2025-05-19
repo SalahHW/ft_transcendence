@@ -22,7 +22,7 @@ export const loginUser = async (request, reply) => {
     if (!isValidPass)
       return reply.code(401).send({ error: "Invalid credentials" });
 
-    const token = request.server.signToken({
+    const token = await request.server.signToken({
       sub: user.id,
       username: user.username,
       aud: "users-service",
