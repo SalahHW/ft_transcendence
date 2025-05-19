@@ -9,8 +9,7 @@ export async function createPassword(password) {
       "Invalid password format. It must be 6 to 12 characters long and contain only letters, numbers, or special characters"
     );
 	}
-	const newPassword = encryptPassword(password);
-	return newPassword;
+  return await encryptPassword(password);
 }
 
 export async function readPassword(request, reply) {
