@@ -52,7 +52,6 @@ export default class UsersApi {
 		const response = await fetch(`${this._baseUrl}`, {
 			method: "POST",
 			headers: {
-				"Authorization": `Bearer CONNECTED_USER_TOKEN`,
 				"Content-Type": "application/json"
 			},
 			body: JSON.stringify(user)
@@ -108,7 +107,6 @@ export default class UsersApi {
 		const response = await fetch(`${this._baseUrl}/${id}`, {
 			method: "PUT",
 			headers: {
-				"Authorization": `Bearer CONNECTED_USER_TOKEN`,
 				"Content-Type": "application/json"
 			},
 			body: JSON.stringify(user)
@@ -161,22 +159,28 @@ export default class UsersApi {
 	async login(username: string, password: string): Promise<User> {
 		const response = await fetch(`${this._baseUrl}/login`, {
 			method: "POST",
+			headers: {
+				"Content-Type": "application/json"
+			},
 			body: JSON.stringify({ username, password })
 		});
 		const responseData = await response.json();
 		if (response.status === 200)
 			return responseData;
 		else
-			throw new Error(`failed to login:\n${JSON.stringify(responseData, null, 2)}`);
-	}
+		throw new Error(`failed to login:\n${JSON.stringify(responseData, null, 2)}`);
+}
 
-	/**
-	 * Logs out the current user
-	 * @returns A promise that resolves to the logged out user
-	 */
-	async logout(): Promise<void> {
-		const response = await fetch(`${this._baseUrl}/logout`, {
-			method: "POST"
+/**
+ * Logs out the current user
+ * @returns A promise that resolves to the logged out user
+*/
+async logout(): Promise<void> {
+	const response = await fetch(`${this._baseUrl}/logout`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json"
+		},
 		});
 		const responseData = await response.json();
 		if (response.status === 200)
@@ -195,6 +199,9 @@ export default class UsersApi {
 	async register(username: string, password: string, email: string): Promise<User> {
 		const response = await fetch(`${this._baseUrl}/register`, {
 			method: "POST",
+			headers: {
+				"Content-Type": "application/json"
+			},
 			body: JSON.stringify({ username, email, password })
 		});
 		const responseData = await response.json();
