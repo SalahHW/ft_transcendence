@@ -17,7 +17,7 @@ export const loginUser = async (request, reply) => {
   try {
     const user = await readUserByUsername(username.toLowerCase());
     if (!user) return reply.code(401).send({ error: "Invalid credentials" });
-    const isValidPass = comparePassword(password, user.password);
+    const isValidPass = await comparePassword(password, user.password);
     if (!isValidPass)
       return reply.code(401).send({ error: "Invalid credentials" });
 
