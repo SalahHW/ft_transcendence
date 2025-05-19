@@ -9,11 +9,10 @@ export const registerUser = async (request, reply) => {
 export const loginUser = async (request, reply) => {
   const { username, password } = request.body;
 
-  if (!username || !password) {
-    reply.statusCode = 401;
-    reply.send({ error: "Username and password are required" });
-    return;
-  }
+  if (!username || !password)
+    return reply
+      .code(401)
+      .send({ error: "Username and password are required" });
 
   try {
     const user = await readUserByUsername(username.toLowerCase());
