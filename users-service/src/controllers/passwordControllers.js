@@ -2,8 +2,7 @@ import * as passwordModels from "../models/passwordModels.js";
 import { readUser } from "./userControllers.js";
 import { encryptPassword, comparePassword } from "../utils/password.js";
 
-export function createPassword(password) {
-	// Mot de passe compose de lettres, chiffres et underscores. 6 a 12 caracteres.
+export async function createPassword(password) {
 	const regexPattern = /^[a-zA-Z0-9?!.#*"']{6,12}$/;
 	if (!password || !regexPattern.test(password)) {
 		throw new Error("Invalid password format. It must be 6 to 12 characters long and contain only letters, numbers, or special characters");
