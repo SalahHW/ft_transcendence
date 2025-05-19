@@ -5,7 +5,9 @@ import { encryptPassword, comparePassword } from "../utils/password.js";
 export async function createPassword(password) {
 	const regexPattern = /^[a-zA-Z0-9?!.#*"']{6,12}$/;
 	if (!password || !regexPattern.test(password)) {
-		throw new Error("Invalid password format. It must be 6 to 12 characters long and contain only letters, numbers, or special characters");
+    throw new Error(
+      "Invalid password format. It must be 6 to 12 characters long and contain only letters, numbers, or special characters"
+    );
 	}
 	const newPassword = encryptPassword(password);
 	return newPassword;
