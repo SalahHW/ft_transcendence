@@ -27,9 +27,7 @@ export const loginUser = async (request, reply) => {
       username: user.username,
       aud: "users-service",
     });
-
-    // TODO: fix response when jwt service is down
-    reply.code(200).send(token);
+    reply.code(200).send({ token });
   } catch (error) {
     return reply
       .code(500)
