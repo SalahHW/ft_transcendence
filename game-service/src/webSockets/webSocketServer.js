@@ -57,7 +57,6 @@ export class webSocketGameServer {
                 { playerId: room.players[1].id, playerScore: 0 }
             );
             room.ball.init();
-            console.log(`Room ${assignedRoom} ball initialized: position=(${room.ball.position.x.toFixed(3)}, ${room.ball.position.y.toFixed(3)}, ${room.ball.position.z.toFixed(3)})`);
             const ballState = {
                 position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
                 velocity: room.ball.velocity,
@@ -126,7 +125,6 @@ export class webSocketGameServer {
     }
 
     // New: Check for end game condition
-    // Later: Add mod to allow user-set max score
     endGame(room, roomId) {
         if (!room.ball || room.isGameOver) return null;
 
@@ -138,18 +136,10 @@ export class webSocketGameServer {
             winnerId = room.players[0].id;
         } else if (score2 >= 11 && score2 > score1) {
             winnerId = room.players[1].id;
-        } else if (score1 >= 11 && score2 >= 11) {
-            // Tie case: First to lead by 1 wins
-            if (score1 > score2) {
-                winnerId = room.players[0].id;
-            } else if (score2 > score1) {
-                winnerId = room.players[1].id;
-            }
-        }
-
+        } 
         if (winnerId) {
             room.isGameOver = true;
-            console.log(`Room ${roomId} game ended: Winner=${winnerId}, Scores=${score1}-${score2}`);
+            //console.log(`Room ${roomId} game ended: Winner=${winnerId}, Scores=${score1}-${score2}`);
             this.broadcastToRoom(roomId, {
                 type: 'gameEnd',
                 winnerId,
@@ -204,7 +194,7 @@ export class webSocketGameServer {
                     { playerId: room.players[0].id, playerScore: 0 },
                     { playerId: room.players[1].id, playerScore: 0 }
                 );
-                console.log(`Room ${roomId} ball created on requestBallRespawn`);
+                //console.log(`Room ${roomId} ball created on requestBallRespawn`);
             }
             room.ball.init();
             const ballState = {
@@ -221,7 +211,6 @@ export class webSocketGameServer {
                 console.error(`Invalid initial ball position: y=${ballState.position.y}, expected y=-2`);
                 ballState.position.y = -2;
             }
-            console.log(`Room ${roomId} sending ballUpdate: position=(${ballState.position.x.toFixed(3)}, ${ballState.position.y.toFixed(3)}, ${ballState.position.z.toFixed(3)}), isRespawning=${ballState.isRespawning}, respawnTime=${ballState.respawnTime}`);
             this.broadcastToRoom(roomId, {
                 type: 'ballUpdate',
                 ballState,
@@ -304,7 +293,6 @@ export class webSocketGameServer {
                             console.error(`Invalid score ball position: y=${ballState.position.y}, expected y=-2`);
                             ballState.position.y = -2;
                         }
-                        console.log(`Room ${roomId} sending score ballUpdate: position=(${ballState.position.x.toFixed(3)}, ${ballState.position.y.toFixed(3)}, ${ballState.position.z.toFixed(3)}), isRespawning=${ballState.isRespawning}, respawnTime=${ballState.respawnTime}`);
                         this.broadcastToRoom(roomId, {
                             type: 'ballUpdate',
                             ballState,
@@ -336,9 +324,6 @@ export class webSocketGameServer {
                         ballState,
                         serverTime: now,
                     });
-                    if (ballState) {
-                        console.log(`Room ${roomId} sent sync: ball position=(${ballState.position.x.toFixed(3)}, ${ballState.position.y.toFixed(3)}, ${ballState.position.z.toFixed(3)}), speed=${ballState.speed}, isRespawning=${ballState.isRespawning}, respawnTime=${ballState.respawnTime}, serverTime=${now}`);
-                    }
                     lastSync = now;
                 }
             });
@@ -375,9 +360,6 @@ export class webSocketGameServer {
         room.players.forEach(({ ws }) => {
             if (ws.readyState === 1) {
                 ws.send(json);
-                //if (message.type === 'ballUpdate' || message.type === 'sync' || message.type === 'gameEnd') {
-                //    console.log(`Sent to room ${roomId}, player ${ws.playerId}: ${message.type}`);
-                //}
             } else {
                 console.log(`Failed to send to player ${ws.playerId} in room ${roomId}: WebSocket not open`);
             }

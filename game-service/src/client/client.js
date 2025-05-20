@@ -24,12 +24,10 @@ document.addEventListener('DOMContentLoaded', () => {
     clientConnection.onInit(async ({ playerId, roomId: rId, role, opponentId }) => {
         roomId = rId;
         localPlayerId = playerId;
-        //console.log(`Initialized player ${playerId} in room ${roomId}, role: ${role}`);
 
         map = new gameMap();
         map.createMap();
         map.createPlayground();
-        //console.log('Map and playground created');
 
         if (role === 0) {
             player1 = new playerPaddle('Player1', playerId, 0);
@@ -41,7 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         player1.createPaddle(map.getScene, 19.5, 2, 20);
         player2.createPaddle(map.getScene, -19.5, 2, 20);
-        //console.log(`Paddles created: P1 ID=${player1.getPlayerId()} (x=19.5), P2 ID=${player2.getPlayerId()} (x=-19.5)`);
 
         let frameCount = 0;
         let lastTime = Date.now();
@@ -80,7 +77,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 predictedPosition.x = Math.max(-20, Math.min(20, predictedPosition.x));
                 predictedPosition.z = Math.max(-10, Math.min(10, predictedPosition.z));
                 ball.ballBody.position.copyFrom(predictedPosition);
-                //console.log(`Predicted: position=(${predictedPosition.x.toFixed(3)}, ${predictedPosition.y.toFixed(3)}, ${predictedPosition.z.toFixed(3)}), deltaTime=${deltaTime.toFixed(3)}, ping=${(ping * 1000).toFixed(1)}ms`);
                 ball.updateClient(map.getScene);
             } else if (ball) {
                 ball.updateClient(map.getScene);
@@ -152,12 +148,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     const alpha = Math.min(timeSinceSync / syncInterval, 1);
                     const interpolatedPosition = BABYLON.Vector3.Lerp(predictedPosition, newPosition, alpha);
                     ball.ballBody.position.copyFrom(interpolatedPosition);
-                    //console.log(`Sync corrected: alpha=${alpha.toFixed(3)}, position=(${interpolatedPosition.x.toFixed(3)}, ${interpolatedPosition.y.toFixed(3)}, ${interpolatedPosition.z.toFixed(3)}), serverPos=(${newPosition.x.toFixed(3)}, ${newPosition.y.toFixed(3)}, ${newPosition.z.toFixed(3)}), ping=${(ping * 1000).toFixed(1)}ms`);
                     predictedPosition = interpolatedPosition.clone();
                 } else {
                     ball.ballBody.position.copyFrom(newPosition);
                     predictedPosition = newPosition.clone();
-                    //console.log(`Sync direct: position=(${newPosition.x.toFixed(3)}, ${newPosition.y.toFixed(3)}, ${newPosition.z.toFixed(3)}), ping=${(ping * 1000).toFixed(1)}ms`);
                 }
                 lastBallPosition = newPosition.clone();
                 lastSyncTime = now;
@@ -179,23 +173,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isGameOver) return; // New: Ignore if game is over
             player1.playerScore = scores[player1.getPlayerId()] || 0;
             player2.playerScore = scores[player2.getPlayerId()] || 0;
-            //console.log(`Scores - P1: ${player1.playerScore}, P2: ${player2.playerScore}`);
         });
 
         clientConnection.onBallUpdate(({ ballState, isInitialSpawn, isScoreRespawn }) => {
             if (isGameOver) return; // New: Ignore if game is over
             if (ballState && !ball.ballBody) {
                 ball.createBall(map.getScene);
-                //console.log('Ball created at position:', ball.position.asArray());
             }
             if (ballState && ball.ballBody) {
                 const newPosition = new BABYLON.Vector3(ballState.position.x, ballState.position.y, ballState.position.z);
-                //console.log(`Received ballUpdate: position=(${newPosition.x.toFixed(3)}, ${newPosition.y.toFixed(3)}, ${newPosition.z.toFixed(3)}), isInitialSpawn=${isInitialSpawn}, isScoreRespawn=${isScoreRespawn}, isRespawning=${ballState.isRespawning}, respawnTime=${ballState.respawnTime}`);
                 const isRespawn = (isInitialSpawn || isScoreRespawn) && ballState.isRespawning;
                 const isPositionValid = isRespawn ? newPosition.y >= -2 && newPosition.y <= 1 : true;
-                if (!isPositionValid) {
-                    //console.warn(`Invalid respawn position: y=${newPosition.y.toFixed(3)}, expected y between -2 and 1, respawnTime=${ballState.respawnTime}`);
-                }
+
                 ball.ballBody.isVisible = false;
                 ball.ballBody.position = newPosition;
                 predictedPosition = newPosition.clone();
@@ -213,7 +202,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 if (ball.hasValidPosition) {
                     ball.ballBody.isVisible = true;
-                    //console.log(`${isInitialSpawn ? 'Initial' : isScoreRespawn ? 'Score' : 'Update'}: Ball position set to (${newPosition.x.toFixed(3)}, ${newPosition.y.toFixed(3)}, ${newPosition.z.toFixed(3)}), valid=${ball.hasValidPosition}, visible=${ball.ballBody.isVisible}, respawnTime=${ballState.respawnTime}`);
                 }
             }
         });

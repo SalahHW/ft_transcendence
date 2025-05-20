@@ -1,3 +1,4 @@
+//HAS TO REGISTER TIME OF END OF MATCH
 export class webSocketClient {
     constructor(url) {
         this.socket = new WebSocket(url);
@@ -14,7 +15,7 @@ export class webSocketClient {
             this.queue.forEach(m => this.socket.send(m));
             this.queue = [];
         });
-
+        // desync bug       
         this.socket.addEventListener('message', ({ data }) => {
             const msg = JSON.parse(data);
             //console.log('Received:', msg);
