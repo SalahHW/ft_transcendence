@@ -5,7 +5,7 @@ export const signToken = async (request, reply) => {
     reply.statuscode = 400;
     reply.send({
       error:
-        "Invalid request: required fields (userId, username, aud) are missing",
+        "Invalid request: required fields (sub, username, aud) are missing",
     });
     return;
   }
