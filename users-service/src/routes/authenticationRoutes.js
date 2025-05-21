@@ -16,9 +16,10 @@ export default async function authenticationRoutes(fastify) {
   fastify.route({
     method: "GET",
     url: "/me",
-    preHandler: [fastify.verifyToken],
+    // preHandler: [fastify.verifyToken],
     handler: async (request, reply) => {
-      return { user: request.user };
+      // return { user: request.user };
+      return reply.code(404).send({});
     },
   });
 }
