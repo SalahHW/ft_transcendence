@@ -1,7 +1,7 @@
 import fp from "fastify-plugin";
 
 const jwtServiceUrl = "http://jwt";
-const jwtServicePort = 3000;
+const jwtServicePort = 3005;
 
 const baseUrl = `${jwtServiceUrl}:${jwtServicePort}`;
 const signUrl = `${baseUrl}/sign`;
@@ -15,18 +15,12 @@ async function signToken(payload) {
       body: JSON.stringify(payload),
     });
 
-    if (!response.ok) {
-      // throw new Error("Failed to sign token");
-      return null;
-    }
+    if (!response.ok) throw new Error("Failed to sign token");
 
     const data = await response.json();
-    console.log(data);
     return data.token;
   } catch (err) {
-    console.error("Error signing token: ", err);
-    // throw new Error("Authentication service unavailable");
-    return null;
+    throw new Error(err.message);
   }
 }
 
@@ -46,7 +40,6 @@ async function verifyToken(token) {
     const data = await response.json();
     return data.decoded;
   } catch (err) {
-    console.error("Error verifying token: ", err);
     throw new Error("Invalid or expired token");
   }
 }

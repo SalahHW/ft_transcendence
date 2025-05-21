@@ -12,4 +12,13 @@ export default async function authenticationRoutes(fastify) {
     url: "/login",
     handler: authenticationControllers.loginUser,
   });
+
+  fastify.route({
+    method: "GET",
+    url: "/me",
+    preHandler: [fastify.verifyToken],
+    handler: async (request, reply) => {
+      return { user: request.user };
+    },
+  });
 }

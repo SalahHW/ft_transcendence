@@ -6,7 +6,6 @@ export function createEmail(rawEmail) {
 	if (typeof rawEmail !== 'string') {
 		throw new Error("Email must be a string");
 	}
-	// Delete whitespaces
 	const email = rawEmail.trim();
 
 	// Simplified RFC 5322 standard

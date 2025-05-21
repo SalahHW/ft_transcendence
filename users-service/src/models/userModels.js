@@ -38,10 +38,10 @@ export const readUserByUsername = async (username) => {
   const query = `
   SELECT *
   FROM users
-  WHERE username = ?`;
+  WHERE LOWER(username) = ?`;
 
   try {
-    const user = await database.get(query, [username]);
+    const user = await database.get(query, [username.toLowerCase()]);
     return user;
   } catch (error) {
     throw translateSqliteError(error);
@@ -86,6 +86,34 @@ export const deleteUser = async (id) => {
   try {
     const result = await database.run(query, [id]);
     return result.changes;
+  } catch (error) {
+    throw translateSqliteError(error);
+  }
+};
+
+export const userExists = async (username) => {
+  const query = `
+    SELECT 1
+    FROM users
+    WHERE LOWER(username) = ?
+    LIMIT 1`;
+  try {
+    const user = await database.get(query, [username.toLowerCase()]);
+    return !!user;
+  } catch (error) {
+    throw translateSqliteError(error);
+  }
+};
+
+export const emailExists = async (email) => {
+  const query = `
+  SELECT 1
+  FROM users
+  WHERE email = ?
+  LIMIT 1`;
+  try {
+    const user = await database.get(query, [email.toLowerCase()]);
+    return !!user;
   } catch (error) {
     throw translateSqliteError(error);
   }
