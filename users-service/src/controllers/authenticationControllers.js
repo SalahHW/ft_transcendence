@@ -15,7 +15,7 @@ export const loginUser = async (request, reply) => {
       .send({ error: "Username and password are required" });
 
   try {
-    const user = await readUserByUsername(username.toLowerCase());
+    const user = await readUserByUsername(username);
     if (!user) return reply.code(401).send({ error: "Invalid credentials" });
     const isValidPass = await comparePassword(password, user.password);
     if (!isValidPass)
