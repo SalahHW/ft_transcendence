@@ -38,10 +38,10 @@ export const readUserByUsername = async (username) => {
   const query = `
   SELECT *
   FROM users
-  WHERE username = ?`;
+  WHERE LOWER(username) = ?`;
 
   try {
-    const user = await database.get(query, [username]);
+    const user = await database.get(query, [username.toLowerCase()]);
     return user;
   } catch (error) {
     throw translateSqliteError(error);
