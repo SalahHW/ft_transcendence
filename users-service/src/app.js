@@ -1,4 +1,4 @@
-import { PORT } from "./config/config.js";
+import { PORT, isDev } from "./config/config.js";
 import Fastify from "fastify";
 import jwtPlugin from "./plugins/jwt.js";
 import { initializeDatabase } from "./models/database.js";
@@ -8,14 +8,19 @@ const fastify = Fastify();
 
 // Initialize the database
 try {
-  // TODO: make it async
   await initializeDatabase();
 } catch (error) {
   console.error("Failed to initialize the database: ", error.message);
   process.exit(1);
 }
 
-// Register plugins
+// Register Swagger in dev environment
+if (isDev) {
+  const { swagger, swaggerUi, swaggerConfig, swaggerUiConfig } = await import("./config/swagger.js");
+  await fastify.register(swagger, swaggerConfig);
+  await fastify.register(swaggerUi, swaggerUiConfig);
+}
+
 await fastify.register(jwtPlugin);
 // Registers routes
 await fastify.register(registerRoutes);
