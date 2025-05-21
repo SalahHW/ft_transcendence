@@ -1,7 +1,8 @@
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
+import { DB_PATH } from "../config/config.js";
 
-const databasePath = "./database/db.sqlite";
+const databasePath = DB_PATH;
 export let database;
 
 export const initializeDatabase = async () => {
