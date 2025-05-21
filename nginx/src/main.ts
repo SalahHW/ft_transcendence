@@ -1,7 +1,6 @@
-import ApiTestPage from "./views/ApiTestPage.js"
+import HomePage from "./views/homePage.js"
 
 document.addEventListener("DOMContentLoaded", () => {
-	const apiTestPage = new ApiTestPage("app-container");
-	apiTestPage.render();
-	console.log("API Test Page loaded ✅");
+	const homePage = new HomePage("app-container");
+	homePage.render();
 });
