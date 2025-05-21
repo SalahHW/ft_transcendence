@@ -167,7 +167,6 @@ export default class UsersApi {
 			headers: {
 				"Content-Type": "application/json"
 			},
-			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ username, password })
 		});
 		const responseData = await response.json();
@@ -181,19 +180,20 @@ export default class UsersApi {
  * Logs out the current user
  * @returns A promise that resolves to the logged out user
 */
-async logout(): Promise<void> {
-	const response = await fetch(`${this._baseUrl}/logout`, {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json"
-		},
-		});
-		const responseData = await response.json();
-		if (response.status === 200)
-			return;
-		else
-			throw new Error(`failed to logout:\n${JSON.stringify(responseData, null, 2)}`);
-	}
+
+// async logout(): Promise<void> {
+// 	const response = await fetch(`${this._host}${this._logoutPath}`, {
+// 		method: "POST",
+// 		headers: {
+// 			"Content-Type": "application/json"
+// 		},
+// 		});
+// 		const responseData = await response.json();
+// 		if (response.status === 200)
+// 			return;
+// 		else
+// 			throw new Error(`failed to logout:\n${JSON.stringify(responseData, null, 2)}`);
+// 	}
 
 	/**
 	 * Registers a new user
@@ -203,7 +203,7 @@ async logout(): Promise<void> {
 	 * @returns A promise that resolves to the registered user
 	 */
 	async register(username: string, password: string, email: string): Promise<User> {
-		const response = await fetch(`${this._baseUrl}/register`, {
+		const response = await fetch(`${this._host}${this._registerPath}`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json"
