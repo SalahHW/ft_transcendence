@@ -20,7 +20,7 @@ services:
       - blockchain
       - transcendence
     volumes:
-      - ./database:/database
+      - ./database:/app/database
 
   jwt:
     container_name: jwt
