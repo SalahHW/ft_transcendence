@@ -91,7 +91,7 @@ export default class LoginLogoutUserForm {
 		form.addEventListener("submit", async (element) => {
 			element.preventDefault();
 
-			await this._userService.logout();
+			// await this._userService.logout();
 		});
 	}
 
