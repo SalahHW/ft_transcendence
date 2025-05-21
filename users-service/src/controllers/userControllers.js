@@ -12,15 +12,17 @@ export async function createUser(request, reply) {
       .send({ error: "Lack of information related to the user" });
   }
   try {
-    const exists = await readUserByUsername(username);
-    if (exists) return reply.code(409).send({ error: "User already exists" });
-    const newUsername = createUsername(username).toLowerCase();
-    const newEmail = createEmail(email).toLowerCase();
+    const usernameExists = await userModels.userExists(username);
+    if (usernameExists) return reply.code(409).send({ error: "User already exists" });
+    const emailLower = createEmail(email).toLowerCase();
+    const emailExists = await userModels.emailExists(emailLower);
+    if (emailExists) return reply.code(409).send({ error: "Email already used" });
+    const newUsername = createUsername(username);
     const hashedPassword = await createPassword(password);
     const newUser = await userModels.createUser({
       username: newUsername,
       password: hashedPassword,
-      email: newEmail,
+      email: emailLower,
     });
     return reply.code(201).send(newUser);
   } catch (error) {
