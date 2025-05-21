@@ -90,3 +90,31 @@ export const deleteUser = async (id) => {
     throw translateSqliteError(error);
   }
 };
+
+export const userExists = async (username) => {
+  const query = `
+    SELECT 1
+    FROM users
+    WHERE LOWER(username) = ?
+    LIMIT 1`;
+  try {
+    const user = await database.get(query, [username.toLowerCase()]);
+    return !!user;
+  } catch (error) {
+    throw translateSqliteError(error);
+  }
+};
+
+export const emailExists = async (email) => {
+  const query = `
+  SELECT 1
+  FROM users
+  WHERE email = ?
+  LIMIT 1`;
+  try {
+    const user = await database.get(query, [email.toLowerCase()]);
+    return !!user;
+  } catch (error) {
+    throw translateSqliteError(error);
+  }
+};
