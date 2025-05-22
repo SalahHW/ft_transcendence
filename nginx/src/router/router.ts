@@ -14,8 +14,12 @@ export default class Router {
     private constructor(containerId: string) {
         this.container = containerId;
         this.routes = [
-            { path: "/", view: HomePage },
-            { path: "/api-test", view: ApiTestPage }
+            {
+                path: "/", view: HomePage
+            },
+            {
+                path: "/api-test", view: ApiTestPage
+            }
         ];
 
         // Gérer la navigation avec les boutons du navigateur
@@ -42,7 +46,8 @@ export default class Router {
         if (route) {
             const view = new route.view(this.container);
             view.render();
-        } else {
+        }
+        else {
             // Rediriger vers la page d'accueil si la route n'existe pas
             this.navigate("/", true);
         }
