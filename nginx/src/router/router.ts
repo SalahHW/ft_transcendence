@@ -1,5 +1,5 @@
 import HomePage from "../views/homePage.js";
-import ApiTestPage from "../views/ApiTestPage.js";
+import ApiTestPage from "../views/apiTestPage/ApiTestPage.js";
 
 type Route = {
     path: string;

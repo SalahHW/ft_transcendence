@@ -1,4 +1,4 @@
-import UsersApi, { User } from "../../api/user.js";
+import UsersApi, { User } from "../../../api/user.js";
 
 export default class UpdateUserForm {
 	private _container: HTMLElement;

@@ -1,4 +1,4 @@
-import MatchServiceAPI from "../../api/matche.js";
+import MatchServiceAPI from "../../../api/matche.js";
 
 export default class GetMatchForm {
 	private _container: HTMLElement;

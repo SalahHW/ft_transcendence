@@ -1,4 +1,4 @@
-import Tabs from "../components/tabs.js";
+import Tabs from "./components/tabs.js";
 
 export default class ApiTestPage {
 	private _container: HTMLElement;
@@ -165,7 +165,7 @@ export default class ApiTestPage {
 	}
 
 	private _renderRightCardContent(): void {
-		import('../components/customTerminal.js').then((module) => {
+		import('./components/customTerminal.js').then((module) => {
 			new module.default("right-card-content");
 		});
 	}

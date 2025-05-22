@@ -1,4 +1,4 @@
-import UsersApi from "../../api/user.js";
+import UsersApi from "../../../api/user.js";
 
 export default class RegisterUserForm {
 	private _container: HTMLElement;

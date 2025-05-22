@@ -1,6 +1,6 @@
-import UsersApi from "../../api/user.js";
+import UsersApi from "../../../api/user.js";
 
-export default class DeleteUserForm {
+export default class GetMeUserForm {
 	private _container: HTMLElement;
 	private _userService: UsersApi;
 
@@ -13,39 +13,24 @@ export default class DeleteUserForm {
 
 	render(): void {
 		this._container.innerHTML = /* HTML */ `
-			<form id="delete-user-form" class="space-y-4">
-				<div>
-					<label class="block text-sm font-medium text-gray-700">ID</label>
-					<input type="number" id="deleteform-user-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-				</div>
-
+			<form id="get-me-user-form" class="space-y-4">
 				<button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-					Delete User
+					Get Me
 				</button>
 			</form>
 		`;
-
 		this._attachEventListeners();
 	}
 
 	private _attachEventListeners(): void {
-		const form = document.getElementById("delete-user-form") as HTMLFormElement;
+		const form = document.getElementById("get-me-user-form") as HTMLFormElement;
 
 		form.addEventListener("submit", async (element) => {
 			element.preventDefault();
 
-			const idInput = document.getElementById("deleteform-user-id") as HTMLInputElement;
-
-			if (!idInput.value) {
-				console.log("Please provide an id");
-				return;
-			}
-
 			try {
-				const userId = parseInt(idInput.value);
-				await this._userService.deleteUser(userId);
-				form.reset();
-				console.log(`User ${userId} deleted`);
+				const response = await this._userService.getCurrentUser();
+				console.log(`Current user:\n${JSON.stringify(response, null, 2)}`);
 			}
 			catch (error) {
 				if (error instanceof Error)
