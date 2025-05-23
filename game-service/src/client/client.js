@@ -7,7 +7,28 @@ import '/src/style.css';
 
 // Use VITE_SERVER_PORT from environment variables
 const serverPort = import.meta.env.VITE_SERVER_PORT || 8080;
-const clientConnection = new webSocketClient(`wss://localhost:${serverPort}/ws`);
+// Read playerId from URL query parameters
+const urlParams = new URLSearchParams(window.location.search);
+const playerId = urlParams.get('playerId');
+
+if (!playerId) {
+    console.error('Error: playerId is required in URL query parameter (e.g., ?playerId=<uuid>)');
+    document.body.innerHTML = '<h1>Error: playerId is required</h1><p>Please include playerId in the URL, e.g., http://localhost:5173?playerId=92c724a6-1aa6-4e0c-a331-a9a89ff399c3</p>';
+    throw new Error('playerId is required');
+}
+console.log('Client initializing with playerId:', playerId); // Debug
+const clientConnection = new webSocketClient(`wss://localhost:${serverPort}/ws`, playerId);
+
+// Debug WebSocket events
+clientConnection.socket.addEventListener('open', () => {
+    console.log('WebSocket connection opened');
+});
+clientConnection.socket.addEventListener('error', (err) => {
+    console.error('WebSocket error:', err);
+});
+clientConnection.socket.addEventListener('close', () => {
+    console.log('WebSocket connection closed');
+});
 
 let map = null;
 let player1, player2, ball;
@@ -21,16 +42,24 @@ let predictedPosition = null;
 let ping = 0;
 let pingSamples = [];
 let isGameOver = false;
-let matchEndTime = null; // New: Track match end time
+let matchEndTime = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOMContentLoaded triggered'); // Debug
     clientConnection.onInit(async ({ playerId, roomId: rId, role, opponentId }) => {
+        //console.log('Received init:', { playerId, roomId: rId, role, opponentId }); // Debug
         roomId = rId;
         localPlayerId = playerId;
 
-        map = new gameMap();
-        map.createMap();
-        map.createPlayground();
+        try {
+            map = new gameMap();
+            console.log('Creating map...'); // Debug
+            map.createMap();
+            map.createPlayground();
+            console.log('Map created successfully'); // Debug
+        } catch (e) {
+            console.error('Map creation failed:', e); // Debug
+        }
 
         if (role === 0) {
             player1 = new playerPaddle('Player1', playerId, 0);
@@ -40,8 +69,13 @@ document.addEventListener('DOMContentLoaded', () => {
             player2 = new playerPaddle('Player2', playerId, 1);
         }
 
-        player1.createPaddle(map.getScene, 19.5, 2, 20);
-        player2.createPaddle(map.getScene, -19.5, 2, 20);
+        try {
+            player1.createPaddle(map.getScene, 19.5, 2, 20);
+            player2.createPaddle(map.getScene, -19.5, 2, 20);
+            console.log('Paddles created successfully'); // Debug
+        } catch (e) {
+            console.error('Paddle creation failed:', e); // Debug
+        }
 
         let frameCount = 0;
         let lastTime = Date.now();
@@ -88,12 +122,12 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         map.getEngine.runRenderLoop(renderLoop);
 
-        //console.log('Starting match animation');
-        await map.launchMatchAnimation();
-        //console.log('Match animation complete');
-
-        ball = new Ball(player1, player2);
-        clientConnection.send({ type: 'requestBallRespawn' });
+        try {
+            await map.launchMatchAnimation();
+            console.log('Match animation launched'); // Debug
+        } catch (e) {
+            console.error('Match animation failed:', e); // Debug
+        }
 
         window.addEventListener('resize', () => map.getEngine.resize());
 
@@ -109,6 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         clientConnection.onSync(({ playerPositions, ballState, serverTime }) => {
             if (isGameOver) return;
+            //console.log('Received sync:', { playerPositions, ballState, serverTime }); // Debug
 
             const now = Date.now();
             if (serverTime) {
@@ -142,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             });
-            if (ballState && ball.ballBody && ball.hasValidPosition) {
+            if (ballState && ball && ball.ballBody && ball.hasValidPosition) {
                 const newPosition = new BABYLON.Vector3(ballState.position.x, ballState.position.y, ballState.position.z);
                 const now = Date.now();
                 if (lastBallPosition && lastSyncTime && predictedPosition) {
@@ -180,10 +215,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         clientConnection.onBallUpdate(({ ballState, isInitialSpawn, isScoreRespawn }) => {
             if (isGameOver) return;
-            if (ballState && !ball.ballBody) {
+            //console.log('Received ballUpdate:', { ballState, isInitialSpawn, isScoreRespawn }); // Debug
+            if (ballState && !ball) {
+                ball = new Ball(player1, player2);
                 ball.createBall(map.getScene);
+                console.log('Ball created'); // Debug
             }
-            if (ballState && ball.ballBody) {
+            if (ballState && ball && ball.ballBody) {
                 const newPosition = new BABYLON.Vector3(ballState.position.x, ballState.position.y, ballState.position.z);
                 const isRespawn = (isInitialSpawn || isScoreRespawn) && ballState.isRespawning;
                 const isPositionValid = isRespawn ? newPosition.y >= -2 && newPosition.y <= 1 : true;
@@ -194,7 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 lastBallPosition = null;
                 ball.setState({
                     position: newPosition,
-                    velocity: new BABYLON.Vector3(ballState.velocity.x, ballState.velocity.y, ballState.velocity.z),
+                    velocity: new BABYLON.Vector3(ballState.velocity.x, ballState.velocity.y, ballState.position.z),
                     previousVelocity: ballState.previousVelocity || new BABYLON.Vector3(ballState.velocity.x, ballState.velocity.y, ballState.velocity.z),
                     rebounds: ballState.rebounds,
                     isRespawning: ballState.isRespawning,
@@ -209,27 +247,24 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Updated: Handle gameEnd with matchEndTime
         clientConnection.onGameEnd(({ winnerId, scores, matchEndTime: endTime }) => {
             isGameOver = true;
-            matchEndTime = endTime; // Store match end time
+            matchEndTime = endTime;
             const winnerName = winnerId === player1.getPlayerId() ? player1.name : player2.name;
             const scoreText = `Final Score - ${player1.name}: ${scores[player1.getPlayerId()]}, ${player2.name}: ${scores[player2.getPlayerId()]}`;
             alert(`${winnerName} wins!\n${scoreText}\nMatch ended at: ${matchEndTime.toISOString()}`);
             console.log(`Game ended: Winner=${winnerName}, ${scoreText}, Match ended at: ${matchEndTime.toISOString()}`);
-            // Stop rendering
             map.getEngine.stopRenderLoop();
-            // Hide ball and paddles
             if (ball && ball.ballBody) ball.ballBody.isVisible = false;
             if (player1.paddleBody) player1.paddleBody.isVisible = false;
             if (player2.paddleBody) player2.paddleBody.isVisible = false;
         });
 
-        // New: Handle usernameUpdate
         clientConnection.onMessage = ({ data }) => {
             let msg;
             try {
                 msg = JSON.parse(data);
+                //console.log('Received message:', msg); // Debug
             } catch (e) {
                 console.error('Invalid JSON:', e);
                 return;

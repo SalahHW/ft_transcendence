@@ -5,9 +5,9 @@ import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
 import { Ball } from '../ball/ball.js';
 import * as BABYLON from '@babylonjs/core';
-import { registerApiRoutes } from './api.js'; // Import API routes
+import { registerApiRoutes } from './api.js';
 
-// Load environment variables from .env file
+// Load environment variables
 dotenv.config();
 
 // Read HTTPS certificates
@@ -22,8 +22,11 @@ const fastify = Fastify({
   logger: true,
 });
 
-// Debug: Log Fastify and plugin versions
-console.log('Fastify version:', Fastify.version);
+// Add UUID generator to Fastify instance
+fastify.decorate('uuid', uuidv4);
+
+// Debug: Log Fastify version
+// console.log('Fastify version:', require('fastify/package.json').version || 'unknown');
 console.log('Registering @fastify/websocket plugin');
 
 // Register WebSocket plugin
@@ -45,9 +48,9 @@ fastify.register(WebSocketPlugin, {
 
 // Game state
 const gameRooms = new Map();
-const players = new Map(); // Shared with api.js
+const players = new Map();
 
-// Register API routes, passing players Map
+// Register API routes
 fastify.register(registerApiRoutes, { players });
 
 // WebSocket route for game connections
@@ -61,23 +64,28 @@ fastify.register(async function (fastify) {
     }
     console.log('WebSocket connection established, readyState:', ws.readyState);
 
-    const playerId = uuidv4();
-    const player = {
-      ws,
-      id: playerId,
-      username: null, // Initialize username
-      positionZ: 0,
-      isUpPressed: false,
-      isDownPressed: false,
-      lastUpdate: Date.now(),
-      playerScore: 0,
-    };
-    players.set(playerId, player);
+    let playerId = req.query.playerId || uuidv4();
+    let player = players.get(playerId);
+    if (!player) {
+      player = {
+        ws,
+        id: playerId,
+        username: null,
+        positionZ: 0,
+        isUpPressed: false,
+        isDownPressed: false,
+        lastUpdate: Date.now(),
+        playerScore: 0,
+      };
+      players.set(playerId, player);
+    } else {
+      player.ws = ws;
+    }
 
     // Find or create a game room
     let roomId = null;
     for (const [rId, room] of gameRooms.entries()) {
-      if (room.players.length < 2 && !room.isGameOver) {
+      if (room.players.length < 2 && !room.isGameOver && !room.ready) {
         room.players.push(player);
         roomId = rId;
         break;
@@ -85,7 +93,7 @@ fastify.register(async function (fastify) {
     }
     if (!roomId) {
       roomId = uuidv4();
-      gameRooms.set(roomId, { players: [player], ball: null, isGameOver: false });
+      gameRooms.set(roomId, { players: [player], ball: null, isGameOver: false, ready: false });
     }
 
     // Set connection metadata
@@ -98,49 +106,6 @@ fastify.register(async function (fastify) {
     }
 
     console.log(`Player connected: ${playerId} in room ${roomId}`);
-
-    // Notify players of game start
-    const room = gameRooms.get(roomId);
-    if (room.players.length === 2) {
-      room.players.forEach((p, i) => {
-        const otherPlayer = room.players[1 - i];
-        if (p.ws && p.ws.readyState === 1) {
-          try {
-            p.ws.send(JSON.stringify({
-              type: 'init',
-              playerId: p.id,
-              roomId,
-              role: i,
-              opponentId: otherPlayer.id,
-            }));
-          } catch (e) {
-            console.error(`Failed to send init to player ${p.id}:`, e);
-          }
-        } else {
-          console.log(`Cannot send init to player ${p.id}: WebSocket not open`);
-        }
-      });
-      room.ball = new Ball(
-        { playerId: room.players[0].id, playerScore: 0 },
-        { playerId: room.players[1].id, playerScore: 0 }
-      );
-      room.ball.init();
-      const ballState = {
-        position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
-        velocity: room.ball.velocity,
-        previousVelocity: room.ball.previousVelocity,
-        rebounds: room.ball.rebounds,
-        isRespawning: room.ball.isRespawning,
-        respawnTime: room.ball.respawnTime,
-        wasHitByPlayer: room.ball.wasHitByPlayer,
-        speed: room.ball.speed,
-      };
-      broadcastToRoom(roomId, {
-        type: 'ballUpdate',
-        ballState,
-        isInitialSpawn: true,
-      });
-    }
 
     // Handle player messages
     ws.on('message', (data) => {
@@ -155,16 +120,36 @@ fastify.register(async function (fastify) {
 
       // Handle username setting
       if (msg.type === 'setUsername') {
+        const providedPlayerId = msg.playerId || playerId;
+        if (providedPlayerId !== playerId) {
+          ws.send(JSON.stringify({
+            type: 'error',
+            message: 'Invalid playerId',
+          }));
+          return;
+        }
+        // Use existing username if player was created via API
+        if (player.username) {
+          console.log(`Player ${playerId} already has username ${player.username} from API`);
+          broadcastToRoom(roomId, {
+            type: 'usernameUpdate',
+            playerId,
+            username: player.username,
+          });
+          checkRoomReady(roomId);
+          return;
+        }
+        // Fallback to client-provided username
         const username = msg.username?.trim();
         if (typeof username === 'string' && username.length > 0 && username.length <= 20) {
           player.username = username;
           console.log(`Player ${playerId} set username to ${username}`);
-          // Notify room of username update
           broadcastToRoom(roomId, {
             type: 'usernameUpdate',
             playerId,
             username,
           });
+          checkRoomReady(roomId);
         } else {
           console.warn(`Invalid username from player ${playerId}:`, msg.username);
           ws.send(JSON.stringify({
@@ -175,7 +160,6 @@ fastify.register(async function (fastify) {
         return;
       }
 
-      // Existing input handling
       handlePlayerInput(data, playerId, roomId);
     });
 
@@ -186,6 +170,54 @@ fastify.register(async function (fastify) {
     });
   });
 });
+
+// Check if room is ready to start
+function checkRoomReady(roomId) {
+  const room = gameRooms.get(roomId);
+  if (!room || room.players.length !== 2 || room.ready) return;
+
+  const allReady = room.players.every(player => player.username && player.ws && player.ws.readyState === 1);
+  if (allReady) {
+    room.ready = true;
+    console.log(`Room ${roomId} is ready, starting game`);
+    room.players.forEach((p, i) => {
+      const otherPlayer = room.players[1 - i];
+      if (p.ws && p.ws.readyState === 1) {
+        try {
+          p.ws.send(JSON.stringify({
+            type: 'init',
+            playerId: p.id,
+            roomId,
+            role: i,
+            opponentId: otherPlayer.id,
+          }));
+        } catch (e) {
+          console.error(`Failed to send init to player ${p.id}:`, e);
+        }
+      }
+    });
+    room.ball = new Ball(
+      { playerId: room.players[0].id, playerScore: 0 },
+      { playerId: room.players[1].id, playerScore: 0 }
+    );
+    room.ball.init();
+    const ballState = {
+      position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
+      velocity: room.ball.velocity,
+      previousVelocity: room.ball.previousVelocity,
+      rebounds: room.ball.rebounds,
+      isRespawning: room.ball.isRespawning,
+      respawnTime: room.ball.respawnTime,
+      wasHitByPlayer: room.ball.wasHitByPlayer,
+      speed: room.ball.speed,
+    };
+    broadcastToRoom(roomId, {
+      type: 'ballUpdate',
+      ballState,
+      isInitialSpawn: true,
+    });
+  }
+}
 
 // Broadcast to room
 function broadcastToRoom(roomId, message) {
@@ -295,6 +327,7 @@ function handlePlayerDisconnect(playerId, roomId) {
   }
 }
 
+// Check for end game condition
 function endGame(room, roomId) {
   if (!room.ball || room.isGameOver) return null;
 
@@ -317,7 +350,7 @@ function endGame(room, roomId) {
         [room.players[0].id]: score1,
         [room.players[1].id]: score2,
       },
-      serverTime: Date.now(), // New: Add server timestamp
+      serverTime: Date.now(),
     });
   }
 
@@ -339,7 +372,7 @@ function startGameLoop() {
     const deltaTime = 1 / FPS;
     frameCount++;
     if (now - lastFrameTime >= 1000) {
-      console.log(`Server FPS: ${frameCount}`);
+      //console.log(`Server FPS: ${frameCount}`);
       frameCount = 0;
       lastFrameTime = now;
     }
