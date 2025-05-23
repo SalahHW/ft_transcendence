@@ -1,4 +1,7 @@
 import { webSocketGameServer } from '../webSockets/webSocketServer.js';
+import dotenv from 'dotenv';
 
-// Start the WebSocket server
-const wsServer = new webSocketGameServer(8080);
+dotenv.config();
+
+const port = process.env.GAME_SERVICE_PORT || 8080;
+const wsServer = new webSocketGameServer(port);

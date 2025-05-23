@@ -6,14 +6,18 @@ import { Ball } from '../ball/ball.js';
 import * as BABYLON from '@babylonjs/core';
 
 export class webSocketGameServer {
-    constructor(port = 8080) {
+    constructor(port) {
+        if (!port || isNaN(port) || port <= 0) {
+            throw new Error('A valid port number must be provided');
+        }
+        this.port = port;
         this.serverConfig = this.loadSecurityConfig();
         this.server = this.createHttpsServer();
         this.webSocketServer = this.initializeWebSocketServer();
         this.gameRooms = new Map();
         this.players = new Map();
         this.setupConnectionHandlers();
-        this.startServer(port);
+        this.startServer();
         this.startGameLoop();
     }
 
@@ -350,8 +354,8 @@ export class webSocketGameServer {
         }
     }
 
-    startServer(port) {
-        this.server.listen(port, () => console.log(`Game server running on port ${port}`));
+    startServer() {
+        this.server.listen(this.port, () => console.log(`Game server running on port ${this.port}`));
     }
 
     broadcastToRoom(roomId, message) {
