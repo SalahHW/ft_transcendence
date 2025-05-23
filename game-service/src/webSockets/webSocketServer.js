@@ -237,7 +237,7 @@ export class webSocketGameServer {
             const deltaTime = 1 / FPS;
             frameCount++;
             if (now - lastFrameTime >= 1000) {
-                console.log(`Server FPS: ${frameCount}`);
+                //console.log(`Server FPS: ${frameCount}`);
                 frameCount = 0;
                 lastFrameTime = now;
             }
