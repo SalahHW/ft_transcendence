@@ -1,6 +1,7 @@
 export class webSocketClient {
-    constructor(url) {
-        this.socket = new WebSocket(url);
+    constructor(url, playerId = null) {
+        this.socket = new WebSocket(playerId ? `${url}?playerId=${playerId}` : url);
+        this.playerId = playerId;
         this.queue = [];
         this.initCallback = null;
         this.moveCallback = null;
@@ -8,16 +9,16 @@ export class webSocketClient {
         this.ballUpdateCallback = null;
         this.scoreUpdateCallback = null;
         this.gameEndCallback = null;
-        this.messageCallback = null; // New: For raw message handling
+        this.messageCallback = null;
         this.matchEndTime = null;
 
         this.socket.addEventListener('open', () => {
             console.log('WebSocket opened');
             // Send setUsername message
-            const username = `Player${Math.floor(Math.random() * 1000)}`;
             this.send({
                 type: 'setUsername',
-                username,
+                playerId: this.playerId,
+                username: null, // Rely on server for API-set username
             });
             // Send queued messages
             this.queue.forEach(m => this.socket.send(m));
@@ -34,12 +35,10 @@ export class webSocketClient {
                 return;
             }
 
-            // New: Call messageCallback for raw messages
             if (this.messageCallback) {
                 this.messageCallback({ data: JSON.stringify(msg) });
             }
 
-            // Handle usernameUpdate and error messages
             if (msg.type === 'usernameUpdate') {
                 console.log(`Player ${msg.playerId} set username: ${msg.username}`);
                 return;
@@ -49,7 +48,6 @@ export class webSocketClient {
                 return;
             }
 
-            // Existing message handling
             if (msg.type === 'init' && this.initCallback) {
                 this.initCallback(msg);
             }
@@ -121,7 +119,6 @@ export class webSocketClient {
         this.gameEndCallback = callback;
     }
 
-    // New: Setter for raw message handling
     set onMessage(callback) {
         this.messageCallback = callback;
     }
