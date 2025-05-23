@@ -1,4 +1,3 @@
-//HAS TO REGISTER TIME OF END OF MATCH
 export class webSocketClient {
     constructor(url) {
         this.socket = new WebSocket(url);
@@ -8,18 +7,49 @@ export class webSocketClient {
         this.syncCallback = null;
         this.ballUpdateCallback = null;
         this.scoreUpdateCallback = null;
-        this.gameEndCallback = null; // New: Callback for gameEnd
+        this.gameEndCallback = null;
+        this.messageCallback = null; // New: For raw message handling
+        this.matchEndTime = null;
 
         this.socket.addEventListener('open', () => {
             console.log('WebSocket opened');
+            // Send setUsername message
+            const username = `Player${Math.floor(Math.random() * 1000)}`;
+            this.send({
+                type: 'setUsername',
+                username,
+            });
+            // Send queued messages
             this.queue.forEach(m => this.socket.send(m));
             this.queue = [];
         });
-        // desync bug       
-        this.socket.addEventListener('message', ({ data }) => {
-            const msg = JSON.parse(data);
-            //console.log('Received:', msg);
 
+        this.socket.addEventListener('message', ({ data }) => {
+            let msg;
+            try {
+                msg = JSON.parse(data);
+                // console.log('Received:', msg);
+            } catch (e) {
+                console.error('Invalid JSON:', e);
+                return;
+            }
+
+            // New: Call messageCallback for raw messages
+            if (this.messageCallback) {
+                this.messageCallback({ data: JSON.stringify(msg) });
+            }
+
+            // Handle usernameUpdate and error messages
+            if (msg.type === 'usernameUpdate') {
+                console.log(`Player ${msg.playerId} set username: ${msg.username}`);
+                return;
+            }
+            if (msg.type === 'error') {
+                console.error('Server error:', msg.message);
+                return;
+            }
+
+            // Existing message handling
             if (msg.type === 'init' && this.initCallback) {
                 this.initCallback(msg);
             }
@@ -40,9 +70,13 @@ export class webSocketClient {
                 this.scoreUpdateCallback(msg);
             }
 
-            // New: Handle gameEnd message
             if (msg.type === 'gameEnd' && this.gameEndCallback) {
-                this.gameEndCallback(msg);
+                this.matchEndTime = msg.serverTime ? new Date(msg.serverTime) : new Date();
+                console.log(`Game ended at: ${this.matchEndTime.toISOString()}`);
+                this.gameEndCallback({
+                    ...msg,
+                    matchEndTime: this.matchEndTime,
+                });
             }
         });
 
@@ -57,6 +91,10 @@ export class webSocketClient {
         } else {
             this.queue.push(m);
         }
+    }
+
+    getMatchEndTime() {
+        return this.matchEndTime;
     }
 
     onInit(callback) {
@@ -79,8 +117,12 @@ export class webSocketClient {
         this.scoreUpdateCallback = callback;
     }
 
-    // New: Register gameEnd callback
     onGameEnd(callback) {
         this.gameEndCallback = callback;
+    }
+
+    // New: Setter for raw message handling
+    set onMessage(callback) {
+        this.messageCallback = callback;
     }
 }

@@ -7,7 +7,7 @@ import '/src/style.css';
 
 // Use VITE_SERVER_PORT from environment variables
 const serverPort = import.meta.env.VITE_SERVER_PORT || 8080;
-const clientConnection = new webSocketClient(`wss://localhost:${serverPort}/ws`); // Updated to /ws
+const clientConnection = new webSocketClient(`wss://localhost:${serverPort}/ws`);
 
 let map = null;
 let player1, player2, ball;
@@ -20,7 +20,8 @@ let lastSyncTime = null;
 let predictedPosition = null;
 let ping = 0;
 let pingSamples = [];
-let isGameOver = false; // New: Track game over state
+let isGameOver = false;
+let matchEndTime = null; // New: Track match end time
 
 document.addEventListener('DOMContentLoaded', () => {
     clientConnection.onInit(async ({ playerId, roomId: rId, role, opponentId }) => {
@@ -45,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let frameCount = 0;
         let lastTime = Date.now();
         const renderLoop = () => {
-            if (isGameOver) return; // New: Stop rendering if game is over
+            if (isGameOver) return;
 
             frameCount++;
             const now = Date.now();
@@ -97,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.addEventListener('resize', () => map.getEngine.resize());
 
         clientConnection.onPaddleMove(({ playerId: pid, positionZ }) => {
-            if (isGameOver) return; // New: Ignore if game is over
+            if (isGameOver) return;
             if (pid === localPlayerId) return;
             if (player1.getPlayerId() === pid) {
                 player1.setZ(positionZ);
@@ -107,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         clientConnection.onSync(({ playerPositions, ballState, serverTime }) => {
-            if (isGameOver) return; // New: Ignore if game is over
+            if (isGameOver) return;
 
             const now = Date.now();
             if (serverTime) {
@@ -172,13 +173,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         clientConnection.onScoreUpdate(({ scores }) => {
-            if (isGameOver) return; // New: Ignore if game is over
+            if (isGameOver) return;
             player1.playerScore = scores[player1.getPlayerId()] || 0;
             player2.playerScore = scores[player2.getPlayerId()] || 0;
         });
 
         clientConnection.onBallUpdate(({ ballState, isInitialSpawn, isScoreRespawn }) => {
-            if (isGameOver) return; // New: Ignore if game is over
+            if (isGameOver) return;
             if (ballState && !ball.ballBody) {
                 ball.createBall(map.getScene);
             }
@@ -208,13 +209,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // New: Handle gameEnd message
-        clientConnection.onGameEnd(({ winnerId, scores }) => {
+        // Updated: Handle gameEnd with matchEndTime
+        clientConnection.onGameEnd(({ winnerId, scores, matchEndTime: endTime }) => {
             isGameOver = true;
-            const winnerName = winnerId === player1.getPlayerId() ? 'Player 1' : 'Player 2';
-            const scoreText = `Final Score - Player 1: ${scores[player1.getPlayerId()]}, Player 2: ${scores[player2.getPlayerId()]}`;
-            alert(`${winnerName} wins!\n${scoreText}`);
-            console.log(`Game ended: Winner=${winnerName}, ${scoreText}`);
+            matchEndTime = endTime; // Store match end time
+            const winnerName = winnerId === player1.getPlayerId() ? player1.name : player2.name;
+            const scoreText = `Final Score - ${player1.name}: ${scores[player1.getPlayerId()]}, ${player2.name}: ${scores[player2.getPlayerId()]}`;
+            alert(`${winnerName} wins!\n${scoreText}\nMatch ended at: ${matchEndTime.toISOString()}`);
+            console.log(`Game ended: Winner=${winnerName}, ${scoreText}, Match ended at: ${matchEndTime.toISOString()}`);
             // Stop rendering
             map.getEngine.stopRenderLoop();
             // Hide ball and paddles
@@ -223,8 +225,28 @@ document.addEventListener('DOMContentLoaded', () => {
             if (player2.paddleBody) player2.paddleBody.isVisible = false;
         });
 
+        // New: Handle usernameUpdate
+        clientConnection.onMessage = ({ data }) => {
+            let msg;
+            try {
+                msg = JSON.parse(data);
+            } catch (e) {
+                console.error('Invalid JSON:', e);
+                return;
+            }
+            if (msg.type === 'usernameUpdate') {
+                if (msg.playerId === player1.getPlayerId()) {
+                    player1.name = msg.username;
+                    console.log(`Player1 updated username to ${msg.username}`);
+                } else if (msg.playerId === player2.getPlayerId()) {
+                    player2.name = msg.username;
+                    console.log(`Player2 updated username to ${msg.username}`);
+                }
+            }
+        };
+
         document.addEventListener('keydown', (event) => {
-            if (isGameOver) return; // New: Ignore inputs if game is over
+            if (isGameOver) return;
             if (event.key === 'ArrowUp' && !isUpPressed) {
                 isUpPressed = true;
                 clientConnection.send({ type: 'keyDown', direction: 'up' });
@@ -237,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         document.addEventListener('keyup', (event) => {
-            if (isGameOver) return; // New: Ignore inputs if game is over
+            if (isGameOver) return;
             if (event.key === 'ArrowUp' && isUpPressed) {
                 isUpPressed = false;
                 clientConnection.send({ type: 'keyUp', direction: 'up' });

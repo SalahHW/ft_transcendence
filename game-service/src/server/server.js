@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
 import { Ball } from '../ball/ball.js';
 import * as BABYLON from '@babylonjs/core';
+import { registerApiRoutes } from './api.js'; // Import API routes
 
 // Load environment variables from .env file
 dotenv.config();
@@ -31,7 +32,7 @@ fastify.register(WebSocketPlugin, {
     clientTracking: true,
     verifyClient: (info, next) => {
       console.log('Verifying WebSocket client:', info.req.url);
-      next(true); // Accept all connections for now
+      next(true);
     },
   },
 }).after(err => {
@@ -44,31 +45,27 @@ fastify.register(WebSocketPlugin, {
 
 // Game state
 const gameRooms = new Map();
-const players = new Map();
+const players = new Map(); // Shared with api.js
+
+// Register API routes, passing players Map
+fastify.register(registerApiRoutes, { players });
 
 // WebSocket route for game connections
 fastify.register(async function (fastify) {
   fastify.get('/ws', { websocket: true }, (connection, req) => {
     console.log('WebSocket route hit, connection:', Object.keys(connection));
-    const ws = connection; // Changed from connection.socket to connection
+    const ws = connection;
     if (!ws) {
       console.error('WebSocket connection is undefined, connection:', connection);
       return;
     }
     console.log('WebSocket connection established, readyState:', ws.readyState);
 
-    // Debug: Log incoming messages and close events
-    ws.on('message', (data) => {
-      console.log('Received WebSocket message:', data.toString());
-    });
-    ws.on('close', () => {
-      console.log('WebSocket closed for player');
-    });
-
     const playerId = uuidv4();
     const player = {
       ws,
       id: playerId,
+      username: null, // Initialize username
       positionZ: 0,
       isUpPressed: false,
       isDownPressed: false,
@@ -146,10 +143,47 @@ fastify.register(async function (fastify) {
     }
 
     // Handle player messages
-    ws.on('message', (data) => handlePlayerInput(data, playerId, roomId));
+    ws.on('message', (data) => {
+      console.log('Received WebSocket message:', data.toString());
+      let msg;
+      try {
+        msg = JSON.parse(data);
+      } catch (e) {
+        console.error('Bad JSON:', e);
+        return;
+      }
+
+      // Handle username setting
+      if (msg.type === 'setUsername') {
+        const username = msg.username?.trim();
+        if (typeof username === 'string' && username.length > 0 && username.length <= 20) {
+          player.username = username;
+          console.log(`Player ${playerId} set username to ${username}`);
+          // Notify room of username update
+          broadcastToRoom(roomId, {
+            type: 'usernameUpdate',
+            playerId,
+            username,
+          });
+        } else {
+          console.warn(`Invalid username from player ${playerId}:`, msg.username);
+          ws.send(JSON.stringify({
+            type: 'error',
+            message: 'Invalid username: must be a string (1-20 characters)',
+          }));
+        }
+        return;
+      }
+
+      // Existing input handling
+      handlePlayerInput(data, playerId, roomId);
+    });
 
     // Handle player disconnect
-    ws.on('close', () => handlePlayerDisconnect(playerId, roomId));
+    ws.on('close', () => {
+      console.log('WebSocket closed for player');
+      handlePlayerDisconnect(playerId, roomId);
+    });
   });
 });
 
@@ -157,7 +191,7 @@ fastify.register(async function (fastify) {
 function broadcastToRoom(roomId, message) {
   const json = JSON.stringify(message);
   const room = gameRooms.get(roomId) || { players: [] };
-  room.players = room.players.filter(p => p.ws && p.ws.readyState === 1); // Clean up invalid WebSockets
+  room.players = room.players.filter(p => p.ws && p.ws.readyState === 1);
   room.players.forEach(({ ws, id }) => {
     if (ws && ws.readyState === 1) {
       try {
@@ -171,7 +205,7 @@ function broadcastToRoom(roomId, message) {
   });
 }
 
-// Handle player input
+// Handle player input (unchanged)
 function handlePlayerInput(data, playerId, roomId) {
   let msg;
   try {
@@ -238,7 +272,7 @@ function handlePlayerInput(data, playerId, roomId) {
   }
 }
 
-// Handle player disconnect
+// Handle player disconnect (unchanged)
 function handlePlayerDisconnect(playerId, roomId) {
   console.log(`Player disconnected: ${playerId} from room ${roomId}`);
   const player = players.get(playerId);
@@ -261,7 +295,6 @@ function handlePlayerDisconnect(playerId, roomId) {
   }
 }
 
-// Check for end game condition
 function endGame(room, roomId) {
   if (!room.ball || room.isGameOver) return null;
 
@@ -284,13 +317,14 @@ function endGame(room, roomId) {
         [room.players[0].id]: score1,
         [room.players[1].id]: score2,
       },
+      serverTime: Date.now(), // New: Add server timestamp
     });
   }
 
   return winnerId;
 }
 
-// Game loop
+// Game loop (unchanged)
 function startGameLoop() {
   const FPS = 1000;
   const BROADCAST_FPS = 60;
