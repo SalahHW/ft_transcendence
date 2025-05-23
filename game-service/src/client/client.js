@@ -5,7 +5,9 @@ import { Ball } from '/src/ball/ball.js';
 import * as BABYLON from '@babylonjs/core';
 import '/src/style.css';
 
-const clientConnection = new webSocketClient('wss://localhost:8080');
+// Use VITE_SERVER_PORT from environment variables
+const serverPort = import.meta.env.VITE_SERVER_PORT || 8080;
+const clientConnection = new webSocketClient(`wss://localhost:${serverPort}/ws`); // Updated to /ws
 
 let map = null;
 let player1, player2, ball;
