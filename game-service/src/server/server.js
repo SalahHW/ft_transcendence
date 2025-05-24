@@ -25,8 +25,6 @@ const fastify = Fastify({
 // Add UUID generator to Fastify instance
 fastify.decorate('uuid', uuidv4);
 
-// Debug: Log Fastify version
-// console.log('Fastify version:', require('fastify/package.json').version || 'unknown');
 console.log('Registering @fastify/websocket plugin');
 
 // Register WebSocket plugin
@@ -49,6 +47,9 @@ fastify.register(WebSocketPlugin, {
 // Game state
 const gameRooms = new Map();
 const players = new Map();
+
+// Track animation completion
+const animationStatus = new Map(); // roomId -> Set(playerId)
 
 // Register API routes
 fastify.register(registerApiRoutes, { players });
@@ -94,6 +95,7 @@ fastify.register(async function (fastify) {
     if (!roomId) {
       roomId = uuidv4();
       gameRooms.set(roomId, { players: [player], ball: null, isGameOver: false, ready: false });
+      animationStatus.set(roomId, new Set());
     }
 
     // Set connection metadata
@@ -108,13 +110,28 @@ fastify.register(async function (fastify) {
     console.log(`Player connected: ${playerId} in room ${roomId}`);
 
     // Handle player messages
+    let messageCount = 0;
     ws.on('message', (data) => {
-      console.log('Received WebSocket message:', data.toString());
+      messageCount++;
+      if (messageCount % 10 === 0) {
+        console.log('Received WebSocket message:', data.toString());
+      }
       let msg;
       try {
         msg = JSON.parse(data);
       } catch (e) {
         console.error('Bad JSON:', e);
+        return;
+      }
+
+      // Handle animation completion
+      if (msg.type === 'animationComplete') {
+        const roomAnimStatus = animationStatus.get(roomId);
+        if (roomAnimStatus) {
+          roomAnimStatus.add(playerId);
+          console.log(`Player ${playerId} completed animation in room ${roomId}`);
+          sendBallUpdate(roomId);
+        }
         return;
       }
 
@@ -128,7 +145,6 @@ fastify.register(async function (fastify) {
           }));
           return;
         }
-        // Use existing username if player was created via API
         if (player.username) {
           console.log(`Player ${playerId} already has username ${player.username} from API`);
           broadcastToRoom(roomId, {
@@ -139,7 +155,6 @@ fastify.register(async function (fastify) {
           checkRoomReady(roomId);
           return;
         }
-        // Fallback to client-provided username
         const username = msg.username?.trim();
         if (typeof username === 'string' && username.length > 0 && username.length <= 20) {
           player.username = username;
@@ -177,9 +192,10 @@ function checkRoomReady(roomId) {
   if (!room || room.players.length !== 2 || room.ready) return;
 
   const allReady = room.players.every(player => player.username && player.ws && player.ws.readyState === 1);
+
   if (allReady) {
     room.ready = true;
-    console.log(`Room ${roomId} is ready, starting game`);
+    console.log(`Room ${roomId} is ready, starting game at ${Date.now()}`);
     room.players.forEach((p, i) => {
       const otherPlayer = room.players[1 - i];
       if (p.ws && p.ws.readyState === 1) {
@@ -196,27 +212,46 @@ function checkRoomReady(roomId) {
         }
       }
     });
+  }
+}
+
+// Send ball update after animations
+function sendBallUpdate(roomId) {
+  const room = gameRooms.get(roomId);
+  if (!room || room.players.length !== 2 || !room.ready) return;
+
+  const roomAnimStatus = animationStatus.get(roomId);
+  if (roomAnimStatus.size !== 2) return; // Wait for both players
+
+  if (!room.ball) {
     room.ball = new Ball(
       { playerId: room.players[0].id, playerScore: 0 },
       { playerId: room.players[1].id, playerScore: 0 }
     );
-    room.ball.init();
-    const ballState = {
-      position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
-      velocity: room.ball.velocity,
-      previousVelocity: room.ball.previousVelocity,
-      rebounds: room.ball.rebounds,
-      isRespawning: room.ball.isRespawning,
-      respawnTime: room.ball.respawnTime,
-      wasHitByPlayer: room.ball.wasHitByPlayer,
-      speed: room.ball.speed,
-    };
-    broadcastToRoom(roomId, {
-      type: 'ballUpdate',
-      ballState,
-      isInitialSpawn: true,
-    });
+    // Initialize for initial spawn with respawn animation
+    room.ball.position = new BABYLON.Vector3(0, -2, 0);
+    room.ball.isRespawning = true;
+    room.ball.respawnTime = 0;
+    room.ball.hasValidPosition = true;
   }
+
+  const ballState = {
+    position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
+    velocity: { x: room.ball.velocity.x, y: room.ball.velocity.y, z: room.ball.velocity.z },
+    previousVelocity: { x: room.ball.previousVelocity.x, y: room.ball.previousVelocity.y, z: room.ball.previousVelocity.z },
+    rebounds: room.ball.rebounds,
+    isRespawning: room.ball.isRespawning,
+    respawnTime: room.ball.respawnTime,
+    wasHitByPlayer: room.ball.wasHitByPlayer,
+    speed: room.ball.speed,
+  };
+  console.log(`Sending initial ballUpdate at ${Date.now()}:`, ballState);
+  broadcastToRoom(roomId, {
+    type: 'ballUpdate',
+    ballState,
+    isInitialSpawn: true,
+    isScoreRespawn: false
+  });
 }
 
 // Broadcast to room
@@ -237,7 +272,7 @@ function broadcastToRoom(roomId, message) {
   });
 }
 
-// Handle player input (unchanged)
+// Handle player input
 function handlePlayerInput(data, playerId, roomId) {
   let msg;
   try {
@@ -281,30 +316,35 @@ function handlePlayerInput(data, playerId, roomId) {
       );
       console.log(`Room ${roomId} ball created on requestBallRespawn`);
     }
-    room.ball.init();
+    if (msg.isInitial) {
+      room.ball.position = new BABYLON.Vector3(0, -2, 0);
+_ball.isRespawning = true;
+      room.ball.respawnTime = 0;
+      room.ball.hasValidPosition = true;
+    } else {
+      room.ball.init();
+    }
     const ballState = {
       position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
-      velocity: room.ball.velocity,
-      previousVelocity: room.ball.previousVelocity,
+      velocity: { x: room.ball.velocity.x, y: room.ball.velocity.y, z: room.ball.velocity.z },
+      previousVelocity: { x: room.ball.previousVelocity.x, y: room.ball.previousVelocity.y, z: room.ball.previousVelocity.z },
       rebounds: room.ball.rebounds,
       isRespawning: room.ball.isRespawning,
       respawnTime: room.ball.respawnTime,
       wasHitByPlayer: room.ball.wasHitByPlayer,
       speed: room.ball.speed,
     };
-    if (ballState.isRespawning && ballState.respawnTime === 0 && ballState.position.y !== -2) {
-      console.error(`Invalid initial ball position: y=${ballState.position.y}, expected y=-2`);
-      ballState.position.y = -2;
-    }
+    console.log(`Sending ballUpdate on requestBallRespawn at ${Date.now()}:`, ballState);
     broadcastToRoom(roomId, {
       type: 'ballUpdate',
       ballState,
-      isInitialSpawn: true,
+      isInitialSpawn: msg.isInitial || false,
+      isScoreRespawn: !msg.isInitial
     });
   }
 }
 
-// Handle player disconnect (unchanged)
+// Handle player disconnect
 function handlePlayerDisconnect(playerId, roomId) {
   console.log(`Player disconnected: ${playerId} from room ${roomId}`);
   const player = players.get(playerId);
@@ -322,6 +362,7 @@ function handlePlayerDisconnect(playerId, roomId) {
   room.players = room.players.filter(p => p.id !== playerId);
   if (room.players.length === 0) {
     gameRooms.delete(roomId);
+    animationStatus.delete(roomId);
   } else {
     gameRooms.set(roomId, room);
   }
@@ -357,7 +398,7 @@ function endGame(room, roomId) {
   return winnerId;
 }
 
-// Game loop (unchanged)
+// Game loop
 function startGameLoop() {
   const FPS = 1000;
   const BROADCAST_FPS = 60;
@@ -372,7 +413,6 @@ function startGameLoop() {
     const deltaTime = 1 / FPS;
     frameCount++;
     if (now - lastFrameTime >= 1000) {
-      //console.log(`Server FPS: ${frameCount}`);
       frameCount = 0;
       lastFrameTime = now;
     }
@@ -411,6 +451,10 @@ function startGameLoop() {
         const prevScore2 = room.ball.player2.playerScore;
         room.ball.update(deltaTime, paddle1Pos, paddle2Pos);
         if (room.ball.player1.playerScore !== prevScore1 || room.ball.player2.playerScore !== prevScore2) {
+          console.log(`Sending scoreUpdate at ${Date.now()}:`, {
+            [room.players[0].id]: room.ball.player1.playerScore,
+            [room.players[1].id]: room.ball.player2.playerScore
+          });
           broadcastToRoom(roomId, {
             type: 'scoreUpdate',
             scores: {
@@ -420,21 +464,19 @@ function startGameLoop() {
           });
           const ballState = {
             position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
-            velocity: room.ball.velocity,
-            previousVelocity: room.ball.previousVelocity,
+            velocity: { x: room.ball.velocity.x, y: room.ball.velocity.y, z: room.ball.velocity.z },
+            previousVelocity: { x: room.ball.previousVelocity.x, y: room.ball.previousVelocity.y, z: room.ball.previousVelocity.z },
             rebounds: room.ball.rebounds,
             isRespawning: room.ball.isRespawning,
             respawnTime: room.ball.respawnTime,
             wasHitByPlayer: room.ball.wasHitByPlayer,
             speed: room.ball.speed,
           };
-          if (ballState.isRespawning && ballState.respawnTime === 0 && ballState.position.y !== -2) {
-            console.error(`Invalid score ball position: y=${ballState.position.y}, expected y=-2`);
-            ballState.position.y = -2;
-          }
+          console.log(`Sending score ballUpdate at ${Date.now()}:`, ballState);
           broadcastToRoom(roomId, {
             type: 'ballUpdate',
             ballState,
+            isInitialSpawn: false,
             isScoreRespawn: true,
           });
           endGame(room, roomId);

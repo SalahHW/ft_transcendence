@@ -11,9 +11,7 @@ class Ball {
         this.wasHitByPlayer = undefined;
         this.ballBody = null;
         this.ballMaterial = null;
-        this.glowAnimationInterval = null;
         this.isGlowing = false;
-        this.currentGlowIntensity = 0;
         this.currentGlowColor = new BABYLON.Color3(0, 0, 0);
         this.isRespawning = true;
         this.respawnTime = 0;
@@ -24,7 +22,6 @@ class Ball {
         this.lastUpdateTime = Date.now();
         this.hasValidPosition = true;
         this.speed = 25;
-        //console.log('Ball constructed: position=', this.position.asArray(), 'hasValidPosition=', this.hasValidPosition);
     }
 
     init() {
@@ -38,7 +35,6 @@ class Ball {
         this.speed = 25;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
-        //console.log('Ball initialized: position=', this.position.asArray(), 'isRespawning=', this.isRespawning, 'respawnTime=', this.respawnTime, 'hasValidPosition=', this.hasValidPosition);
     }
 
     setFirstVelocity() {
@@ -53,15 +49,10 @@ class Ball {
         this.ballBody.position.copyFrom(this.position);
         this.ballBody.material = this.ballMaterial;
         this.ballBody.isVisible = true;
-        ////console.log('Ball created: position=', this.ballBody.position.asArray(), 'visible=', this.ballBody.isVisible);
     }
 
     handleBallRespawn(previousVelocity) {
-        this.position = new BABYLON.Vector3(
-            previousVelocity.x < 0 ? -0.2 : 0.2,
-            -2,
-            0
-        );
+        this.position = new BABYLON.Vector3(0, -2, 0); // Center for initial spawn
         this.velocity = BABYLON.Vector3.Zero();
         this.previousVelocity.copyFrom(previousVelocity);
         this.isRespawning = true;
@@ -70,7 +61,7 @@ class Ball {
         this.speed = 25;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
-        //console.log(`Ball respawn started: position=(${this.position.x.toFixed(3)}, ${this.position.y.toFixed(3)}, ${this.position.z.toFixed(3)}), previousVelocity=(${previousVelocity.x.toFixed(3)}, ${previousVelocity.y.toFixed(3)}, ${previousVelocity.z.toFixed(3)}), hasValidPosition=${this.hasValidPosition}`);
+        console.log('handleBallRespawn called:', { position: this.position, isRespawning: this.isRespawning, respawnTime: this.respawnTime });
     }
 
     update(deltaTime, paddle1Pos, paddle2Pos) {
@@ -80,6 +71,7 @@ class Ball {
             this.position.y = -2 + 3 * t;
             this.position.z = 0;
             this.position.x = this.position.x;
+            console.log(`Respawn animation: t=${t}, position.y=${this.position.y}, respawnTime=${this.respawnTime}`);
             if (t >= 1) {
                 this.isRespawning = false;
                 this.position.y = 1;
@@ -89,18 +81,14 @@ class Ball {
                 }
                 this.hasValidPosition = true;
                 this.speed = this.rebounds < 5 ? 25 : 37.5;
-                //console.log(`Ball respawn complete: position=(${this.position.x.toFixed(3)}, ${this.position.y.toFixed(3)}, ${this.position.z.toFixed(3)}), velocity=(${this.velocity.x.toFixed(3)}, ${this.velocity.y.toFixed(3)}, ${this.velocity.z.toFixed(3)}), hasValidPosition=${this.hasValidPosition}`);
+                console.log('Respawn complete:', { position: this.position, velocity: this.velocity });
             }
-            //console.log(`Respawn update: position=(${this.position.x.toFixed(3)}, ${this.position.y.toFixed(3)}, ${this.position.z.toFixed(3)}), respawnTime=${this.respawnTime.toFixed(3)}, hasValidPosition=${this.hasValidPosition}`);
             return;
         }
 
         const now = Date.now();
         const timeElapsed = (now - this.lastUpdateTime) / 1000;
         if (timeElapsed > 0.01) {
-            const distance = BABYLON.Vector3.Distance(this.position, this.lastPosition);
-            const speed = distance / timeElapsed;
-            //console.log(`Ball speed: ${speed.toFixed(3)} units/s, pos: (${this.position.x.toFixed(3)}, ${this.position.y.toFixed(3)}, ${this.position.z.toFixed(3)}), vel: (${this.velocity.x.toFixed(3)}, ${this.velocity.y.toFixed(3)}, ${this.velocity.z.toFixed(3)}), rebounds: ${this.rebounds}`);
             this.lastPosition = this.position.clone();
             this.lastUpdateTime = now;
         }
@@ -112,7 +100,6 @@ class Ball {
         this.position.x = Number(this.position.x.toFixed(6));
         this.position.y = Number(this.position.y.toFixed(6));
         this.position.z = Number(this.position.z.toFixed(6));
-        //console.log(`Ball updated: position=(${this.position.x.toFixed(3)}, ${this.position.y.toFixed(3)}, ${this.position.z.toFixed(3)}), hasValidPosition=${this.hasValidPosition}`);
         this.handleScoreZone();
     }
 
@@ -190,25 +177,29 @@ class Ball {
             }
             const newVelocity = new BABYLON.Vector3(wasGoingLeft ? -25 : 25, 0, 0);
             this.handleBallRespawn(newVelocity);
-            console.log(`Score - P1: ${this.player1.playerScore}, P2: ${this.player2.playerScore}, respawning at x=${this.position.x.toFixed(3)}`);
         }
     }
 
-    startGlowTransition(targetColor, duration) {
+    startGlowTransition(targetColor, duration, scene) {
         if (!this.ballBody || !this.ballMaterial) return;
-        if (this.glowAnimationInterval) clearInterval(this.glowAnimationInterval);
         const startColor = this.currentGlowColor.clone();
-        const startTime = Date.now();
-        this.glowAnimationInterval = setInterval(() => {
-            const progress = Math.min(1, (Date.now() - startTime) / duration);
-            this.currentGlowColor = BABYLON.Color3.Lerp(startColor, targetColor, progress);
-            this.ballMaterial.emissiveColor = this.currentGlowColor;
-            if (progress >= 1) {
-                clearInterval(this.glowAnimationInterval);
-                this.glowAnimationInterval = null;
-                this.isGlowing = true;
-            }
-        }, 16);
+        const glowAnimation = new BABYLON.Animation(
+            "glowAnimation",
+            "emissiveColor",
+            60,
+            BABYLON.Animation.ANIMATIONTYPE_COLOR3,
+            BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+        );
+        const keys = [
+            { frame: 0, value: startColor },
+            { frame: 60 * (duration / 1000), value: targetColor }
+        ];
+        glowAnimation.setKeys(keys);
+        this.ballMaterial.animations = [glowAnimation];
+        scene.beginAnimation(this.ballMaterial, 0, 60 * (duration / 1000), false, 1, () => {
+            this.currentGlowColor = targetColor;
+            this.isGlowing = true;
+        });
     }
 
     updateClient(scene) {
@@ -224,14 +215,20 @@ class Ball {
         this.position.copyFrom(state.position);
         this.velocity.copyFrom(state.velocity);
         this.previousVelocity.copyFrom(state.previousVelocity || this.velocity);
-        this.rebounds = state.rebounds;
-        this.isRespawning = state.isRespawning;
-        this.respawnTime = state.respawnTime;
+        this.rebounds = state.rebounds || 0;
+        this.isRespawning = state.isRespawning || false;
+        this.respawnTime = state.respawnTime || 0;
         this.wasHitByPlayer = state.wasHitByPlayer;
         this.hasValidPosition = state.hasValidPosition;
-        this.speed = state.speed || this.speed;
+        this.speed = state.speed || 25;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
+        if (state.isInitialSpawn) {
+            this.position = new BABYLON.Vector3(0, -2, 0);
+            this.isRespawning = true;
+            this.respawnTime = 0;
+            this.hasValidPosition = true;
+        }
     }
 }
 

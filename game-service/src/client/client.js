@@ -13,10 +13,10 @@ const playerId = urlParams.get('playerId');
 
 if (!playerId) {
     console.error('Error: playerId is required in URL query parameter (e.g., ?playerId=<uuid>)');
-    document.body.innerHTML = '<h1>Error: playerId is required</h1><p>Please include playerId in the URL, e.g., http://localhost:5173?playerId=92c724a6-1aa6-4e0c-a331-a9a89ff399c3</p>';
+    document.body.innerHTML = '<h1>Error: playerId is required</h1><p>Please include playerId in the URL, e.g., http://localhost:5173?playerId=30781deb-a3b5-48bc-8e1b-31c22d824720</p>';
     throw new Error('playerId is required');
 }
-console.log('Client initializing with playerId:', playerId); // Debug
+console.log('Client initializing with playerId:', playerId);
 const clientConnection = new webSocketClient(`wss://localhost:${serverPort}/ws`, playerId);
 
 // Debug WebSocket events
@@ -43,22 +43,25 @@ let ping = 0;
 let pingSamples = [];
 let isGameOver = false;
 let matchEndTime = null;
+let initTime = null;
+let syncCount = 0;
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOMContentLoaded triggered'); // Debug
+    console.log('DOMContentLoaded triggered');
     clientConnection.onInit(async ({ playerId, roomId: rId, role, opponentId }) => {
-        //console.log('Received init:', { playerId, roomId: rId, role, opponentId }); // Debug
+        console.log('Received init:', { playerId, roomId: rId, role, opponentId });
+        initTime = Date.now();
         roomId = rId;
         localPlayerId = playerId;
 
         try {
             map = new gameMap();
-            console.log('Creating map...'); // Debug
+            console.log('Creating map...');
             map.createMap();
             map.createPlayground();
-            console.log('Map created successfully'); // Debug
+            console.log('Map created successfully');
         } catch (e) {
-            console.error('Map creation failed:', e); // Debug
+            console.error('Map creation failed:', e);
         }
 
         if (role === 0) {
@@ -72,9 +75,18 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             player1.createPaddle(map.getScene, 19.5, 2, 20);
             player2.createPaddle(map.getScene, -19.5, 2, 20);
-            console.log('Paddles created successfully'); // Debug
+            console.log('Paddles created successfully');
         } catch (e) {
-            console.error('Paddle creation failed:', e); // Debug
+            console.error('Paddle creation failed:', e);
+        }
+
+        // Create ball early
+        try {
+            ball = new Ball(player1, player2);
+            ball.createBall(map.getScene);
+            console.log('Ball created successfully');
+        } catch (e) {
+            console.error('Ball creation failed:', e);
         }
 
         let frameCount = 0;
@@ -85,7 +97,6 @@ document.addEventListener('DOMContentLoaded', () => {
             frameCount++;
             const now = Date.now();
             if (now - lastTime >= 1000) {
-                //console.log(`Client FPS: ${frameCount}`);
                 frameCount = 0;
                 lastTime = now;
             }
@@ -107,15 +118,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     positionZ: localPlayer.getPaddleBodyPos.z,
                 });
             }
-            if (ball && ball.ballBody && ball.hasValidPosition && !ball.isRespawning) {
-                predictedPosition = predictedPosition || ball.ballBody.position.clone();
-                const effectiveDeltaTime = deltaTime + ping / 2;
-                predictedPosition.addInPlace(ball.velocity.scale(effectiveDeltaTime));
-                predictedPosition.x = Math.max(-20, Math.min(20, predictedPosition.x));
-                predictedPosition.z = Math.max(-10, Math.min(10, predictedPosition.z));
-                ball.ballBody.position.copyFrom(predictedPosition);
-                ball.updateClient(map.getScene);
-            } else if (ball) {
+            if (ball && ball.ballBody) {
+                if (ball.isRespawning) {
+                    console.log('Render loop: Ball is respawning');
+                }
+                if (ball.hasValidPosition && !ball.isRespawning) {
+                    predictedPosition = predictedPosition || ball.ballBody.position.clone();
+                    const effectiveDeltaTime = deltaTime + ping / 2;
+                    predictedPosition.addInPlace(ball.velocity.scale(effectiveDeltaTime));
+                    predictedPosition.x = Math.max(-20, Math.min(20, predictedPosition.x));
+                    predictedPosition.z = Math.max(-10, Math.min(10, predictedPosition.z));
+                    ball.ballBody.position.copyFrom(predictedPosition);
+                }
                 ball.updateClient(map.getScene);
             }
             map.getScene.render();
@@ -123,10 +137,15 @@ document.addEventListener('DOMContentLoaded', () => {
         map.getEngine.runRenderLoop(renderLoop);
 
         try {
+            console.log('Starting match animation');
             await map.launchMatchAnimation();
-            console.log('Match animation launched'); // Debug
+            console.log('Match animation completed');
+            clientConnection.send({
+                type: 'animationComplete',
+                playerId: localPlayerId
+            });
         } catch (e) {
-            console.error('Match animation failed:', e); // Debug
+            console.error('Match animation failed:', e);
         }
 
         window.addEventListener('resize', () => map.getEngine.resize());
@@ -143,7 +162,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         clientConnection.onSync(({ playerPositions, ballState, serverTime }) => {
             if (isGameOver) return;
-            //console.log('Received sync:', { playerPositions, ballState, serverTime }); // Debug
+            syncCount++;
+            //if (syncCount % 10 === 0) {
+            //    console.log('Received sync:', { playerPositions, ballState, serverTime });
+            //}
 
             const now = Date.now();
             if (serverTime) {
@@ -151,7 +173,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 pingSamples.push(rtt);
                 if (pingSamples.length > 10) pingSamples.shift();
                 ping = pingSamples.reduce((a, b) => a + b, 0) / pingSamples.length;
-                //console.log(`Ping updated: ${(ping * 1000).toFixed(1)}ms, samples=${pingSamples.length}`);
             }
 
             Object.entries(playerPositions).forEach(([pid, positionZ]) => {
@@ -177,6 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             });
+
             if (ballState && ball && ball.ballBody && ball.hasValidPosition) {
                 const newPosition = new BABYLON.Vector3(ballState.position.x, ballState.position.y, ballState.position.z);
                 const now = Date.now();
@@ -197,52 +219,69 @@ document.addEventListener('DOMContentLoaded', () => {
                     position: ball.ballBody.position,
                     velocity: new BABYLON.Vector3(ballState.velocity.x, ballState.velocity.y, ballState.velocity.z),
                     previousVelocity: ballState.previousVelocity || new BABYLON.Vector3(ballState.velocity.x, ballState.velocity.y, ballState.velocity.z),
-                    rebounds: ballState.rebounds,
-                    isRespawning: ballState.isRespawning,
-                    respawnTime: ballState.respawnTime,
-                    wasHitByPlayer: ballState.wasHitByPlayer,
+                    rebounds: ballState.rebounds || 0,
+                    isRespawning: ballState.isRespawning || false,
+                    respawnTime: ballState.respawnTime || 0,
+                    wasHitByPlayer: ballState.wasHitByPlayer || false,
                     hasValidPosition: true,
-                    speed: ballState.speed,
+                    speed: ballState.speed || 25,
+                    isInitialSpawn: ballState.isInitialSpawn || false
                 });
             }
         });
 
         clientConnection.onScoreUpdate(({ scores }) => {
             if (isGameOver) return;
+            console.log('Received scoreUpdate:', { scores });
             player1.playerScore = scores[player1.getPlayerId()] || 0;
             player2.playerScore = scores[player2.getPlayerId()] || 0;
         });
 
         clientConnection.onBallUpdate(({ ballState, isInitialSpawn, isScoreRespawn }) => {
             if (isGameOver) return;
-            //console.log('Received ballUpdate:', { ballState, isInitialSpawn, isScoreRespawn }); // Debug
-            if (ballState && !ball) {
-                ball = new Ball(player1, player2);
-                ball.createBall(map.getScene);
-                console.log('Ball created'); // Debug
+            const now = Date.now();
+            console.log(`Received ballUpdate at ${now}:`, { ballState, isInitialSpawn, isScoreRespawn });
+            if (initTime) {
+                console.log(`Time since init: ${(now - initTime)}ms`);
+            }
+            if (!ballState || !ballState.position || !ballState.velocity) {
+                console.error('Invalid ballState:', ballState);
+                return;
             }
             if (ballState && ball && ball.ballBody) {
                 const newPosition = new BABYLON.Vector3(ballState.position.x, ballState.position.y, ballState.position.z);
                 const isRespawn = (isInitialSpawn || isScoreRespawn) && ballState.isRespawning;
                 const isPositionValid = isRespawn ? newPosition.y >= -2 && newPosition.y <= 1 : true;
 
-                ball.ballBody.isVisible = false;
+                ball.ballBody.isVisible = isInitialSpawn || isRespawn || isPositionValid;
                 ball.ballBody.position = newPosition;
                 predictedPosition = newPosition.clone();
                 lastBallPosition = null;
-                ball.setState({
-                    position: newPosition,
-                    velocity: new BABYLON.Vector3(ballState.velocity.x, ballState.velocity.y, ballState.position.z),
-                    previousVelocity: ballState.previousVelocity || new BABYLON.Vector3(ballState.velocity.x, ballState.velocity.y, ballState.velocity.z),
-                    rebounds: ballState.rebounds,
-                    isRespawning: ballState.isRespawning,
-                    respawnTime: ballState.respawnTime,
-                    wasHitByPlayer: ballState.wasHitByPlayer,
-                    hasValidPosition: isPositionValid,
-                    speed: ballState.speed,
-                });
-                if (ball.hasValidPosition) {
-                    ball.ballBody.isVisible = true;
+                try {
+                    ball.setState({
+                        position: newPosition,
+                        velocity: new BABYLON.Vector3(ballState.velocity.x, ballState.velocity.y, ballState.velocity.z),
+                        previousVelocity: ballState.previousVelocity || new BABYLON.Vector3(ballState.velocity.x, ballState.velocity.y, ballState.velocity.z),
+                        rebounds: ballState.rebounds || 0,
+                        isRespawning: ballState.isRespawning || false,
+                        respawnTime: ballState.respawnTime || 0,
+                        wasHitByPlayer: ballState.wasHitByPlayer || false,
+                        hasValidPosition: isPositionValid,
+                        speed: ballState.speed || 25,
+                        isInitialSpawn: isInitialSpawn || false
+                    });
+                    console.log('Ball state updated:', {
+                        position: ball.position,
+                        isRespawning: ball.isRespawning,
+                        hasValidPosition: ball.hasValidPosition,
+                        isVisible: ball.ballBody.isVisible,
+                        respawnTime: ball.respawnTime
+                    });
+                    if (!ball.isRespawning && ball.hasValidPosition) {
+                        console.log('Ball active and visible at position:', newPosition);
+                    }
+                } catch (e) {
+                    console.error('Ball setState failed:', e);
                 }
             }
         });
@@ -252,8 +291,8 @@ document.addEventListener('DOMContentLoaded', () => {
             matchEndTime = endTime;
             const winnerName = winnerId === player1.getPlayerId() ? player1.name : player2.name;
             const scoreText = `Final Score - ${player1.name}: ${scores[player1.getPlayerId()]}, ${player2.name}: ${scores[player2.getPlayerId()]}`;
-            alert(`${winnerName} wins!\n${scoreText}\nMatch ended at: ${matchEndTime.toISOString()}`);
-            console.log(`Game ended: Winner=${winnerName}, ${scoreText}, Match ended at: ${matchEndTime.toISOString()}`);
+            alert(`${winnerName} wins!\n${scoreText}\nMatch ended at: ${new Date(matchEndTime).toISOString()}`);
+            console.log(`Game ended: Winner=${winnerName}, ${scoreText}, Match ended at: ${new Date(matchEndTime).toISOString()}`);
             map.getEngine.stopRenderLoop();
             if (ball && ball.ballBody) ball.ballBody.isVisible = false;
             if (player1.paddleBody) player1.paddleBody.isVisible = false;
@@ -264,7 +303,6 @@ document.addEventListener('DOMContentLoaded', () => {
             let msg;
             try {
                 msg = JSON.parse(data);
-                //console.log('Received message:', msg); // Debug
             } catch (e) {
                 console.error('Invalid JSON:', e);
                 return;
@@ -285,11 +323,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (event.key === 'ArrowUp' && !isUpPressed) {
                 isUpPressed = true;
                 clientConnection.send({ type: 'keyDown', direction: 'up' });
-                //console.log('Sent keyDown: up');
             } else if (event.key === 'ArrowDown' && !isDownPressed) {
                 isDownPressed = true;
                 clientConnection.send({ type: 'keyDown', direction: 'down' });
-                //console.log('Sent keyDown: down');
             }
         });
 
@@ -298,11 +334,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (event.key === 'ArrowUp' && isUpPressed) {
                 isUpPressed = false;
                 clientConnection.send({ type: 'keyUp', direction: 'up' });
-                //console.log('Sent keyUp: up');
             } else if (event.key === 'ArrowDown' && isDownPressed) {
                 isDownPressed = false;
                 clientConnection.send({ type: 'keyUp', direction: 'down' });
-                //console.log('Sent keyUp: down');
             }
         });
     });
