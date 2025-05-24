@@ -89,13 +89,33 @@ fastify.register(async function (fastify) {
       if (room.players.length < 2 && !room.isGameOver && !room.ready) {
         room.players.push(player);
         roomId = rId;
+        console.log(`Player ${playerId} joined existing room ${roomId}`);
         break;
       }
     }
     if (!roomId) {
       roomId = uuidv4();
-      gameRooms.set(roomId, { players: [player], ball: null, isGameOver: false, ready: false });
+      const newRoom = {
+        players: [player],
+        ball: new Ball(
+          { playerId: playerId, playerScore: 0 },
+          { playerId: null, playerScore: 0 }
+        ),
+        isGameOver: false,
+        ready: false,
+        ballUpdateSent: false // Track initial ballUpdate
+      };
+      newRoom.ball.position = new BABYLON.Vector3(0, -2, 0);
+      newRoom.ball.isRespawning = true;
+      newRoom.ball.respawnTime = 0;
+      newRoom.ball.hasValidPosition = true;
+      gameRooms.set(roomId, newRoom);
       animationStatus.set(roomId, new Set());
+      console.log(`Created new room ${roomId} for player ${playerId} with ball initialized`);
+    } else {
+      const room = gameRooms.get(roomId);
+      room.ball.player2.playerId = playerId;
+      console.log(`Updated ball player2 ID to ${playerId} in room ${roomId}`);
     }
 
     // Set connection metadata
@@ -107,7 +127,7 @@ fastify.register(async function (fastify) {
       return;
     }
 
-    console.log(`Player connected: ${playerId} in room ${roomId}`);
+    console.log(`Player connected: ${playerId} in room ${roomId}, total rooms: ${gameRooms.size}`);
 
     // Handle player messages
     let messageCount = 0;
@@ -129,8 +149,10 @@ fastify.register(async function (fastify) {
         const roomAnimStatus = animationStatus.get(roomId);
         if (roomAnimStatus) {
           roomAnimStatus.add(playerId);
-          console.log(`Player ${playerId} completed animation in room ${roomId}`);
+          console.log(`Player ${playerId} completed animation in room ${roomId}, status size: ${roomAnimStatus.size}`);
           sendBallUpdate(roomId);
+        } else {
+          console.error(`No animationStatus for room ${roomId}`);
         }
         return;
       }
@@ -207,6 +229,7 @@ function checkRoomReady(roomId) {
             role: i,
             opponentId: otherPlayer.id,
           }));
+          console.log(`Sent init to player ${p.id} in room ${roomId}`);
         } catch (e) {
           console.error(`Failed to send init to player ${p.id}:`, e);
         }
@@ -218,17 +241,50 @@ function checkRoomReady(roomId) {
 // Send ball update after animations
 function sendBallUpdate(roomId) {
   const room = gameRooms.get(roomId);
-  if (!room || room.players.length !== 2 || !room.ready) return;
+  if (!room || room.players.length !== 2) {
+    console.warn(`Cannot send ballUpdate for room ${roomId}: invalid state`, {
+      exists: !!room,
+      playerCount: room?.players.length
+    });
+    return;
+  }
 
   const roomAnimStatus = animationStatus.get(roomId);
-  if (roomAnimStatus.size !== 2) return; // Wait for both players
+  if (roomAnimStatus.size !== 2) {
+    console.log(`Waiting for animations in room ${roomId}: ${roomAnimStatus.size}/2 completed`);
+    // Force ball update after 6s if animations are not complete
+    if (!room.ballUpdateTimeout) {
+      room.ballUpdateTimeout = setTimeout(() => {
+        console.log(`Forcing ballUpdate for room ${roomId} due to timeout`);
+        sendBallUpdateForced(roomId);
+      }, 6000);
+    }
+    return;
+  }
+
+  // Clear timeout and animation status
+  if (room.ballUpdateTimeout) {
+    clearTimeout(room.ballUpdateTimeout);
+    room.ballUpdateTimeout = null;
+  }
+
+  sendBallUpdateForced(roomId);
+}
+
+// Forced ball update
+function sendBallUpdateForced(roomId) {
+  const room = gameRooms.get(roomId);
+  if (!room || room.players.length !== 2) {
+    console.warn(`Cannot send forced ballUpdate for room ${roomId}: invalid state`);
+    return;
+  }
 
   if (!room.ball) {
+    console.error(`Ball not initialized for room ${roomId}, creating new`);
     room.ball = new Ball(
       { playerId: room.players[0].id, playerScore: 0 },
       { playerId: room.players[1].id, playerScore: 0 }
     );
-    // Initialize for initial spawn with respawn animation
     room.ball.position = new BABYLON.Vector3(0, -2, 0);
     room.ball.isRespawning = true;
     room.ball.respawnTime = 0;
@@ -245,13 +301,21 @@ function sendBallUpdate(roomId) {
     wasHitByPlayer: room.ball.wasHitByPlayer,
     speed: room.ball.speed,
   };
-  console.log(`Sending initial ballUpdate at ${Date.now()}:`, ballState);
+  console.log(`Sending initial ballUpdate for room ${roomId} at ${Date.now()}:`, ballState);
   broadcastToRoom(roomId, {
     type: 'ballUpdate',
     ballState,
     isInitialSpawn: true,
     isScoreRespawn: false
   });
+
+  // Clear animation status and mark ballUpdate sent
+  const roomAnimStatus = animationStatus.get(roomId);
+  if (roomAnimStatus) {
+    roomAnimStatus.clear();
+    console.log(`Cleared animationStatus for room ${roomId}`);
+  }
+  room.ballUpdateSent = true;
 }
 
 // Broadcast to room
@@ -259,15 +323,17 @@ function broadcastToRoom(roomId, message) {
   const json = JSON.stringify(message);
   const room = gameRooms.get(roomId) || { players: [] };
   room.players = room.players.filter(p => p.ws && p.ws.readyState === 1);
+  console.log(`Broadcasting to room ${roomId}, players: ${room.players.map(p => p.id).join(', ')}`);
   room.players.forEach(({ ws, id }) => {
     if (ws && ws.readyState === 1) {
       try {
         ws.send(json);
+        console.log(`Sent ${message.type} to player ${id} in room ${roomId}`);
       } catch (e) {
         console.error(`Failed to send to player ${id} in room ${roomId}:`, e);
       }
     } else {
-      console.log(`Failed to send to player ${id} in room ${roomId}: WebSocket not open or undefined`);
+      console.log(`Failed to send to player ${id} in room ${roomId}: WebSocket not open`);
     }
   });
 }
@@ -283,7 +349,7 @@ function handlePlayerInput(data, playerId, roomId) {
 
   const player = players.get(playerId);
   const room = gameRooms.get(roomId) || { players: [] };
-  if (!player || room.players.length !== 2 || room.isGameOver) return;
+  if (!player || room.players.length !== 2) return;
 
   if (msg.type === 'keyDown') {
     if (msg.direction === 'up') {
@@ -318,7 +384,7 @@ function handlePlayerInput(data, playerId, roomId) {
     }
     if (msg.isInitial) {
       room.ball.position = new BABYLON.Vector3(0, -2, 0);
-_ball.isRespawning = true;
+      room.ball.isRespawning = true;
       room.ball.respawnTime = 0;
       room.ball.hasValidPosition = true;
     } else {
@@ -341,6 +407,7 @@ _ball.isRespawning = true;
       isInitialSpawn: msg.isInitial || false,
       isScoreRespawn: !msg.isInitial
     });
+    room.ballUpdateSent = true;
   }
 }
 
@@ -363,6 +430,7 @@ function handlePlayerDisconnect(playerId, roomId) {
   if (room.players.length === 0) {
     gameRooms.delete(roomId);
     animationStatus.delete(roomId);
+    console.log(`Room ${roomId} deleted, no players left`);
   } else {
     gameRooms.set(roomId, room);
   }
@@ -447,9 +515,15 @@ function startGameLoop() {
       if (room.ball) {
         const paddle1Pos = new BABYLON.Vector3(19.5, 2, room.players[0].positionZ);
         const paddle2Pos = new BABYLON.Vector3(-19.5, 2, room.players[1].positionZ);
+        console.log(`Room ${roomId} paddle positions: paddle1=${JSON.stringify(paddle1Pos)}, paddle2=${JSON.stringify(paddle2Pos)}`);
         const prevScore1 = room.ball.player1.playerScore;
         const prevScore2 = room.ball.player2.playerScore;
-        room.ball.update(deltaTime, paddle1Pos, paddle2Pos);
+        // Skip ball update during initial respawn until ballUpdate is sent
+        if (!room.ballUpdateSent && room.ball.isRespawning) {
+          // Keep ball in initial state
+        } else {
+          room.ball.update(deltaTime, paddle1Pos, paddle2Pos);
+        }
         if (room.ball.player1.playerScore !== prevScore1 || room.ball.player2.playerScore !== prevScore2) {
           console.log(`Sending scoreUpdate at ${Date.now()}:`, {
             [room.players[0].id]: room.ball.player1.playerScore,

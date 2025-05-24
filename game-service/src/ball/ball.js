@@ -71,7 +71,7 @@ class Ball {
             this.position.y = -2 + 3 * t;
             this.position.z = 0;
             this.position.x = this.position.x;
-            console.log(`Respawn animation: t=${t}, position.y=${this.position.y}, respawnTime=${this.respawnTime}`);
+            //console.log(`Respawn animation: t=${t}, position.y=${this.position.y}, respawnTime=${this.respawnTime}`);
             if (t >= 1) {
                 this.isRespawning = false;
                 this.position.y = 1;

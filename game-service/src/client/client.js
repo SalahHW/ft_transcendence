@@ -21,13 +21,13 @@ const clientConnection = new webSocketClient(`wss://localhost:${serverPort}/ws`,
 
 // Debug WebSocket events
 clientConnection.socket.addEventListener('open', () => {
-    console.log('WebSocket connection opened');
+  console.log('WebSocket connection opened');
 });
 clientConnection.socket.addEventListener('error', (err) => {
-    console.error('WebSocket error:', err);
+  console.error('WebSocket error:', err);
 });
 clientConnection.socket.addEventListener('close', () => {
-    console.log('WebSocket connection closed');
+  console.log('WebSocket connection closed');
 });
 
 let map = null;
@@ -45,6 +45,7 @@ let isGameOver = false;
 let matchEndTime = null;
 let initTime = null;
 let syncCount = 0;
+let ballUpdateReceived = false;
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOMContentLoaded triggered');
@@ -59,9 +60,14 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Creating map...');
             map.createMap();
             map.createPlayground();
-            console.log('Map created successfully');
+            if (!map.getScene) {
+                throw new Error('map.getScene is undefined');
+            }
+            console.log('Map created successfully, scene:', !!map.getScene);
         } catch (e) {
             console.error('Map creation failed:', e);
+            document.body.innerHTML = '<h1>Error: Failed to create game map</h1>';
+            return;
         }
 
         if (role === 0) {
@@ -78,15 +84,17 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Paddles created successfully');
         } catch (e) {
             console.error('Paddle creation failed:', e);
+            return;
         }
 
         // Create ball early
         try {
             ball = new Ball(player1, player2);
             ball.createBall(map.getScene);
-            console.log('Ball created successfully');
+            console.log('Ball created successfully, ballBody:', !!ball.ballBody);
         } catch (e) {
             console.error('Ball creation failed:', e);
+            return;
         }
 
         let frameCount = 0;
@@ -120,9 +128,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (ball && ball.ballBody) {
                 if (ball.isRespawning) {
-                    console.log('Render loop: Ball is respawning');
-                }
-                if (ball.hasValidPosition && !ball.isRespawning) {
+                    // Follow server position during respawn
+                    ball.ballBody.position.copyFrom(ball.position);
+                    ball.ballBody.isVisible = true;
+                    console.log('Render loop: Ball is respawning, position:', ball.ballBody.position);
+                } else if (ball.hasValidPosition) {
                     predictedPosition = predictedPosition || ball.ballBody.position.clone();
                     const effectiveDeltaTime = deltaTime + ping / 2;
                     predictedPosition.addInPlace(ball.velocity.scale(effectiveDeltaTime));
@@ -144,6 +154,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 type: 'animationComplete',
                 playerId: localPlayerId
             });
+            // Request ball update if none received after 6s
+            setTimeout(() => {
+                if (!ballUpdateReceived && !isGameOver) {
+                    console.warn('No ballUpdate received after 6s, requesting ball respawn');
+                    clientConnection.send({
+                        type: 'requestBallRespawn',
+                        playerId: localPlayerId,
+                        isInitial: true
+                    });
+                }
+            }, 6000);
         } catch (e) {
             console.error('Match animation failed:', e);
         }
@@ -239,6 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         clientConnection.onBallUpdate(({ ballState, isInitialSpawn, isScoreRespawn }) => {
             if (isGameOver) return;
+            ballUpdateReceived = true;
             const now = Date.now();
             console.log(`Received ballUpdate at ${now}:`, { ballState, isInitialSpawn, isScoreRespawn });
             if (initTime) {
@@ -248,12 +270,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Invalid ballState:', ballState);
                 return;
             }
+            if (!ball || !ball.ballBody) {
+                console.warn('Ball not initialized, creating new ball');
+                try {
+                    ball = new Ball(player1, player2);
+                    ball.createBall(map.getScene);
+                    console.log('Ball created successfully, ballBody:', !!ball.ballBody);
+                } catch (e) {
+                    console.error('Ball creation failed:', e);
+                    return;
+                }
+            }
             if (ballState && ball && ball.ballBody) {
                 const newPosition = new BABYLON.Vector3(ballState.position.x, ballState.position.y, ballState.position.z);
-                const isRespawn = (isInitialSpawn || isScoreRespawn) && ballState.isRespawning;
-                const isPositionValid = isRespawn ? newPosition.y >= -2 && newPosition.y <= 1 : true;
-
-                ball.ballBody.isVisible = isInitialSpawn || isRespawn || isPositionValid;
+                ball.ballBody.isVisible = true; // Ensure visibility for initial spawn or respawn
                 ball.ballBody.position = newPosition;
                 predictedPosition = newPosition.clone();
                 lastBallPosition = null;
@@ -266,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         isRespawning: ballState.isRespawning || false,
                         respawnTime: ballState.respawnTime || 0,
                         wasHitByPlayer: ballState.wasHitByPlayer || false,
-                        hasValidPosition: isPositionValid,
+                        hasValidPosition: true,
                         speed: ballState.speed || 25,
                         isInitialSpawn: isInitialSpawn || false
                     });
@@ -303,6 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let msg;
             try {
                 msg = JSON.parse(data);
+                //console.log('Received message:', msg);
             } catch (e) {
                 console.error('Invalid JSON:', e);
                 return;
