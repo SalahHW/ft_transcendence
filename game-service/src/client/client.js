@@ -128,10 +128,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (ball && ball.ballBody) {
                 if (ball.isRespawning) {
-                    // Follow server position during respawn
                     ball.ballBody.position.copyFrom(ball.position);
                     ball.ballBody.isVisible = true;
-                    console.log('Render loop: Ball is respawning, position:', ball.ballBody.position);
+                    //console.log('Render loop: Ball is respawning, position:', ball.ballBody.position, 'respawnTime:', ball.respawnTime);
                 } else if (ball.hasValidPosition) {
                     predictedPosition = predictedPosition || ball.ballBody.position.clone();
                     const effectiveDeltaTime = deltaTime + ping / 2;
@@ -139,8 +138,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     predictedPosition.x = Math.max(-20, Math.min(20, predictedPosition.x));
                     predictedPosition.z = Math.max(-10, Math.min(10, predictedPosition.z));
                     ball.ballBody.position.copyFrom(predictedPosition);
+                    //console.log('Render loop: Ball moving, predictedPosition:', ball.ballBody.position);
                 }
                 ball.updateClient(map.getScene);
+            } else {
+                console.warn('Render loop: Ball or ballBody not initialized');
             }
             map.getScene.render();
         };
@@ -154,19 +156,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 type: 'animationComplete',
                 playerId: localPlayerId
             });
-            // Request ball update if none received after 6s
-            setTimeout(() => {
-                if (!ballUpdateReceived && !isGameOver) {
-                    console.warn('No ballUpdate received after 6s, requesting ball respawn');
+            // Request ball update if none received
+            const requestBallRespawn = () => {
+                if (!ballUpdateReceived && !isGameOver && clientConnection.socket.readyState === WebSocket.OPEN) {
+                    console.warn('No ballUpdate received, requesting ball respawn, ws.readyState:', clientConnection.socket.readyState);
                     clientConnection.send({
                         type: 'requestBallRespawn',
                         playerId: localPlayerId,
                         isInitial: true
                     });
+                    setTimeout(requestBallRespawn, 3000);
+                } else if (clientConnection.socket.readyState !== WebSocket.OPEN) {
+                    console.error('WebSocket not open for requestBallRespawn, readyState:', clientConnection.socket.readyState);
                 }
-            }, 6000);
+            };
+            setTimeout(requestBallRespawn, 6000);
         } catch (e) {
             console.error('Match animation failed:', e);
+            // Send animationComplete anyway to avoid stalling
+            clientConnection.send({
+                type: 'animationComplete',
+                playerId: localPlayerId
+            });
         }
 
         window.addEventListener('resize', () => map.getEngine.resize());
@@ -262,7 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isGameOver) return;
             ballUpdateReceived = true;
             const now = Date.now();
-            console.log(`Received ballUpdate at ${now}:`, { ballState, isInitialSpawn, isScoreRespawn });
+            console.log(`Received ballUpdate at ${now}, ws.readyState=${clientConnection.socket.readyState}, ballBodyExists=${!!ball?.ballBody}:`, { ballState, isInitialSpawn, isScoreRespawn });
             if (initTime) {
                 console.log(`Time since init: ${(now - initTime)}ms`);
             }
@@ -271,11 +282,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             if (!ball || !ball.ballBody) {
-                console.warn('Ball not initialized, creating new ball');
+                console.warn('Ball or ballBody not initialized, attempting to create');
                 try {
                     ball = new Ball(player1, player2);
                     ball.createBall(map.getScene);
                     console.log('Ball created successfully, ballBody:', !!ball.ballBody);
+                    // Retry setting state after creation
+                    setTimeout(() => {
+                        if (ball && ball.ballBody) {
+                            const newPosition = new BABYLON.Vector3(ballState.position.x, ballState.position.y, ballState.position.z);
+                            ball.ballBody.isVisible = true;
+                            ball.ballBody.position = newPosition;
+                            ball.setState({
+                                position: newPosition,
+                                velocity: new BABYLON.Vector3(ballState.velocity.x, ballState.velocity.y, ballState.velocity.z),
+                                previousVelocity: ballState.previousVelocity || new BABYLON.Vector3(ballState.velocity.x, ballState.velocity.y, ballState.velocity.z),
+                                rebounds: ballState.rebounds || 0,
+                                isRespawning: ballState.isRespawning || false,
+                                respawnTime: ballState.respawnTime || 0,
+                                wasHitByPlayer: ballState.wasHitByPlayer || false,
+                                hasValidPosition: true,
+                                speed: ballState.speed || 25,
+                                isInitialSpawn: isInitialSpawn || false
+                            });
+                            console.log('Ball state updated after retry:', {
+                                position: ball.position,
+                                isRespawning: ball.isRespawning,
+                                hasValidPosition: ball.hasValidPosition,
+                                isVisible: ball.ballBody.isVisible,
+                                ballBodyExists: !!ball.ballBody
+                            });
+                        }
+                    }, 1000);
                 } catch (e) {
                     console.error('Ball creation failed:', e);
                     return;
@@ -283,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (ballState && ball && ball.ballBody) {
                 const newPosition = new BABYLON.Vector3(ballState.position.x, ballState.position.y, ballState.position.z);
-                ball.ballBody.isVisible = true; // Ensure visibility for initial spawn or respawn
+                ball.ballBody.isVisible = true;
                 ball.ballBody.position = newPosition;
                 predictedPosition = newPosition.clone();
                 lastBallPosition = null;
@@ -305,7 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         isRespawning: ball.isRespawning,
                         hasValidPosition: ball.hasValidPosition,
                         isVisible: ball.ballBody.isVisible,
-                        respawnTime: ball.respawnTime
+                        ballBodyExists: !!ball.ballBody
                     });
                     if (!ball.isRespawning && ball.hasValidPosition) {
                         console.log('Ball active and visible at position:', newPosition);

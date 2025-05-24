@@ -103,7 +103,8 @@ fastify.register(async function (fastify) {
         ),
         isGameOver: false,
         ready: false,
-        ballUpdateSent: false // Track initial ballUpdate
+        ballUpdateSent: false,
+        ballUpdateTimeout: null,
       };
       newRoom.ball.position = new BABYLON.Vector3(0, -2, 0);
       newRoom.ball.isRespawning = true;
@@ -116,6 +117,13 @@ fastify.register(async function (fastify) {
       const room = gameRooms.get(roomId);
       room.ball.player2.playerId = playerId;
       console.log(`Updated ball player2 ID to ${playerId} in room ${roomId}`);
+      // Trigger ball update after second player joins
+      if (room.players.length === 2) {
+        setTimeout(() => {
+          console.log(`Triggering initial ballUpdate for room ${roomId} after second player`);
+          sendBallUpdateForced(roomId);
+        }, 2000); // Reduced to 2s for faster initialization
+      }
     }
 
     // Set connection metadata
@@ -150,7 +158,7 @@ fastify.register(async function (fastify) {
         if (roomAnimStatus) {
           roomAnimStatus.add(playerId);
           console.log(`Player ${playerId} completed animation in room ${roomId}, status size: ${roomAnimStatus.size}`);
-          sendBallUpdate(roomId);
+          // Removed sendBallUpdate call to avoid dependency
         } else {
           console.error(`No animationStatus for room ${roomId}`);
         }
@@ -238,7 +246,7 @@ function checkRoomReady(roomId) {
   }
 }
 
-// Send ball update after animations
+// Send ball update after animations (simplified)
 function sendBallUpdate(roomId) {
   const room = gameRooms.get(roomId);
   if (!room || room.players.length !== 2) {
@@ -249,25 +257,7 @@ function sendBallUpdate(roomId) {
     return;
   }
 
-  const roomAnimStatus = animationStatus.get(roomId);
-  if (roomAnimStatus.size !== 2) {
-    console.log(`Waiting for animations in room ${roomId}: ${roomAnimStatus.size}/2 completed`);
-    // Force ball update after 6s if animations are not complete
-    if (!room.ballUpdateTimeout) {
-      room.ballUpdateTimeout = setTimeout(() => {
-        console.log(`Forcing ballUpdate for room ${roomId} due to timeout`);
-        sendBallUpdateForced(roomId);
-      }, 6000);
-    }
-    return;
-  }
-
-  // Clear timeout and animation status
-  if (room.ballUpdateTimeout) {
-    clearTimeout(room.ballUpdateTimeout);
-    room.ballUpdateTimeout = null;
-  }
-
+  // Always proceed to forced update
   sendBallUpdateForced(roomId);
 }
 
@@ -275,7 +265,10 @@ function sendBallUpdate(roomId) {
 function sendBallUpdateForced(roomId) {
   const room = gameRooms.get(roomId);
   if (!room || room.players.length !== 2) {
-    console.warn(`Cannot send forced ballUpdate for room ${roomId}: invalid state`);
+    console.warn(`Cannot send forced ballUpdate for room ${roomId}: invalid state`, {
+      exists: !!room,
+      playerCount: room?.players.length
+    });
     return;
   }
 
@@ -291,6 +284,10 @@ function sendBallUpdateForced(roomId) {
     room.ball.hasValidPosition = true;
   }
 
+  // Ensure ball is active
+  room.ball.isRespawning = false;
+  room.ball.respawnTime = 0;
+
   const ballState = {
     position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
     velocity: { x: room.ball.velocity.x, y: room.ball.velocity.y, z: room.ball.velocity.z },
@@ -305,17 +302,17 @@ function sendBallUpdateForced(roomId) {
   broadcastToRoom(roomId, {
     type: 'ballUpdate',
     ballState,
-    isInitialSpawn: true,
+    isInitialSpawn: !room.ballUpdateSent,
     isScoreRespawn: false
   });
 
-  // Clear animation status and mark ballUpdate sent
   const roomAnimStatus = animationStatus.get(roomId);
   if (roomAnimStatus) {
     roomAnimStatus.clear();
     console.log(`Cleared animationStatus for room ${roomId}`);
   }
   room.ballUpdateSent = true;
+  room.ballUpdateTimeout = null;
 }
 
 // Broadcast to room
@@ -323,7 +320,7 @@ function broadcastToRoom(roomId, message) {
   const json = JSON.stringify(message);
   const room = gameRooms.get(roomId) || { players: [] };
   room.players = room.players.filter(p => p.ws && p.ws.readyState === 1);
-  console.log(`Broadcasting to room ${roomId}, players: ${room.players.map(p => p.id).join(', ')}`);
+  console.log(`Broadcasting to room ${roomId}, players: ${room.players.map(p => p.id).join(', ')}, readyStates: ${room.players.map(p => p.ws.readyState).join(', ')}`);
   room.players.forEach(({ ws, id }) => {
     if (ws && ws.readyState === 1) {
       try {
@@ -333,7 +330,7 @@ function broadcastToRoom(roomId, message) {
         console.error(`Failed to send to player ${id} in room ${roomId}:`, e);
       }
     } else {
-      console.log(`Failed to send to player ${id} in room ${roomId}: WebSocket not open`);
+      console.warn(`Failed to send to player ${id} in room ${roomId}: WebSocket not open, readyState=${ws?.readyState}`);
     }
   });
 }
@@ -349,7 +346,10 @@ function handlePlayerInput(data, playerId, roomId) {
 
   const player = players.get(playerId);
   const room = gameRooms.get(roomId) || { players: [] };
-  if (!player || room.players.length !== 2) return;
+  if (!player || !room) {
+    console.warn(`Invalid input: player ${playerId} or room ${roomId} not found`);
+    return;
+  }
 
   if (msg.type === 'keyDown') {
     if (msg.direction === 'up') {
@@ -377,8 +377,8 @@ function handlePlayerInput(data, playerId, roomId) {
   } else if (msg.type === 'requestBallRespawn') {
     if (!room.ball) {
       room.ball = new Ball(
-        { playerId: room.players[0].id, playerScore: 0 },
-        { playerId: room.players[1].id, playerScore: 0 }
+        { playerId: room.players[0]?.id || playerId, playerScore: 0 },
+        { playerId: room.players[1]?.id || playerId, playerScore: 0 }
       );
       console.log(`Room ${roomId} ball created on requestBallRespawn`);
     }
@@ -390,6 +390,7 @@ function handlePlayerInput(data, playerId, roomId) {
     } else {
       room.ball.init();
     }
+    room.ball.isRespawning = false; // Ensure ball is active
     const ballState = {
       position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
       velocity: { x: room.ball.velocity.x, y: room.ball.velocity.y, z: room.ball.velocity.z },
@@ -468,7 +469,7 @@ function endGame(room, roomId) {
 
 // Game loop
 function startGameLoop() {
-  const FPS = 1000;
+  const FPS = 240; // Reduced for stability
   const BROADCAST_FPS = 60;
   const SYNC_INTERVAL = 5;
   let lastBroadcast = Date.now();
@@ -485,58 +486,84 @@ function startGameLoop() {
       lastFrameTime = now;
     }
 
-    gameRooms.forEach((room, roomId) => {
-      if (room.players.length !== 2 || room.isGameOver) return;
+    try {
+      gameRooms.forEach((room, roomId) => {
+        if (room.players.length !== 2 || room.isGameOver) return;
 
-      room.players.forEach((player, index) => {
-        const speed = 20;
-        const halfD = 7.5;
-        let moved = false;
-        if (player.isUpPressed && !player.isDownPressed) {
-          const newZ = player.positionZ - speed * deltaTime;
-          player.positionZ = Math.max(-halfD, newZ);
-          moved = newZ !== player.positionZ;
-        } else if (player.isDownPressed && !player.isUpPressed) {
-          const newZ = player.positionZ + speed * deltaTime;
-          player.positionZ = Math.min(halfD, newZ);
-          moved = newZ !== player.positionZ;
-        }
-        player.positionZ = Number(player.positionZ.toFixed(3));
+        room.players.forEach((player, index) => {
+          const speed = 20;
+          const halfD = 7.5;
+          let moved = false;
+          if (player.isUpPressed && !player.isDownPressed) {
+            const newZ = player.positionZ - speed * deltaTime;
+            player.positionZ = Math.max(-halfD, newZ);
+            moved = newZ !== player.positionZ;
+          } else if (player.isDownPressed && !player.isUpPressed) {
+            const newZ = player.positionZ + speed * deltaTime;
+            player.positionZ = Math.min(halfD, newZ);
+            moved = newZ !== player.positionZ;
+          }
+          player.positionZ = Number(player.positionZ.toFixed(3));
 
-        if ((player.isUpPressed || player.isDownPressed) && now - lastBroadcast >= 1000 / BROADCAST_FPS) {
-          broadcastToRoom(roomId, {
-            type: 'paddleMove',
-            playerId: player.id,
-            positionZ: player.positionZ,
-          });
-        }
-      });
+          if ((player.isUpPressed || player.isDownPressed) && now - lastBroadcast >= 1000 / BROADCAST_FPS) {
+            broadcastToRoom(roomId, {
+              type: 'paddleMove',
+              playerId: player.id,
+              positionZ: player.positionZ,
+            });
+          }
+        });
 
-      if (room.ball) {
-        const paddle1Pos = new BABYLON.Vector3(19.5, 2, room.players[0].positionZ);
-        const paddle2Pos = new BABYLON.Vector3(-19.5, 2, room.players[1].positionZ);
-        console.log(`Room ${roomId} paddle positions: paddle1=${JSON.stringify(paddle1Pos)}, paddle2=${JSON.stringify(paddle2Pos)}`);
-        const prevScore1 = room.ball.player1.playerScore;
-        const prevScore2 = room.ball.player2.playerScore;
-        // Skip ball update during initial respawn until ballUpdate is sent
-        if (!room.ballUpdateSent && room.ball.isRespawning) {
-          // Keep ball in initial state
-        } else {
-          room.ball.update(deltaTime, paddle1Pos, paddle2Pos);
-        }
-        if (room.ball.player1.playerScore !== prevScore1 || room.ball.player2.playerScore !== prevScore2) {
-          console.log(`Sending scoreUpdate at ${Date.now()}:`, {
-            [room.players[0].id]: room.ball.player1.playerScore,
-            [room.players[1].id]: room.ball.player2.playerScore
-          });
-          broadcastToRoom(roomId, {
-            type: 'scoreUpdate',
-            scores: {
+        if (room.ball) {
+          const paddle1Pos = new BABYLON.Vector3(19.5, 2, room.players[0].positionZ);
+          const paddle2Pos = new BABYLON.Vector3(-19.5, 2, room.players[1].positionZ);
+          console.log(`Room ${roomId} paddle positions: paddle1=${JSON.stringify(paddle1Pos)}, paddle2=${JSON.stringify(paddle2Pos)}`);
+          const prevScore1 = room.ball.player1.playerScore;
+          const prevScore2 = room.ball.player2.playerScore;
+          if (!room.ballUpdateSent && room.ball.isRespawning) {
+            // Keep ball in initial state
+          } else {
+            room.ball.update(deltaTime, paddle1Pos, paddle2Pos);
+          }
+          if (room.ball.player1.playerScore !== prevScore1 || room.ball.player2.playerScore !== prevScore2) {
+            console.log(`Sending scoreUpdate at ${Date.now()}:`, {
               [room.players[0].id]: room.ball.player1.playerScore,
-              [room.players[1].id]: room.ball.player2.playerScore,
-            },
+              [room.players[1].id]: room.ball.player2.playerScore
+            });
+            broadcastToRoom(roomId, {
+              type: 'scoreUpdate',
+              scores: {
+                [room.players[0].id]: room.ball.player1.playerScore,
+                [room.players[1].id]: room.ball.player2.playerScore,
+              },
+            });
+            const ballState = {
+              position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
+              velocity: { x: room.ball.velocity.x, y: room.ball.velocity.y, z: room.ball.velocity.z },
+              previousVelocity: { x: room.ball.previousVelocity.x, y: room.ball.previousVelocity.y, z: room.ball.previousVelocity.z },
+              rebounds: room.ball.rebounds,
+              isRespawning: room.ball.isRespawning,
+              respawnTime: room.ball.respawnTime,
+              wasHitByPlayer: room.ball.wasHitByPlayer,
+              speed: room.ball.speed,
+            };
+            console.log(`Sending score ballUpdate at ${Date.now()}:`, ballState);
+            broadcastToRoom(roomId, {
+              type: 'ballUpdate',
+              ballState,
+              isInitialSpawn: false,
+              isScoreRespawn: true,
+            });
+            endGame(room, roomId);
+          }
+        }
+
+        if (now - lastSync >= SYNC_INTERVAL) {
+          const playerPositions = {};
+          room.players.forEach(player => {
+            playerPositions[player.id] = player.positionZ;
           });
-          const ballState = {
+          const ballState = room.ball ? {
             position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
             velocity: { x: room.ball.velocity.x, y: room.ball.velocity.y, z: room.ball.velocity.z },
             previousVelocity: { x: room.ball.previousVelocity.x, y: room.ball.previousVelocity.y, z: room.ball.previousVelocity.z },
@@ -545,42 +572,19 @@ function startGameLoop() {
             respawnTime: room.ball.respawnTime,
             wasHitByPlayer: room.ball.wasHitByPlayer,
             speed: room.ball.speed,
-          };
-          console.log(`Sending score ballUpdate at ${Date.now()}:`, ballState);
+          } : null;
           broadcastToRoom(roomId, {
-            type: 'ballUpdate',
+            type: 'sync',
+            playerPositions,
             ballState,
-            isInitialSpawn: false,
-            isScoreRespawn: true,
+            serverTime: now,
           });
-          endGame(room, roomId);
+          lastSync = now;
         }
-      }
-
-      if (now - lastSync >= SYNC_INTERVAL) {
-        const playerPositions = {};
-        room.players.forEach(player => {
-          playerPositions[player.id] = player.positionZ;
-        });
-        const ballState = room.ball ? {
-          position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
-          velocity: { x: room.ball.velocity.x, y: room.ball.velocity.y, z: room.ball.velocity.z },
-          previousVelocity: { x: room.ball.previousVelocity.x, y: room.ball.previousVelocity.y, z: room.ball.previousVelocity.z },
-          rebounds: room.ball.rebounds,
-          isRespawning: room.ball.isRespawning,
-          respawnTime: room.ball.respawnTime,
-          wasHitByPlayer: room.ball.wasHitByPlayer,
-          speed: room.ball.speed,
-        } : null;
-        broadcastToRoom(roomId, {
-          type: 'sync',
-          playerPositions,
-          ballState,
-          serverTime: now,
-        });
-        lastSync = now;
-      }
-    });
+      });
+    } catch (e) {
+      console.error('Game loop error:', e);
+    }
 
     if (now - lastBroadcast >= 1000 / BROADCAST_FPS) {
       lastBroadcast = now;
