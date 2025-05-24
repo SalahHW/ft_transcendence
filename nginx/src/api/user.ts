@@ -108,7 +108,7 @@ export default class UsersApi {
 	 * @param user - The updated user object
 	 * @returns A promise that resolves to the updated user
 	 */
-	async updateUser(id:number, user: User): Promise<User> {
+	async updateUser(id: number, user: User): Promise<User> {
 		const response = await fetch(`${this._usersBaseUrl}/${id}`, {
 			method: "PUT",
 			headers: {
@@ -173,27 +173,27 @@ export default class UsersApi {
 		if (response.status === 200)
 			return responseData;
 		else
-		throw new Error(`failed to login:\n${JSON.stringify(responseData, null, 2)}`);
-}
+			throw new Error(`failed to login:\n${JSON.stringify(responseData, null, 2)}`);
+	}
 
-/**
- * Logs out the current user
- * @returns A promise that resolves to the logged out user
-*/
+	/**
+	 * Logs out the current user
+	 * @returns A promise that resolves to the logged out user
+	*/
 
-// async logout(): Promise<void> {
-// 	const response = await fetch(`${this._host}${this._logoutPath}`, {
-// 		method: "POST",
-// 		headers: {
-// 			"Content-Type": "application/json"
-// 		},
-// 		});
-// 		const responseData = await response.json();
-// 		if (response.status === 200)
-// 			return;
-// 		else
-// 			throw new Error(`failed to logout:\n${JSON.stringify(responseData, null, 2)}`);
-// 	}
+	// async logout(): Promise<void> {
+	// 	const response = await fetch(`${this._host}${this._logoutPath}`, {
+	// 		method: "POST",
+	// 		headers: {
+	// 			"Content-Type": "application/json"
+	// 		},
+	// 		});
+	// 		const responseData = await response.json();
+	// 		if (response.status === 200)
+	// 			return;
+	// 		else
+	// 			throw new Error(`failed to logout:\n${JSON.stringify(responseData, null, 2)}`);
+	// 	}
 
 	/**
 	 * Registers a new user
