@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (ball && ball.ballBody) {
                 if (ball.isRespawning) {
                     ball.ballBody.position.copyFrom(ball.position);
-                    ball.ballBody.isVisible = true;
+                    ball.ballBody.isVisible = true; // NEW: Ensure ball is visible during respawn
                     //console.log('Render loop: Ball is respawning, position:', ball.ballBody.position, 'respawnTime:', ball.respawnTime);
                 } else if (ball.hasValidPosition) {
                     predictedPosition = predictedPosition || ball.ballBody.position.clone();
@@ -156,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 type: 'animationComplete',
                 playerId: localPlayerId
             });
-            // Request ball update if none received
+            // NEW: Reduced timeout for requesting ball respawn
             const requestBallRespawn = () => {
                 if (!ballUpdateReceived && !isGameOver && clientConnection.socket.readyState === WebSocket.OPEN) {
                     console.warn('No ballUpdate received, requesting ball respawn, ws.readyState:', clientConnection.socket.readyState);
@@ -165,12 +165,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         playerId: localPlayerId,
                         isInitial: true
                     });
-                    setTimeout(requestBallRespawn, 3000);
+                    setTimeout(requestBallRespawn, 2000); // NEW: Reduced from 3000ms to 2000ms
                 } else if (clientConnection.socket.readyState !== WebSocket.OPEN) {
                     console.error('WebSocket not open for requestBallRespawn, readyState:', clientConnection.socket.readyState);
                 }
             };
-            setTimeout(requestBallRespawn, 6000);
+            setTimeout(requestBallRespawn, 2000); // NEW: Reduced from 6000ms to 2000ms
         } catch (e) {
             console.error('Match animation failed:', e);
             // Send animationComplete anyway to avoid stalling

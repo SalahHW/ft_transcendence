@@ -117,13 +117,8 @@ fastify.register(async function (fastify) {
       const room = gameRooms.get(roomId);
       room.ball.player2.playerId = playerId;
       console.log(`Updated ball player2 ID to ${playerId} in room ${roomId}`);
-      // Trigger ball update after second player joins
-      if (room.players.length === 2) {
-        setTimeout(() => {
-          console.log(`Triggering initial ballUpdate for room ${roomId} after second player`);
-          sendBallUpdateForced(roomId);
-        }, 2000); // Reduced to 2s for faster initialization
-      }
+      // NEW: Check if room is ready and trigger ball update immediately
+      checkRoomReady(roomId);
     }
 
     // Set connection metadata
@@ -158,7 +153,11 @@ fastify.register(async function (fastify) {
         if (roomAnimStatus) {
           roomAnimStatus.add(playerId);
           console.log(`Player ${playerId} completed animation in room ${roomId}, status size: ${roomAnimStatus.size}`);
-          // Removed sendBallUpdate call to avoid dependency
+          // NEW: Trigger ball update if both players have completed animations
+          if (roomAnimStatus.size === 2 && gameRooms.get(roomId)?.ready) {
+            console.log(`Both players completed animations in room ${roomId}, sending ballUpdate`);
+            sendBallUpdateForced(roomId);
+          }
         } else {
           console.error(`No animationStatus for room ${roomId}`);
         }
@@ -243,10 +242,18 @@ function checkRoomReady(roomId) {
         }
       }
     });
+    // NEW: Schedule ball update after a short delay to allow init messages to process
+    setTimeout(() => {
+      const roomAnimStatus = animationStatus.get(roomId);
+      if (roomAnimStatus?.size === 2 && gameRooms.get(roomId)?.ready) {
+        console.log(`Both players ready in room ${roomId}, sending initial ballUpdate`);
+        sendBallUpdateForced(roomId);
+      }
+    }, 500);
   }
 }
 
-// Send ball update after animations (simplified)
+// Send ball update after animations
 function sendBallUpdate(roomId) {
   const room = gameRooms.get(roomId);
   if (!room || room.players.length !== 2) {
@@ -257,8 +264,14 @@ function sendBallUpdate(roomId) {
     return;
   }
 
-  // Always proceed to forced update
-  sendBallUpdateForced(roomId);
+  // NEW: Check if both players have completed animations
+  const roomAnimStatus = animationStatus.get(roomId);
+  if (roomAnimStatus?.size === 2) {
+    console.log(`Both players completed animations in room ${roomId}, sending ballUpdate`);
+    sendBallUpdateForced(roomId);
+  } else {
+    console.log(`Waiting for animations in room ${roomId}, status size: ${roomAnimStatus?.size || 0}`);
+  }
 }
 
 // Forced ball update
@@ -285,7 +298,7 @@ function sendBallUpdateForced(roomId) {
   }
 
   // Ensure ball is active
-  room.ball.isRespawning = false;
+  room.ball.isRespawning = true; // NEW: Ensure initial spawn uses respawn animation
   room.ball.respawnTime = 0;
 
   const ballState = {
@@ -320,7 +333,7 @@ function broadcastToRoom(roomId, message) {
   const json = JSON.stringify(message);
   const room = gameRooms.get(roomId) || { players: [] };
   room.players = room.players.filter(p => p.ws && p.ws.readyState === 1);
-  console.log(`Broadcasting to room ${roomId}, players: ${room.players.map(p => p.id).join(', ')}, readyStates: ${room.players.map(p => p.ws.readyState).join(', ')}`);
+  //console.log(`Broadcasting to room ${roomId}, players: ${room.players.map(p => p.id).join(', ')}, readyStates: ${room.players.map(p => p.ws.readyState).join(', ')}`);
   room.players.forEach(({ ws, id }) => {
     if (ws && ws.readyState === 1) {
       try {
@@ -390,7 +403,7 @@ function handlePlayerInput(data, playerId, roomId) {
     } else {
       room.ball.init();
     }
-    room.ball.isRespawning = false; // Ensure ball is active
+    room.ball.isRespawning = true; // NEW: Ensure respawn animation is used
     const ballState = {
       position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
       velocity: { x: room.ball.velocity.x, y: room.ball.velocity.y, z: room.ball.velocity.z },
@@ -517,7 +530,6 @@ function startGameLoop() {
         if (room.ball) {
           const paddle1Pos = new BABYLON.Vector3(19.5, 2, room.players[0].positionZ);
           const paddle2Pos = new BABYLON.Vector3(-19.5, 2, room.players[1].positionZ);
-          console.log(`Room ${roomId} paddle positions: paddle1=${JSON.stringify(paddle1Pos)}, paddle2=${JSON.stringify(paddle2Pos)}`);
           const prevScore1 = room.ball.player1.playerScore;
           const prevScore2 = room.ball.player2.playerScore;
           if (!room.ballUpdateSent && room.ball.isRespawning) {
