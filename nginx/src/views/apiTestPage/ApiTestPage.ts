@@ -11,27 +11,27 @@ export default class ApiTestPage {
 
 	render(): void {
 		this._container.innerHTML = /* HTML */ `
-		<div class="container mx-auto p-4 h-[90vh] flex flex-col">
-			<h1 class="text-3xl font-bold mb-4 text-center text-gradient bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent drop-shadow">API Test Page</h1>
-			<div class="flex flex-col md:flex-row gap-6 flex-1">
-				<!-- First card -->
-				<div class="flex-1 bg-white rounded-lg shadow-md p-6 border border-gray-200 min-h-[50vh]">
-					<div class="w-full h-full flex flex-col">
-						<div class="flex-grow">
-							<div id="left-card-content" class="h-full"></div>
+			<div class="container mx-auto p-4 h-[90vh] flex flex-col">
+				<h1 class="text-3xl font-bold mb-4 text-center text-gradient bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent drop-shadow">API Test Page</h1>
+				<div class="flex flex-col md:flex-row gap-6 flex-1">
+					<!-- First card -->
+					<div class="flex-1 bg-white rounded-lg shadow-md p-6 border border-gray-200 min-h-[50vh]">
+						<div class="w-full h-full flex flex-col">
+							<div class="flex-grow">
+								<div id="left-card-content" class="h-full"></div>
+							</div>
 						</div>
 					</div>
-				</div>
-				<!-- Second card -->
-				<div class="flex-1 bg-white rounded-lg shadow-md p-6 border border-gray-200 min-h-[50vh]">
-					<div class="w-full h-full flex flex-col">
-						<div class="flex-grow">
-							<div id="right-card-content" class="h-full"></div>
+					<!-- Second card -->
+					<div class="flex-1 bg-white rounded-lg shadow-md p-6 border border-gray-200 min-h-[50vh]">
+						<div class="w-full h-full flex flex-col">
+							<div class="flex-grow">
+								<div id="right-card-content" class="h-full"></div>
+							</div>
 						</div>
 					</div>
 				</div>
 			</div>
-		</div>
 		`;
 		this._renderLeftCardContent();
 		this._renderRightCardContent();

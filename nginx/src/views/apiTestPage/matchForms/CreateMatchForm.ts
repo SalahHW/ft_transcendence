@@ -13,31 +13,31 @@ export default class CreateMatchForm {
 
 	render(): void {
 		this._container.innerHTML = /* HTML */ `
-		<form id="create-match-form" class="space-y-4">
-			<div>
-				<label class="block text-sm font-medium text-gray-700">User 1 ID</label>
-				<input type="number" id="createform-user-id1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-			</div>
+			<form id="create-match-form" class="space-y-4">
+				<div>
+					<label class="block text-sm font-medium text-gray-700">User 1 ID</label>
+					<input type="number" id="createform-user-id1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+				</div>
 
-			<div>
-				<label class="block text-sm font-medium text-gray-700">User 2 ID</label>
-				<input type="number" id="createform-user-id2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-			</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700">User 2 ID</label>
+					<input type="number" id="createform-user-id2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+				</div>
 
-			<div>
-				<label class="block text-sm font-medium text-gray-700">User 1 score</label>
-				<input type="number" id="createform-user-score1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-			</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700">User 1 score</label>
+					<input type="number" id="createform-user-score1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+				</div>
 
-			<div>
-				<label class="block text-sm font-medium text-gray-700">User 2 score</label>
-				<input type="number" id="createform-user-score2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-			</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700">User 2 score</label>
+					<input type="number" id="createform-user-score2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+				</div>
 
-			<button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-				Create Match
-			</button>
-		</form>
+				<button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+					Create Match
+				</button>
+			</form>
 		`;
 
 		this._attachEventListeners();
