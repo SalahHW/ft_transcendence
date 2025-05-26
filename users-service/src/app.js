@@ -1,6 +1,6 @@
 import { PORT, isDev } from "./config/config.js";
 import Fastify from "fastify";
-import jwtPlugin from "./plugins/jwt.js";
+import plugins from "./plugins/index.js";
 import fastifyCookie from "@fastify/cookie";
 import { initializeDatabase } from "./models/database.js";
 import registerRoutes from "./routes/index.js";
@@ -24,7 +24,7 @@ if (isDev) {
   await fastify.register(swaggerUi, swaggerUiConfig);
 }
 
-await fastify.register(jwtPlugin);
+await fastify.register(plugins);
 await fastify.register(fastifyCookie);
 // Registers routes
 await fastify.register(registerRoutes);
