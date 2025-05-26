@@ -34,13 +34,16 @@ async function verifyToken(token) {
     });
 
     if (!response.ok) {
-      throw new Error("Invalid or expired token");
+      return { valid: false, error: "Invalid or expired token" };
     }
 
     const data = await response.json();
-    return data.decoded;
+    return { valid: true, decoded: data.decoded };
   } catch (err) {
-    throw new Error("Invalid or expired token");
+    return {
+      valid: false,
+      error: "An error occurred while verifying the token",
+    };
   }
 }
 
