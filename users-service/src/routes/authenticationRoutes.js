@@ -19,15 +19,17 @@ export default async function authenticationRoutes(fastify) {
     handler: async (request, reply) => {
       const token = request.cookies?.token;
       if (!token) {
-        return reply.code(401).send({ error: "Authentication token is missing" });
+        return reply
+          .code(401)
+          .send({ error: "Authentication token is missing" });
       }
 
-      try {
-        const user = await request.server.verifyToken(token);
-        return { user };
-      } catch (error) {
-        return reply.code(401).send({ error: "Invalid token", cause: error.message });
+      const verificationResult = await request.server.verifyToken(token);
+      if (!verificationResult.valid) {
+        return reply.code(401).send({ error: verificationResult.error });
       }
+
+      return { user: verificationResult.decoded };
     },
   });
 }
