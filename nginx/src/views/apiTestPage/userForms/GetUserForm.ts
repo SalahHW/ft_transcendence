@@ -6,11 +6,13 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 21:08:25 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/26 21:08:25 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/05/26 21:08:33 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 import UsersApi from "../../../api/user.js";
+import { buttonHTML } from "../../../components/button.js";
+import { COMMON_CLASSES } from "../../../style/tailwindClasses.js";
 
 export default class GetUserForm {
 	private _container: HTMLElement;
@@ -27,18 +29,16 @@ export default class GetUserForm {
 		this._container.innerHTML = /* HTML */ `
 			<form id="get-user-form" class="space-y-4">
 				<div>
-					<label class="block text-sm font-medium text-gray-700">ID (optional)</label>
-					<input type="number" id="getform-user-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+					<label class="${COMMON_CLASSES.label}">ID (optional)</label>
+					<input type="number" id="getform-user-id" class="${COMMON_CLASSES.input}">
 				</div>
 
 				<div>
-					<label class="block text-sm font-medium text-gray-700">Name (optional)</label>
-					<input type="text" id="getform-user-name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+					<label class="${COMMON_CLASSES.label}">Name (optional)</label>
+					<input type="text" id="getform-user-name" class="${COMMON_CLASSES.input}">
 				</div>
 
-				<button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-					Get User
-				</button>
+				${buttonHTML({label: "Get User", type: "submit"})}
 			</form>
 		`;
 
