@@ -60,12 +60,10 @@ export function startGameLoop() {
           if (room.ball.isRespawning) {
             room.ball.respawnTime += deltaTime;
             if (room.ball.respawnTime >= 3) {
-              console.log(`Ball respawn complete for room ${roomId}`);
               room.ball.isRespawning = false;
               room.ball.position.y = 1;
               if (room.ball.velocity.length() === 0) {
                 room.ball.setFirstVelocity();
-                console.log(`Set initial velocity for room ${roomId}:`, room.ball.velocity);
               }
             }
           }
