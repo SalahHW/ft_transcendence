@@ -40,9 +40,9 @@ export default class HomePage {
 
 	private _attachEventListeners(): void {
 		const apiTestPageButton = document.getElementById("api-test-page-button") as HTMLButtonElement;
-		apiTestPageButton.addEventListener("click", () => {
-			const router = Router.getInstance("app-container");
-			router.navigate("/api-test");
+		apiTestPageButton.addEventListener("click", (event) => {
+			event.preventDefault();
+			Router.getInstance().navigate("/api-test");
 		});
 	}
 }
