@@ -68,11 +68,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (role === 0) {
-            player1 = new playerPaddle('Player1', playerId, 0);
-            player2 = new playerPaddle('Player2', opponentId, 1);
+            player1 = new playerPaddle('', playerId, 0);
+            player2 = new playerPaddle('', opponentId, 1);
         } else {
-            player1 = new playerPaddle('Player1', opponentId, 0);
-            player2 = new playerPaddle('Player2', playerId, 1);
+            player1 = new playerPaddle('', opponentId, 0);
+            player2 = new playerPaddle('', playerId, 1);
         }
 
         try {
@@ -88,11 +88,13 @@ document.addEventListener('DOMContentLoaded', () => {
             ball = new Ball(player1, player2);
             ball.createBall(map.getScene);
             ball.ballBody.metadata = { roomId };
-            // Ensure ball starts under the map and invisible
+            // Ensure ball starts at y=-2 and invisible
             ball.position = new BABYLON.Vector3(0, -2, 0);
             ball.ballBody.position = new BABYLON.Vector3(0, -2, 0);
             ball.ballBody.isVisible = false;
-            console.log('Ball created successfully for room', roomId, 'ballBody:', !!ball.ballBody, 'metadata:', ball.ballBody.metadata);
+            ball.isRespawning = false; // Don't start respawning until explicitly told to
+            ball.respawnTime = 0;
+            console.log('Ball created successfully for room', roomId, 'position:', ball.position);
         } catch (e) {
             console.error('Ball creation failed:', e);
             return;
@@ -128,11 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
             if (ball && ball.ballBody && ball.ballBody.metadata && ball.ballBody.metadata.roomId === roomId) {
-                // First, ensure visibility is correct
-                if (ball.position.y <= -2 || (ball.isRespawning && ball.respawnTime === 0)) {
-                    ball.ballBody.isVisible = false;
-                }
-
                 if (ball.isRespawning) {
                     const t = Math.min(ball.respawnTime / ball.respawnDuration, 1);
                     const newY = -2 + 3 * t; // Animate from y=-2 to y=1
@@ -143,11 +140,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const deltaTime = (now - (ball.lastUpdateTime || now)) / 1000;
                     ball.lastUpdateTime = now;
                     ball.respawnTime += deltaTime;
-                    
-                    // Only make the ball visible once it starts moving up
-                    if (ball.respawnTime > 0 && newY > -2) {
-                        ball.ballBody.isVisible = true;
-                    }
                     
                     if (ball.respawnTime >= ball.respawnDuration) {
                         ball.isRespawning = false;
@@ -167,8 +159,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         ball.ballBody.position.copyFrom(predictedPosition);
                     }
                 }
-                
-                // Update client after all position changes
                 ball.updateClient(map.getScene);
             } else if (ball && ball.ballBody) {
                 console.warn('Render loop: Ball belongs to different room. Expected:', roomId, 'Got:', ball.ballBody.metadata?.roomId);
@@ -317,10 +307,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     ball = new Ball(player1, player2);
                     ball.createBall(map.getScene);
                     ball.ballBody.metadata = { roomId };
-                    // Ensure ball starts under the map and invisible
+                    // Ensure ball starts at y=-2 and invisible
                     ball.position = new BABYLON.Vector3(0, -2, 0);
                     ball.ballBody.position = new BABYLON.Vector3(0, -2, 0);
                     ball.ballBody.isVisible = false;
+                    ball.isRespawning = false; // Don't start respawning until explicitly told to
+                    ball.respawnTime = 0;
                 } catch (e) {
                     console.error('Ball creation failed:', e);
                     return;
@@ -328,12 +320,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (ball && ball.ballBody && ball.ballBody.metadata && ball.ballBody.metadata.roomId === roomId) {
-                const newPosition = new BABYLON.Vector3(ballState.position.x, ballState.position.y, ballState.position.z);
-                
                 if (isInitialSpawn) {
-                    // For initial spawn, only update state and let the respawn animation handle everything
+                    // For initial spawn, ensure we start at y=-2
+                    ball.position = new BABYLON.Vector3(0, -2, 0);
+                    ball.ballBody.position = new BABYLON.Vector3(0, -2, 0);
                     ball.setState({
-                        position: newPosition,
+                        position: new BABYLON.Vector3(0, -2, 0),
                         velocity: new BABYLON.Vector3(ballState.velocity.x, ballState.velocity.y, ballState.velocity.z),
                         previousVelocity: ballState.previousVelocity || new BABYLON.Vector3(ballState.velocity.x, ballState.velocity.y, ballState.velocity.z),
                         rebounds: ballState.rebounds || 0,
@@ -347,6 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 
+                const newPosition = new BABYLON.Vector3(ballState.position.x, ballState.position.y, ballState.position.z);
                 ball.ballBody.position = newPosition;
                 predictedPosition = newPosition.clone();
                 lastBallPosition = null;
@@ -364,10 +357,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         speed: ballState.speed || 25,
                         isInitialSpawn: false
                     });
-                    
-                    if (isInitialSpawn && ball.velocity.length() === 0) {
-                        ball.setFirstVelocity();
-                    }
                 } catch (e) {
                     console.error('Ball setState failed:', e);
                 }
@@ -376,13 +365,42 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        clientConnection.onGameEnd(({ winnerId, scores, matchEndTime: endTime }) => {
+        clientConnection.onGameEnd(({ winnerId, scores, matchEndTime: endTime, disconnectedPlayer }) => {
             isGameOver = true;
             matchEndTime = endTime;
-            const winnerName = winnerId === player1.getPlayerId() ? player1.name : player2.name;
-            const scoreText = `Final Score - ${player1.name}: ${scores[player1.getPlayerId()]}, ${player2.name}: ${scores[player2.getPlayerId()]}`;
-            alert(`${winnerName} wins!\n${scoreText}\nMatch ended at: ${new Date(matchEndTime).toISOString()}`);
-            console.log(`Game ended: Winner=${winnerName}, ${scoreText}, Match ended at: ${new Date(matchEndTime).toISOString()}`);
+            
+            let message;
+            if (disconnectedPlayer) {
+                // Get references to the disconnected and remaining players
+                const disconnectedPlayerObj = disconnectedPlayer === player1.getPlayerId() ? player1 : player2;
+                const winnerObj = disconnectedPlayer === player1.getPlayerId() ? player2 : player1;
+                
+                message = `${disconnectedPlayerObj.getPlayerName} ${disconnectedPlayerObj.getPlayerId()} score: ${scores[disconnectedPlayerObj.getPlayerId()]} disconnected: looser\n` +
+                         `${winnerObj.getPlayerName} ${winnerObj.getPlayerId()} score: ${scores[winnerObj.getPlayerId()]} won by forfeit\n` +
+                         `match ended at ${new Date(matchEndTime).toISOString()}`;
+                
+                console.log('Game ended by disconnect:', {
+                    disconnectedPlayer: {
+                        name: disconnectedPlayerObj.getPlayerName,
+                        id: disconnectedPlayerObj.getPlayerId(),
+                        score: scores[disconnectedPlayerObj.getPlayerId()]
+                    },
+                    winner: {
+                        name: winnerObj.getPlayerName,
+                        id: winnerObj.getPlayerId(),
+                        score: scores[winnerObj.getPlayerId()]
+                    }
+                });
+            } else {
+                const winner = winnerId === player1.getPlayerId() ? player1 : player2;
+                const loser = winnerId === player1.getPlayerId() ? player2 : player1;
+                message = `${winner.getPlayerName} ${winner.getPlayerId()} score: ${scores[winner.getPlayerId()]} wins!\n` +
+                         `${loser.getPlayerName} ${loser.getPlayerId()} score: ${scores[loser.getPlayerId()]}\n` +
+                         `match ended at ${new Date(matchEndTime).toISOString()}`;
+            }
+            
+            alert(message);
+            console.log(`Game ended: ${message}`);
             map.getEngine().stopRenderLoop();
             
             if (ball && ball.ballBody && ball.ballBody.metadata && ball.ballBody.metadata.roomId === roomId) {
@@ -401,12 +419,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             if (msg.type === 'usernameUpdate') {
+                console.log('Received usernameUpdate:', msg);  // Debug log
                 if (msg.playerId === player1.getPlayerId()) {
-                    player1.name = msg.username;
-                    console.log(`Player1 updated username to ${msg.username}`);
+                    player1.playerName = msg.username;
+                    console.log(`Player1 (${player1.getPlayerId()}) updated username to ${msg.username}`);
                 } else if (msg.playerId === player2.getPlayerId()) {
-                    player2.name = msg.username;
-                    console.log(`Player2 updated username to ${msg.username}`);
+                    player2.playerName = msg.username;
+                    console.log(`Player2 (${player2.getPlayerId()}) updated username to ${msg.username}`);
                 }
             }
         };

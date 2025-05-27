@@ -68,6 +68,10 @@ class playerPaddle {
     return this.playerScore;
   }
 
+  get getPlayerName() {
+    return this.playerName;
+  }
+
   get getPlayerRebounds() {
     return this.playerRebounds;
   }

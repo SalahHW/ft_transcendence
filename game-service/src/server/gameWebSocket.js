@@ -217,13 +217,35 @@ function handlePlayerDisconnect(playerId, roomId) {
     }
     getPlayers().delete(playerId);
   }
-  const room = getGameState().gameRooms.get(roomId) || { players: [] };
+  
+  const room = getGameState().gameRooms.get(roomId);
+  if (!room) return;
+
+  // Find the remaining player (if any) before filtering
+  const remainingPlayer = room.players.find(p => p.id !== playerId);
   room.players = room.players.filter(p => p.id !== playerId);
+
   if (room.players.length === 0) {
     getGameState().gameRooms.delete(roomId);
     getGameState().animationStatus.delete(roomId);
     console.log(`Room ${roomId} deleted, no players left`);
-  } else {
+  } else if (!room.isGameOver && remainingPlayer && room.ball) {
+    // Auto-win for the remaining player with actual scores
+    const now = Date.now();
+    const scores = {
+      [remainingPlayer.id]: remainingPlayer.id === room.ball.player1.playerId ? room.ball.player1.playerScore : room.ball.player2.playerScore,
+      [playerId]: playerId === room.ball.player1.playerId ? room.ball.player1.playerScore : room.ball.player2.playerScore
+    };
+    
+    broadcastToRoom(roomId, {
+      type: 'gameEnd',
+      winnerId: remainingPlayer.id,
+      scores: scores,
+      matchEndTime: now,
+      disconnectedPlayer: playerId
+    });
+    
+    room.isGameOver = true;
     getGameState().gameRooms.set(roomId, room);
   }
 }

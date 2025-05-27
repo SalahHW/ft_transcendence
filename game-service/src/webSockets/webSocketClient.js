@@ -40,7 +40,10 @@ export class webSocketClient {
             }
 
             if (msg.type === 'usernameUpdate') {
-                console.log(`Player ${msg.playerId} set username: ${msg.username}`);
+                console.log(`WebSocket received username update for player ${msg.playerId}: ${msg.username}`);
+                if (this.messageCallback) {
+                    this.messageCallback({ data: JSON.stringify(msg) });
+                }
                 return;
             }
             if (msg.type === 'error') {
