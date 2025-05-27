@@ -128,6 +128,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
             if (ball && ball.ballBody && ball.ballBody.metadata && ball.ballBody.metadata.roomId === roomId) {
+                // First, ensure visibility is correct
+                if (ball.position.y <= -2 || (ball.isRespawning && ball.respawnTime === 0)) {
+                    ball.ballBody.isVisible = false;
+                }
+
                 if (ball.isRespawning) {
                     const t = Math.min(ball.respawnTime / ball.respawnDuration, 1);
                     const newY = -2 + 3 * t; // Animate from y=-2 to y=1
@@ -138,6 +143,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const deltaTime = (now - (ball.lastUpdateTime || now)) / 1000;
                     ball.lastUpdateTime = now;
                     ball.respawnTime += deltaTime;
+                    
+                    // Only make the ball visible once it starts moving up
+                    if (ball.respawnTime > 0 && newY > -2) {
+                        ball.ballBody.isVisible = true;
+                    }
                     
                     if (ball.respawnTime >= ball.respawnDuration) {
                         ball.isRespawning = false;
@@ -157,6 +167,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         ball.ballBody.position.copyFrom(predictedPosition);
                     }
                 }
+                
+                // Update client after all position changes
                 ball.updateClient(map.getScene);
             } else if (ball && ball.ballBody) {
                 console.warn('Render loop: Ball belongs to different room. Expected:', roomId, 'Got:', ball.ballBody.metadata?.roomId);

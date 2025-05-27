@@ -4,6 +4,7 @@ import { createExplosion } from './ballEffects.js';
 class Ball {
     constructor(player1, player2) {
         this.position = new BABYLON.Vector3(0, -2, 0);
+        // console.log('[BALL] Constructor - Initial position:', { x: this.position.x, y: this.position.y, z: this.position.z });
         this.velocity = new BABYLON.Vector3(0, 0, 0);
         this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
         this.radius = 1;
@@ -15,7 +16,7 @@ class Ball {
         this.currentGlowColor = new BABYLON.Color3(0, 0, 0);
         this.isRespawning = false;
         this.respawnTime = 0;
-        this.respawnDuration = 2;
+        this.respawnDuration = 3;
         this.player1 = player1;
         this.player2 = player2;
         this.lastPosition = this.position.clone();
@@ -25,7 +26,9 @@ class Ball {
     }
 
     init() {
+        // console.log('[BALL] Init - Before reset position:', { x: this.position.x, y: this.position.y, z: this.position.z });
         this.position = new BABYLON.Vector3(0, -2, 0);
+        // console.log('[BALL] Init - After reset position:', { x: this.position.x, y: this.position.y, z: this.position.z });
         this.velocity = new BABYLON.Vector3(0, 0, 0);
         this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
         this.rebounds = 0;
@@ -48,16 +51,26 @@ class Ball {
     }
 
     createBall(scene) {
+        // console.log('[BALL] CreateBall - Before creation:', { position: this.position ? { x: this.position.x, y: this.position.y, z: this.position.z } : 'undefined' });
         this.ballBody = BABYLON.MeshBuilder.CreateSphere("ball", { diameter: 2 }, scene);
         this.ballMaterial = new BABYLON.StandardMaterial("glowMat", scene);
         this.position = new BABYLON.Vector3(0, -2, 0);
         this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
         this.ballBody.material = this.ballMaterial;
         this.ballBody.isVisible = false;
-        console.log('createBall: ballBody created, position:', this.ballBody.position, 'isVisible:', this.ballBody.isVisible);
+        // console.log('[BALL] CreateBall - After creation:', {
+        //     position: { x: this.position.x, y: this.position.y, z: this.position.z },
+        //     ballBodyPosition: { x: this.ballBody.position.x, y: this.ballBody.position.y, z: this.ballBody.position.z },
+        //     isVisible: this.ballBody.isVisible
+        // });
     }
 
     handleBallRespawn(previousVelocity) {
+        // console.log('[BALL] HandleBallRespawn - Before:', {
+        //     position: { x: this.position.x, y: this.position.y, z: this.position.z },
+        //     isRespawning: this.isRespawning,
+        //     respawnTime: this.respawnTime
+        // });
         this.position = new BABYLON.Vector3(0, -2, 0);
         this.velocity = BABYLON.Vector3.Zero();
         this.previousVelocity.copyFrom(previousVelocity);
@@ -69,22 +82,44 @@ class Ball {
         this.lastUpdateTime = Date.now();
         if (this.ballBody) {
             this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
-            this.ballBody.isVisible = true;
+            this.ballBody.isVisible = false;
         }
-        console.log('handleBallRespawn called:', { position: this.position, isRespawning: this.isRespawning, respawnTime: this.respawnTime });
+        // console.log('[BALL] HandleBallRespawn - After:', {
+        //     position: { x: this.position.x, y: this.position.y, z: this.position.z },
+        //     ballBodyPosition: this.ballBody ? { x: this.ballBody.position.x, y: this.ballBody.position.y, z: this.ballBody.position.z } : 'no ballBody',
+        //     isVisible: this.ballBody ? this.ballBody.isVisible : 'no ballBody',
+        //     isRespawning: this.isRespawning,
+        //     respawnTime: this.respawnTime
+        // });
     }
 
     update(deltaTime, paddle1Pos, paddle2Pos) {
         if (this.isRespawning) {
+            const prevY = this.position.y;
             this.respawnTime += deltaTime;
             const t = Math.min(this.respawnTime / this.respawnDuration, 1);
             this.position.y = -2 + 3 * t;
             this.position.z = 0;
             this.position.x = 0;
+            
+            // if (Math.abs(this.position.y - prevY) > 0.01) {  // Log only significant changes
+            //     console.log('[BALL] Update - Y position change during respawn:', {
+            //         prevY,
+            //         newY: this.position.y,
+            //         t,
+            //         respawnTime: this.respawnTime,
+            //         isVisible: this.ballBody ? this.ballBody.isVisible : 'no ballBody'
+            //     });
+            // }
+            
             if (this.ballBody) {
                 this.ballBody.position.copyFrom(this.position);
             }
             if (t >= 1) {
+                // console.log('[BALL] Update - Respawn complete:', {
+                //     finalPosition: { x: this.position.x, y: this.position.y, z: this.position.z },
+                //     isVisible: this.ballBody ? this.ballBody.isVisible : 'no ballBody'
+                // });
                 this.isRespawning = false;
                 this.position.y = 1;
                 if (this.ballBody) {
@@ -96,7 +131,6 @@ class Ball {
                 }
                 this.hasValidPosition = true;
                 this.speed = this.rebounds < 5 ? 25 : 37.5;
-                console.log('Respawn complete:', { position: this.position, velocity: this.velocity });
             }
             return;
         }
@@ -219,10 +253,24 @@ class Ball {
 
     updateClient(scene) {
         if (this.ballBody && this.hasValidPosition) {
+            const prevY = this.ballBody.position.y;
             this.ballBody.position.copyFrom(this.position);
-            if (this.isRespawning || this.position.y > -2) {
+            const wasVisible = this.ballBody.isVisible;
+            
+            if ((this.isRespawning && this.position.y > -2) || (!this.isRespawning && this.position.y > -2)) {
                 this.ballBody.isVisible = true;
             }
+
+            // Log visibility or position changes
+            // if (wasVisible !== this.ballBody.isVisible || Math.abs(prevY - this.position.y) > 0.01) {
+            //     console.log('[BALL] UpdateClient - State change:', {
+            //         prevY,
+            //         newY: this.position.y,
+            //         wasVisible,
+            //         isVisible: this.ballBody.isVisible,
+            //         isRespawning: this.isRespawning
+            //     });
+            // }
         }
     }
 
@@ -236,15 +284,22 @@ class Ball {
             this.hasValidPosition = true;
             if (this.ballBody) {
                 this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
-                this.ballBody.isVisible = true;
+                this.ballBody.isVisible = false;
             }
+            this.lastPosition = this.position.clone();
+            this.lastUpdateTime = Date.now();
             return;
         }
 
         if (this.isRespawning && state.isRespawning) {
+            // During respawn, only update time and position if needed
+            if (state.respawnTime !== undefined) {
+                this.respawnTime = state.respawnTime;
+            }
             return;
         }
 
+        // For non-initial states, update all properties
         this.position.copyFrom(state.position);
         this.velocity.copyFrom(state.velocity);
         this.previousVelocity.copyFrom(state.previousVelocity || this.velocity);
@@ -256,6 +311,13 @@ class Ball {
         this.speed = state.speed || 25;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
+
+        // Ensure visibility is correct after state update
+        if (this.ballBody) {
+            if (this.position.y <= -2 || (this.isRespawning && this.respawnTime === 0)) {
+                this.ballBody.isVisible = false;
+            }
+        }
     }
 }
 
