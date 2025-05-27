@@ -1,9 +1,9 @@
-import { playerPaddle } from '/src/player/player.js';
-import { gameMap } from '/src/map/gameMap.js';
-import { webSocketClient } from '/src/webSockets/webSocketClient.js';
-import { Ball } from '/src/ball/ball.js';
+import { playerPaddle } from '../player/player.js';
+import { gameMap } from '../map/gameMap.js';
+import { webSocketClient } from '../webSocketClient/webSocketClient.js';
+import { Ball } from '../ball/ball.js';
 import * as BABYLON from '@babylonjs/core';
-import '/src/style.css';
+import '../style.css';
 
 const serverPort = import.meta.env.VITE_SERVER_PORT || 8080;
 const urlParams = new URLSearchParams(window.location.search);

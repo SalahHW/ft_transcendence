@@ -1,8 +1,8 @@
 import * as BABYLON from '@babylonjs/core';
-import { playerPaddle } from './player/player.js';
+import { playerPaddle } from '../game-service/src/player/player.js';
 import { gameMap} from './map/gameMap.js';
-import { ball } from './ball/ball.js';
-import { keystrokesListen, keyState, keystrokesCatch } from './player/playerUtils.js';
+import { ball } from '../game-service/src/ball/ball.js';
+import { keystrokesListen, keyState, keystrokesCatch } from '../game-service/src/player/playerUtils.js';
 
 const nPlayer = 2;
 let map = new gameMap();

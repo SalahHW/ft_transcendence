@@ -40,6 +40,15 @@ services:
     networks:
       - blockchain
 
+  game:
+    container_name: game
+    build: ./game-service
+    env_file:
+      - ./.env
+      - ./game-service/.env
+    networks:
+      - transcendence
+
 networks:
   users:
   blockchain:
