@@ -13,7 +13,7 @@ class Ball {
         this.ballMaterial = null;
         this.isGlowing = false;
         this.currentGlowColor = new BABYLON.Color3(0, 0, 0);
-        this.isRespawning = true;
+        this.isRespawning = false;
         this.respawnTime = 0;
         this.respawnDuration = 2;
         this.player1 = player1;
@@ -29,12 +29,16 @@ class Ball {
         this.velocity = new BABYLON.Vector3(0, 0, 0);
         this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
         this.rebounds = 0;
-        this.isRespawning = true;
+        this.isRespawning = false;
         this.respawnTime = 0;
         this.hasValidPosition = true;
         this.speed = 25;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
+        if (this.ballBody) {
+            this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
+            this.ballBody.isVisible = false;
+        }
     }
 
     setFirstVelocity() {
@@ -46,9 +50,10 @@ class Ball {
     createBall(scene) {
         this.ballBody = BABYLON.MeshBuilder.CreateSphere("ball", { diameter: 2 }, scene);
         this.ballMaterial = new BABYLON.StandardMaterial("glowMat", scene);
-        this.ballBody.position.copyFrom(this.position);
+        this.position = new BABYLON.Vector3(0, -2, 0);
+        this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
         this.ballBody.material = this.ballMaterial;
-        this.ballBody.isVisible = true;
+        this.ballBody.isVisible = false;
         console.log('createBall: ballBody created, position:', this.ballBody.position, 'isVisible:', this.ballBody.isVisible);
     }
 
@@ -62,6 +67,10 @@ class Ball {
         this.speed = 25;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
+        if (this.ballBody) {
+            this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
+            this.ballBody.isVisible = true;
+        }
         console.log('handleBallRespawn called:', { position: this.position, isRespawning: this.isRespawning, respawnTime: this.respawnTime });
     }
 
@@ -72,10 +81,15 @@ class Ball {
             this.position.y = -2 + 3 * t;
             this.position.z = 0;
             this.position.x = 0;
-            console.log(`Respawn animation: t=${t}, position.y=${this.position.y}, respawnTime=${this.respawnTime}`);
+            if (this.ballBody) {
+                this.ballBody.position.copyFrom(this.position);
+            }
             if (t >= 1) {
                 this.isRespawning = false;
                 this.position.y = 1;
+                if (this.ballBody) {
+                    this.ballBody.position.y = 1;
+                }
                 this.velocity.copyFrom(this.previousVelocity);
                 if (this.velocity.length() === 0) {
                     this.setFirstVelocity();
@@ -206,15 +220,31 @@ class Ball {
     updateClient(scene) {
         if (this.ballBody && this.hasValidPosition) {
             this.ballBody.position.copyFrom(this.position);
-            this.ballBody.isVisible = true;
-            //console.log('updateClient: ballBody updated, position:', this.ballBody.position, 'isVisible:', this.ballBody.isVisible);
-        } else if (this.ballBody) {
-            this.ballBody.isVisible = false;
-            //console.warn('updateClient: ballBody not updated, hasValidPosition:', this.hasValidPosition);
+            if (this.isRespawning || this.position.y > -2) {
+                this.ballBody.isVisible = true;
+            }
         }
     }
 
     setState(state) {
+        if (state.isInitialSpawn) {
+            this.position = new BABYLON.Vector3(0, -2, 0);
+            this.velocity = new BABYLON.Vector3(0, 0, 0);
+            this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
+            this.isRespawning = true;
+            this.respawnTime = 0;
+            this.hasValidPosition = true;
+            if (this.ballBody) {
+                this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
+                this.ballBody.isVisible = true;
+            }
+            return;
+        }
+
+        if (this.isRespawning && state.isRespawning) {
+            return;
+        }
+
         this.position.copyFrom(state.position);
         this.velocity.copyFrom(state.velocity);
         this.previousVelocity.copyFrom(state.previousVelocity || this.velocity);
@@ -226,18 +256,6 @@ class Ball {
         this.speed = state.speed || 25;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
-        if (state.isInitialSpawn && state.isRespawning) {
-            this.position = new BABYLON.Vector3(0, -2, 0);
-            this.isRespawning = true;
-            this.respawnTime = 0;
-            this.hasValidPosition = true;
-        }
-        //console.log('setState called:', {
-        //    position: this.position,
-        //    isRespawning: this.isRespawning,
-        //    respawnTime: this.respawnTime,
-        //    isInitialSpawn: state.isInitialSpawn
-        //});
     }
 }
 

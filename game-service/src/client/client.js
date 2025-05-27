@@ -88,6 +88,10 @@ document.addEventListener('DOMContentLoaded', () => {
             ball = new Ball(player1, player2);
             ball.createBall(map.getScene);
             ball.ballBody.metadata = { roomId };
+            // Ensure ball starts under the map and invisible
+            ball.position = new BABYLON.Vector3(0, -2, 0);
+            ball.ballBody.position = new BABYLON.Vector3(0, -2, 0);
+            ball.ballBody.isVisible = false;
             console.log('Ball created successfully for room', roomId, 'ballBody:', !!ball.ballBody, 'metadata:', ball.ballBody.metadata);
         } catch (e) {
             console.error('Ball creation failed:', e);
@@ -125,8 +129,24 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (ball && ball.ballBody && ball.ballBody.metadata && ball.ballBody.metadata.roomId === roomId) {
                 if (ball.isRespawning) {
+                    const t = Math.min(ball.respawnTime / ball.respawnDuration, 1);
+                    const newY = -2 + 3 * t; // Animate from y=-2 to y=1
+                    ball.position.y = newY;
                     ball.ballBody.position.copyFrom(ball.position);
-                    ball.ballBody.isVisible = true;
+                    
+                    // Update respawn time
+                    const deltaTime = (now - (ball.lastUpdateTime || now)) / 1000;
+                    ball.lastUpdateTime = now;
+                    ball.respawnTime += deltaTime;
+                    
+                    if (ball.respawnTime >= ball.respawnDuration) {
+                        ball.isRespawning = false;
+                        ball.position.y = 1;
+                        ball.ballBody.position.y = 1;
+                        if (ball.velocity.length() === 0) {
+                            ball.setFirstVelocity();
+                        }
+                    }
                 } else if (ball.hasValidPosition) {
                     predictedPosition = predictedPosition || ball.ballBody.position.clone();
                     const effectiveDeltaTime = deltaTime + ping / 2;
@@ -272,7 +292,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (isGameOver) return;
             ballUpdateReceived = true;
             const now = Date.now();
-            //console.log(`Received ballUpdate for room ${roomId} at ${now}, ws.readyState=${clientConnection.socket.readyState}:`, { ballState, isInitialSpawn, isScoreRespawn });
             if (initTime) {
                 //console.log(`Time since init: ${now - initTime}ms`);
             }
@@ -282,12 +301,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (!ball || !ball.ballBody || (ball.ballBody.metadata && ball.ballBody.metadata.roomId !== roomId)) {
-                //console.log('Creating new ball for room', roomId, 'existing ball:', ball?.ballBody?.metadata?.roomId);
                 try {
                     ball = new Ball(player1, player2);
                     ball.createBall(map.getScene);
                     ball.ballBody.metadata = { roomId };
-                    //console.log('Ball created successfully for room', roomId, 'metadata:', ball.ballBody.metadata);
+                    // Ensure ball starts under the map and invisible
+                    ball.position = new BABYLON.Vector3(0, -2, 0);
+                    ball.ballBody.position = new BABYLON.Vector3(0, -2, 0);
+                    ball.ballBody.isVisible = false;
                 } catch (e) {
                     console.error('Ball creation failed:', e);
                     return;
@@ -296,10 +317,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (ball && ball.ballBody && ball.ballBody.metadata && ball.ballBody.metadata.roomId === roomId) {
                 const newPosition = new BABYLON.Vector3(ballState.position.x, ballState.position.y, ballState.position.z);
-                ball.ballBody.isVisible = true;
+                
+                if (isInitialSpawn) {
+                    // For initial spawn, only update state and let the respawn animation handle everything
+                    ball.setState({
+                        position: newPosition,
+                        velocity: new BABYLON.Vector3(ballState.velocity.x, ballState.velocity.y, ballState.velocity.z),
+                        previousVelocity: ballState.previousVelocity || new BABYLON.Vector3(ballState.velocity.x, ballState.velocity.y, ballState.velocity.z),
+                        rebounds: ballState.rebounds || 0,
+                        isRespawning: true,
+                        respawnTime: 0,
+                        wasHitByPlayer: ballState.wasHitByPlayer || false,
+                        hasValidPosition: true,
+                        speed: ballState.speed || 25,
+                        isInitialSpawn: true
+                    });
+                    return;
+                }
+                
                 ball.ballBody.position = newPosition;
                 predictedPosition = newPosition.clone();
                 lastBallPosition = null;
+                
                 try {
                     ball.setState({
                         position: newPosition,
@@ -311,21 +350,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         wasHitByPlayer: ballState.wasHitByPlayer || false,
                         hasValidPosition: true,
                         speed: ballState.speed || 25,
-                        isInitialSpawn: isInitialSpawn || false
+                        isInitialSpawn: false
                     });
+                    
                     if (isInitialSpawn && ball.velocity.length() === 0) {
                         ball.setFirstVelocity();
-                        //console.log('Set initial velocity for ball:', ball.velocity);
                     }
-                    //console.log('Ball state updated for room', roomId, ':', {
-                    //    position: ball.position,
-                    //    velocity: ball.velocity,
-                    //    isRespawning: ball.isRespawning,
-                    //    hasValidPosition: ball.hasValidPosition,
-                    //    isVisible: ball.ballBody.isVisible,
-                    //    ballBodyExists: !!ball.ballBody,
-                    //    metadata: ball.ballBody.metadata
-                    //});
                 } catch (e) {
                     console.error('Ball setState failed:', e);
                 }
