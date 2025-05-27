@@ -13,7 +13,6 @@ export function checkRoomReady(roomId) {
 
   if (allReady) {
     room.ready = true;
-    console.log(`Room ${roomId} is ready, starting game at ${Date.now()}`);
     room.players.forEach((p, i) => {
       const otherPlayer = room.players[1 - i];
       if (p.ws && p.ws.readyState === 1) {
@@ -25,7 +24,6 @@ export function checkRoomReady(roomId) {
             role: i,
             opponentId: otherPlayer.id,
           }));
-          console.log(`Sent init to player ${p.id} in room ${roomId}`);
         } catch (e) {
           console.error(`Failed to send init to player ${p.id}:`, e);
         }
@@ -34,13 +32,11 @@ export function checkRoomReady(roomId) {
     // Ensure animationStatus is initialized
     if (!animationStatus.has(roomId)) {
       animationStatus.set(roomId, new Set());
-      console.log(`Initialized animationStatus for room ${roomId}`);
     }
     // Retry ball update
     const attemptBallUpdate = (attempt = 1) => {
       const roomAnimStatus = animationStatus.get(roomId);
       if (roomAnimStatus?.size === 2 && gameRooms.get(roomId)?.ready) {
-        console.log(`Sending initial ballUpdate for room ${roomId}`);
         sendBallUpdateForced(roomId);
       } else if (attempt <= 3) {
         console.warn(`Waiting for animations in room ${roomId}, attempt ${attempt}, status size: ${roomAnimStatus?.size || 0}`);
@@ -60,7 +56,6 @@ export function sendBallUpdate(roomId) {
   if (!room || room.players.length !== 2) return;
 
   if (!room.ballUpdateSent) {
-    console.log(`Sending ballUpdate for room ${roomId} at ${Date.now()}`);
     sendBallUpdateForced(roomId);
   }
 }
@@ -101,7 +96,6 @@ export function sendBallUpdateForced(roomId) {
     wasHitByPlayer: room.ball.wasHitByPlayer,
     speed: room.ball.speed,
   };
-  console.log(`Sending initial ballUpdate for room ${roomId} at ${Date.now()}:`, ballState);
   broadcastToRoom(roomId, {
     type: 'ballUpdate',
     ballState,
@@ -112,7 +106,6 @@ export function sendBallUpdateForced(roomId) {
   const roomAnimStatus = animationStatus.get(roomId);
   if (roomAnimStatus) {
     roomAnimStatus.clear();
-    console.log(`Cleared animationStatus for room ${roomId}`);
   }
   room.ballUpdateSent = true;
   room.ballUpdateTimeout = null;
@@ -126,7 +119,6 @@ export function broadcastToRoom(roomId, message) {
     if (ws && ws.readyState === 1) {
       try {
         ws.send(json);
-        console.log(`Sent ${message.type} to player ${id} in room ${roomId}`);
       } catch (e) {
         console.error(`Failed to send ${message.type} to player ${id} in room ${roomId}:`, e);
       }
@@ -145,7 +137,6 @@ export function endGame(room, roomId) {
     } else if (room.ball.player2.playerScore >= 11) {
       winnerId = room.players[1].id;
     }
-    console.log(`Game ended in room ${roomId}, winner: ${winnerId}`);
     broadcastToRoom(roomId, {
       type: 'gameEnd',
       winnerId,
@@ -164,7 +155,6 @@ export function createOrJoinRoom(playerId, player, ws) {
     if (room.players.length < 2 && !room.isGameOver && !room.ready) {
       room.players.push(player);
       roomId = rId;
-      console.log(`Player ${playerId} joined existing room ${roomId}`);
       break;
     }
   }
@@ -187,12 +177,10 @@ export function createOrJoinRoom(playerId, player, ws) {
     newRoom.ball.hasValidPosition = true;
     gameRooms.set(roomId, newRoom);
     animationStatus.set(roomId, new Set());
-    console.log(`Created new room ${roomId} for player ${playerId} with ball initialized`);
   } else {
     const room = gameRooms.get(roomId);
     room.ball.player2.playerId = playerId;
     room.ballUpdateSent = false; // Reset to ensure ballUpdate
-    console.log(`Updated ball player2 ID to ${playerId} in room ${roomId}`);
     checkRoomReady(roomId);
   }
   return roomId;
