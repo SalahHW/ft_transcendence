@@ -6,11 +6,12 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:42:50 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/26 20:42:51 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/05/27 19:44:05 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-import Router from "../router/router.js";
+import { buttonHTML } from "../components/button.js";
+import Router from "../router/Router.js";
 
 export default class HomePage {
 	private _container: HTMLElement;
@@ -28,10 +29,12 @@ export default class HomePage {
 					<button id="play-button" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-md text-xl font-bold shadow-md transition duration-300">Play</button>
 				</div>
 				<div class="absolute bottom-8 left-8">
-					<button id="api-test-page-button" class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-md shadow-md transition duration-300 flex items-center gap-2">
-						<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="text-white"><path fill="none" stroke="currentColor" stroke-width="2" d="M9 1v7L2 20v3h20v-3L15 8V1m0 17a1 1 0 1 0 0-2a1 1 0 0 0 0 2Zm-6 2a1 1 0 1 0 0-2a1 1 0 0 0 0 2Zm9-7c-7-3-6 4-12 1M6 1h12"/></svg>
-						API Test Page
-					</button>
+					 ${buttonHTML({
+						id: "api-test-page-button",
+						label: "API Test Page",
+						type: "button",
+						svgIcon: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="text-white"><path fill="none" stroke="currentColor" stroke-width="2" d="M9 1v7L2 20v3h20v-3L15 8V1m0 17a1 1 0 1 0 0-2a1 1 0 0 0 0 2Zm-6 2a1 1 0 1 0 0-2a1 1 0 0 0 0 2Zm9-7c-7-3-6 4-12 1M6 1h12"/></svg>`
+					 })}
 				</div>
 			</div>
 		`;

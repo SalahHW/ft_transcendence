@@ -5,14 +5,14 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/26 20:42:48 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/26 20:42:49 by edelarbr         ###   ########.fr       */
+/*   Created: 2025/05/27 19:14:29 by edelarbr          #+#    #+#             */
+/*   Updated: 2025/05/27 19:14:39 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 import Tabs from "./components/tabs.js";
 
-export default class ApiTestPage {
+export default class APITestPage {
 	private _container: HTMLElement;
 
 	constructor(containerId: string) {
