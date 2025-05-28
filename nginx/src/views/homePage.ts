@@ -6,12 +6,13 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:42:50 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/27 19:44:05 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/05/28 16:14:51 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 import { buttonHTML } from "../components/button.js";
 import Router from "../router/Router.js";
+import { COMMON_CLASSES } from "../style/tailwindClasses.js";
 
 export default class HomePage {
 	private _container: HTMLElement;
@@ -24,9 +25,9 @@ export default class HomePage {
 
 	render(): void {
 		this._container.innerHTML = /* HTML */ `
-			<div class="container mx-auto p-4 h-[90vh] flex flex-col">
+			<div class="${COMMON_CLASSES.pageContainer}">
 				<div class="flex-grow flex items-center justify-center">
-					<button id="play-button" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-md text-xl font-bold shadow-md transition duration-300">Play</button>
+					<button id="play-button" class="${COMMON_CLASSES.primaryButton}">Play</button>
 				</div>
 				<div class="absolute bottom-8 left-8">
 					 ${buttonHTML({
