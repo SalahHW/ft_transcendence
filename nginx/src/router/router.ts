@@ -6,18 +6,42 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:40:51 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/28 00:36:15 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/05/28 16:29:39 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-export default class Router {
-	private static _instance: Router;
-	private _routes: Map<string, () => void>;
-	private _initialized: boolean = false;
+// TODO: Mettre cette classe ça au propre
+// TODO: (opt) Mettre des views pour les differents forms de APITestPage
 
-	private constructor() {
-		this._routes = new Map();
-	}
+import APITestPage from "../views/apiTestPage/APITestPage.js";
+import HomePage from "../views/homePage.js";
+interface Route {
+	path: string;
+	cache?: any;
+	handler: () => void;
+}
+
+export default class Router {
+	private constructor() {}
+	private static	_instance: Router;
+	private			_routes: Route[] = [
+		{
+			path: "/",
+			handler: function() {
+				if (!this.cache)
+					this.cache = new HomePage("app-container");
+				this.cache.render();
+			}
+		},
+		{
+			path: "/api-test",
+			handler: function() {
+				if (!this.cache)
+					this.cache = new APITestPage("app-container");
+				this.cache.render();
+			}
+		}
+	];
 
 	public static getInstance(): Router {
 		if (!Router._instance) {
@@ -26,21 +50,18 @@ export default class Router {
 		return Router._instance;
 	}
 
-	public addRoute(path: string, handler: () => void): void {
-		this._routes.set(path, handler);
-	}
-
-	private _executeHandler(path: string): boolean {
-		const handler = this._routes.get(path);
-		if (handler) {
-			handler();
+	private _executeHandler(path: string) {
+		var route = this._routes.find(route => route.path === path);
+		if (route?.handler) {
+			route.handler();
 			return true;
 		}
+		console.warn(`No handler found for route: ${path}`);
 		return false;
 	}
 
 	private _isValidRoute(path: string): boolean {
-		return this._routes.has(path);
+		return this._routes.some(route => route.path === path);
 	}
 
 	private _redirectToHome(): void {
@@ -50,19 +71,18 @@ export default class Router {
 
 	public navigate(path: string, replaceState: boolean = false): boolean {
 		if (this._isValidRoute(path)) {
-			if (replaceState) {
+			if (replaceState)
 				window.history.replaceState({ path }, '', path);
-			} else {
+			else
 				window.history.pushState({ path }, '', path);
-			}
 
 			this._executeHandler(path);
 			return true;
-		} else {
+		}
+		else {
 			console.warn(`Route not found: ${path}`);
-			if (path !== '/') {
+			if (path !== '/')
 				this._redirectToHome();
-			}
 			return false;
 		}
 	}
@@ -83,30 +103,19 @@ export default class Router {
 	}
 
 	public init(): void {
-		if (this._initialized) {
-			console.warn('Router already initialized');
-			return;
-		}
-
 		window.addEventListener('popstate', this._handlePopState);
 
 		const currentPath = this.getCurrentPath();
-		const shouldRedirectToHome = currentPath === '/public/index.html' ||
-									  !this._isValidRoute(currentPath);
-
-		if (shouldRedirectToHome) {
+		if (!this._isValidRoute(currentPath))
 			this.navigate('/', true);
-		} else {
+		 else
 			this.navigate(currentPath, true);
-		}
-
-		this._initialized = true;
 	}
 
-	public destroy(): void {
-		if (this._initialized) {
-			window.removeEventListener('popstate', this._handlePopState);
-			this._initialized = false;
-		}
-	}
+	// public destroy(): void {
+	// 	if (this._initialized) {
+	// 		window.removeEventListener('popstate', this._handlePopState);
+	// 		this._initialized = false;
+	// 	}
+	// }
 }
