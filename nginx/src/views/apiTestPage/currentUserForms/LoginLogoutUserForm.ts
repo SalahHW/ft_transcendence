@@ -6,11 +6,13 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:42:34 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/26 20:42:36 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/05/28 16:14:51 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 import UsersApi from "../../../api/user.js";
+import { buttonHTML } from "../../../components/button.js";
+import { COMMON_CLASSES } from "../../../style/tailwindClasses.js";
 
 export default class LoginLogoutUserForm {
 	private _container: HTMLElement;
@@ -31,28 +33,30 @@ export default class LoginLogoutUserForm {
 		}
 		catch (error) {
 			if (error instanceof Error)
-				console.log(error.message);
+				console.error(error.message);
 			else
-				console.log(error);
+				console.error(error);
 		}
 	}
 
 	private _renderLoginForm(): void {
 		this._container.innerHTML = /* HTML */ `
-			<form id="login-logout-user-form" class="space-y-4">
+			<form id="login-logout-user-form" class="${COMMON_CLASSES.form}">
 				<div>
-					<label class="block text-sm font-medium text-gray-700">Username (required)</label>
-					<input type="text" id="login-logout-user-form-username" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+					<label class="${COMMON_CLASSES.label}">Username (required)</label>
+					<input type="text" id="login-logout-user-form-username" class="${COMMON_CLASSES.input}">
 				</div>
 
 				<div>
-					<label class="block text-sm font-medium text-gray-700">Password (required)</label>
-					<input type="password" id="login-logout-user-form-password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+					<label class="${COMMON_CLASSES.label}">Password (required)</label>
+					<input type="password" id="login-logout-user-form-password" class="${COMMON_CLASSES.input}">
 				</div>
 
-				<button id="login-logout-user-form-login" type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-					Login
-				</button>
+				${buttonHTML({
+					id: "login-logout-user-form-login",
+					type: "submit",
+					label: "Login"
+				})}
 			</form>
 		`;
 
@@ -68,7 +72,7 @@ export default class LoginLogoutUserForm {
 			const usernameInput = document.getElementById("login-logout-user-form-username") as HTMLInputElement;
 			const passwordInput = document.getElementById("login-logout-user-form-password") as HTMLInputElement;
 			if (!usernameInput.value || !passwordInput.value) {
-				console.log("Please provide both username and password");
+				console.warn("Please provide both username and password");
 				return;
 			}
 
@@ -78,19 +82,21 @@ export default class LoginLogoutUserForm {
 			}
 			catch (error) {
 				if (error instanceof Error)
-					console.log(error.message);
+					console.error(error.message);
 				else
-					console.log(error);
+					console.error(error);
 			}
 		});
 	}
 
 	private _renderLogoutForm(): void {
 		this._container.innerHTML = /* HTML */ `
-			<form id="login-logout-user-form" class="space-y-4">
-				<button id="login-logout-user-form-logout" type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-					Logout
-				</button>
+			<form id="login-logout-user-form" class="${COMMON_CLASSES.form}">
+				${buttonHTML({
+					id: "login-logout-user-form-logout",
+					type: "submit",
+					label: "Logout"
+				})}
 			</form>
 		`;
 

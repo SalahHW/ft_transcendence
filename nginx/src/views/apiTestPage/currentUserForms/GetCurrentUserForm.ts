@@ -6,11 +6,13 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:42:30 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/26 20:42:32 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/05/28 16:14:51 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 import UsersApi from "../../../api/user.js";
+import { buttonHTML } from "../../../components/button.js";
+import { COMMON_CLASSES } from "../../../style/tailwindClasses.js";
 
 export default class GetMeUserForm {
 	private _container: HTMLElement;
@@ -25,10 +27,11 @@ export default class GetMeUserForm {
 
 	render(): void {
 		this._container.innerHTML = /* HTML */ `
-			<form id="get-me-user-form" class="space-y-4">
-				<button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-					Get Me
-				</button>
+			<form id="get-me-user-form" class="${COMMON_CLASSES.form}">
+				${buttonHTML({
+					type: "submit",
+					label: "Get Me"
+				})}
 			</form>
 		`;
 		this._attachEventListeners();
@@ -46,9 +49,9 @@ export default class GetMeUserForm {
 			}
 			catch (error) {
 				if (error instanceof Error)
-					console.log(error.message);
+					console.error(error.message);
 				else
-					console.log(error);
+					console.error(error);
 			}
 		});
 	}

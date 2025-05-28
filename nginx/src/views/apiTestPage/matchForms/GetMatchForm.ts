@@ -6,11 +6,13 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:42:45 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/26 20:42:46 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/05/28 16:14:51 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 import MatchServiceAPI from "../../../api/matche.js";
+import { buttonHTML } from "../../../components/button.js";
+import { COMMON_CLASSES } from "../../../style/tailwindClasses.js";
 
 export default class GetMatchForm {
 	private _container: HTMLElement;
@@ -25,15 +27,16 @@ export default class GetMatchForm {
 
 	render(): void {
 		this._container.innerHTML = /* HTML */ `
-			<form id="get-match-form" class="space-y-4">
+			<form id="get-match-form" class="${COMMON_CLASSES.form}">
 				<div>
-					<label class="block text-sm font-medium text-gray-700">ID</label>
-					<input type="number" id="getform-match-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+					<label class="${COMMON_CLASSES.label}">ID</label>
+					<input type="number" id="getform-match-id" class="${COMMON_CLASSES.input}">
 				</div>
 
-				<button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-					Get Match
-				</button>
+				${buttonHTML({
+					type: "submit",
+					label: "Get Match"
+				})}
 			</form>
 		`;
 
@@ -49,7 +52,7 @@ export default class GetMatchForm {
 			const idInput = document.getElementById("getform-match-id") as HTMLInputElement;
 
 			if (!idInput.value) {
-				console.log("Please provide an ID to get a match");
+				console.warn("Please provide an ID to get a match");
 				return;
 			}
 

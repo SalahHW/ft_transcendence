@@ -6,11 +6,13 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:42:42 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/26 20:42:43 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/05/28 16:14:51 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 import MatchServiceAPI, { Match } from "../../../api/matche.js";
+import { buttonHTML } from "../../../components/button.js";
+import { COMMON_CLASSES } from "../../../style/tailwindClasses.js";
 
 export default class CreateMatchForm {
 	private _container: HTMLElement;
@@ -25,30 +27,31 @@ export default class CreateMatchForm {
 
 	render(): void {
 		this._container.innerHTML = /* HTML */ `
-			<form id="create-match-form" class="space-y-4">
+			<form id="create-match-form" class="${COMMON_CLASSES.form}">
 				<div>
-					<label class="block text-sm font-medium text-gray-700">User 1 ID</label>
-					<input type="number" id="createform-user-id1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+					<label class="${COMMON_CLASSES.label}">User 1 ID</label>
+					<input type="number" id="createform-user-id1" class="${COMMON_CLASSES.input}">
 				</div>
 
 				<div>
-					<label class="block text-sm font-medium text-gray-700">User 2 ID</label>
-					<input type="number" id="createform-user-id2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+					<label class="${COMMON_CLASSES.label}">User 2 ID</label>
+					<input type="number" id="createform-user-id2" class="${COMMON_CLASSES.input}">
 				</div>
 
 				<div>
-					<label class="block text-sm font-medium text-gray-700">User 1 score</label>
-					<input type="number" id="createform-user-score1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+					<label class="${COMMON_CLASSES.label}">User 1 score</label>
+					<input type="number" id="createform-user-score1" class="${COMMON_CLASSES.input}">
 				</div>
 
 				<div>
-					<label class="block text-sm font-medium text-gray-700">User 2 score</label>
-					<input type="number" id="createform-user-score2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+					<label class="${COMMON_CLASSES.label}">User 2 score</label>
+					<input type="number" id="createform-user-score2" class="${COMMON_CLASSES.input}">
 				</div>
 
-				<button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-					Create Match
-				</button>
+				${buttonHTML({
+					type: "submit",
+					label: "Create Match"
+				})}
 			</form>
 		`;
 
@@ -67,7 +70,7 @@ export default class CreateMatchForm {
 			const score2Input = document.getElementById("createform-user-score2") as HTMLInputElement;
 
 			if (!id1Input.value || !id2Input.value || !score1Input.value || !score2Input.value) {
-				console.log("Please provide both id1, id2, score1 and score2");
+				console.warn("Please provide both id1, id2, score1 and score2");
 				return;
 			}
 
@@ -84,10 +87,10 @@ export default class CreateMatchForm {
 			}
 			catch (error) {
 				if (error instanceof Error) {
-					console.log(`Failed to create match ${matchData}:`, error.message);
+					console.error(`Failed to create match ${matchData}:`, error.message);
 				}
 				else {
-					console.log(`Failed to create match ${matchData}:`, error);
+					console.error(`Failed to create match ${matchData}:`, error);
 				}
 			}
 		});

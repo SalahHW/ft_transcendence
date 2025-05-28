@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 21:08:25 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/26 21:08:33 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/05/28 16:14:51 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,7 +27,7 @@ export default class GetUserForm {
 
 	render(): void {
 		this._container.innerHTML = /* HTML */ `
-			<form id="get-user-form" class="space-y-4">
+			<form id="get-user-form" class="${COMMON_CLASSES.form}">
 				<div>
 					<label class="${COMMON_CLASSES.label}">ID (optional)</label>
 					<input type="number" id="getform-user-id" class="${COMMON_CLASSES.input}">
@@ -55,11 +55,11 @@ export default class GetUserForm {
 			const nameInput = document.getElementById("getform-user-name") as HTMLInputElement;
 
 			if (idInput.value && nameInput.value) {
-				console.log("Please provide only one field to get user (id or name)");
+				console.warn("Please provide only one field to get user (id or name)");
 				return;
 			}
 			if (!idInput.value && !nameInput.value) {
-				console.log("Please provide one field to get user (id or name)");
+				console.warn("Please provide one field to get user (id or name)");
 				return;
 			}
 
@@ -78,9 +78,9 @@ export default class GetUserForm {
 			}
 			catch (error) {
 				if (error instanceof Error)
-					console.log(error.message);
+					console.error(error.message);
 				else
-					console.log(error);
+					console.error(error);
 			}
 		});
 	}

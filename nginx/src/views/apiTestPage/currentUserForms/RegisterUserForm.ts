@@ -6,11 +6,13 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:42:38 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/26 20:42:40 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/05/28 16:14:51 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 import UsersApi from "../../../api/user.js";
+import { buttonHTML } from "../../../components/button.js";
+import { COMMON_CLASSES } from "../../../style/tailwindClasses.js";
 
 export default class RegisterUserForm {
 	private _container: HTMLElement;
@@ -23,25 +25,27 @@ export default class RegisterUserForm {
 
 	async render(): Promise<void> {
 		this._container.innerHTML = /* HTML */ `
-			<form id="register-user-form" class="space-y-4">
+			<form id="register-user-form" class="${COMMON_CLASSES.form}">
 				<div>
-					<label class="block text-sm font-medium text-gray-700">Username (required)</label>
-					<input type="text" id="register-user-form-username" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+					<label class="${COMMON_CLASSES.label}">Username (required)</label>
+					<input type="text" id="register-user-form-username" class="${COMMON_CLASSES.input}">
 				</div>
 
 				<div>
-					<label class="block text-sm font-medium text-gray-700">Email (required)</label>
-					<input type="email" id="register-user-form-email" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+					<label class="${COMMON_CLASSES.label}">Email (required)</label>
+					<input type="email" id="register-user-form-email" class="${COMMON_CLASSES.input}">
 				</div>
 
 				<div>
-					<label class="block text-sm font-medium text-gray-700">Password (required)</label>
-					<input type="password" id="register-user-form-password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+					<label class="${COMMON_CLASSES.label}">Password (required)</label>
+					<input type="password" id="register-user-form-password" class="${COMMON_CLASSES.input}">
 				</div>
 
-				<button id="register-user-form-register" type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-					Register
-				</button>
+				${buttonHTML({
+					id: "register-user-form-register",
+					type: "submit",
+					label: "Register"
+				})}
 			</form>
 		`;
 
@@ -59,7 +63,7 @@ export default class RegisterUserForm {
 			const emailInput = document.getElementById("register-user-form-email") as HTMLInputElement;
 
 			if (!usernameInput.value || !passwordInput.value || !emailInput.value) {
-				console.log("Please provide username, email and password");
+				console.warn("Please provide username, email and password");
 				return;
 			}
 
@@ -69,9 +73,9 @@ export default class RegisterUserForm {
 			}
 			catch (error) {
 				if (error instanceof Error)
-					console.log(error.message);
+					console.error(error.message);
 				else
-					console.log(error);
+					console.error(error);
 			}
 		});
 	}
