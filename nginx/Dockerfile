@@ -8,9 +8,13 @@ RUN rm -rf /etc/nginx/http.d/*
 COPY ./nginx-config/default.conf /etc/nginx/http.d/
 
 WORKDIR /app
+COPY index.html .
+COPY ./src/styles ./styles
+COPY ./src ./src
 COPY package.json .
 RUN npm install
-COPY . .
+COPY ./tsconfig.json .
 RUN npm run build
+
 
 CMD [ "nginx", "-g", "daemon off;" ]

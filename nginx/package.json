@@ -1,17 +1,11 @@
 {
-  "name": "transcendence-frontend",
+  "name": "frontend",
   "version": "1.0.0",
-  "description": "Frontend SPA for ft_transcendence project",
+  "type": "module",
   "scripts": {
-  "build": "npx @tailwindcss/cli -i ./src/style/input.css -o ./public/style/style.css && tsc",
-  "ts-build": "tsc",
-  "ts-watch": "tsc --watch",
-  "tw-build": "npx @tailwindcss/cli -i ./src/style/input.css -o ./public/style/style.css",
-  "tw-watch": "npx @tailwindcss/cli -i ./src/style/input.css -o ./public/style/style.css --watch"
+    "build": "npx tsc"
   },
-  "dependencies": {},
-  "devDependencies": {
-  "tailwindcss": "^4.0.14",
-  "typescript": "5.8.2"
+  "dependencies": {
+    "typescript": "^5.8.3"
   }
 }

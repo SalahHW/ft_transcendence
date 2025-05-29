@@ -1,7 +1,9 @@
-import ApiTestPage from "./views/ApiTestPage.js"
+import { render } from "./utils/render";
+import { createHomePage } from "./pages/homePage";
+import { createLoginPage } from "./pages/loginPage";
 
-document.addEventListener("DOMContentLoaded", () => {
-	const apiTestPage = new ApiTestPage("app-container");
-	apiTestPage.render();
-	console.log("API Test Page loaded ✅");
-});
+function goToLoginPage() {
+  render(createLoginPage());
+}
+
+render(createHomePage(goToLoginPage));
