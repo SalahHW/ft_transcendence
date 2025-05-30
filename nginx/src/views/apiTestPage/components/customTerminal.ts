@@ -1,8 +1,22 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   customTerminal.ts                                  :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/05/26 20:42:23 by edelarbr          #+#    #+#             */
+/*   Updated: 2025/05/28 01:09:33 by edelarbr         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 export default class CustomTerminal {
     private _container: HTMLElement;
     private _outputElement!: HTMLElement; // Using definite assignment assertion
     private static _instance: CustomTerminal | null = null;
     private static _originalConsoleLog: (...data: any[]) => void;
+    private static _originalConsoleError: (...data: any[]) => void;
+    private static _originalConsoleWarn: (...data: any[]) => void;
     private _keydownHandler: (event: KeyboardEvent) => void;
 
     constructor(containerId: string) {
@@ -16,10 +30,12 @@ export default class CustomTerminal {
         // Store the instance for global access
         CustomTerminal._instance = this;
 
-        // Save the original console.log
+        // Save the original console methods
         CustomTerminal._originalConsoleLog = console.log;
+        CustomTerminal._originalConsoleError = console.error;
+        CustomTerminal._originalConsoleWarn = console.warn;
 
-        // Override console.log
+        // Override console methods
         console.log = (...data: any[]) => {
             // Call the original console.log
             CustomTerminal._originalConsoleLog.apply(console, data);
@@ -31,6 +47,34 @@ export default class CustomTerminal {
                 ).join(' ');
 
                 CustomTerminal._instance.log(message);
+            }
+        };
+
+        console.error = (...data: any[]) => {
+            // Call the original console.error
+            CustomTerminal._originalConsoleError.apply(console, data);
+
+            // Log to our terminal with error styling
+            if (CustomTerminal._instance) {
+                const message = data.map(item =>
+                    typeof item === 'object' ? JSON.stringify(item, null, 2) : String(item)
+                ).join(' ');
+
+                CustomTerminal._instance.logError(message);
+            }
+        };
+
+        console.warn = (...data: any[]) => {
+            // Call the original console.warn
+            CustomTerminal._originalConsoleWarn.apply(console, data);
+
+            // Log to our terminal with warning styling
+            if (CustomTerminal._instance) {
+                const message = data.map(item =>
+                    typeof item === 'object' ? JSON.stringify(item, null, 2) : String(item)
+                ).join(' ');
+
+                CustomTerminal._instance.logWarn(message);
             }
         };
 
@@ -47,10 +91,16 @@ export default class CustomTerminal {
         document.addEventListener('keydown', this._keydownHandler);
     }
 
-    // Method to restore the original console.log
+    // Method to restore the original console methods
     static restoreConsoleLog(): void {
         if (CustomTerminal._originalConsoleLog) {
             console.log = CustomTerminal._originalConsoleLog;
+        }
+        if (CustomTerminal._originalConsoleError) {
+            console.error = CustomTerminal._originalConsoleError;
+        }
+        if (CustomTerminal._originalConsoleWarn) {
+            console.warn = CustomTerminal._originalConsoleWarn;
         }
 
         // Remove keyboard event listener if instance exists
@@ -89,6 +139,26 @@ export default class CustomTerminal {
         const line = document.createElement('p');
         line.className = 'm-0 py-0.5 whitespace-pre-wrap break-words';
         line.textContent = message;
+        this._outputElement.appendChild(line);
+
+        // Auto-scroll to bottom
+        this._outputElement.scrollTop = this._outputElement.scrollHeight;
+    }
+
+    logError(message: string): void {
+        const line = document.createElement('p');
+        line.className = 'm-0 py-0.5 whitespace-pre-wrap break-words text-red-400';
+        line.textContent = `❌ ${message}`;
+        this._outputElement.appendChild(line);
+
+        // Auto-scroll to bottom
+        this._outputElement.scrollTop = this._outputElement.scrollHeight;
+    }
+
+    logWarn(message: string): void {
+        const line = document.createElement('p');
+        line.className = 'm-0 py-0.5 whitespace-pre-wrap break-words text-yellow-400';
+        line.textContent = `⚠️ ${message}`;
         this._outputElement.appendChild(line);
 
         // Auto-scroll to bottom
