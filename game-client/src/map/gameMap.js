@@ -129,7 +129,6 @@ class gameMap {
     launchMatchAnimation() {
         return new Promise((resolve, reject) => {
             try {
-                console.log('Starting camera animation sequence...');
                 const steps = [500, 250, 50];
                 let currentStep = 0;
                 let animationStartTime = Date.now();
@@ -138,8 +137,6 @@ class gameMap {
                     try {
                         if (currentStep < steps.length) {
                             const currentY = steps[currentStep];
-                            console.log(`Animating camera to Y position: ${currentY} (step ${currentStep + 1}/${steps.length})`);
-                            
                             // Smoothly interpolate to the target position
                             const currentPos = this.globalPov.position.y;
                             const targetPos = currentY;
@@ -160,18 +157,14 @@ class gameMap {
                             
                             requestAnimationFrame(updateYPosition);
                         } else {
-                            console.log('Camera animation sequence completed');
                             // Ensure final position is set
                             this.globalPov.position.y = steps[steps.length - 1];
-                            
                             // Disable depth of field for gameplay
                             if (this.pipeline) {
                                 this.pipeline.depthOfFieldEnabled = false;
                             }
-
                             // Final render with gameplay settings
                             this.scene.render();
-                            
                             // Signal animation completion
                             resolve();
                         }

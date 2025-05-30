@@ -262,10 +262,7 @@ function initializeGame(playerId) {
         // Start the game loop after match animation if not already running
         if (!isGameLoopRunning) {
             try {
-                console.log('Starting match animation...');
                 await map.launchMatchAnimation();
-                console.log('Match animation completed, preparing for gameplay...');
-                
                 // Prepare the scene for gameplay
                 map.prepareForGameplay();
                 
@@ -275,8 +272,6 @@ function initializeGame(playerId) {
                     player2.paddleBody.isVisible = true;
                     console.log('Paddles made visible');
                 }
-
-                console.log('Starting game loop...');
                 setupGameLoop();
             } catch (e) {
                 console.error('Error during game initialization:', e);
@@ -353,7 +348,6 @@ function setupGameLoop() {
     if (map && map.getEngine) {
         map.getEngine.runRenderLoop(renderLoop);
         isGameLoopRunning = true;
-        console.log('Game loop started');
     } else {
         console.error('Failed to start game loop: map or engine not initialized');
     }
