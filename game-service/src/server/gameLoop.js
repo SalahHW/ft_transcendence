@@ -59,13 +59,43 @@ export function startGameLoop() {
           // Handle ball state
           if (room.ball.isRespawning) {
             room.ball.respawnTime += deltaTime;
-            if (room.ball.respawnTime >= 3) {
-              console.log(`Ball respawn complete for room ${roomId}`);
+            const t = Math.min(room.ball.respawnTime / 3, 1);  // 3 second animation
+            
+            // Smoothly interpolate position
+            room.ball.position = new BABYLON.Vector3(
+              0,
+              -2 + (3 * t),  // Animate from y=-2 to y=1
+              0
+            );
+
+            // Send updates more frequently during respawn
+            if (now - lastBroadcast >= (1000 / (BROADCAST_FPS * 2))) {  // Double the update rate during respawn
+              const ballState = {
+                position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
+                velocity: { x: room.ball.velocity.x, y: room.ball.velocity.y, z: room.ball.velocity.z },
+                previousVelocity: { x: room.ball.previousVelocity.x, y: room.ball.previousVelocity.y, z: room.ball.previousVelocity.z },
+                rebounds: room.ball.rebounds,
+                isRespawning: true,
+                respawnTime: room.ball.respawnTime,
+                wasHitByPlayer: room.ball.wasHitByPlayer,
+                speed: room.ball.speed,
+                hasValidPosition: true
+              };
+
+              broadcastToRoom(roomId, {
+                type: 'ballUpdate',
+                ballState,
+                isInitialSpawn: false,
+                isScoreRespawn: false,
+                roomId: roomId
+              });
+            }
+
+            if (t >= 1) {
               room.ball.isRespawning = false;
               room.ball.position.y = 1;
               if (room.ball.velocity.length() === 0) {
                 room.ball.setFirstVelocity();
-                console.log(`Set initial velocity for room ${roomId}:`, room.ball.velocity);
               }
             }
           }

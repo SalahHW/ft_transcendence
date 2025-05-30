@@ -99,14 +99,22 @@ export function sendBallUpdateForced(roomId) {
       { playerId: room.players[1].id, playerScore: 0 }
     );
     room.ball.position = new BABYLON.Vector3(0, -2, 0);
+    room.ball.velocity = new BABYLON.Vector3(0, 0, 0);
+    room.ball.previousVelocity = new BABYLON.Vector3(0, 0, 0);
     room.ball.isRespawning = true;
     room.ball.respawnTime = 0;
     room.ball.hasValidPosition = true;
-    room.ball.setFirstVelocity(); // Set initial velocity immediately
   }
 
-  room.ball.isRespawning = true;
-  room.ball.respawnTime = 0;
+  // Ensure consistent state for respawn
+  if (!room.ballUpdateSent) {
+    room.ball.position = new BABYLON.Vector3(0, -2, 0);
+    room.ball.velocity = new BABYLON.Vector3(0, 0, 0);
+    room.ball.previousVelocity = new BABYLON.Vector3(0, 0, 0);
+    room.ball.isRespawning = true;
+    room.ball.respawnTime = 0;
+    room.ball.hasValidPosition = true;
+  }
 
   const ballState = {
     position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
@@ -117,7 +125,9 @@ export function sendBallUpdateForced(roomId) {
     respawnTime: room.ball.respawnTime,
     wasHitByPlayer: room.ball.wasHitByPlayer,
     speed: room.ball.speed,
+    hasValidPosition: true
   };
+
   console.log(`Sending initial ballUpdate for room ${roomId} at ${Date.now()}:`, ballState);
   broadcastToRoom(roomId, {
     type: 'ballUpdate',
@@ -126,11 +136,6 @@ export function sendBallUpdateForced(roomId) {
     isScoreRespawn: false
   });
 
-  const roomAnimStatus = animationStatus.get(roomId);
-  if (roomAnimStatus) {
-    roomAnimStatus.clear();
-    console.log(`Cleared animationStatus for room ${roomId}`);
-  }
   room.ballUpdateSent = true;
   room.ballUpdateTimeout = null;
 }
@@ -143,7 +148,6 @@ export function broadcastToRoom(roomId, message) {
     if (ws && ws.readyState === 1) {
       try {
         ws.send(json);
-        console.log(`Sent ${message.type} to player ${id} in room ${roomId}`);
       } catch (e) {
         console.error(`Failed to send ${message.type} to player ${id} in room ${roomId}:`, e);
       }
