@@ -3,13 +3,15 @@
   "version": "1.0.0",
   "description": "Frontend SPA for ft_transcendence project",
   "scripts": {
-  "build": "npx @tailwindcss/cli -i ./src/style/input.css -o ./public/style/style.css && tsc",
-  "ts-build": "tsc",
-  "ts-watch": "tsc --watch",
-  "tw-build": "npx @tailwindcss/cli -i ./src/style/input.css -o ./public/style/style.css",
-  "tw-watch": "npx @tailwindcss/cli -i ./src/style/input.css -o ./public/style/style.css --watch"
+    "build": "npm run game-build && npm run tw-build && npm run ts-build",
+    "ts-build": "tsc",
+    "ts-watch": "tsc --watch",
+    "tw-build": "npx @tailwindcss/cli -i ./src/style/input.css -o ./public/style/style.css",
+    "tw-watch": "npx @tailwindcss/cli -i ./src/style/input.css -o ./public/style/style.css --watch",
+    "game-build": "npm i ./game-client"
   },
   "dependencies": {
+    "babypong": "file:game-client",
     "tailwindcss": "^4.1.8",
     "typescript": "^5.8.3"
   }

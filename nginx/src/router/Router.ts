@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   router.ts                                          :+:      :+:    :+:   */
+/*   Router.ts                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:40:51 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/28 16:29:39 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/05/30 15:44:33 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 // TODO: (opt) Mettre des views pour les differents forms de APITestPage
 
 import APITestPage from "../views/apiTestPage/APITestPage.js";
+import launchGame from "../../game-client/main.js"
 import HomePage from "../views/homePage.js";
 interface Route {
 	path: string;
@@ -39,6 +40,12 @@ export default class Router {
 				if (!this.cache)
 					this.cache = new APITestPage("app-container");
 				this.cache.render();
+			}
+		},
+		{
+			path: "/game",
+			handler: function() {
+				launchGame();
 			}
 		}
 	];

@@ -1,5 +1,7 @@
 {
 	"compilerOptions": {
+		"allowJs": true,
+		"checkJs": false,
 		"outDir": "./public/js/",
 		"module": "ES2020",
 		"strict": true, // active tous les flags strict
@@ -15,5 +17,8 @@
 		"./src/*.ts",
 		"./src/*/*.ts",
 		"./src/*/*/*.ts"
+	],
+	"exclude": [
+		"./game-client",
 	]
 }
