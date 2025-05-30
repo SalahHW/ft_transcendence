@@ -4,6 +4,8 @@
 		"checkJs": false,
 		"outDir": "./public/js/",
 		"module": "ES2020",
+		"target": "ES2020",
+		"moduleResolution": "node",
 		"strict": true, // active tous les flags strict
 		"noImplicitAny": true, // signale les types implicites
 		"noImplicitReturns": true, // signale les fonctions sans return
@@ -12,6 +14,7 @@
         "noUnusedParameters": true, // signale les paramètres non utilisés
         "forceConsistentCasingInFileNames": true, // assure une casse(=>MAJ/min) cohérente
 		"lib": ["dom", "dom.iterable", "es2019"],
+		"skipLibCheck": true
 	},
 	"include": [
 		"./src/*.ts",
