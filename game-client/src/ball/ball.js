@@ -15,7 +15,7 @@ class Ball {
         this.currentGlowColor = new BABYLON.Color3(0, 0, 0);
         this.isRespawning = false;
         this.respawnTime = 0;
-        this.respawnDuration = 2;
+        this.respawnDuration = 3;
         this.player1 = player1;
         this.player2 = player2;
         this.lastPosition = this.position.clone();
@@ -71,7 +71,6 @@ class Ball {
             this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
             this.ballBody.isVisible = true;
         }
-        console.log('handleBallRespawn called:', { position: this.position, isRespawning: this.isRespawning, respawnTime: this.respawnTime });
     }
 
     update(deltaTime, paddle1Pos, paddle2Pos) {
@@ -220,9 +219,7 @@ class Ball {
     updateClient(scene) {
         if (this.ballBody && this.hasValidPosition) {
             this.ballBody.position.copyFrom(this.position);
-            if (this.isRespawning || this.position.y > -2) {
-                this.ballBody.isVisible = true;
-            }
+            this.ballBody.isVisible = this.isRespawning || this.position.y >= -2;
         }
     }
 
@@ -241,21 +238,37 @@ class Ball {
             return;
         }
 
-        if (this.isRespawning && state.isRespawning) {
-            return;
-        }
+        this.position = new BABYLON.Vector3(
+            state.position.x,
+            state.position.y,
+            state.position.z
+        );
+        
+        this.velocity = new BABYLON.Vector3(
+            state.velocity.x,
+            state.velocity.y,
+            state.velocity.z
+        );
+        
+        this.previousVelocity = new BABYLON.Vector3(
+            state.previousVelocity.x,
+            state.previousVelocity.y,
+            state.previousVelocity.z
+        );
 
-        this.position.copyFrom(state.position);
-        this.velocity.copyFrom(state.velocity);
-        this.previousVelocity.copyFrom(state.previousVelocity || this.velocity);
         this.rebounds = state.rebounds || 0;
         this.isRespawning = state.isRespawning || false;
         this.respawnTime = state.respawnTime || 0;
         this.wasHitByPlayer = state.wasHitByPlayer;
-        this.hasValidPosition = state.hasValidPosition;
+        this.hasValidPosition = true;
         this.speed = state.speed || 25;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
+
+        if (this.ballBody) {
+            this.ballBody.position.copyFrom(this.position);
+            this.ballBody.isVisible = this.isRespawning || this.position.y >= -2;
+        }
     }
 }
 

@@ -113,7 +113,6 @@ function initializeGame(playerId) {
         
         // Only update if it's not our own paddle
         if (movingPlayer && movingPlayer.getPlayerId() !== localPlayerId) {
-            console.log(`Updating paddle position for player ${msg.playerId} to ${msg.positionZ}`);
             movingPlayer.setZ(msg.positionZ);
         }
     });
@@ -122,7 +121,13 @@ function initializeGame(playerId) {
     clientConnection.onBallUpdate((msg) => {
         if (!ball) return;
         
-        console.log('Received ball update:', msg.ballState);
+        // Ensure ball is visible during respawn
+        if (msg.ballState.isRespawning || msg.isInitialSpawn || msg.isScoreRespawn) {
+            if (ball.ballBody) {
+                ball.ballBody.isVisible = true;
+            }
+        }
+        
         ball.setState(msg.ballState);
     });
 
@@ -336,16 +341,6 @@ function setupGameLoop() {
         // Update ball position and ensure it's visible
         if (ball && ball.ballBody) {
             ball.updateClient(map.getScene);
-            
-            // Debug ball state
-            if (frameCount % 60 === 0) {  // Log every second
-                console.log('Ball state:', {
-                    position: ball.position.toString(),
-                    isVisible: ball.ballBody.isVisible,
-                    isRespawning: ball.isRespawning,
-                    hasValidPosition: ball.hasValidPosition
-                });
-            }
         }
 
         // Ensure scene renders
