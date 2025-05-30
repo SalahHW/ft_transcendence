@@ -9,7 +9,12 @@ export function checkRoomReady(roomId) {
   const room = gameRooms.get(roomId);
   if (!room || room.players.length !== 2 || room.ready) return;
 
-  const allReady = room.players.every(player => player.username && player.ws && player.ws.readyState === 1);
+  const allReady = room.players.every(player => 
+    player.username && 
+    player.ws && 
+    player.ws.readyState === 1 && 
+    player.readyToPlay
+  );
 
   if (allReady) {
     room.ready = true;
@@ -52,6 +57,18 @@ export function checkRoomReady(roomId) {
       }
     };
     setTimeout(() => attemptBallUpdate(), 500);
+  } else {
+    // Notify players about waiting status
+    const readyPlayers = room.players.filter(p => p.readyToPlay).length;
+    room.players.forEach(p => {
+      if (p.ws && p.ws.readyState === 1) {
+        p.ws.send(JSON.stringify({
+          type: 'waitingForPlayers',
+          readyCount: readyPlayers,
+          totalNeeded: 2
+        }));
+      }
+    });
   }
 }
 
@@ -204,4 +221,18 @@ export function getGameState() {
 
 export function getPlayers() {
   return players;
+}
+
+export function setPlayerReady(playerId) {
+  const player = players.get(playerId);
+  if (player) {
+    player.readyToPlay = true;
+    // Find the room this player is in
+    for (const [roomId, room] of gameRooms.entries()) {
+      if (room.players.some(p => p.id === playerId)) {
+        checkRoomReady(roomId);
+        break;
+      }
+    }
+  }
 }

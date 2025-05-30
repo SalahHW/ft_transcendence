@@ -1,3 +1,5 @@
+import { setPlayerReady } from './gameState.js';
+
 export async function registerApiRoutes(fastify, options) {
   const { players } = options;
 
@@ -8,6 +10,7 @@ export async function registerApiRoutes(fastify, options) {
       const playerList = Array.from(players.values()).map(player => ({
         id: player.id,
         username: player.username || 'Anonymous',
+        readyToPlay: player.readyToPlay || false
       }));
       return reply.status(200).send({
         status: 'success',
@@ -44,6 +47,7 @@ export async function registerApiRoutes(fastify, options) {
         isDownPressed: false,
         lastUpdate: Date.now(),
         playerScore: 0,
+        readyToPlay: false
       };
       players.set(playerId, player);
       console.log(`Created player ${playerId} with username ${username}`);
@@ -53,6 +57,41 @@ export async function registerApiRoutes(fastify, options) {
       });
     } catch (error) {
       console.error('Error in POST /api/players:', error);
+      return reply.status(500).send({
+        status: 'error',
+        message: 'Internal server error',
+      });
+    }
+  });
+
+  // POST /api/players/:id/ready: Set player ready status
+  fastify.post('/api/players/:id/ready', {
+    schema: {
+      body: {
+        type: 'object',
+        additionalProperties: true  // Allow empty object
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params;
+      const player = players.get(id);
+      
+      if (!player) {
+        return reply.status(404).send({
+          status: 'error',
+          message: 'Player not found',
+        });
+      }
+
+      setPlayerReady(id);
+      
+      return reply.status(200).send({
+        status: 'success',
+        message: 'Player ready status updated',
+      });
+    } catch (error) {
+      console.error('Error in POST /api/players/:id/ready:', error);
       return reply.status(500).send({
         status: 'error',
         message: 'Internal server error',

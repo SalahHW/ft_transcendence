@@ -7,6 +7,7 @@ import { registerApiRoutes } from './api.js';
 import { startGameLoop } from './gameLoop.js';
 import { registerWebSocketRoutes } from './gameWebSocket.js';
 import { getPlayers } from './gameState.js';
+import cors from '@fastify/cors';
 
 // Load environment variables
 dotenv.config();
@@ -25,6 +26,14 @@ const fastify = Fastify({
 
 // Add UUID generator to Fastify instance
 fastify.decorate('uuid', uuidv4);
+
+// Register CORS
+fastify.register(cors, {
+  origin: ['http://localhost:5173', 'https://localhost:5173'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+});
 
 console.log('Registering @fastify/websocket plugin');
 
