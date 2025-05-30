@@ -6,7 +6,6 @@ services:
     ports:
       - "80:80"
     networks:
-      - users
       - transcendence
 
   users:
@@ -16,8 +15,6 @@ services:
       - ./.env
       - ./users-service/.env
     networks:
-      - users
-      - blockchain
       - transcendence
     volumes:
       - ./database:/app/database
@@ -38,7 +35,7 @@ services:
       - ./.env
       - ./blockchain-service/.env
     networks:
-      - blockchain
+      - transcendence
 
   game:
     container_name: game
@@ -50,6 +47,4 @@ services:
       - transcendence
 
 networks:
-  users:
-  blockchain:
   transcendence:
