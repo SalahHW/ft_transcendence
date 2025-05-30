@@ -3,30 +3,11 @@ import { gameMap } from '../map/gameMap.js';
 import { webSocketClient } from '../webSocketClient/webSocketClient.js';
 import { Ball } from '../ball/ball.js';
 import * as BABYLON from '@babylonjs/core';
+import { fetchWithSelfSigned } from '../utils/fetch.js';
 import '../style.css';
 
 const serverPort = import.meta.env.VITE_SERVER_PORT || 8080;
-const urlParams = new URLSearchParams(window.location.search);
-const playerId = urlParams.get('playerId');
-
-if (!playerId) {
-    console.error('Error: playerId is required in URL query parameter (e.g., ?playerId=<uuid>)');
-    document.body.innerHTML = '<h1>Error: playerId is required</h1><p>Please include playerId in the URL, e.g., http://localhost:5173?playerId=30781deb-a3b5-48bc-8e1b-31c22d824720</p>';
-    throw new Error('playerId is required');
-}
-console.log('Client initializing with playerId:', playerId);
-const clientConnection = new webSocketClient(`wss://localhost:${serverPort}/ws`, playerId);
-
-clientConnection.socket.addEventListener('open', () => {
-  console.log('WebSocket connection opened');
-});
-clientConnection.socket.addEventListener('error', (err) => {
-  console.error('WebSocket error:', err);
-});
-clientConnection.socket.addEventListener('close', () => {
-  console.log('WebSocket connection closed');
-});
-
+let clientConnection = null;
 let map = null;
 let player1, player2, ball;
 let roomId = null;
@@ -43,382 +24,385 @@ let matchEndTime = null;
 let initTime = null;
 let syncCount = 0;
 let ballUpdateReceived = false;
+let isGameLoopRunning = false;
 
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOMContentLoaded triggered');
+// Function to check available players
+async function checkAvailablePlayers() {
+    try {
+        const response = await fetchWithSelfSigned(`https://localhost:${serverPort}/api/players`, {
+            method: 'GET',
+        });
+        
+        const result = await response.json();
+        if (!result.data || !Array.isArray(result.data)) {
+            throw new Error('Invalid response format from server');
+        }
+        
+        return result.data;
+    } catch (error) {
+        console.error('Error checking players:', error);
+        throw error;
+    }
+}
+
+// Function to set player ready status
+async function setPlayerReady(playerId) {
+    try {
+        const response = await fetchWithSelfSigned(`https://localhost:${serverPort}/api/players/${playerId}/ready`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({}),  // Send empty object as body
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to set player ready status');
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('Error setting player ready:', error);
+        throw error;
+    }
+}
+
+// Function to update game status
+function updateGameStatus(message) {
+    const statusElement = document.getElementById('gameStatus');
+    if (statusElement) {
+        statusElement.textContent = message;
+    }
+}
+
+// Function to initialize the game
+function initializeGame(playerId) {
+    if (clientConnection) {
+        clientConnection.socket.close();
+    }
+    
+    localPlayerId = playerId;
+    clientConnection = new webSocketClient(`wss://localhost:${serverPort}/ws`, playerId);
+
+    clientConnection.socket.addEventListener('open', () => {
+        console.log('WebSocket connection opened');
+        updateGameStatus('Connected to game server');
+    });
+
+    clientConnection.socket.addEventListener('error', err => {
+        console.error('WebSocket error:', err);
+        updateGameStatus('Connection error');
+    });
+
+    clientConnection.socket.addEventListener('close', () => {
+        console.log('WebSocket connection closed');
+        updateGameStatus('Connection closed');
+        // Clean up game loop if it's running
+        if (isGameLoopRunning && map && map.getEngine) {
+            map.getEngine.stopRenderLoop();
+            isGameLoopRunning = false;
+        }
+    });
+
+    // Set up paddle movement handler
+    clientConnection.onPaddleMove((msg) => {
+        if (!player1 || !player2) return;
+        
+        // Find the player whose paddle needs to be updated
+        const movingPlayer = msg.playerId === player1.getPlayerId() ? player1 : player2;
+        
+        // Only update if it's not our own paddle
+        if (movingPlayer && movingPlayer.getPlayerId() !== localPlayerId) {
+            console.log(`Updating paddle position for player ${msg.playerId} to ${msg.positionZ}`);
+            movingPlayer.setZ(msg.positionZ);
+        }
+    });
+
+    // Add ball update handler
+    clientConnection.onBallUpdate((msg) => {
+        if (!ball) return;
+        
+        console.log('Received ball update:', msg.ballState);
+        ball.setState(msg.ballState);
+    });
+
+    // Add sync handler to ensure positions are correct
+    clientConnection.onSync((msg) => {
+        if (!player1 || !player2) return;
+        
+        // Update paddle positions from sync message
+        Object.entries(msg.playerPositions).forEach(([playerId, positionZ]) => {
+            const syncPlayer = playerId === player1.getPlayerId() ? player1 : player2;
+            if (syncPlayer && syncPlayer.getPlayerId() !== localPlayerId) {
+                syncPlayer.setZ(positionZ);
+            }
+        });
+
+        // Update ball state if available
+        if (msg.ballState && ball) {
+            ball.setState(msg.ballState);
+        }
+    });
+
+    // Add handler for waiting status
+    clientConnection.socket.addEventListener('message', (event) => {
+        try {
+            const message = JSON.parse(event.data);
+            if (message.type === 'waitingForPlayers') {
+                updateGameStatus(`Waiting for players... (${message.readyCount}/${message.totalNeeded} ready)`);
+            }
+        } catch (error) {
+            console.error('Error parsing message:', error);
+        }
+    });
+
+    // Set up the game initialization handlers
     clientConnection.onInit(async ({ playerId, roomId: rId, role, opponentId }) => {
         console.log('Received init:', { playerId, roomId: rId, role, opponentId });
         initTime = Date.now();
         roomId = rId;
         localPlayerId = playerId;
 
-        try {
-            map = new gameMap();
-            console.log('Creating map...');
-            map.createMap();
-            map.createPlayground();
-            if (!map.getScene) {
-                throw new Error('map.getScene is undefined');
-            }
-            console.log('Map created successfully, scene:', !!map.getScene);
-        } catch (e) {
-            console.error('Map creation failed:', e);
-            document.body.innerHTML = '<h1>Error: Failed to create game map</h1>';
-            return;
-        }
-
-        if (role === 0) {
-            player1 = new playerPaddle('Player1', playerId, 0);
-            player2 = new playerPaddle('Player2', opponentId, 1);
-        } else {
-            player1 = new playerPaddle('Player1', opponentId, 0);
-            player2 = new playerPaddle('Player2', playerId, 1);
-        }
-
-        try {
-            player1.createPaddle(map.getScene, 19.5, 2, 20);
-            player2.createPaddle(map.getScene, -19.5, 2, 20);
-            console.log('Paddles created successfully');
-        } catch (e) {
-            console.error('Paddle creation failed:', e);
-            return;
-        }
-
-        try {
-            ball = new Ball(player1, player2);
-            ball.createBall(map.getScene);
-            ball.ballBody.metadata = { roomId };
-            // Ensure ball starts under the map and invisible
-            ball.position = new BABYLON.Vector3(0, -2, 0);
-            ball.ballBody.position = new BABYLON.Vector3(0, -2, 0);
-            ball.ballBody.isVisible = false;
-            console.log('Ball created successfully for room', roomId, 'ballBody:', !!ball.ballBody, 'metadata:', ball.ballBody.metadata);
-        } catch (e) {
-            console.error('Ball creation failed:', e);
-            return;
-        }
-
-        let frameCount = 0;
-        let lastTime = Date.now();
-        const renderLoop = () => {
-            if (isGameOver) return;
-
-            frameCount++;
-            const now = Date.now();
-            if (now - lastTime >= 1000) {
-                frameCount = 0;
-                lastTime = now;
-            }
-
-            const deltaTime = map.getEngine.getDeltaTime() / 1000;
-            const localPlayer = player1.getPlayerId() === localPlayerId ? player1 : player2;
-            if (isUpPressed && !isDownPressed) {
-                localPlayer.move(-1, deltaTime);
-                clientConnection.send({
-                    type: 'paddlePosition',
-                    playerId: localPlayerId,
-                    positionZ: localPlayer.getPaddleBodyPos.z,
-                });
-            } else if (isDownPressed && !isUpPressed) {
-                localPlayer.move(1, deltaTime);
-                clientConnection.send({
-                    type: 'paddlePosition',
-                    playerId: localPlayerId,
-                    positionZ: localPlayer.getPaddleBodyPos.z,
-                });
-            }
-            if (ball && ball.ballBody && ball.ballBody.metadata && ball.ballBody.metadata.roomId === roomId) {
-                if (ball.isRespawning) {
-                    const t = Math.min(ball.respawnTime / ball.respawnDuration, 1);
-                    const newY = -2 + 3 * t; // Animate from y=-2 to y=1
-                    ball.position.y = newY;
-                    ball.ballBody.position.copyFrom(ball.position);
-                    
-                    // Update respawn time
-                    const deltaTime = (now - (ball.lastUpdateTime || now)) / 1000;
-                    ball.lastUpdateTime = now;
-                    ball.respawnTime += deltaTime;
-                    
-                    if (ball.respawnTime >= ball.respawnDuration) {
-                        ball.isRespawning = false;
-                        ball.position.y = 1;
-                        ball.ballBody.position.y = 1;
-                        if (ball.velocity.length() === 0) {
-                            ball.setFirstVelocity();
-                        }
-                    }
-                } else if (ball.hasValidPosition) {
-                    predictedPosition = predictedPosition || ball.ballBody.position.clone();
-                    const effectiveDeltaTime = deltaTime + ping / 2;
-                    if (ball.velocity.length() > 0) {
-                        predictedPosition.addInPlace(ball.velocity.scale(effectiveDeltaTime));
-                        predictedPosition.x = Math.max(-20, Math.min(20, predictedPosition.x));
-                        predictedPosition.z = Math.max(-10, Math.min(10, predictedPosition.z));
-                        ball.ballBody.position.copyFrom(predictedPosition);
-                    }
-                }
-                ball.updateClient(map.getScene);
-            } else if (ball && ball.ballBody) {
-                console.warn('Render loop: Ball belongs to different room. Expected:', roomId, 'Got:', ball.ballBody.metadata?.roomId);
-            } else {
-                console.warn('Render loop: Ball or ballBody not initialized');
-            }
-            map.getScene.render();
-        };
-        map.getEngine.runRenderLoop(renderLoop);
-
-        try {
-            console.log('Starting match animation');
-            await map.launchMatchAnimation();
-            console.log('Match animation completed');
-            clientConnection.send({
-                type: 'animationComplete',
-                playerId: localPlayerId
-            });
-            const requestBallRespawn = () => {
-                if (!ballUpdateReceived && !isGameOver && clientConnection.socket.readyState === WebSocket.OPEN) {
-                    console.warn(`No ballUpdate received for room ${roomId}, requesting respawn`);
-                    clientConnection.send({
-                        type: 'requestBallRespawn',
-                        playerId: localPlayerId,
-                        isInitial: true
-                    });
-                    setTimeout(requestBallRespawn, 2000);
-                }
-            };
-            setTimeout(requestBallRespawn, 2000);
-        } catch (e) {
-            console.error('Match animation failed:', e);
-            clientConnection.send({
-                type: 'animationComplete',
-                playerId: localPlayerId
-            });
-        }
-
-        window.addEventListener('resize', () => map.getEngine.resize());
-
-        clientConnection.onPaddleMove(({ playerId: pid, positionZ, roomId: updateRoomId }) => {
-            if (isGameOver) return;
-            if (pid === localPlayerId) return;
-            if (updateRoomId !== roomId) {
-                console.log(`Ignoring paddle move from different room. Expected: ${roomId}, Got: ${updateRoomId}`);
-                return;
-            }
-            if (player1.getPlayerId() === pid) {
-                player1.setZ(positionZ);
-            } else if (player2.getPlayerId() === pid) {
-                player2.setZ(positionZ);
-            }
-        });
-
-        clientConnection.onSync(({ playerPositions, ballState, serverTime, roomId: updateRoomId }) => {
-            if (isGameOver) return;
-            if (updateRoomId !== roomId) {
-                console.log(`Ignoring sync from different room. Expected: ${roomId}, Got: ${updateRoomId}`);
-                return;
-            }
-            syncCount++;
-            const now = Date.now();
-            if (serverTime) {
-                const rtt = (now - serverTime) / 1000;
-                pingSamples.push(rtt);
-                if (pingSamples.length > 10) pingSamples.shift();
-                ping = pingSamples.reduce((a, b) => a + b, 0) / pingSamples.length;
-            }
-
-            Object.entries(playerPositions).forEach(([pid, positionZ]) => {
-                if (player1.getPlayerId() === pid) {
-                    if (pid === localPlayerId) {
-                        const currentZ = player1.getPaddleBodyPos.z;
-                        const diff = Math.abs(positionZ - currentZ);
-                        if (diff > 0.1) {
-                            player1.setZ(positionZ);
-                        }
-                    } else {
-                        player1.setZ(positionZ);
-                    }
-                } else if (player2.getPlayerId() === pid) {
-                    if (pid === localPlayerId) {
-                        const currentZ = player2.getPaddleBodyPos.z;
-                        const diff = Math.abs(positionZ - currentZ);
-                        if (diff > 0.1) {
-                            player2.setZ(positionZ);
-                        }
-                    } else {
-                        player2.setZ(positionZ);
-                    }
-                }
-            });
-
-            if (ballState && ball && ball.ballBody && ball.hasValidPosition && ball.ballBody.metadata && ball.ballBody.metadata.roomId === roomId) {
-                const newPosition = new BABYLON.Vector3(ballState.position.x, ballState.position.y, ballState.position.z);
-                const now = Date.now();
-                if (lastBallPosition && lastSyncTime && predictedPosition) {
-                    const timeSinceSync = (now - lastSyncTime) / 1000 + ping / 2;
-                    const syncInterval = 0.005 + ping;
-                    const alpha = Math.min(timeSinceSync / syncInterval, 1);
-                    const interpolatedPosition = BABYLON.Vector3.Lerp(predictedPosition, newPosition, alpha);
-                    ball.ballBody.position.copyFrom(interpolatedPosition);
-                    predictedPosition = interpolatedPosition.clone();
-                } else {
-                    ball.ballBody.position.copyFrom(newPosition);
-                    predictedPosition = newPosition.clone();
-                }
-                lastBallPosition = newPosition.clone();
-                lastSyncTime = now;
-                ball.setState({
-                    position: ball.ballBody.position,
-                    velocity: new BABYLON.Vector3(ballState.velocity.x, ballState.velocity.y, ballState.velocity.z),
-                    previousVelocity: ballState.previousVelocity || new BABYLON.Vector3(ballState.velocity.x, ballState.velocity.y, ballState.velocity.z),
-                    rebounds: ballState.rebounds || 0,
-                    isRespawning: ballState.isRespawning || false,
-                    respawnTime: ballState.respawnTime || 0,
-                    wasHitByPlayer: ballState.wasHitByPlayer || false,
-                    hasValidPosition: true,
-                    speed: ballState.speed || 25,
-                    isInitialSpawn: ballState.isInitialSpawn || false
-                });
-            }
-        });
-
-        clientConnection.onScoreUpdate(({ scores }) => {
-            if (isGameOver) return;
-            console.log('Received scoreUpdate:', { scores });
-            player1.playerScore = scores[player1.getPlayerId()] || 0;
-            player2.playerScore = scores[player2.getPlayerId()] || 0;
-        });
-
-        clientConnection.onBallUpdate(({ ballState, isInitialSpawn, isScoreRespawn }) => {
-            if (isGameOver) return;
-            ballUpdateReceived = true;
-            const now = Date.now();
-            if (initTime) {
-                //console.log(`Time since init: ${now - initTime}ms`);
-            }
-            if (!ballState || !ballState.position || !ballState.velocity) {
-                console.error('Invalid ballState:', ballState);
-                return;
-            }
-
-            if (!ball || !ball.ballBody || (ball.ballBody.metadata && ball.ballBody.metadata.roomId !== roomId)) {
-                try {
-                    ball = new Ball(player1, player2);
-                    ball.createBall(map.getScene);
-                    ball.ballBody.metadata = { roomId };
-                    // Ensure ball starts under the map and invisible
-                    ball.position = new BABYLON.Vector3(0, -2, 0);
-                    ball.ballBody.position = new BABYLON.Vector3(0, -2, 0);
-                    ball.ballBody.isVisible = false;
-                } catch (e) {
-                    console.error('Ball creation failed:', e);
-                    return;
-                }
-            }
-
-            if (ball && ball.ballBody && ball.ballBody.metadata && ball.ballBody.metadata.roomId === roomId) {
-                const newPosition = new BABYLON.Vector3(ballState.position.x, ballState.position.y, ballState.position.z);
-                
-                if (isInitialSpawn) {
-                    // For initial spawn, only update state and let the respawn animation handle everything
-                    ball.setState({
-                        position: newPosition,
-                        velocity: new BABYLON.Vector3(ballState.velocity.x, ballState.velocity.y, ballState.velocity.z),
-                        previousVelocity: ballState.previousVelocity || new BABYLON.Vector3(ballState.velocity.x, ballState.velocity.y, ballState.velocity.z),
-                        rebounds: ballState.rebounds || 0,
-                        isRespawning: true,
-                        respawnTime: 0,
-                        wasHitByPlayer: ballState.wasHitByPlayer || false,
-                        hasValidPosition: true,
-                        speed: ballState.speed || 25,
-                        isInitialSpawn: true
-                    });
-                    return;
-                }
-                
-                ball.ballBody.position = newPosition;
-                predictedPosition = newPosition.clone();
-                lastBallPosition = null;
-                
-                try {
-                    ball.setState({
-                        position: newPosition,
-                        velocity: new BABYLON.Vector3(ballState.velocity.x, ballState.velocity.y, ballState.velocity.z),
-                        previousVelocity: ballState.previousVelocity || new BABYLON.Vector3(ballState.velocity.x, ballState.velocity.y, ballState.velocity.z),
-                        rebounds: ballState.rebounds || 0,
-                        isRespawning: ballState.isRespawning || false,
-                        respawnTime: ballState.respawnTime || 0,
-                        wasHitByPlayer: ballState.wasHitByPlayer || false,
-                        hasValidPosition: true,
-                        speed: ballState.speed || 25,
-                        isInitialSpawn: false
-                    });
-                    
-                    if (isInitialSpawn && ball.velocity.length() === 0) {
-                        ball.setFirstVelocity();
-                    }
-                } catch (e) {
-                    console.error('Ball setState failed:', e);
-                }
-            } else {
-                //console.warn('Ball update ignored - wrong room. Expected:', roomId, 'Got:', ball?.ballBody?.metadata?.roomId);
-            }
-        });
-
-        clientConnection.onGameEnd(({ winnerId, scores, matchEndTime: endTime }) => {
-            isGameOver = true;
-            matchEndTime = endTime;
-            const winnerName = winnerId === player1.getPlayerId() ? player1.name : player2.name;
-            const scoreText = `Final Score - ${player1.name}: ${scores[player1.getPlayerId()]}, ${player2.name}: ${scores[player2.getPlayerId()]}`;
-            alert(`${winnerName} wins!\n${scoreText}\nMatch ended at: ${new Date(matchEndTime).toISOString()}`);
-            console.log(`Game ended: Winner=${winnerName}, ${scoreText}, Match ended at: ${new Date(matchEndTime).toISOString()}`);
-            map.getEngine().stopRenderLoop();
-            
-            if (ball && ball.ballBody && ball.ballBody.metadata && ball.ballBody.metadata.roomId === roomId) {
-                ball.ballBody.isVisible = false;
-            }
-            if (player1.paddleBody) player1.paddleBody.isVisible = false;
-            if (player2.paddleBody) player2.paddleBody.isVisible = false;
-        });
-
-        clientConnection.onMessage = ({ data }) => {
-            let msg;
+        // Only create new map if it doesn't exist
+        if (!map) {
             try {
-                msg = JSON.parse(data);
-            } catch (err) {
-                console.error('Invalid JSON:', err);
+                map = new gameMap();
+                console.log('Creating map...');
+                map.createMap();
+                map.createPlayground();
+                if (!map.getScene) {
+                    throw new Error('map.getScene is undefined');
+                }
+                console.log('Map created successfully, scene:', !!map.getScene);
+            } catch (e) {
+                console.error('Map creation failed:', e);
+                updateGameStatus('Error: Failed to create game map');
                 return;
             }
-            if (msg.type === 'usernameUpdate') {
-                if (msg.playerId === player1.getPlayerId()) {
-                    player1.name = msg.username;
-                    console.log(`Player1 updated username to ${msg.username}`);
-                } else if (msg.playerId === player2.getPlayerId()) {
-                    player2.name = msg.username;
-                    console.log(`Player2 updated username to ${msg.username}`);
+        }
+
+        // Only create paddles if they don't exist
+        if (!player1 || !player2) {
+            if (role === 0) {
+                player1 = new playerPaddle('Player1', playerId, 0);
+                player2 = new playerPaddle('Player2', opponentId, 1);
+            } else {
+                player1 = new playerPaddle('Player1', opponentId, 0);
+                player2 = new playerPaddle('Player2', playerId, 1);
+            }
+
+            try {
+                player1.createPaddle(map.getScene, 19.5, 2, 20);
+                player2.createPaddle(map.getScene, -19.5, 2, 20);
+                console.log('Paddles created successfully');
+            } catch (e) {
+                console.error('Paddle creation failed:', e);
+                return;
+            }
+        }
+
+        // Only create ball if it doesn't exist
+        if (!ball) {
+            try {
+                ball = new Ball(player1, player2);
+                ball.createBall(map.getScene);
+                ball.ballBody.metadata = { roomId };
+                ball.position = new BABYLON.Vector3(0, -2, 0);
+                ball.ballBody.position = new BABYLON.Vector3(0, -2, 0);
+                ball.ballBody.isVisible = true;
+                ball.isRespawning = true;
+                ball.respawnTime = 0;
+                ball.hasValidPosition = true;
+                
+                // Request initial ball respawn from server
+                clientConnection.send({
+                    type: 'requestBallRespawn',
+                    isInitial: true
+                });
+                console.log('Requested initial ball respawn');
+            } catch (e) {
+                console.error('Ball creation failed:', e);
+                return;
+            }
+        }
+
+        updateGameStatus('Game starting...');
+        
+        // Set up keyboard controls if not already set
+        if (!window.gameControlsInitialized) {
+            document.addEventListener('keydown', (event) => {
+                if (isGameOver) return;
+                if (event.key === 'ArrowUp' && !isUpPressed) {
+                    isUpPressed = true;
+                    clientConnection.send({ type: 'keyDown', direction: 'up' });
+                } else if (event.key === 'ArrowDown' && !isDownPressed) {
+                    isDownPressed = true;
+                    clientConnection.send({ type: 'keyDown', direction: 'down' });
                 }
-            }
-        };
+            });
 
-        document.addEventListener('keydown', (event) => {
-            if (isGameOver) return;
-            if (event.key === 'ArrowUp' && !isUpPressed) {
-                isUpPressed = true;
-                clientConnection.send({ type: 'keyDown', direction: 'up' });
-            } else if (event.key === 'ArrowDown' && !isDownPressed) {
-                isDownPressed = true;
-                clientConnection.send({ type: 'keyDown', direction: 'down' });
-            }
-        });
+            document.addEventListener('keyup', (event) => {
+                if (isGameOver) return;
+                if (event.key === 'ArrowUp' && isUpPressed) {
+                    isUpPressed = false;
+                    clientConnection.send({ type: 'keyUp', direction: 'up' });
+                } else if (event.key === 'ArrowDown' && isDownPressed) {
+                    isDownPressed = false;
+                    clientConnection.send({ type: 'keyUp', direction: 'down' });
+                }
+            });
+            window.gameControlsInitialized = true;
+        }
+        
+        // Start the game loop after match animation if not already running
+        if (!isGameLoopRunning) {
+            try {
+                console.log('Starting match animation...');
+                await map.launchMatchAnimation();
+                console.log('Match animation completed, preparing for gameplay...');
+                
+                // Prepare the scene for gameplay
+                map.prepareForGameplay();
+                
+                // Ensure paddles are ready
+                if (player1 && player2) {
+                    player1.paddleBody.isVisible = true;
+                    player2.paddleBody.isVisible = true;
+                    console.log('Paddles made visible');
+                }
 
-        document.addEventListener('keyup', (event) => {
-            if (isGameOver) return;
-            if (event.key === 'ArrowUp' && isUpPressed) {
-                isUpPressed = false;
-                clientConnection.send({ type: 'keyUp', direction: 'up' });
-            } else if (event.key === 'ArrowDown' && isDownPressed) {
-                isDownPressed = false;
-                clientConnection.send({ type: 'keyUp', direction: 'down' });
+                console.log('Starting game loop...');
+                setupGameLoop();
+            } catch (e) {
+                console.error('Error during game initialization:', e);
+                // Start game loop anyway if animation fails
+                setupGameLoop();
             }
-        });
+        }
+    });
+}
+
+// Function to setup game loop
+function setupGameLoop() {
+    if (isGameLoopRunning) {
+        console.log('Game loop already running, skipping setup');
+        return;
+    }
+
+    console.log('Setting up game loop...');
+    let frameCount = 0;
+    let lastTime = Date.now();
+    let lastPaddleUpdate = Date.now();
+    const PADDLE_UPDATE_INTERVAL = 1000 / 60; // 60 updates per second
+    
+    const renderLoop = () => {
+        if (isGameOver) {
+            map.getEngine.stopRenderLoop();
+            isGameLoopRunning = false;
+            return;
+        }
+
+        frameCount++;
+        const now = Date.now();
+        if (now - lastTime >= 1000) {
+            frameCount = 0;
+            lastTime = now;
+        }
+
+        const deltaTime = map.getEngine.getDeltaTime() / 1000;
+        
+        // Handle player movement
+        const localPlayer = player1.getPlayerId() === localPlayerId ? player1 : player2;
+        let paddleMoved = false;
+
+        if (isUpPressed && !isDownPressed) {
+            localPlayer.move(-1, deltaTime);
+            paddleMoved = true;
+        } else if (isDownPressed && !isUpPressed) {
+            localPlayer.move(1, deltaTime);
+            paddleMoved = true;
+        }
+
+        // Send paddle position updates at a fixed rate
+        if (paddleMoved && now - lastPaddleUpdate >= PADDLE_UPDATE_INTERVAL) {
+            clientConnection.send({
+                type: 'paddlePosition',
+                playerId: localPlayerId,
+                positionZ: localPlayer.getPaddleBodyPos.z,
+            });
+            lastPaddleUpdate = now;
+        }
+
+        // Update ball position and ensure it's visible
+        if (ball && ball.ballBody) {
+            ball.updateClient(map.getScene);
+            
+            // Debug ball state
+            if (frameCount % 60 === 0) {  // Log every second
+                console.log('Ball state:', {
+                    position: ball.position.toString(),
+                    isVisible: ball.ballBody.isVisible,
+                    isRespawning: ball.isRespawning,
+                    hasValidPosition: ball.hasValidPosition
+                });
+            }
+        }
+
+        // Ensure scene renders
+        if (map && map.getScene) {
+            map.getScene.render();
+        }
+    };
+
+    // Start the render loop
+    if (map && map.getEngine) {
+        map.getEngine.runRenderLoop(renderLoop);
+        isGameLoopRunning = true;
+        console.log('Game loop started');
+    } else {
+        console.error('Failed to start game loop: map or engine not initialized');
+    }
+}
+
+// Handle join game button click
+document.addEventListener('DOMContentLoaded', () => {
+    const joinGameBtn = document.getElementById('joinGameBtn');
+    
+    joinGameBtn.addEventListener('click', async () => {
+        joinGameBtn.disabled = true;
+        updateGameStatus('Checking for available players...');
+        
+        try {
+            const players = await checkAvailablePlayers();
+            
+            if (players.length < 2) {
+                updateGameStatus('Not enough players registered. Please wait for more players.');
+                joinGameBtn.disabled = false;
+                return;
+            }
+
+            // Find an available player slot
+            const availablePlayers = players.filter(p => !p.readyToPlay);
+            if (availablePlayers.length === 0) {
+                updateGameStatus('All players are already in game. Please wait.');
+                joinGameBtn.disabled = false;
+                return;
+            }
+
+            const playerId = availablePlayers[0].id;
+            updateGameStatus('Joining game...');
+            
+            // Initialize game connection
+            initializeGame(playerId);
+            
+            // Set player as ready
+            await setPlayerReady(playerId);
+            updateGameStatus('Waiting for other player to join...');
+
+        } catch (error) {
+            console.error('Error joining game:', error);
+            updateGameStatus('Error joining game. Please try again.');
+            joinGameBtn.disabled = false;
+        }
     });
 });

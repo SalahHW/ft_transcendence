@@ -114,34 +114,99 @@ class gameMap {
         }
     }
     updateCurrentDof(currentY) {
-        if (this.depthOfFieldEffect) {
-            this.depthOfFieldEffect.focusDistance = currentY;
-        }
-        if (currentY === 50 && this.pipeline) {
-            this.pipeline.depthOfFieldEnabled = false;
+        try {
+            if (this.pipeline && this.pipeline.depthOfField) {
+                // Adjust DOF parameters based on camera height
+                this.pipeline.depthOfField.focusDistance = currentY / 10;
+                this.pipeline.depthOfField.focalLength = Math.max(50, currentY / 5);
+                this.pipeline.depthOfField.fStop = Math.max(1.4, currentY / 100);
+            }
+        } catch (error) {
+            console.error('Error updating depth of field:', error);
         }
     }
     
     launchMatchAnimation() {
-        return new Promise((resolve) => {
-            const steps = [500, 250, 50];
-            let currentStep = 0;
-    
-            const updateYPosition = () => {
-                if (currentStep < steps.length) {
-                    const currentY = steps[currentStep];
-                    this.globalPov.position.y = currentY;
-                    this.updateCurrentDof(currentY);
-                    currentStep++;
-                    setTimeout(updateYPosition, 1000);
-                } else {
-                    resolve();
-                }
-            };
-    
-            setTimeout(updateYPosition, 1000); // Start after 1 second
+        return new Promise((resolve, reject) => {
+            try {
+                console.log('Starting camera animation sequence...');
+                const steps = [500, 250, 50];
+                let currentStep = 0;
+                let animationStartTime = Date.now();
+        
+                const updateYPosition = () => {
+                    try {
+                        if (currentStep < steps.length) {
+                            const currentY = steps[currentStep];
+                            console.log(`Animating camera to Y position: ${currentY} (step ${currentStep + 1}/${steps.length})`);
+                            
+                            // Smoothly interpolate to the target position
+                            const currentPos = this.globalPov.position.y;
+                            const targetPos = currentY;
+                            const t = Math.min((Date.now() - animationStartTime) / 1000, 1);
+                            this.globalPov.position.y = currentPos + (targetPos - currentPos) * t;
+                            
+                            if (this.pipeline && this.pipeline.depthOfField) {
+                                this.updateCurrentDof(this.globalPov.position.y);
+                            }
+
+                            // Ensure scene renders during animation
+                            this.scene.render();
+                            
+                            if (t >= 1) {
+                                currentStep++;
+                                animationStartTime = Date.now();
+                            }
+                            
+                            requestAnimationFrame(updateYPosition);
+                        } else {
+                            console.log('Camera animation sequence completed');
+                            // Ensure final position is set
+                            this.globalPov.position.y = steps[steps.length - 1];
+                            
+                            // Disable depth of field for gameplay
+                            if (this.pipeline) {
+                                this.pipeline.depthOfFieldEnabled = false;
+                            }
+
+                            // Final render with gameplay settings
+                            this.scene.render();
+                            
+                            // Signal animation completion
+                            resolve();
+                        }
+                    } catch (error) {
+                        console.error('Error during camera animation step:', error);
+                        reject(error);
+                    }
+                };
+        
+                // Start the animation immediately
+                requestAnimationFrame(updateYPosition);
+            } catch (error) {
+                console.error('Error initializing camera animation:', error);
+                reject(error);
+            }
         });
     }
+
+    // Add method to prepare for gameplay
+    prepareForGameplay() {
+        // Disable depth of field
+        if (this.pipeline) {
+            this.pipeline.depthOfFieldEnabled = false;
+        }
+
+        // Set final camera position
+        this.globalPov.position.y = 50;
+        
+        // Ensure camera is properly positioned and configured
+        this.globalPov.setTarget(BABYLON.Vector3.Zero());
+        
+        // Make sure the scene is ready for gameplay
+        this.scene.render();
+    }
+
     get getEngine() {
         return this.engine;
     }
