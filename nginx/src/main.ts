@@ -1,9 +1,9 @@
 import { render } from "./utils/render.js";
-import { createHomePage } from "./pages/homePage.js";
-import { createLoginPage } from "./pages/loginPage.js";
+import { createHomeView } from "./views/homeView.js";
+import { createLoginView } from "./views/loginView.js";
 
-function goToLoginPage() {
-  render(createLoginPage());
+function goToLogin() {
+  render(createLoginView());
 }
 
-render(createHomePage(goToLoginPage));
+render(createHomeView(goToLogin));

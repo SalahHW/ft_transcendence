@@ -16,7 +16,7 @@ body {
 
 #app {
   width: 100%;
-  /* max-width: 400px; */
+  max-width: 600px;
   padding: 2%;
   background: rgb(240, 228, 215);
   border-radius: 8px;
