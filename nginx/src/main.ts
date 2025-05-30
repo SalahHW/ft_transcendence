@@ -1,6 +1,6 @@
-import { render } from "./utils/render";
-import { createHomePage } from "./pages/homePage";
-import { createLoginPage } from "./pages/loginPage";
+import { render } from "./utils/render.js";
+import { createHomePage } from "./pages/homePage.js";
+import { createLoginPage } from "./pages/loginPage.js";
 
 function goToLoginPage() {
   render(createLoginPage());
