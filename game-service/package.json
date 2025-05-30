@@ -16,6 +16,7 @@
   },
   "main": "index.js",
   "dependencies": {
+    "@fastify/cors": "^11.0.1",
     "@fastify/websocket": "^11.0.2",
     "dotenv": "^16.5.0",
     "esbuild": "^0.25.2",
