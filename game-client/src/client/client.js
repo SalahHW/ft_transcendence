@@ -178,7 +178,6 @@ function initializeGame(playerId) {
                 if (!map.getScene) {
                     throw new Error('map.getScene is undefined');
                 }
-                console.log('Map created successfully, scene:', !!map.getScene);
             } catch (e) {
                 console.error('Map creation failed:', e);
                 updateGameStatus('Error: Failed to create game map');
@@ -199,7 +198,6 @@ function initializeGame(playerId) {
             try {
                 player1.createPaddle(map.getScene, 19.5, 2, 20);
                 player2.createPaddle(map.getScene, -19.5, 2, 20);
-                console.log('Paddles created successfully');
             } catch (e) {
                 console.error('Paddle creation failed:', e);
                 return;
@@ -268,7 +266,6 @@ function initializeGame(playerId) {
                 if (player1 && player2) {
                     player1.paddleBody.isVisible = true;
                     player2.paddleBody.isVisible = true;
-                    console.log('Paddles made visible');
                 }
                 setupGameLoop();
             } catch (e) {
@@ -311,6 +308,7 @@ function setupGameLoop() {
         
         // Handle player movement
         const localPlayer = player1.getPlayerId() === localPlayerId ? player1 : player2;
+        const playerNumber = player1.getPlayerId() === localPlayerId ? 1 : 2;
         let paddleMoved = false;
 
         if (isUpPressed && !isDownPressed) {
