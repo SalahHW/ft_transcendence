@@ -54,7 +54,6 @@ class Ball {
         this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
         this.ballBody.material = this.ballMaterial;
         this.ballBody.isVisible = false;
-        console.log('createBall: ballBody created, position:', this.ballBody.position, 'isVisible:', this.ballBody.isVisible);
     }
 
     handleBallRespawn(previousVelocity) {
@@ -71,7 +70,6 @@ class Ball {
             this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
             this.ballBody.isVisible = true;
         }
-        console.log('handleBallRespawn called:', { position: this.position, isRespawning: this.isRespawning, respawnTime: this.respawnTime });
     }
 
     update(deltaTime, paddle1Pos, paddle2Pos) {
@@ -145,8 +143,8 @@ class Ball {
     }
 
     handlePaddleCollisions(paddle1Pos, paddle2Pos) {
-        const isPaddle2 = this.velocity.x < 0;
-        const paddle = isPaddle2 ? paddle2Pos : paddle1Pos;
+        const isHittingPlayer2 = this.velocity.x < 0; // Ball going left hits player2 (left side)
+        const paddle = isHittingPlayer2 ? paddle2Pos : paddle1Pos;
         const dx = this.position.x - paddle.x;
         const dz = this.position.z - paddle.z;
         const paddleHalfWidth = 0.5;
@@ -157,7 +155,7 @@ class Ball {
 
         if (overlapX && overlapZ) {
             this.rebounds++;
-            this.wasHitByPlayer = isPaddle2 ? this.player2.playerId : this.player1.playerId;
+            this.wasHitByPlayer = isHittingPlayer2 ? this.player2.playerId : this.player1.playerId;
             const isSideHit = Math.abs(dz) > paddleHalfDepth;
             let speed = this.velocity.length();
             if (isSideHit) {
@@ -173,7 +171,7 @@ class Ball {
                     0,
                     Math.sin(angle)
                 ).normalize().scale(speed);
-                this.velocity.x = isPaddle2 ? Math.abs(this.velocity.x) : -Math.abs(this.velocity.x);
+                this.velocity.x = isHittingPlayer2 ? Math.abs(this.velocity.x) : -Math.abs(this.velocity.x);
                 const sign = dx > 0 ? 1 : -1;
                 this.position.x += sign * ((paddleHalfWidth + this.radius) - Math.abs(dx) + 0.01);
             }
@@ -184,13 +182,20 @@ class Ball {
 
     handleScoreZone() {
         if (Math.abs(this.position.x) > 20) {
-            const wasGoingLeft = this.velocity.x < 0;
+            let newVelocity;
+            
             if (this.position.x < 0) {
-                this.player2.playerScore++;
-            } else {
+                // Ball went past left side (Player 2's side), Player 1 scores
                 this.player1.playerScore++;
+                // Ball goes towards the loser (Player 2 - left side)
+                newVelocity = new BABYLON.Vector3(-25, 0, 0);
+            } else {
+                // Ball went past right side (Player 1's side), Player 2 scores  
+                this.player2.playerScore++;
+                // Ball goes towards the loser (Player 1 - right side)
+                newVelocity = new BABYLON.Vector3(25, 0, 0);
             }
-            const newVelocity = new BABYLON.Vector3(wasGoingLeft ? -25 : 25, 0, 0);
+            
             this.handleBallRespawn(newVelocity);
         }
     }

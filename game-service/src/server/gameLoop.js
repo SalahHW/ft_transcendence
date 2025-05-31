@@ -94,9 +94,12 @@ export function startGameLoop() {
             if (t >= 1) {
               room.ball.isRespawning = false;
               room.ball.position.y = 1;
+              room.ball.velocity.copyFrom(room.ball.previousVelocity);
               if (room.ball.velocity.length() === 0) {
                 room.ball.setFirstVelocity();
               }
+              room.ball.hasValidPosition = true;
+              room.ball.speed = room.ball.rebounds < 5 ? 25 : 37.5;
             }
           }
 
