@@ -48,9 +48,9 @@ export async function registerWebSocketRoutes(fastify) {
     let messageCount = 0;
     ws.on('message', (data) => {
       messageCount++;
-      if (messageCount % 10 === 0) {
-        console.log('Received WebSocket message:', data.toString());
-      }
+      //if (messageCount % 10 === 0) {
+      //  console.log('Received WebSocket message:', data.toString());
+      //}
       let msg;
       try {
         msg = JSON.parse(data);
