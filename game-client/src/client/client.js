@@ -263,8 +263,6 @@ function initializeGame(playerId) {
         if (!isGameLoopRunning) {
             try {
                 await map.launchMatchAnimation();
-                // Prepare the scene for gameplay
-                map.prepareForGameplay();
                 
                 // Ensure paddles are ready
                 if (player1 && player2) {

@@ -62,9 +62,9 @@ class gameMap {
             [this.globalPov] // Camera
         );
         this.pipeline.depthOfFieldEnabled = true;
-        this.pipeline.depthOfField.focusDistance = 50; // Distance from camera in units (tune as needed)
-        this.pipeline.depthOfField.focalLength = 50;   // Lens focal length (higher = stronger effect)
-        this.pipeline.depthOfField.fStop = 1.8;         // Aperture (lower = stronger blur)
+        this.pipeline.depthOfField.focusDistance = 50; 
+        this.pipeline.depthOfField.focalLength = 50;
+        this.pipeline.depthOfField.fStop = 1.8;      
         this.pipeline.depthOfField.blurLevel = BABYLON.DepthOfFieldEffectBlurLevel.Medium; // Low/Medium/High
 
     }
@@ -97,9 +97,7 @@ class gameMap {
         this.playgroundMaterial.diffuseColor = new BABYLON.Color3(0, 0, 0);
         this.playground.material = this.playgroundMaterial;
     }
-    //displayScore() {
 
-    //}
     gameStateHandler(player1, player2) {
         console.log("state playerscore 1 = ", player1.getPlayerScore);
         console.log("state playerscore 2 = ", player2.getPlayerScore);
@@ -126,6 +124,41 @@ class gameMap {
         }
     }
     
+    smoothlyDisableDof(duration) {
+        return new Promise((resolve) => {
+            if (!this.pipeline || !this.pipeline.depthOfFieldEnabled) {
+                resolve();
+                return;
+            }
+
+            const startTime = Date.now();
+            const initialFocalLength = this.pipeline.depthOfField.focalLength;
+            const initialFStop = this.pipeline.depthOfField.fStop;
+            const initialFocusDistance = this.pipeline.depthOfField.focusDistance;
+
+            const updateDof = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Gradually reduce DOF effect
+                this.pipeline.depthOfField.focalLength = initialFocalLength * (1 - progress);
+                this.pipeline.depthOfField.fStop = initialFStop + (8 - initialFStop) * progress;
+                this.pipeline.depthOfField.focusDistance = initialFocusDistance * (1 - progress);
+                this.scene.render();
+
+                if (progress < 1) {
+                    requestAnimationFrame(updateDof);
+                } else {
+                    this.pipeline.depthOfFieldEnabled = false;
+                    this.scene.render();
+                    resolve();
+                }
+            };
+
+            requestAnimationFrame(updateDof);
+        });
+    }
+    
     launchMatchAnimation() {
         return new Promise((resolve, reject) => {
             try {
@@ -146,8 +179,6 @@ class gameMap {
                             if (this.pipeline && this.pipeline.depthOfField) {
                                 this.updateCurrentDof(this.globalPov.position.y);
                             }
-
-                            // Ensure scene renders during animation
                             this.scene.render();
                             
                             if (t >= 1) {
@@ -157,15 +188,8 @@ class gameMap {
                             
                             requestAnimationFrame(updateYPosition);
                         } else {
-                            // Ensure final position is set
                             this.globalPov.position.y = steps[steps.length - 1];
-                            // Disable depth of field for gameplay
-                            if (this.pipeline) {
-                                this.pipeline.depthOfFieldEnabled = false;
-                            }
-                            // Final render with gameplay settings
-                            this.scene.render();
-                            // Signal animation completion
+                            this.smoothlyDisableDof(500);
                             resolve();
                         }
                     } catch (error) {
@@ -181,23 +205,6 @@ class gameMap {
                 reject(error);
             }
         });
-    }
-
-    // Add method to prepare for gameplay
-    prepareForGameplay() {
-        // Disable depth of field
-        if (this.pipeline) {
-            this.pipeline.depthOfFieldEnabled = false;
-        }
-
-        // Set final camera position
-        this.globalPov.position.y = 50;
-        
-        // Ensure camera is properly positioned and configured
-        this.globalPov.setTarget(BABYLON.Vector3.Zero());
-        
-        // Make sure the scene is ready for gameplay
-        this.scene.render();
     }
 
     get getEngine() {
