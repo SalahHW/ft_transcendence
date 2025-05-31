@@ -9,10 +9,6 @@ class Ball {
         this.radius = 1;
         this.rebounds = 0;
         this.wasHitByPlayer = undefined;
-        this.ballBody = null;
-        this.ballMaterial = null;
-        this.isGlowing = false;
-        this.currentGlowColor = new BABYLON.Color3(0, 0, 0);
         this.isRespawning = false;
         this.respawnTime = 0;
         this.respawnDuration = 2;
@@ -35,10 +31,6 @@ class Ball {
         this.speed = 25;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
-        if (this.ballBody) {
-            this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
-            this.ballBody.isVisible = false;
-        }
     }
 
     setFirstVelocity() {
@@ -57,10 +49,6 @@ class Ball {
         this.speed = 25;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
-        if (this.ballBody) {
-            this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
-            this.ballBody.isVisible = true;
-        }
     }
 
     update(deltaTime, paddle1Pos, paddle2Pos) {
@@ -70,15 +58,9 @@ class Ball {
             this.position.y = -2 + 3 * t;
             this.position.z = 0;
             this.position.x = 0;
-            if (this.ballBody) {
-                this.ballBody.position.copyFrom(this.position);
-            }
             if (t >= 1) {
                 this.isRespawning = false;
                 this.position.y = 1;
-                if (this.ballBody) {
-                    this.ballBody.position.y = 1;
-                }
                 this.velocity.copyFrom(this.previousVelocity);
                 if (this.velocity.length() === 0) {
                     this.setFirstVelocity();
@@ -230,10 +212,6 @@ class Ball {
             this.isRespawning = true;
             this.respawnTime = 0;
             this.hasValidPosition = true;
-            if (this.ballBody) {
-                this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
-                this.ballBody.isVisible = true;
-            }
             return;
         }
 
