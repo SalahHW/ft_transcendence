@@ -140,10 +140,11 @@ class gameMap {
                 const elapsed = Date.now() - startTime;
                 const progress = Math.min(elapsed / duration, 1);
                 
-                // Gradually reduce DOF effect
+                // Linear interpolation for all parameters
                 this.pipeline.depthOfField.focalLength = initialFocalLength * (1 - progress);
                 this.pipeline.depthOfField.fStop = initialFStop + (8 - initialFStop) * progress;
                 this.pipeline.depthOfField.focusDistance = initialFocusDistance * (1 - progress);
+
                 this.scene.render();
 
                 if (progress < 1) {
@@ -189,7 +190,7 @@ class gameMap {
                             requestAnimationFrame(updateYPosition);
                         } else {
                             this.globalPov.position.y = steps[steps.length - 1];
-                            this.smoothlyDisableDof(500);
+                            this.smoothlyDisableDof(1000);
                             resolve();
                         }
                     } catch (error) {
