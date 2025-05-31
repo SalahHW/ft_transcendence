@@ -47,15 +47,6 @@ class Ball {
         this.speed = 25;
     }
 
-    createBall(scene) {
-        this.ballBody = BABYLON.MeshBuilder.CreateSphere("ball", { diameter: 2 }, scene);
-        this.ballMaterial = new BABYLON.StandardMaterial("glowMat", scene);
-        this.position = new BABYLON.Vector3(0, -2, 0);
-        this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
-        this.ballBody.material = this.ballMaterial;
-        this.ballBody.isVisible = false;
-    }
-
     handleBallRespawn(previousVelocity) {
         this.position = new BABYLON.Vector3(0, -2, 0);
         this.velocity = BABYLON.Vector3.Zero();
