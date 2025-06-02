@@ -98,4 +98,127 @@ export async function registerApiRoutes(fastify, options) {
       });
     }
   });
+
+  // POST /api/matches/results: Report match completion to other services
+  fastify.post('/api/matches/results', async (request, reply) => {
+    try {
+      console.log('API request: POST /api/matches/results');
+      const matchData = request.body;
+      
+      // Validate required match data
+      const requiredFields = ['roomId', 'matchEndTime', 'winner', 'loser', 'gameStats'];
+      const missingFields = requiredFields.filter(field => !matchData[field]);
+      
+      if (missingFields.length > 0) {
+        return reply.status(400).send({
+          status: 'error',
+          message: `Missing required fields: ${missingFields.join(', ')}`,
+        });
+      }
+
+      // Forward match data to other services
+      await notifyOtherServices(matchData);
+      
+      return reply.status(200).send({
+        status: 'success',
+        message: 'Match results reported successfully',
+        data: { matchId: matchData.roomId }
+      });
+    } catch (error) {
+      console.error('Error in POST /api/matches/results:', error);
+      return reply.status(500).send({
+        status: 'error',
+        message: 'Failed to report match results',
+      });
+    }
+  });
+}
+
+// Service-to-service notification functions
+async function notifyOtherServices(matchData) {
+  const services = [
+    {
+      name: 'users-service',
+      url: process.env.USERS_SERVICE_URL || 'http://localhost:3001',
+      endpoints: ['/api/matches/completed']
+    },
+    {
+      name: 'stats-service', 
+      url: process.env.STATS_SERVICE_URL || 'http://localhost:3002',
+      endpoints: ['/api/player-stats', '/api/match-history']
+    },
+    {
+      name: 'tournament-service',
+      url: process.env.TOURNAMENT_SERVICE_URL || 'http://localhost:3003',
+      endpoints: ['/api/tournament/match-result']
+    }
+  ];
+
+  const notifications = services.flatMap(service => 
+    service.endpoints.map(endpoint => 
+      notifyService(service.name, `${service.url}${endpoint}`, matchData)
+    )
+  );
+
+  await Promise.allSettled(notifications);
+}
+
+async function notifyService(serviceName, url, matchData) {
+  try {
+    console.log(`🔄 Notifying ${serviceName} at ${url}`);
+    console.log(`📤 Sending match data:`, JSON.stringify(matchData, null, 2));
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Source-Service': 'game-service',
+        'X-Match-Id': matchData.roomId
+      },
+      body: JSON.stringify(matchData),
+      signal: AbortSignal.timeout(5000) // 5 second timeout
+    });
+
+    if (!response.ok) {
+      throw new Error(`${serviceName} responded with ${response.status}`);
+    }
+
+    const responseData = await response.json();
+    console.log(`✅ Successfully notified ${serviceName}`);
+    console.log(`📥 ${serviceName} response:`, JSON.stringify(responseData, null, 2));
+    console.log('-'.repeat(60));
+    
+    return responseData;
+  } catch (error) {
+    console.error(`❌ Failed to notify ${serviceName}:`, error.message);
+    console.log('-'.repeat(60));
+    // Could implement retry logic here
+    throw error;
+  }
+}
+
+// Export function to call the internal API from gameState
+export async function reportMatchResultsToAPI(matchData) {
+  try {
+    const API_BASE_URL = process.env.GAME_SERVICE_API_BASE || 'https://localhost:8080';
+    
+    const response = await fetch(`${API_BASE_URL}/api/matches/results`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(matchData),
+      signal: AbortSignal.timeout(5000) // 5 second timeout
+    });
+
+    if (!response.ok) {
+      throw new Error(`API call failed: ${response.status} ${response.statusText}`);
+    }
+
+    console.log('Match results successfully reported to API');
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to report match results to API:', error);
+    // Don't throw - we don't want to break the game flow if API call fails
+  }
 }

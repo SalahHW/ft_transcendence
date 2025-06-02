@@ -171,7 +171,6 @@ function handlePlayerInput(data, playerId, roomId) {
         { playerId: room.players[0]?.id || playerId, playerScore: 0 },
         { playerId: room.players[1]?.id || playerId, playerScore: 0 }
       );
-      console.log(`Room ${roomId} ball created on requestBallRespawn`);
     }
     if (msg.isInitial) {
       room.ball.position = new BABYLON.Vector3(0, -2, 0);

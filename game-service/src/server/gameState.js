@@ -1,5 +1,6 @@
 import { Ball } from '../ball/ball.js';
 import * as BABYLON from '@babylonjs/core';
+import { reportMatchResultsToAPI } from './api.js';
 
 const gameRooms = new Map();
 const players = new Map();
@@ -157,24 +158,71 @@ export function broadcastToRoom(roomId, message) {
   });
 }
 
-export function endGame(room, roomId) {
+export async function endGame(room, roomId) {
   if (room.ball.player1.playerScore >= 11 || room.ball.player2.playerScore >= 11) {
     room.isGameOver = true;
-    let winnerId = null;
-    if (room.ball.player1.playerScore >= 11) {
-      winnerId = room.players[0].id;
-    } else if (room.ball.player2.playerScore >= 11) {
-      winnerId = room.players[1].id;
-    }
-    console.log(`Game ended in room ${roomId}, winner: ${winnerId}`);
-    broadcastToRoom(roomId, {
-      type: 'gameEnd',
-      winnerId,
-      scores: {
-        [room.players[0].id]: room.ball.player1.playerScore,
-        [room.players[1].id]: room.ball.player2.playerScore,
+    
+    const player1 = room.players[0];
+    const player2 = room.players[1];
+    const score1 = room.ball.player1.playerScore;
+    const score2 = room.ball.player2.playerScore;
+    
+    const winner = score1 >= 11 ? player1 : player2;
+    const loser = score1 >= 11 ? player2 : player1;
+    const winnerScore = score1 >= 11 ? score1 : score2;
+    const loserScore = score1 >= 11 ? score2 : score1;
+    
+    const matchEndTime = new Date().toISOString();
+    const matchStartTime = room.startTime || new Date().toISOString();
+    
+    // Comprehensive match data
+    const matchData = {
+      roomId,
+      matchStartTime,
+      matchEndTime,
+      matchDuration: new Date() - new Date(matchStartTime),
+      winner: {
+        id: winner.id,
+        username: winner.username || 'Anonymous',
+        score: winnerScore
+      },
+      loser: {
+        id: loser.id,
+        username: loser.username || 'Anonymous',
+        score: loserScore
+      },
+      gameStats: {
+        totalRebounds: room.ball.rebounds,
+        finalScore: `${winnerScore}-${loserScore}`,
+        scoreHistory: room.scoreHistory || [],
+        ballSpeed: room.ball.speed,
+        lastHitBy: room.ball.wasHitByPlayer
       },
       serverTime: Date.now(),
+    };
+
+    // Enhanced logging
+    console.log('='.repeat(60));
+    console.log('MATCH COMPLETED');
+    console.log('='.repeat(60));
+    console.log(`Room ID: ${roomId}`);
+    console.log(`Match End Time: ${matchEndTime}`);
+    console.log(`Winner: ${winner.username || 'Anonymous'} (ID: ${winner.id}) - Score: ${winnerScore}`);
+    console.log(`Loser: ${loser.username || 'Anonymous'} (ID: ${loser.id}) - Score: ${loserScore}`);
+    console.log(`Final Score: ${winnerScore}-${loserScore}`);
+    console.log(`Total Ball Rebounds: ${room.ball.rebounds}`);
+    console.log(`Match Duration: ${matchData.matchDuration}ms`);
+    console.log('='.repeat(60));
+    
+    // Report to API (async, don't wait for completion)
+    reportMatchResultsToAPI(matchData).catch(err => {
+      console.error('Failed to report match results to API:', err);
+    });
+    
+    // Enhanced client message (existing functionality)
+    broadcastToRoom(roomId, {
+      type: 'gameEnd',
+      ...matchData
     });
   }
 }
@@ -201,6 +249,8 @@ export function createOrJoinRoom(playerId, player, ws) {
       ready: false,
       ballUpdateSent: false,
       ballUpdateTimeout: null,
+      startTime: new Date().toISOString(), // Track match start time
+      scoreHistory: [], // Track score progression
     };
     newRoom.ball.position = new BABYLON.Vector3(0, -2, 0);
     newRoom.ball.isRespawning = true;
@@ -208,7 +258,7 @@ export function createOrJoinRoom(playerId, player, ws) {
     newRoom.ball.hasValidPosition = true;
     gameRooms.set(roomId, newRoom);
     animationStatus.set(roomId, new Set());
-    console.log(`Created new room ${roomId} for player ${playerId} with ball initialized`);
+    console.log(`Created new room ${roomId} for player ${playerId} with ball initialized at ${newRoom.startTime}`);
   } else {
     const room = gameRooms.get(roomId);
     room.ball.player2.playerId = playerId;

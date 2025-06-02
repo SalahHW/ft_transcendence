@@ -149,6 +149,30 @@ function initializeGame(playerId) {
         }
     });
 
+    // Add game end handler
+    clientConnection.onGameEnd((gameEndData) => {
+        isGameOver = true;
+        
+        console.log('='.repeat(50));
+        console.log('GAME OVER!');
+        console.log('='.repeat(50));
+        console.log(`Winner: ${gameEndData.winner.username} (${gameEndData.winner.score})`);
+        console.log(`Loser: ${gameEndData.loser.username} (${gameEndData.loser.score})`);
+        console.log(`Room: ${gameEndData.roomId}`);
+        console.log(`Match Duration: ${gameEndData.matchDuration}ms`);
+        console.log(`Total Rebounds: ${gameEndData.gameStats.totalRebounds}`);
+        console.log(`Ended at: ${gameEndData.matchEndTime}`);
+        console.log('='.repeat(50));
+        
+        // Update UI to show game results
+        const isWinner = gameEndData.winner.id === localPlayerId;
+        const resultText = isWinner 
+            ? `🎉 YOU WON! Final Score: ${gameEndData.winner.score}-${gameEndData.loser.score}`
+            : `😔 You Lost. Final Score: ${gameEndData.winner.score}-${gameEndData.loser.score}`;
+        
+        updateGameStatus(resultText);
+    });
+
     // Add handler for waiting status
     clientConnection.socket.addEventListener('message', (event) => {
         try {
