@@ -149,6 +149,54 @@ function initializeGame(playerId) {
         }
     });
 
+    // Add score update handler with camera shake for losing player
+    let previousScores = {};
+    clientConnection.onScoreUpdate((msg) => {
+        if (!player1 || !player2 || !map) return;
+        
+        const currentScores = msg.scores;
+        
+        // Initialize previous scores with zeros if this is the first update
+        if (Object.keys(previousScores).length === 0) {
+            // Initialize with zeros for both players
+            Object.keys(currentScores).forEach(playerId => {
+                previousScores[playerId] = 0;
+            });
+        }
+        
+        // Check which player's score increased (they scored, opponent lost a point)
+        let losingPlayerId = null;
+        
+        for (const [playerId, currentScore] of Object.entries(currentScores)) {
+            const previousScore = previousScores[playerId] || 0;
+            if (currentScore > previousScore) {
+                // This player scored, so the other player lost a point
+                const otherPlayerId = Object.keys(currentScores).find(id => id !== playerId);
+                losingPlayerId = otherPlayerId;
+                break;
+            }
+        }
+        
+        // Trigger camera shake only if the local player lost the point
+        if (losingPlayerId === localPlayerId) {
+            console.log('You lost a point! Triggering camera shake...');
+            map.triggerCameraShake().catch(error => {
+                console.error('Camera shake failed:', error);
+            });
+        }
+        previousScores = { ...currentScores };
+        
+        // Update local player scores for display
+        if (player1 && player2) {
+            const player1Score = currentScores[player1.getPlayerId()] || 0;
+            const player2Score = currentScores[player2.getPlayerId()] || 0;
+            player1.playerScore = player1Score;
+            player2.playerScore = player2Score;
+            
+            console.log(`Score update: Player1: ${player1Score}, Player2: ${player2Score}`);
+        }
+    });
+
     // Add game end handler
     clientConnection.onGameEnd((gameEndData) => {
         isGameOver = true;

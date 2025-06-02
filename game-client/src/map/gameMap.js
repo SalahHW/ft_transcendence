@@ -205,6 +205,47 @@ class gameMap {
         });
     }
 
+    triggerCameraShake() {
+        return new Promise((resolve) => {
+            try {
+                const duration = 500; // Half a second
+                const intensity = 2; // Shake intensity
+                const frequency = 50; // Shake frequency in Hz
+                const startTime = Date.now();
+                const originalPosition = this.globalPov.position.clone();
+
+                const shake = () => {
+                    const elapsed = Date.now() - startTime;
+                    const progress = elapsed / duration;
+
+                    if (progress >= 1) {
+                        this.globalPov.position.copyFrom(originalPosition);
+                        this.scene.render();
+                        resolve();
+                        return;
+                    }
+
+                    const fadeOut = 1 - progress; // Gradually reduce shake intensity
+                    const shakeX = Math.sin(elapsed * frequency * 0.001 * Math.PI * 2) * intensity * fadeOut;
+                    const shakeZ = Math.cos(elapsed * frequency * 0.001 * Math.PI * 2 * 1.3) * intensity * fadeOut;
+                    const shakeY = Math.sin(elapsed * frequency * 0.001 * Math.PI * 2 * 0.7) * intensity * 0.5 * fadeOut;
+
+                    this.globalPov.position.x = originalPosition.x + shakeX;
+                    this.globalPov.position.y = originalPosition.y + shakeY;
+                    this.globalPov.position.z = originalPosition.z + shakeZ;
+
+                    this.scene.render();
+                    requestAnimationFrame(shake);
+                };
+
+                requestAnimationFrame(shake);
+            } catch (error) {
+                console.error('Error during camera shake:', error);
+                resolve(); // Resolve anyway to prevent hanging
+            }
+        });
+    }
+
     get getEngine() {
         return this.engine;
     }
