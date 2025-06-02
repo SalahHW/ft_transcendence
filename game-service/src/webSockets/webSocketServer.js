@@ -101,6 +101,7 @@ export class webSocketGameServer {
                 return roomId;
             }
         }
+        // MOD HERE TO GENERATE IN INSTEAD OF UUID -> MAKE FUNCTION THAT CHECKS IF ID EXISTS BEFORE SETTING
         const newRoomId = uuidv4();
         this.gameRooms.set(newRoomId, { players: [player], ball: null, isGameOver: false });
         return newRoomId;
@@ -143,7 +144,6 @@ export class webSocketGameServer {
         } 
         if (winnerId) {
             room.isGameOver = true;
-            //console.log(`Room ${roomId} game ended: Winner=${winnerId}, Scores=${score1}-${score2}`);
             this.broadcastToRoom(roomId, {
                 type: 'gameEnd',
                 winnerId,
@@ -237,7 +237,6 @@ export class webSocketGameServer {
             const deltaTime = 1 / FPS;
             frameCount++;
             if (now - lastFrameTime >= 1000) {
-                //console.log(`Server FPS: ${frameCount}`);
                 frameCount = 0;
                 lastFrameTime = now;
             }

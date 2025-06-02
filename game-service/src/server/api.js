@@ -37,6 +37,7 @@ export async function registerApiRoutes(fastify, options) {
           message: 'Invalid username: must be a string (1-20 characters)',
         });
       }
+      // GET PLAYER ID WITH API OF USER SERVICE ? OR BLOCKCHAIN SERVICE ?
       const playerId = fastify.uuid();
       const player = {
         id: playerId,
@@ -165,8 +166,8 @@ async function notifyOtherServices(matchData) {
 
 async function notifyService(serviceName, url, matchData) {
   try {
-    console.log(`🔄 Notifying ${serviceName} at ${url}`);
-    console.log(`📤 Sending match data:`, JSON.stringify(matchData, null, 2));
+    console.log(`Notifying ${serviceName} at ${url}`);
+    console.log(`Sending match data:`, JSON.stringify(matchData, null, 2));
     
     const response = await fetch(url, {
       method: 'POST',
@@ -197,28 +198,13 @@ async function notifyService(serviceName, url, matchData) {
   }
 }
 
-// Export function to call the internal API from gameState
+// Export function to call external services from gameState
 export async function reportMatchResultsToAPI(matchData) {
   try {
-    const API_BASE_URL = process.env.GAME_SERVICE_API_BASE || 'https://localhost:8080';
-    
-    const response = await fetch(`${API_BASE_URL}/api/matches/results`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(matchData),
-      signal: AbortSignal.timeout(5000) // 5 second timeout
-    });
-
-    if (!response.ok) {
-      throw new Error(`API call failed: ${response.status} ${response.statusText}`);
-    }
-
-    console.log('Match results successfully reported to API');
-    return await response.json();
+    // Forward match data to external services only
+    await notifyOtherServices(matchData);
+    console.log('✅ Match results processing completed');
   } catch (error) {
-    console.error('Failed to report match results to API:', error);
-    // Don't throw - we don't want to break the game flow if API call fails
+    console.error('❌ Failed to process match results:', error.message);
   }
 }

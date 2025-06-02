@@ -214,9 +214,18 @@ export async function endGame(room, roomId) {
     console.log(`Match Duration: ${matchData.matchDuration}ms`);
     console.log('='.repeat(60));
     
-    // Report to API (async, don't wait for completion)
+    // Display API packet format for match results
+    console.log('MATCH RESULTS API PACKET:');
+    console.log(JSON.stringify({
+      status: 'success',
+      message: 'Match completed successfully',
+      data: matchData
+    }, null, 2));
+    console.log('='.repeat(60));
+    
+    // Report to external services (async, don't wait for completion)
     reportMatchResultsToAPI(matchData).catch(err => {
-      console.error('Failed to report match results to API:', err);
+      console.error('Failed to report match results to external services:', err.message);
     });
     
     // Enhanced client message (existing functionality)
