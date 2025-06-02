@@ -99,8 +99,6 @@ class gameMap {
     }
 
     gameStateHandler(player1, player2) {
-        console.log("state playerscore 1 = ", player1.getPlayerScore);
-        console.log("state playerscore 2 = ", player2.getPlayerScore);
         if (player1.getPlayerScore > 10 && player2.getPlayerScore < player1.getPlayerScore) {
             player1.setPlayerWinner = true;
             player2.setPlayerWinner = false;
@@ -155,7 +153,6 @@ class gameMap {
                     resolve();
                 }
             };
-
             requestAnimationFrame(updateDof);
         });
     }
