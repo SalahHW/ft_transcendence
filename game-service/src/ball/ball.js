@@ -6,7 +6,7 @@ class Ball {
         this.position = new BABYLON.Vector3(0, -2, 0);
         this.velocity = new BABYLON.Vector3(0, 0, 0);
         this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
-        this.radius = 1;
+        this.radius = 0.75;
         this.rebounds = 0;
         this.wasHitByPlayer = undefined;
         this.isRespawning = false;
