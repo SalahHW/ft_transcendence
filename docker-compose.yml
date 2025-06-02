@@ -4,7 +4,7 @@ services:
     container_name: nginx
     build: ./nginx/
     ports:
-      - "80:80"
+      - "8443:443"
     networks:
       - transcendence
 
@@ -34,15 +34,6 @@ services:
     env_file:
       - ./.env
       - ./blockchain-service/.env
-    networks:
-      - transcendence
-
-  game:
-    container_name: game
-    build: ./game-service
-    env_file:
-      - ./.env
-      - ./game-service/.env
     networks:
       - transcendence
 
