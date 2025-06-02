@@ -1,5 +1,5 @@
-module.exports = async (fastify, opts) => {
-    const contract = fastify.masterContract
+export default async function (fastify) {
+    const contract = fastify.masterContract;
 
     fastify.get('/player/:name', {
         schema: {
@@ -7,21 +7,28 @@ module.exports = async (fastify, opts) => {
                 type: 'object',
                 required: ['name'],
                 properties: {
-                    name: { type: 'string' }
-                }
+                    name: { type: 'string' },
+                },
+            },
+        },
+        handler: async (request, reply) => {
+            if (!contract) {
+                return reply
+                    .status(503)
+                    .send({ error: 'Contract not initialized' });
             }
-        }
-    }, async (request, reply) => {
-        if (!contract) {
-            return reply.status(503).send({ error: 'Contract not initialized' });
-        }
 
-        try {
-            const player = await contract.getPlayerAddress(request.params.name)
-            reply.send({ success: true, player })
-        } catch (error) {
-            request.log.error(error)
-            reply.status(500).send({ success: false, error: error.message })
-        }
-    })
+            try {
+                const player = await contract.getPlayerAddress(
+                    request.params.name
+                );
+                reply.send({ success: true, player });
+            } catch (error) {
+                request.log.error(error);
+                reply
+                    .status(500)
+                    .send({ success: false, error: error.message });
+            }
+        },
+    });
 }

@@ -1,7 +1,7 @@
-const bigIntToString = require("../utils/bigIntToString");
+import bigIntToString from '../utils/bigIntToString.js';
 
-module.exports = async (fastify, opts) => {
-    const contract = fastify.masterContract
+export default async function (fastify) {
+    const contract = fastify.masterContract;
 
     fastify.get('/match/winner/:address', {
         schema: {
@@ -9,21 +9,28 @@ module.exports = async (fastify, opts) => {
                 type: 'object',
                 required: ['address'],
                 properties: {
-                    address: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' }
-                }
+                    address: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' },
+                },
+            },
+        },
+        handler: async (request, reply) => {
+            if (!contract) {
+                return reply
+                    .status(503)
+                    .send({ error: 'Contract not initialized' });
             }
-        }
-    }, async (request, reply) => {
-        if (!contract) {
-            return reply.status(503).send({ error: 'Contract not initialized' });
-        }
 
-        try {
-            const matches = await contract.getMatchesByWinner(request.params.address)
-            reply.send(bigIntToString({ success: true, matches }))
-        } catch (error) {
-            request.log.error(error)
-            reply.status(500).send({ success: false, error: error.message })
-        }
-    })
+            try {
+                const matches = await contract.getMatchesByWinner(
+                    request.params.address
+                );
+                reply.send(bigIntToString({ success: true, matches }));
+            } catch (error) {
+                request.log.error(error);
+                reply
+                    .status(500)
+                    .send({ success: false, error: error.message });
+            }
+        },
+    });
 }
