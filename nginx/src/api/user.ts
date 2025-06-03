@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:41:03 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/03 15:18:38 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/03 15:35:08 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -212,7 +212,8 @@ export default class UsersApi {
 	 * @param username - The username of the user to register
 	 * @param password - The password of the user to register
 	 * @param email - The email of the user to register
-	 * @returns A promise that resolves to the registered user
+	 * @param walletAddress - The wallet address of the user to register
+	* @returns A promise that resolves to the registered user
 	 */
 	async register(username: string, password: string, email: string, walletAddress: string): Promise<User> {
 		const response = await fetch(`${this._host}${this._registerPath}`, {
@@ -220,7 +221,7 @@ export default class UsersApi {
 			headers: {
 				"Content-Type": "application/json"
 			},
-			body: JSON.stringify({ username, email, password, walletAddress })
+			body: JSON.stringify({ username, password, email, walletAddress })
 		});
 		const responseData = await response.json();
 		if (response.status === 201)
