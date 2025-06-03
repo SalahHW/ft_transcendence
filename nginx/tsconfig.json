@@ -9,6 +9,7 @@
         "noUnusedLocals": true, // signale les variables non utilisées
         "noUnusedParameters": true, // signale les paramètres non utilisés
         "forceConsistentCasingInFileNames": true, // assure une casse(=>MAJ/min) cohérente
+		"skipLibCheck": true, // ignore les erreurs de type dans les fichiers de déclaration
 		"lib": ["dom", "dom.iterable", "es2019"],
 	},
 	"include": [
