@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:41:03 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/26 20:41:05 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/03 15:12:08 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -92,7 +92,7 @@ export default class UsersApi {
 		const responseData = await response.json();
 		if (response.status === 200)
 			return responseData;
-		else if (response.status === 404)
+		else if (response.status === 401)
 			return null as unknown as User;
 		else
 			throw new Error(`failed to get current user:\n${JSON.stringify(responseData, null, 2)}`);
