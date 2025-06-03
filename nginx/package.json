@@ -9,9 +9,8 @@
   "tw-build": "npx @tailwindcss/cli -i ./src/style/input.css -o ./public/style/style.css",
   "tw-watch": "npx @tailwindcss/cli -i ./src/style/input.css -o ./public/style/style.css --watch"
   },
-  "dependencies": {},
-  "devDependencies": {
-  "tailwindcss": "^4.0.14",
-  "typescript": "5.8.2"
+  "dependencies": {
+    "tailwindcss": "^4.1.8",
+    "typescript": "^5.8.3"
   }
 }
