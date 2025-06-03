@@ -1,7 +1,5 @@
 .env
 
-./database
-
 .dockerignore
 Dockerfile
 
