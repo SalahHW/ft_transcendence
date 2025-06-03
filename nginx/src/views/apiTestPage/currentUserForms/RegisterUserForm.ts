@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:42:38 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/28 16:14:51 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/03 15:15:33 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,6 +41,11 @@ export default class RegisterUserForm {
 					<input type="password" id="register-user-form-password" class="${COMMON_CLASSES.input}">
 				</div>
 
+				<div>
+					<label class="${COMMON_CLASSES.label}">Wallet Address (required)</label>
+					<input type="text" id="register-user-form-wallet" class="${COMMON_CLASSES.input}" placeholder="0x...">
+				</div>
+
 				${buttonHTML({
 					id: "register-user-form-register",
 					type: "submit",
@@ -61,14 +66,20 @@ export default class RegisterUserForm {
 			const usernameInput = document.getElementById("register-user-form-username") as HTMLInputElement;
 			const passwordInput = document.getElementById("register-user-form-password") as HTMLInputElement;
 			const emailInput = document.getElementById("register-user-form-email") as HTMLInputElement;
+			const walletInput = document.getElementById("register-user-form-wallet") as HTMLInputElement;
 
-			if (!usernameInput.value || !passwordInput.value || !emailInput.value) {
-				console.warn("Please provide username, email and password");
+			if (!usernameInput.value || !passwordInput.value || !emailInput.value || !walletInput.value) {
+				console.warn("Please provide username, email, password and wallet address");
 				return;
 			}
 
 			try {
-				const response = await this._userService.register(usernameInput.value, emailInput.value, passwordInput.value);
+				const response = await this._userService.register(
+					usernameInput.value,
+					emailInput.value,
+					passwordInput.value,
+					walletInput.value
+				);
 				console.log(response);
 			}
 			catch (error) {

@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:41:03 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/03 15:12:08 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/03 15:18:38 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -214,13 +214,13 @@ export default class UsersApi {
 	 * @param email - The email of the user to register
 	 * @returns A promise that resolves to the registered user
 	 */
-	async register(username: string, password: string, email: string): Promise<User> {
+	async register(username: string, password: string, email: string, walletAddress: string): Promise<User> {
 		const response = await fetch(`${this._host}${this._registerPath}`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json"
 			},
-			body: JSON.stringify({ username, email, password })
+			body: JSON.stringify({ username, email, password, walletAddress })
 		});
 		const responseData = await response.json();
 		if (response.status === 201)
