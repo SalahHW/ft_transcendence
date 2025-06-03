@@ -2,14 +2,19 @@ import { database } from "./database.js";
 import { translateSqliteError } from "./errors/translateSqliteError.js";
 
 export const createUser = async (user) => {
-  const { username, password, email } = user;
+  const { username, password, email, wallet } = user;
 
   const query = `
-  INSERT INTO users (username, password, email)
-  VALUES (?, ?, ?);`;
+  INSERT INTO users (username, password, email, wallet)
+  VALUES (?, ?, ?, ?);`;
 
   try {
-    const result = await database.run(query, [username, password, email]);
+    const result = await database.run(query, [
+      username,
+      password,
+      email,
+      wallet,
+    ]);
     return {
       id: result.lastID,
       username,
@@ -62,16 +67,23 @@ export const readAllUsers = async () => {
 };
 
 export const updateUser = async (id, newUser) => {
-  const { username, password, email } = newUser;
+  const { username, password, email, wallet } = newUser;
   const query = `
   UPDATE users
   SET username = ?,
   password = ?,
-  email = ?
+  email = ?,
+  wallet = ?
   WHERE id = ?`;
 
   try {
-    const result = await database.run(query, [username, password, email, id]);
+    const result = await database.run(query, [
+      username,
+      password,
+      email,
+      wallet,
+      id,
+    ]);
     return result.changes;
   } catch (error) {
     throw translateSqliteError(error);
@@ -113,6 +125,20 @@ export const emailExists = async (email) => {
   LIMIT 1`;
   try {
     const user = await database.get(query, [email.toLowerCase()]);
+    return !!user;
+  } catch (error) {
+    throw translateSqliteError(error);
+  }
+};
+
+export const walletExists = async (wallet) => {
+  const query = `
+    SELECT 1
+    FROM users
+    WHERE wallet = ?
+    LIMIT 1`;
+  try {
+    const user = await database.get(query, [wallet]);
     return !!user;
   } catch (error) {
     throw translateSqliteError(error);

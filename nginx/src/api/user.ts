@@ -92,7 +92,7 @@ export default class UsersApi {
 		const responseData = await response.json();
 		if (response.status === 200)
 			return responseData;
-		else if (response.status === 404)
+		else if (response.status === 401)
 			return null as unknown as User;
 		else
 			throw new Error(`failed to get current user:\n${JSON.stringify(responseData, null, 2)}`);
@@ -214,7 +214,7 @@ export default class UsersApi {
 	 * @param email - The email of the user to register
 	 * @returns A promise that resolves to the registered user
 	 */
-	async register(username: string, password: string, email: string): Promise<User> {
+	async register(username: string, email: string, password: string): Promise<User> {
 		const response = await fetch(`${this._host}${this._registerPath}`, {
 			method: "POST",
 			headers: {
