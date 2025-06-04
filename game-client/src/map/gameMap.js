@@ -26,15 +26,19 @@ class gameMap {
         this.setUpLight();
     }
     setUpLight() {
-        this.light = new BABYLON.DirectionalLight("light",
-            new BABYLON.Vector3(0, -1, 0),
+        // Main directional light coming from above to illuminate the playing field
+        this.light = new BABYLON.DirectionalLight("mainLight",
+            new BABYLON.Vector3(0, -1, 0), // Pointing straight down
             this.scene);
-        this.light.position = new BABYLON.Vector3(-80, 80, 0);
-        this.light.intensity = 0.5;
-        const ambient = new BABYLON.HemisphericLight("ambient",
-            new BABYLON.Vector3(0, 100, 0), // From sky
+        this.light.position = new BABYLON.Vector3(0, 100, 0); // Positioned above the field
+        this.light.intensity = 0.35; // Strong enough to see everything clearly
+        
+        // Soft ambient light for overall scene visibility
+        const ambient = new BABYLON.HemisphericLight("ambientLight",
+            new BABYLON.Vector3(0, 1, 0), // From above
             this.scene);
-        ambient.intensity = 0.3;
+        ambient.intensity = 0.5; // Gentle fill light
+        ambient.diffuse = new BABYLON.Color3(0.9, 0.9, 1); // Slightly cool tone
     }
     setUpEngine() {
         this.engine = new BABYLON.Engine(this.canvas);
