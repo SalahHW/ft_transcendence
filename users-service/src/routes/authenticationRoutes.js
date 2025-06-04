@@ -16,10 +16,20 @@ export default async function authenticationRoutes(fastify) {
   fastify.route({
     method: "GET",
     url: "/me",
-    // preHandler: [fastify.verifyToken],
     handler: async (request, reply) => {
-      // return { user: request.user };
-      return reply.code(404).send({});
+      const token = request.cookies?.token;
+      if (!token) {
+        return reply
+          .code(401)
+          .send({ error: "Authentication token is missing" });
+      }
+
+      const verificationResult = await request.server.verifyToken(token);
+      if (!verificationResult.valid) {
+        return reply.code(401).send({ error: verificationResult.error });
+      }
+
+      return { user: verificationResult.decoded };
     },
   });
 }

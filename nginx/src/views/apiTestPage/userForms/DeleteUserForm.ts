@@ -1,4 +1,6 @@
-import UsersApi from "../../api/user.js";
+import UsersApi from "../../../api/user.js";
+import { buttonHTML } from "../../../components/button.js";
+import { COMMON_CLASSES } from "../../../style/tailwindClasses.js";
 
 export default class DeleteUserForm {
 	private _container: HTMLElement;
@@ -13,15 +15,16 @@ export default class DeleteUserForm {
 
 	render(): void {
 		this._container.innerHTML = /* HTML */ `
-			<form id="delete-user-form" class="space-y-4">
+			<form id="delete-user-form" class="${COMMON_CLASSES.form}">
 				<div>
-					<label class="block text-sm font-medium text-gray-700">ID</label>
-					<input type="number" id="deleteform-user-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+					<label class="${COMMON_CLASSES.label}">ID</label>
+					<input type="number" id="deleteform-user-id" class="${COMMON_CLASSES.input}">
 				</div>
 
-				<button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-					Delete User
-				</button>
+				${buttonHTML({
+					type: "submit",
+					label: "Delete User"
+				})}
 			</form>
 		`;
 
@@ -37,7 +40,7 @@ export default class DeleteUserForm {
 			const idInput = document.getElementById("deleteform-user-id") as HTMLInputElement;
 
 			if (!idInput.value) {
-				console.log("Please provide an id");
+				console.warn("Please provide an id");
 				return;
 			}
 
@@ -49,9 +52,9 @@ export default class DeleteUserForm {
 			}
 			catch (error) {
 				if (error instanceof Error)
-					console.log(error.message);
+					console.error(error.message);
 				else
-					console.log(error);
+					console.error(error);
 			}
 		});
 	}

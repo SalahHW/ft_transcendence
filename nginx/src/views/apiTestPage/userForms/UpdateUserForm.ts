@@ -1,4 +1,6 @@
-import UsersApi, { User } from "../../api/user.js";
+import UsersApi, { User } from "../../../api/user.js";
+import { buttonHTML } from "../../../components/button.js";
+import { COMMON_CLASSES } from "../../../style/tailwindClasses.js";
 
 export default class UpdateUserForm {
 	private _container: HTMLElement;
@@ -13,25 +15,26 @@ export default class UpdateUserForm {
 
 	render(): void {
 		this._container.innerHTML = /* HTML */ `
-			<form id="update-user-form" class="space-y-4">
+			<form id="update-user-form" class="${COMMON_CLASSES.form}">
 				<div>
-					<label class="block text-sm font-medium text-gray-700">User ID (required)</label>
-					<input type="number" id="updateform-user-id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+					<label class="${COMMON_CLASSES.label}">User ID (required)</label>
+					<input type="number" id="updateform-user-id" class="${COMMON_CLASSES.input}">
 				</div>
 
 				<div>
-					<label class="block text-sm font-medium text-gray-700">New Name</label>
-					<input type="text" id="updateform-user-name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+					<label class="${COMMON_CLASSES.label}">New Name</label>
+					<input type="text" id="updateform-user-name" class="${COMMON_CLASSES.input}">
 				</div>
 
 				<div>
-					<label class="block text-sm font-medium text-gray-700">New Email</label>
-					<input type="email" id="updateform-user-email" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+					<label class="${COMMON_CLASSES.label}">New Email</label>
+					<input type="email" id="updateform-user-email" class="${COMMON_CLASSES.input}">
 				</div>
 
-				<button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-					Update User
-				</button>
+				${buttonHTML({
+					type: "submit",
+					label: "Update User"
+				})}
 			</form>
 		`;
 
@@ -49,12 +52,12 @@ export default class UpdateUserForm {
 			const emailInput = document.getElementById("updateform-user-email") as HTMLInputElement;
 
 			if (!idInput.value) {
-				console.log("Please provide a user ID");
+				console.warn("Please provide a user ID");
 				return;
 			}
 
 			if (!nameInput.value && !emailInput.value) {
-				console.log("Please provide at least one field to update (name or email)");
+				console.warn("Please provide at least one field to update (name or email)");
 				return;
 			}
 
@@ -76,9 +79,9 @@ export default class UpdateUserForm {
 			}
 			catch (error) {
 				if (error instanceof Error)
-					console.log(error.message);
+					console.error(error.message);
 				else
-					console.log(error);
+					console.error(error);
 			}
 		});
 	}

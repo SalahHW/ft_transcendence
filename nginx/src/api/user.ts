@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   user.ts                                            :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/05/26 20:41:03 by edelarbr          #+#    #+#             */
+/*   Updated: 2025/05/26 20:41:05 by edelarbr         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 /**
  * Enum for user roles
 */
@@ -57,7 +69,6 @@ export default class UsersApi {
 		const response = await fetch(`${this._usersBaseUrl}`, {
 			method: "POST",
 			headers: {
-				"Authorization": `Bearer CONNECTED_USER_TOKEN`,
 				"Content-Type": "application/json"
 			},
 			body: JSON.stringify(user)
@@ -81,7 +92,7 @@ export default class UsersApi {
 		const responseData = await response.json();
 		if (response.status === 200)
 			return responseData;
-		else if (response.status === 404)
+		else if (response.status === 401)
 			return null as unknown as User;
 		else
 			throw new Error(`failed to get current user:\n${JSON.stringify(responseData, null, 2)}`);
@@ -109,11 +120,10 @@ export default class UsersApi {
 	 * @param user - The updated user object
 	 * @returns A promise that resolves to the updated user
 	 */
-	async updateUser(id:number, user: User): Promise<User> {
+	async updateUser(id: number, user: User): Promise<User> {
 		const response = await fetch(`${this._usersBaseUrl}/${id}`, {
 			method: "PUT",
 			headers: {
-				"Authorization": `Bearer CONNECTED_USER_TOKEN`,
 				"Content-Type": "application/json"
 			},
 			body: JSON.stringify(user)
@@ -166,7 +176,9 @@ export default class UsersApi {
 	async login(username: string, password: string): Promise<User> {
 		const response = await fetch(`${this._host}${this._loginPath}`, {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: {
+				"Content-Type": "application/json"
+			},
 			body: JSON.stringify({ username, password })
 		});
 		const responseData = await response.json();
@@ -179,28 +191,35 @@ export default class UsersApi {
 	/**
 	 * Logs out the current user
 	 * @returns A promise that resolves to the logged out user
-	 */
-	async logout(): Promise<void> {
-		const response = await fetch(`${this._usersBaseUrl}/logout`, {
-			method: "POST"
-		});
-		const responseData = await response.json();
-		if (response.status === 200)
-			return;
-		else
-			throw new Error(`failed to logout:\n${JSON.stringify(responseData, null, 2)}`);
-	}
+	*/
+
+	// async logout(): Promise<void> {
+	// 	const response = await fetch(`${this._host}${this._logoutPath}`, {
+	// 		method: "POST",
+	// 		headers: {
+	// 			"Content-Type": "application/json"
+	// 		},
+	// 		});
+	// 		const responseData = await response.json();
+	// 		if (response.status === 200)
+	// 			return;
+	// 		else
+	// 			throw new Error(`failed to logout:\n${JSON.stringify(responseData, null, 2)}`);
+	// 	}
 
 	/**
 	 * Registers a new user
 	 * @param username - The username of the user to register
 	 * @param password - The password of the user to register
+	 * @param email - The email of the user to register
 	 * @returns A promise that resolves to the registered user
 	 */
 	async register(username: string, email: string, password: string): Promise<User> {
 		const response = await fetch(`${this._host}${this._registerPath}`, {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: {
+				"Content-Type": "application/json"
+			},
 			body: JSON.stringify({ username, email, password })
 		});
 		const responseData = await response.json();

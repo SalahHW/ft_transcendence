@@ -1,6 +1,19 @@
-import Tabs from "../components/tabs.js";
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   APITestPage.ts                                     :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/05/27 19:14:29 by edelarbr          #+#    #+#             */
+/*   Updated: 2025/05/28 16:14:51 by edelarbr         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
 
-export default class ApiTestPage {
+import Tabs from "./components/tabs.js";
+import { COMMON_CLASSES } from "../../style/tailwindClasses.js";
+
+export default class APITestPage {
 	private _container: HTMLElement;
 
 	constructor(containerId: string) {
@@ -11,27 +24,27 @@ export default class ApiTestPage {
 
 	render(): void {
 		this._container.innerHTML = /* HTML */ `
-		<div class="container mx-auto p-4 h-[90vh] flex flex-col">
-			<h1 class="text-3xl font-bold mb-4 text-center text-gradient bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent drop-shadow">API Test Page</h1>
-			<div class="flex flex-col md:flex-row gap-6 flex-1">
-				<!-- First card -->
-				<div class="flex-1 bg-white rounded-lg shadow-md p-6 border border-gray-200 min-h-[50vh]">
-					<div class="w-full h-full flex flex-col">
-						<div class="flex-grow">
-							<div id="left-card-content" class="h-full"></div>
+			<div class="${COMMON_CLASSES.pageContainer}">
+				<h1 class="text-3xl font-bold mb-4 text-center text-gradient bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent drop-shadow">API Test Page</h1>
+				<div class="flex flex-col md:flex-row gap-6 flex-1">
+					<!-- First card -->
+					<div class="${COMMON_CLASSES.card}">
+						<div class="w-full h-full flex flex-col">
+							<div class="flex-grow">
+								<div id="left-card-content" class="h-full"></div>
+							</div>
 						</div>
 					</div>
-				</div>
-				<!-- Second card -->
-				<div class="flex-1 bg-white rounded-lg shadow-md p-6 border border-gray-200 min-h-[50vh]">
-					<div class="w-full h-full flex flex-col">
-						<div class="flex-grow">
-							<div id="right-card-content" class="h-full"></div>
+					<!-- Second card -->
+					<div class="${COMMON_CLASSES.card}">
+						<div class="w-full h-full flex flex-col">
+							<div class="flex-grow">
+								<div id="right-card-content" class="h-full"></div>
+							</div>
 						</div>
 					</div>
 				</div>
 			</div>
-		</div>
 		`;
 		this._renderLeftCardContent();
 		this._renderRightCardContent();
@@ -165,7 +178,7 @@ export default class ApiTestPage {
 	}
 
 	private _renderRightCardContent(): void {
-		import('../components/customTerminal.js').then((module) => {
+		import('./components/customTerminal.js').then((module) => {
 			new module.default("right-card-content");
 		});
 	}

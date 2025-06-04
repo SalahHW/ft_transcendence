@@ -1,5 +1,3 @@
-import fp from "fastify-plugin";
-
 const jwtServiceUrl = "http://jwt";
 const jwtServicePort = 3005;
 
@@ -7,7 +5,7 @@ const baseUrl = `${jwtServiceUrl}:${jwtServicePort}`;
 const signUrl = `${baseUrl}/sign`;
 const verifyUrl = `${baseUrl}/verify`;
 
-async function signToken(payload) {
+export async function signToken(payload) {
   try {
     const response = await fetch(signUrl, {
       method: "POST",
@@ -24,7 +22,7 @@ async function signToken(payload) {
   }
 }
 
-async function verifyToken(token) {
+export async function verifyToken(token) {
   try {
     const response = await fetch(verifyUrl, {
       method: "POST",
@@ -34,17 +32,15 @@ async function verifyToken(token) {
     });
 
     if (!response.ok) {
-      throw new Error("Invalid or expired token");
+      return { valid: false, error: "Invalid or expired token" };
     }
 
     const data = await response.json();
-    return data.decoded;
+    return { valid: true, decoded: data.decoded };
   } catch (err) {
-    throw new Error("Invalid or expired token");
+    return {
+      valid: false,
+      error: "An error occurred while verifying the token",
+    };
   }
 }
-
-export default fp(async function (fastify, options) {
-  fastify.decorate("signToken", signToken);
-  fastify.decorate("verifyToken", verifyToken);
-});
