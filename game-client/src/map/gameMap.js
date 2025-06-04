@@ -18,6 +18,7 @@ class gameMap {
         this.pipeline = undefined;
     }
     createMap () {
+        // TODO: renderCanvas -> app-container
         this.canvas = document.getElementById('renderCanvas');
         this.setUpEngine();
         this.setUpScene();
