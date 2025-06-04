@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   router.ts                                          :+:      :+:    :+:   */
+/*   Router.ts                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:40:51 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/28 16:29:39 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/04 15:01:59 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,6 +39,20 @@ export default class Router {
 				if (!this.cache)
 					this.cache = new APITestPage("app-container");
 				this.cache.render();
+			}
+		},
+		{
+			path: "/1v1",
+			handler: function() {
+				console.log("1v1 page handler called");
+				// TODO: Implement 1v1 page by adding your function
+			}
+		},
+		{
+			path: "/tournament",
+			handler: function() {
+				console.log("Tournament page handler called");
+				// TODO: Implement tournament page by adding your function
 			}
 		}
 	];

@@ -6,12 +6,14 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/27 19:14:29 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/28 16:14:51 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/04 15:15:34 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 import Tabs from "./components/tabs.js";
 import { COMMON_CLASSES } from "../../style/tailwindClasses.js";
+import { buttonHTML } from "../../components/button.js";
+import Router from "../../router/Router.js";
 
 export default class APITestPage {
 	private _container: HTMLElement;
@@ -52,7 +54,7 @@ export default class APITestPage {
 
 	private _renderLeftCardContent(): void {
 		const tabs = new Tabs(
-			"left-card-content", ["User API", "Match API", "Current User API"]
+			"left-card-content", ["User API", "Match API", "Current User API", "Game API"]
 		);
 
 		const userContainer = document.createElement('div');
@@ -72,6 +74,12 @@ export default class APITestPage {
 		tabs.setTabContent(2, currentUserContainer);
 
 		this._renderCurrentUserForms();
+
+		const gameContainer = document.createElement('div');
+		gameContainer.id = "game-forms-container";
+		tabs.setTabContent(3, gameContainer);
+
+		this._renderGameForms();
 	}
 
 	private _renderUserForms(): void {
@@ -176,6 +184,39 @@ export default class APITestPage {
 			registerUserForm.render();
 		});
 	}
+
+	private _renderGameForms(): void {
+		const router = Router.getInstance();
+		const tabs = new Tabs("game-forms-container", ["1v1", "Tournament",]);
+		const oneVsOneContainer = document.createElement('div');
+		oneVsOneContainer.id = "one-vs-one-form-container";
+		tabs.setTabContent(0, oneVsOneContainer);
+
+		oneVsOneContainer.innerHTML = /* HTML */ `
+			<div class="flex flex-col items-center justify-center h-full">
+				${buttonHTML({id: "one-vs-one-button", label: "Start 1v1 Game", type: "button",})}
+			</div>
+		`;
+
+		document.getElementById("one-vs-one-button")?.addEventListener("click", (event) => {
+			event.preventDefault();
+			router.navigate("/1v1");
+		});
+
+		const tournamentContainer = document.createElement('div');
+		tournamentContainer.id = "tournament-form-container";
+		tabs.setTabContent(1, tournamentContainer);
+
+		tournamentContainer.innerHTML = /* HTML */ `
+			<div class="flex flex-col items-center justify-center h-full">
+				${buttonHTML({id: "tournament-button", label: "Start Tournament", type: "button",})}
+			</div>
+		`;
+
+		document.getElementById("tournament-button")?.addEventListener("click", (event) => {
+			event.preventDefault();
+			router.navigate("/tournament");
+		});}
 
 	private _renderRightCardContent(): void {
 		import('./components/customTerminal.js').then((module) => {
