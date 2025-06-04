@@ -79,7 +79,9 @@ export function startGameLoop() {
                 respawnTime: room.ball.respawnTime,
                 wasHitByPlayer: room.ball.wasHitByPlayer,
                 speed: room.ball.speed,
-                hasValidPosition: true
+                hasValidPosition: true,
+                currentGlowColor: { r: room.ball.currentGlowColor.r, g: room.ball.currentGlowColor.g, b: room.ball.currentGlowColor.b },
+                shouldGlow: room.ball.shouldGlow
               };
 
               broadcastToRoom(roomId, {
@@ -99,7 +101,7 @@ export function startGameLoop() {
                 room.ball.setFirstVelocity();
               }
               room.ball.hasValidPosition = true;
-              room.ball.speed = room.ball.rebounds < 5 ? 25 : 37.5;
+              room.ball.handleAcceleration();
             }
           }
 
@@ -110,7 +112,7 @@ export function startGameLoop() {
 
           // Send ball updates
           if (now - lastBroadcast >= 1000 / BROADCAST_FPS) {
-            const ballState = {
+            const ballState = room.ball ? {
               position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
               velocity: { x: room.ball.velocity.x, y: room.ball.velocity.y, z: room.ball.velocity.z },
               previousVelocity: { x: room.ball.previousVelocity.x, y: room.ball.previousVelocity.y, z: room.ball.previousVelocity.z },
@@ -119,7 +121,9 @@ export function startGameLoop() {
               respawnTime: room.ball.respawnTime,
               wasHitByPlayer: room.ball.wasHitByPlayer,
               speed: room.ball.speed,
-            };
+              currentGlowColor: { r: room.ball.currentGlowColor.r, g: room.ball.currentGlowColor.g, b: room.ball.currentGlowColor.b },
+              shouldGlow: room.ball.shouldGlow
+            } : null;
             broadcastToRoom(roomId, {
               type: 'ballUpdate',
               ballState,
@@ -156,6 +160,8 @@ export function startGameLoop() {
             respawnTime: room.ball.respawnTime,
             wasHitByPlayer: room.ball.wasHitByPlayer,
             speed: room.ball.speed,
+            currentGlowColor: { r: room.ball.currentGlowColor.r, g: room.ball.currentGlowColor.g, b: room.ball.currentGlowColor.b },
+            shouldGlow: room.ball.shouldGlow
           } : null;
           broadcastToRoom(roomId, {
             type: 'sync',

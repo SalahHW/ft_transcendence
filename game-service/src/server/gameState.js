@@ -126,7 +126,11 @@ export function sendBallUpdateForced(roomId) {
     respawnTime: room.ball.respawnTime,
     wasHitByPlayer: room.ball.wasHitByPlayer,
     speed: room.ball.speed,
-    hasValidPosition: true
+    hasValidPosition: true,
+    currentGlowColor: room.ball.currentGlowColor ? 
+      { r: room.ball.currentGlowColor.r, g: room.ball.currentGlowColor.g, b: room.ball.currentGlowColor.b } :
+      { r: 0, g: 0, b: 0 },
+    shouldGlow: room.ball.shouldGlow || false
   };
 
   console.log(`Sending initial ballUpdate for room ${roomId} at ${Date.now()}:`, ballState);

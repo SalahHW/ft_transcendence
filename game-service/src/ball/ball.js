@@ -18,6 +18,9 @@ class Ball {
         this.lastUpdateTime = Date.now();
         this.hasValidPosition = true;
         this.speed = 25;
+        this.currentGlowColor = new BABYLON.Color3(0, 0, 0);
+        this.shouldGlow = false;
+        this.lastSpeedTier = 0; // Track speed tier changes
     }
 
     init() {
@@ -31,6 +34,10 @@ class Ball {
         this.speed = 25;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
+        // Reset glow properties
+        this.currentGlowColor = new BABYLON.Color3(0, 0, 0);
+        this.shouldGlow = false;
+        this.lastSpeedTier = 0;
     }
 
     setFirstVelocity() {
@@ -66,8 +73,8 @@ class Ball {
                     this.setFirstVelocity();
                 }
                 this.hasValidPosition = true;
-                this.speed = this.rebounds < 5 ? 25 : 37.5;
-                console.log('Respawn complete:', { position: this.position, velocity: this.velocity });
+                this.handleAcceleration();
+                console.log('Respawn complete:', { position: this.position, velocity: this.velocity, speed: this.speed, rebounds: this.rebounds });
             }
             return;
         }
@@ -102,8 +109,27 @@ class Ball {
 
     handleAcceleration() {
         let speed;
-        if (this.rebounds < 5) speed = 25;
-        else speed = 37.5;
+        let glowColor = null;
+        
+        // New speed tiers based on rebounds with glowing effects
+        if (this.rebounds < 10) {
+            speed = 25; // Base speed
+            glowColor = new BABYLON.Color3(0, 0, 0); // No glow
+        } else if (this.rebounds >= 10 && this.rebounds < 20) {
+            speed = 37.5; // First speed boost
+            glowColor = new BABYLON.Color3(0.8, 0.4, 0); // Orange glow
+        } else if (this.rebounds >= 20) {
+            // Scale speed between 40-45 based on rebounds beyond 20
+            const extraRebounds = this.rebounds - 20;
+            const scalingFactor = Math.min(extraRebounds / 10, 1); // Scale over 10 rebounds
+            speed = 40 + (5 * scalingFactor); // Between 40-45
+            
+            // Transition from orange to red-white
+            const redIntensity = 1;
+            const greenIntensity = 0.2 + (0.6 * scalingFactor); // From orange to white-red
+            const blueIntensity = scalingFactor * 0.4; // Slight blue tint at max speed
+            glowColor = new BABYLON.Color3(redIntensity, greenIntensity, blueIntensity);
+        }
 
         const currentSpeed = this.velocity.length();
         if (currentSpeed > 0) {
@@ -113,6 +139,10 @@ class Ball {
         }
         this.previousVelocity.copyFrom(this.velocity);
         this.speed = speed;
+        
+        // Store glow information for client synchronization
+        this.currentGlowColor = glowColor;
+        this.shouldGlow = this.rebounds >= 10;
     }
 
     handlePaddleCollisions(paddle1Pos, paddle2Pos) {
@@ -127,7 +157,10 @@ class Ball {
         const overlapZ = Math.abs(dz) <= paddleHalfDepth + this.radius;
 
         if (overlapX && overlapZ) {
+            const previousSpeedTier = this.getSpeedTier(this.rebounds);
             this.rebounds++;
+            const newSpeedTier = this.getSpeedTier(this.rebounds);
+            
             this.wasHitByPlayer = isHittingPlayer2 ? this.player2.playerId : this.player1.playerId;
             const isSideHit = Math.abs(dz) > paddleHalfDepth;
             let speed = this.velocity.length();
@@ -149,7 +182,15 @@ class Ball {
                 this.position.x += sign * ((paddleHalfWidth + this.radius) - Math.abs(dx) + 0.01);
             }
             this.previousVelocity.copyFrom(this.velocity);
-            this.speed = this.rebounds < 5 ? 25 : 37.5;
+            
+            // Update speed and glow based on new rebounds count
+            this.handleAcceleration();
+            
+            // Mark speed tier change for client notification
+            if (newSpeedTier !== previousSpeedTier) {
+                this.speedTierChanged = true;
+                this.lastSpeedTier = newSpeedTier;
+            }
         }
     }
 
@@ -193,6 +234,12 @@ class Ball {
             this.currentGlowColor = targetColor;
             this.isGlowing = true;
         });
+    }
+
+    getSpeedTier(rebounds) {
+        if (rebounds < 10) return 0;
+        else if (rebounds < 20) return 1;
+        else return 2;
     }
 
     updateClient(scene) {
