@@ -63,13 +63,17 @@ export class webSocketGameServer {
             room.ball.init();
             const ballState = {
                 position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
-                velocity: room.ball.velocity,
-                previousVelocity: room.ball.previousVelocity,
+                velocity: { x: room.ball.velocity.x, y: room.ball.velocity.y, z: room.ball.velocity.z },
+                previousVelocity: { x: room.ball.previousVelocity.x, y: room.ball.previousVelocity.y, z: room.ball.previousVelocity.z },
                 rebounds: room.ball.rebounds,
                 isRespawning: room.ball.isRespawning,
                 respawnTime: room.ball.respawnTime,
                 wasHitByPlayer: room.ball.wasHitByPlayer,
                 speed: room.ball.speed,
+                currentGlowColor: room.ball.currentGlowColor ? 
+                  { r: room.ball.currentGlowColor.r, g: room.ball.currentGlowColor.g, b: room.ball.currentGlowColor.b } :
+                  { r: 0, g: 0, b: 0 },
+                shouldGlow: room.ball.shouldGlow || false
             };
             this.broadcastToRoom(assignedRoom, {
                 type: 'ballUpdate',
@@ -203,13 +207,17 @@ export class webSocketGameServer {
             room.ball.init();
             const ballState = {
                 position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
-                velocity: room.ball.velocity,
-                previousVelocity: room.ball.previousVelocity,
+                velocity: { x: room.ball.velocity.x, y: room.ball.velocity.y, z: room.ball.velocity.z },
+                previousVelocity: { x: room.ball.previousVelocity.x, y: room.ball.previousVelocity.y, z: room.ball.previousVelocity.z },
                 rebounds: room.ball.rebounds,
                 isRespawning: room.ball.isRespawning,
                 respawnTime: room.ball.respawnTime,
                 wasHitByPlayer: room.ball.wasHitByPlayer,
                 speed: room.ball.speed,
+                currentGlowColor: room.ball.currentGlowColor ? 
+                  { r: room.ball.currentGlowColor.r, g: room.ball.currentGlowColor.g, b: room.ball.currentGlowColor.b } :
+                  { r: 0, g: 0, b: 0 },
+                shouldGlow: room.ball.shouldGlow || false
             };
             if (ballState.isRespawning && ballState.respawnTime === 0 && ballState.position.y !== -2) {
                 console.error(`Invalid initial ball position: y=${ballState.position.y}, expected y=-2`);
@@ -284,13 +292,17 @@ export class webSocketGameServer {
                         });
                         const ballState = {
                             position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
-                            velocity: room.ball.velocity,
-                            previousVelocity: room.ball.previousVelocity,
+                            velocity: { x: room.ball.velocity.x, y: room.ball.velocity.y, z: room.ball.velocity.z },
+                            previousVelocity: { x: room.ball.previousVelocity.x, y: room.ball.previousVelocity.y, z: room.ball.previousVelocity.z },
                             rebounds: room.ball.rebounds,
                             isRespawning: room.ball.isRespawning,
                             respawnTime: room.ball.respawnTime,
                             wasHitByPlayer: room.ball.wasHitByPlayer,
                             speed: room.ball.speed,
+                            currentGlowColor: room.ball.currentGlowColor ? 
+                              { r: room.ball.currentGlowColor.r, g: room.ball.currentGlowColor.g, b: room.ball.currentGlowColor.b } :
+                              { r: 0, g: 0, b: 0 },
+                            shouldGlow: room.ball.shouldGlow || false
                         };
                         if (ballState.isRespawning && ballState.respawnTime === 0 && ballState.position.y !== -2) {
                             console.error(`Invalid score ball position: y=${ballState.position.y}, expected y=-2`);
@@ -320,6 +332,10 @@ export class webSocketGameServer {
                         respawnTime: room.ball.respawnTime,
                         wasHitByPlayer: room.ball.wasHitByPlayer,
                         speed: room.ball.speed,
+                        currentGlowColor: room.ball.currentGlowColor ? 
+                          { r: room.ball.currentGlowColor.r, g: room.ball.currentGlowColor.g, b: room.ball.currentGlowColor.b } :
+                          { r: 0, g: 0, b: 0 },
+                        shouldGlow: room.ball.shouldGlow || false
                     } : null;
                     this.broadcastToRoom(roomId, {
                         type: 'sync',
