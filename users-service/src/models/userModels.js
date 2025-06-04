@@ -28,7 +28,6 @@ export const createUser = async (user) => {
 export const createUserWithWalletOnly = async ({ username, wallet }) => {
   const email = `wallet_${wallet.slice(2, 10)}@example.com`;
 
-  // Vérifie que le username n'existe pas déjà
   const exists = await userExists(username);
   if (exists) {
     throw new Error("Username already taken");
