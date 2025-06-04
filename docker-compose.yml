@@ -45,6 +45,8 @@ services:
       - ./game-service/.env
     networks:
       - transcendence
+    ports:
+      - "5173:5173"
 
 networks:
   transcendence:
