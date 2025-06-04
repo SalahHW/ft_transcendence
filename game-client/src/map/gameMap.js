@@ -24,6 +24,7 @@ class gameMap {
         this.setUpPov();
         this.setUpDof();
         this.setUpLight();
+        this.createBlackBackground();
     }
     setUpLight() {
         // Main directional light coming from above to illuminate the playing field
@@ -81,6 +82,10 @@ class gameMap {
         skyboxMaterial.diffuseColor = new BABYLON.Color3(0, 0, 0);
         skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
         this.skyBox.material = skyboxMaterial;
+    }
+
+    createBlackBackground() {
+        this.scene.clearColor = new BABYLON.Color3(0, 0, 0);
     }
     createShadowCaster(ball, player1, player2) {
         this.shadowGenerator = new BABYLON.ShadowGenerator(4096, this.light);
