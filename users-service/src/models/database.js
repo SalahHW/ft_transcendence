@@ -19,6 +19,7 @@ export const initializeDatabase = async () => {
       password TEXT NOT NULL,
       email TEXT UNIQUE NOT NULL,
       wallet TEXT UNIQUE NOT NULL,
+      authenticationMethod TEXT NOT NULL DEFAULT 'credentials',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );`;
 

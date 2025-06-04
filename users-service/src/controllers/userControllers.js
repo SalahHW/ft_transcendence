@@ -11,8 +11,8 @@ export async function createUser(request, reply) {
     const usernameExists = await userModels.userExists(username);
     if (usernameExists)
       return reply.code(409).send({ error: "User already exists" });
-    
-    const emailLower = createEmail(email).toLowerCase(); 
+
+    const emailLower = createEmail(email).toLowerCase();
     const emailExists = await userModels.emailExists(emailLower);
     if (emailExists)
       return reply.code(409).send({ error: "Email already used" });
@@ -20,7 +20,7 @@ export async function createUser(request, reply) {
     const walletExists = await userModels.walletExists(wallet);
     if (walletExists)
       return reply.code(409).send({ error: "Wallet already used" });
-    
+
     const newUsername = createUsername(username);
     const hashedPassword = await createPassword(password);
     const newWallet = await createWallet(username, wallet);

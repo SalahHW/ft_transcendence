@@ -4,8 +4,14 @@ import plugins from "./plugins/index.js";
 import fastifyCookie from "@fastify/cookie";
 import { initializeDatabase } from "./models/database.js";
 import registerRoutes from "./routes/index.js";
+import fastifyCors from "@fastify/cors";
 
 const fastify = Fastify();
+
+await fastify.register(fastifyCors, {
+  origin: "https://elsalmajori.games", // autorise uniquement cette origine
+  credentials: true, // pour que les cookies passent
+});
 
 // Initialize the database
 try {

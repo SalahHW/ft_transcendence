@@ -5,8 +5,8 @@ export const createUser = async (user) => {
   const { username, password, email, wallet } = user;
 
   const query = `
-  INSERT INTO users (username, password, email, wallet)
-  VALUES (?, ?, ?, ?);`;
+  INSERT INTO users (username, password, email, wallet, authenticationMethod)
+  VALUES (?, ?, ?, ?, 'credentials');`;
 
   try {
     const result = await database.run(query, [
@@ -19,6 +19,33 @@ export const createUser = async (user) => {
       id: result.lastID,
       username,
       email,
+    };
+  } catch (error) {
+    throw translateSqliteError(error);
+  }
+};
+
+export const createUserWithWalletOnly = async ({ username, wallet }) => {
+  const email = `wallet_${wallet.slice(2, 10)}@example.com`;
+
+  // Vérifie que le username n'existe pas déjà
+  const exists = await userExists(username);
+  if (exists) {
+    throw new Error("Username already taken");
+  }
+
+  const query = `
+  INSERT INTO users (username, email, wallet, authenticationMethod)
+  VALUES (?, ?, ?, 'wallet');`;
+
+  try {
+    const result = await database.run(query, [username, email, wallet]);
+    return {
+      id: result.lastID,
+      username,
+      email,
+      wallet,
+      authenticationMethod: "wallet",
     };
   } catch (error) {
     throw translateSqliteError(error);
@@ -55,7 +82,7 @@ export const readUserByUsername = async (username) => {
 
 export const readAllUsers = async () => {
   const query = `
-  SELECT id, username, email
+  SELECT id, username, email, wallet, authenticationMethod
   FROM users`;
 
   try {
