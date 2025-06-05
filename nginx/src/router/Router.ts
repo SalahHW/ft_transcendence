@@ -74,4 +74,44 @@ export default class Router {
     window.history.replaceState({ path: "/" }, "", "/");
     this._executeHandler("/");
   }
+
+
+  public navigate(path: string, replaceState: boolean = false): boolean {
+    if (this._isValidRoute(path)) {
+      if (replaceState)
+        window.history.replaceState({ path }, "", path);
+      else
+        window.history.pushState({ path }, "", path);
+
+      this._executeHandler(path);
+      return true;
+    } else {
+      console.warn(`Route not found: ${path}`);
+      if (path !== "/") this._redirectToHome();
+      return false;
+    }
+  }
+
+  public getCurrentPath(): string {
+    return window.location.pathname;
+  }
+
+  private _handlePopState = (): void => {
+    const path = this.getCurrentPath();
+
+    if (!this._executeHandler(path)) {
+      console.warn(`Popstate: route not found: ${path}`);
+      if (path !== "/") {
+        this._redirectToHome();
+      }
+    }
+  };
+
+  public init(): void {
+    window.addEventListener("popstate", this._handlePopState);
+
+    const currentPath = this.getCurrentPath();
+    if (!this._isValidRoute(currentPath)) this.navigate("/", true);
+    else this.navigate(currentPath, true);
+  }
 }
