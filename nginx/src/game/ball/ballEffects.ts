@@ -1,7 +1,7 @@
 import * as BABYLON from '@babylonjs/core';
 
 // Modernized createScene function
-export const createScene = (engine, canvas) => {
+export const createScene = (engine: BABYLON.Engine, canvas: HTMLCanvasElement): BABYLON.Scene => {
     const scene = new BABYLON.Scene(engine);
 
     // Set up environment
@@ -44,12 +44,12 @@ export const createScene = (engine, canvas) => {
     groundMat.normalTexture = new BABYLON.Texture("./textures/map_assets/rockyGround_normal.png", scene);
     groundMat.metallicRoughnessTexture = new BABYLON.Texture("./textures/map_assets/rockyGround_metalRough.png", scene);
 
-    groundMat.baseTexture.uScale = 40.0;
-    groundMat.baseTexture.vScale = 40.0;
-    groundMat.normalTexture.uScale = 40.0;
-    groundMat.normalTexture.vScale = 40.0;
-    groundMat.metallicRoughnessTexture.uScale = 40.0;
-    groundMat.metallicRoughnessTexture.vScale = 40.0;
+    (groundMat.baseTexture as BABYLON.Texture).uScale = 40.0;
+    (groundMat.baseTexture as BABYLON.Texture).vScale = 40.0;
+    (groundMat.normalTexture as BABYLON.Texture).uScale = 40.0;
+    (groundMat.normalTexture as BABYLON.Texture).vScale = 40.0;
+    (groundMat.metallicRoughnessTexture as BABYLON.Texture).uScale = 40.0;
+    (groundMat.metallicRoughnessTexture as BABYLON.Texture).vScale = 40.0;
 
     ground.material = groundMat;
     ground.material.backFaceCulling = false;
@@ -69,6 +69,10 @@ export const createScene = (engine, canvas) => {
     pipeline.bloomKernel = 64;
     pipeline.bloomScale = 0.5;
 
+    const explode = (event: KeyboardEvent) => {
+        // Handle explosion logic here if needed
+    };
+
     document.addEventListener('keydown', explode);
 
     // Remove listener when scene is disposed
@@ -79,9 +83,13 @@ export const createScene = (engine, canvas) => {
     return scene;
 };
 
-export const createExplosion = (scene, position, options = {}) => {
-    BABYLON.ParticleHelper.CreateAsync("explosion", scene).then(particleSet => {
-        particleSet.systems.forEach(system => {
+interface ExplosionOptions {
+    [key: string]: any;
+}
+
+export const createExplosion = (scene: BABYLON.Scene, position: BABYLON.Vector3, options: ExplosionOptions = {}): void => {
+    BABYLON.ParticleHelper.CreateAsync("explosion", scene).then((particleSet: any) => {
+        particleSet.systems.forEach((system: any) => {
             system.emitter = position.clone();
             system.disposeOnStop = true;
 
@@ -103,4 +111,4 @@ export const createExplosion = (scene, position, options = {}) => {
 
         particleSet.start();
     });
-};
+}; 

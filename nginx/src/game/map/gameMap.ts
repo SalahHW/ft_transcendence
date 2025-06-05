@@ -1,10 +1,21 @@
 import * as BABYLON from '@babylonjs/core';
-import { playerPaddle } from '../player/player.js';
+import { playerPaddle } from '../player/player';
 import "@babylonjs/core/PostProcesses/depthOfFieldEffect";
 import "@babylonjs/core/PostProcesses/RenderPipeline/postProcessRenderPipelineManager";
 import "@babylonjs/core/Rendering/depthRenderer";
 
 class gameMap {
+    public engine: BABYLON.Engine | undefined;
+    public canvas: HTMLCanvasElement | undefined;
+    public scene: BABYLON.Scene | undefined;
+    public playground: BABYLON.Mesh | undefined;
+    public playgroundMaterial: BABYLON.StandardMaterial | undefined;
+    public globalPov: BABYLON.UniversalCamera | undefined;
+    public light: BABYLON.DirectionalLight | undefined;
+    public shadowGenerator: BABYLON.ShadowGenerator | undefined;
+    public skyBox: BABYLON.Mesh | undefined;
+    public pipeline: BABYLON.DefaultRenderingPipeline | undefined;
+
     constructor() {
         this.engine = undefined;
         this.canvas = undefined;
@@ -17,9 +28,10 @@ class gameMap {
         this.skyBox = undefined;
         this.pipeline = undefined;
     }
-    createMap () {
+
+    createMap(): void {
         // TODO: renderCanvas -> app-container
-        this.canvas = document.getElementById('renderCanvas');
+        this.canvas = document.getElementById('renderCanvas') as HTMLCanvasElement;
         this.setUpEngine();
         this.setUpScene();
         this.setUpPov();
@@ -27,7 +39,10 @@ class gameMap {
         this.setUpLight();
         this.createBlackBackground();
     }
-    setUpLight() {
+
+    setUpLight(): void {
+        if (!this.scene) return;
+        
         // Main directional light coming from above to illuminate the playing field
         this.light = new BABYLON.DirectionalLight("mainLight",
             new BABYLON.Vector3(0, -1, 0), // Pointing straight down
@@ -42,25 +57,38 @@ class gameMap {
         ambient.intensity = 0.5; // Gentle fill light
         ambient.diffuse = new BABYLON.Color3(0.9, 0.9, 1); // Slightly cool tone
     }
-    setUpEngine() {
+
+    setUpEngine(): void {
+        if (!this.canvas) return;
         this.engine = new BABYLON.Engine(this.canvas);
     }
-    setUpScene() {
+
+    setUpScene(): void {
+        if (!this.engine) return;
         this.scene = new BABYLON.Scene(this.engine);
     }
-    setUpPov() {
+
+    setUpPov(): void {
+        if (!this.scene) return;
+        
         this.globalPov = new BABYLON.UniversalCamera('pov',
             new BABYLON.Vector3(0, 1500, 0),
             this.scene);
         this.globalPov.setTarget(BABYLON.Vector3.Zero());
         this.disableCameraConstrols();
     }
-    disableCameraConstrols () {
+
+    disableCameraConstrols(): void {
+        if (!this.globalPov || !this.canvas) return;
+        
         this.globalPov.inputs.removeMouse();
         this.globalPov.inputs.removeByType("FreeCameraKeyboardMoveInput");
         this.globalPov.attachControl(this.canvas, false);
     }
-    setUpDof() {
+
+    setUpDof(): void {
+        if (!this.scene || !this.globalPov) return;
+        
         this.pipeline = new BABYLON.DefaultRenderingPipeline(
             "defaultPipeline",
             true,
@@ -71,10 +99,9 @@ class gameMap {
         this.pipeline.depthOfField.focusDistance = 50; 
         this.pipeline.depthOfField.focalLength = 50;
         this.pipeline.depthOfField.fStop = 1.8;      
-        this.pipeline.depthOfField.blurLevel = BABYLON.DepthOfFieldEffectBlurLevel.Medium; // Low/Medium/High
-
     }
-    createSkyBox (scene){
+
+    createSkyBox(scene: BABYLON.Scene): void {
         this.skyBox = BABYLON.MeshBuilder.CreateBox("skyBox", { size: 150 }, scene);
         const skyboxMaterial = new BABYLON.StandardMaterial("skyBox", scene);
         skyboxMaterial.backFaceCulling = false;
@@ -85,10 +112,14 @@ class gameMap {
         this.skyBox.material = skyboxMaterial;
     }
 
-    createBlackBackground() {
-        this.scene.clearColor = new BABYLON.Color3(0, 0, 0);
+    createBlackBackground(): void {
+        if (!this.scene) return;
+        this.scene.clearColor = new BABYLON.Color4(0, 0, 0, 1);
     }
-    createShadowCaster(ball, player1, player2) {
+
+    createShadowCaster(ball: BABYLON.Mesh, player1: BABYLON.Mesh, player2: BABYLON.Mesh): void {
+        if (!this.light || !this.playground) return;
+        
         this.shadowGenerator = new BABYLON.ShadowGenerator(4096, this.light);
         this.shadowGenerator.useBlurExponentialShadowMap = true;
         this.shadowGenerator.addShadowCaster(ball);
@@ -97,7 +128,10 @@ class gameMap {
         this.shadowGenerator.setDarkness(0.2);
         this.playground.receiveShadows = true;
     }
-    createPlayground() {
+
+    createPlayground(): void {
+        if (!this.scene) return;
+        
         this.playground = BABYLON.MeshBuilder.CreateBox("playground", {
             width: 40,
             height: 0.5,
@@ -108,18 +142,19 @@ class gameMap {
         this.playground.material = this.playgroundMaterial;
     }
 
-    gameStateHandler(player1, player2) {
+    gameStateHandler(player1: playerPaddle, player2: playerPaddle): void {
         if (player1.getPlayerScore > 10 && player2.getPlayerScore < player1.getPlayerScore) {
-            player1.setPlayerWinner = true;
-            player2.setPlayerWinner = false;
+            player1.playerWinner = true;
+            player2.playerWinner = false;
             console.log("PLAYER1 WINNER");
         } else if (player2.getPlayerScore > 10 && player1.getPlayerScore < player2.getPlayerScore) {
-            player2.setPlayerWinner = true;
-            player1.setPlayerWinner = false;
+            player2.playerWinner = true;
+            player1.playerWinner = false;
             console.log("PLAYER2 WINNER");
         }
     }
-    updateCurrentDof(currentY) {
+
+    updateCurrentDof(currentY: number): void {
         try {
             if (this.pipeline && this.pipeline.depthOfField) {
                 // Adjust DOF parameters based on camera height
@@ -132,9 +167,9 @@ class gameMap {
         }
     }
     
-    smoothlyDisableDof(duration) {
+    smoothlyDisableDof(duration: number): Promise<void> {
         return new Promise((resolve) => {
-            if (!this.pipeline || !this.pipeline.depthOfFieldEnabled) {
+            if (!this.pipeline || !this.pipeline.depthOfFieldEnabled || !this.scene) {
                 resolve();
                 return;
             }
@@ -147,6 +182,11 @@ class gameMap {
             const updateDof = () => {
                 const elapsed = Date.now() - startTime;
                 const progress = Math.min(elapsed / duration, 1);
+                
+                if (!this.pipeline || !this.scene) {
+                    resolve();
+                    return;
+                }
                 
                 // Linear interpolation for all parameters
                 this.pipeline.depthOfField.focalLength = initialFocalLength * (1 - progress);
@@ -167,7 +207,7 @@ class gameMap {
         });
     }
     
-    launchMatchAnimation() {
+    launchMatchAnimation(): Promise<void> {
         return new Promise((resolve, reject) => {
             try {
                 const steps = [500, 250, 50];
@@ -176,6 +216,11 @@ class gameMap {
         
                 const updateYPosition = () => {
                     try {
+                        if (!this.globalPov || !this.scene) {
+                            reject(new Error('Missing required objects for animation'));
+                            return;
+                        }
+                        
                         if (currentStep < steps.length) {
                             const currentY = steps[currentStep];
                             // Smoothly interpolate to the target position
@@ -215,9 +260,14 @@ class gameMap {
         });
     }
 
-    triggerCameraShake() {
+    triggerCameraShake(): Promise<void> {
         return new Promise((resolve) => {
             try {
+                if (!this.globalPov || !this.scene) {
+                    resolve();
+                    return;
+                }
+                
                 const duration = 500; // Half a second
                 const intensity = 2; // Shake intensity
                 const frequency = 50; // Shake frequency in Hz
@@ -227,6 +277,11 @@ class gameMap {
                 const shake = () => {
                     const elapsed = Date.now() - startTime;
                     const progress = elapsed / duration;
+
+                    if (!this.globalPov || !this.scene) {
+                        resolve();
+                        return;
+                    }
 
                     if (progress >= 1) {
                         this.globalPov.position.copyFrom(originalPosition);
@@ -256,20 +311,21 @@ class gameMap {
         });
     }
 
-    get getEngine() {
+    get getEngine(): BABYLON.Engine | undefined {
         return this.engine;
     }
 
-    get getScene() {
+    get getScene(): BABYLON.Scene | undefined {
         return this.scene;
     }
 
-    get getPlayground() {
+    get getPlayground(): BABYLON.Mesh | undefined {
         return this.playground;
     }
-    get getGlobalPovY() {
-        return this.globalPov.position.y;
+    
+    get getGlobalPovY(): number {
+        return this.globalPov?.position.y || 0;
     }
 }
 
-export {gameMap};
+export {gameMap}; 

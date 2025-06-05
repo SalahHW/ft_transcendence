@@ -1,5 +1,31 @@
+interface WebSocketMessage {
+    type: string;
+    playerId?: string;
+    username?: string;
+    message?: string;
+    positionZ?: number;
+    playerPositions?: { [key: string]: number };
+    ballState?: any; // You can make this more specific based on your ball state structure
+    scores?: { [key: string]: number };
+    serverTime?: string;
+    matchEndTime?: Date;
+    [key: string]: any;
+}
+
 export class webSocketClient {
-    constructor(url, playerId = null) {
+    public socket: WebSocket;
+    public playerId: string | null;
+    private queue: string[];
+    private initCallback: ((msg: WebSocketMessage) => void) | null;
+    private moveCallback: ((msg: WebSocketMessage) => void) | null;
+    private syncCallback: ((msg: WebSocketMessage) => void) | null;
+    private ballUpdateCallback: ((msg: WebSocketMessage) => void) | null;
+    private scoreUpdateCallback: ((msg: WebSocketMessage) => void) | null;
+    private gameEndCallback: ((msg: WebSocketMessage) => void) | null;
+    private messageCallback: ((msg: { data: string }) => void) | null;
+    public matchEndTime: Date | null;
+
+    constructor(url: string, playerId: string | null = null) {
         this.socket = new WebSocket(playerId ? `${url}?playerId=${playerId}` : url);
         this.playerId = playerId;
         this.queue = [];
@@ -26,7 +52,7 @@ export class webSocketClient {
         });
 
         this.socket.addEventListener('message', ({ data }) => {
-            let msg;
+            let msg: WebSocketMessage;
             try {
                 msg = JSON.parse(data);
                 // console.log('Received:', msg);
@@ -82,7 +108,7 @@ export class webSocketClient {
         this.socket.addEventListener('close', () => console.log('WS closed'));
     }
 
-    send(obj) {
+    send(obj: any): void {
         const m = JSON.stringify(obj);
         if (this.socket.readyState === WebSocket.OPEN) {
             this.socket.send(m);
@@ -91,35 +117,35 @@ export class webSocketClient {
         }
     }
 
-    getMatchEndTime() {
+    getMatchEndTime(): Date | null {
         return this.matchEndTime;
     }
 
-    onInit(callback) {
+    onInit(callback: (msg: WebSocketMessage) => void): void {
         this.initCallback = callback;
     }
 
-    onPaddleMove(callback) {
+    onPaddleMove(callback: (msg: WebSocketMessage) => void): void {
         this.moveCallback = callback;
     }
 
-    onSync(callback) {
+    onSync(callback: (msg: WebSocketMessage) => void): void {
         this.syncCallback = callback;
     }
 
-    onBallUpdate(callback) {
+    onBallUpdate(callback: (msg: WebSocketMessage) => void): void {
         this.ballUpdateCallback = callback;
     }
 
-    onScoreUpdate(callback) {
+    onScoreUpdate(callback: (msg: WebSocketMessage) => void): void {
         this.scoreUpdateCallback = callback;
     }
 
-    onGameEnd(callback) {
+    onGameEnd(callback: (msg: WebSocketMessage) => void): void {
         this.gameEndCallback = callback;
     }
 
-    set onMessage(callback) {
+    set onMessage(callback: (msg: { data: string }) => void) {
         this.messageCallback = callback;
     }
-}
+} 

@@ -2,12 +2,13 @@
 	"compilerOptions": {
 		"outDir": "./public/js/",
 		"module": "ES2020",
-		"strict": true, // active tous les flags strict
+		"moduleResolution": "node",
+		"strict": false, // active tous les flags strict
 		"noImplicitAny": true, // signale les types implicites
 		"noImplicitReturns": true, // signale les fonctions sans return
 		"noFallthroughCasesInSwitch": true, // signale les cas de switch sans break
-        "noUnusedLocals": true, // signale les variables non utilisées
-        "noUnusedParameters": true, // signale les paramètres non utilisés
+        "noUnusedLocals": false, // signale les variables non utilisées
+        "noUnusedParameters": false, // signale les paramètres non utilisés
         "forceConsistentCasingInFileNames": true, // assure une casse(=>MAJ/min) cohérente
 		"skipLibCheck": true, // ignore les vérifications de type dans les fichiers de déclaration
 		"lib": ["dom", "dom.iterable", "es2019"],

@@ -1,7 +1,21 @@
 import * as BABYLON from '@babylonjs/core';
 
 class playerPaddle {
-  constructor(playerName, playerId, role) {
+  public playerName: string;
+  public playerId: string;
+  public role: number;
+  public hasPowerup: boolean;
+  public playerRebounds: number;
+  public isWinner: boolean | undefined;
+  public poweupType: string | undefined;
+  public paddleBody: BABYLON.Mesh | undefined;
+  public playerPov: BABYLON.Camera | undefined;
+  public paddleSpeed: number | undefined;
+  public paddleMaterial: BABYLON.StandardMaterial | undefined;
+  public playerScore: number;
+  private scene: BABYLON.Scene | undefined;
+
+  constructor(playerName: string, playerId: string, role: number) {
     this.playerName = playerName;
     this.playerId = playerId;
     this.role = role;
@@ -16,7 +30,8 @@ class playerPaddle {
     this.playerScore = 0;
   }
 
-  createPaddle(scene, posX, posY, paddleSpeed) {
+  createPaddle(scene: BABYLON.Scene, posX: number, posY: number, paddleSpeed: number): void {
+    this.scene = scene;
     this.paddleBody = BABYLON.MeshBuilder.CreateBox(this.playerName, { width: 1, height: 4, depth: 5 }, scene);
     this.paddleBody.position.x = posX;
     this.paddleBody.position.y = posY;
@@ -24,7 +39,9 @@ class playerPaddle {
     this.paddleColor();
   }
 
-  paddleColor() {
+  paddleColor(): void {
+    if (!this.paddleBody || !this.scene) return;
+    
     this.paddleMaterial = new BABYLON.StandardMaterial(this.playerName + '_material', this.scene);
     this.paddleBody.material = this.paddleMaterial;
     if (this.role === 0) {
@@ -35,50 +52,50 @@ class playerPaddle {
     this.paddleMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
   }
 
-  move(direction, deltaTime) {
-    if (this.paddleBody) {
+  move(direction: number, deltaTime: number): void {
+    if (this.paddleBody && this.paddleSpeed) {
       const newZ = this.paddleBody.position.z + direction * this.paddleSpeed * deltaTime;
       this.setZ(newZ);
     }
   }
 
-  setZ(newZ) {
+  setZ(newZ: number): void {
     if (this.paddleBody) {
       this.paddleBody.position.z = Math.max(-7.5, Math.min(7.5, newZ));
     }
   }
 
-  getPlayerId() {
+  getPlayerId(): string {
     return this.playerId; // Return UUID
   }
 
-  get getPaddleBody() {
+  get getPaddleBody(): BABYLON.Mesh | undefined {
     return this.paddleBody;
   }
 
-  get getPaddleBodyPos() {
-    return this.paddleBody.position;
+  get getPaddleBodyPos(): BABYLON.Vector3 | undefined {
+    return this.paddleBody?.position;
   }
 
-  get getWinnerState() {
+  get getWinnerState(): boolean | undefined {
     return this.isWinner;
   }
 
-  get getPlayerScore() {
+  get getPlayerScore(): number {
     return this.playerScore;
   }
 
-  get getPlayerRebounds() {
+  get getPlayerRebounds(): number {
     return this.playerRebounds;
   }
 
-  set playerWinner(winner) {
+  set playerWinner(winner: boolean) {
     this.isWinner = winner;
   }
 
-  incrementPlayerRebounds() {
+  incrementPlayerRebounds(): void {
     this.playerRebounds += 1;
   }
 }
 
-export { playerPaddle };
+export { playerPaddle }; 

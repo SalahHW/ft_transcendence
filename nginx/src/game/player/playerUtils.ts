@@ -1,15 +1,22 @@
 import * as BABYLON from '@babylonjs/core';
-import { playerPaddle as paddle } from './player.js';
+import { playerPaddle as paddle } from './player';
 
-let keyState = {
+interface KeyState {
+    w: boolean;
+    s: boolean;
+    o: boolean;
+    l: boolean;
+}
+
+let keyState: KeyState = {
     w: false,
     s: false,
     o: false,
     l: false,
 };
 
-const keystrokesListen = (player1, player2) => {
-    window.addEventListener("keydown", (event) => {
+const keystrokesListen = (player1: paddle, player2: paddle): void => {
+    window.addEventListener("keydown", (event: KeyboardEvent) => {
         switch (event.key) {
             case "w": keyState.w = true; break;
             case "s": keyState.s = true; break;
@@ -18,7 +25,7 @@ const keystrokesListen = (player1, player2) => {
         }
     });
 
-    window.addEventListener("keyup", (event) => {
+    window.addEventListener("keyup", (event: KeyboardEvent) => {
         switch (event.key) {
             case "w": keyState.w = false; break;
             case "s": keyState.s = false; break;
@@ -29,7 +36,9 @@ const keystrokesListen = (player1, player2) => {
     
 }
 
-const  keystrokesCatch = (keyState, player1, player2) => {
+const keystrokesCatch = (keyState: KeyState, player1: paddle, player2: paddle): void => {
+    if (!player1.paddleBody || !player2.paddleBody || !player1.paddleSpeed || !player2.paddleSpeed) return;
+    
     if (keyState.w) player1.paddleBody.position.z -= player2.paddleSpeed;
     if (keyState.s) player1.paddleBody.position.z += player2.paddleSpeed;
 
@@ -42,4 +51,4 @@ const  keystrokesCatch = (keyState, player1, player2) => {
     player1.paddleBody.position.z = Math.max(minZ, Math.min(maxZ, player1.paddleBody.position.z));
 }
 
-export {keystrokesListen, keyState, keystrokesCatch};
+export {keystrokesListen, keyState, keystrokesCatch}; 

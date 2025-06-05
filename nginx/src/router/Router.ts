@@ -15,6 +15,8 @@
 
 import APITestPage from "../views/apiTestPage/APITestPage.js";
 import HomePage from "../views/homePage.js";
+import { getCurrentUser } from "../game/utils/fetch.js";
+
 interface Route {
 	path: string;
 	cache?: any;
@@ -43,8 +45,10 @@ export default class Router {
 		},
 		{
 			path: "/1v1",
-			handler: function() {
+			handler: async function() {
 				console.log("1v1 page handler called");
+				const response = await getCurrentUser();
+				console.log(response);
 				// TODO: Implement 1v1 page by adding your function
 			}
 		},

@@ -1,39 +1,70 @@
-import { playerPaddle } from '../player/player.js';
-import { gameMap } from '../map/gameMap.js';
-import { webSocketClient } from '../webSocketClient/webSocketClient.js';
-import { Ball } from '../ball/ball.js';
+import { playerPaddle } from '../player/player';
+import { gameMap } from '../map/gameMap';
+import { webSocketClient } from '../webSocketClient/webSocketClient';
+import { Ball } from '../ball/ball';
 import * as BABYLON from '@babylonjs/core';
-import { fetchWithSelfSigned } from '../utils/fetch.js';
+import { fetchWithSelfSigned } from '../utils/fetch';
 import '../style.css';
 
+interface PlayerData {
+    id: string;
+    readyToPlay: boolean;
+    [key: string]: any;
+}
+
+interface ApiResponse {
+    data: PlayerData[];
+}
+
+interface GameEndData {
+    winner: {
+        id: string;
+        username: string;
+        score: number;
+    };
+    loser: {
+        id: string;
+        username: string;
+        score: number;
+    };
+    roomId: string;
+    matchDuration: number;
+    gameStats: {
+        totalRebounds: number;
+    };
+    matchEndTime: Date;
+}
+
 const serverPort = 8080; // Game service port
-let clientConnection = null;
-let map = null;
-let player1, player2, ball;
-let roomId = null;
-let localPlayerId = null;
-let isUpPressed = false;
-let isDownPressed = false;
-let lastBallPosition = null;
-let lastSyncTime = null;
-let predictedPosition = null;
-let ping = 0;
-let pingSamples = [];
-let isGameOver = false;
-let matchEndTime = null;
-let initTime = null;
-let syncCount = 0;
-let ballUpdateReceived = false;
-let isGameLoopRunning = false;
+let clientConnection: webSocketClient | null = null;
+let map: gameMap | null = null;
+let player1: playerPaddle | null = null;
+let player2: playerPaddle | null = null;
+let ball: Ball | null = null;
+let roomId: string | null = null;
+let localPlayerId: string | null = null;
+let isUpPressed: boolean = false;
+let isDownPressed: boolean = false;
+let lastBallPosition: BABYLON.Vector3 | null = null;
+let lastSyncTime: number | null = null;
+let predictedPosition: BABYLON.Vector3 | null = null;
+let ping: number = 0;
+let pingSamples: number[] = [];
+let isGameOver: boolean = false;
+let matchEndTime: Date | null = null;
+let initTime: number | null = null;
+let syncCount: number = 0;
+let ballUpdateReceived: boolean = false;
+let isGameLoopRunning: boolean = false;
 
 // Function to check available players
-async function checkAvailablePlayers() {
+async function checkAvailablePlayers(): Promise<PlayerData[]> {
     try {
         const response = await fetchWithSelfSigned(`https://localhost:${serverPort}/api/players`, {
             method: 'GET',
         });
         
-        const result = await response.json();
+        const result: ApiResponse = await response.json();
         if (!result.data || !Array.isArray(result.data)) {
             throw new Error('Invalid response format from server');
         }
@@ -46,7 +77,7 @@ async function checkAvailablePlayers() {
 }
 
 // Function to set player ready status
-async function setPlayerReady(playerId) {
+async function setPlayerReady(playerId: string): Promise<boolean> {
     try {
         const response = await fetchWithSelfSigned(`https://localhost:${serverPort}/api/players/${playerId}/ready`, {
             method: 'POST',
@@ -68,7 +99,7 @@ async function setPlayerReady(playerId) {
 }
 
 // Function to update game status
-function updateGameStatus(message) {
+function updateGameStatus(message: string): void {
     const statusElement = document.getElementById('gameStatus');
     if (statusElement) {
         statusElement.textContent = message;
@@ -76,7 +107,7 @@ function updateGameStatus(message) {
 }
 
 // Function to initialize the game
-function initializeGame(playerId) {
+function initializeGame(playerId: string): void {
     if (clientConnection) {
         clientConnection.socket.close();
     }
@@ -113,7 +144,7 @@ function initializeGame(playerId) {
         
         // Only update if it's not our own paddle
         if (movingPlayer && movingPlayer.getPlayerId() !== localPlayerId) {
-            movingPlayer.setZ(msg.positionZ);
+            movingPlayer.setZ(msg.positionZ || 0);
         }
     });
 
@@ -122,13 +153,15 @@ function initializeGame(playerId) {
         if (!ball) return;
         
         // Ensure ball is visible during respawn
-        if (msg.ballState.isRespawning || msg.isInitialSpawn || msg.isScoreRespawn) {
+        if (msg.ballState?.isRespawning || msg.isInitialSpawn || msg.isScoreRespawn) {
             if (ball.ballBody) {
                 ball.ballBody.isVisible = true;
             }
         }
         
-        ball.setState(msg.ballState);
+        if (msg.ballState) {
+            ball.setState(msg.ballState);
+        }
     });
 
     // Add sync handler to ensure positions are correct
@@ -136,12 +169,14 @@ function initializeGame(playerId) {
         if (!player1 || !player2) return;
         
         // Update paddle positions from sync message
-        Object.entries(msg.playerPositions).forEach(([playerId, positionZ]) => {
-            const syncPlayer = playerId === player1.getPlayerId() ? player1 : player2;
-            if (syncPlayer && syncPlayer.getPlayerId() !== localPlayerId) {
-                syncPlayer.setZ(positionZ);
-            }
-        });
+        if (msg.playerPositions) {
+            Object.entries(msg.playerPositions).forEach(([playerId, positionZ]) => {
+                const syncPlayer = playerId === player1!.getPlayerId() ? player1 : player2;
+                if (syncPlayer && syncPlayer.getPlayerId() !== localPlayerId) {
+                    syncPlayer.setZ(positionZ);
+                }
+            });
+        }
 
         // Update ball state if available
         if (msg.ballState && ball) {
@@ -150,9 +185,9 @@ function initializeGame(playerId) {
     });
 
     // Add score update handler with camera shake for losing player
-    let previousScores = {};
+    let previousScores: { [key: string]: number } = {};
     clientConnection.onScoreUpdate((msg) => {
-        if (!player1 || !player2 || !map) return;
+        if (!player1 || !player2 || !map || !msg.scores) return;
         
         const currentScores = msg.scores;
         
@@ -165,14 +200,14 @@ function initializeGame(playerId) {
         }
         
         // Check which player's score increased (they scored, opponent lost a point)
-        let losingPlayerId = null;
+        let losingPlayerId: string | null = null;
         
         for (const [playerId, currentScore] of Object.entries(currentScores)) {
             const previousScore = previousScores[playerId] || 0;
             if (currentScore > previousScore) {
                 // This player scored, so the other player lost a point
                 const otherPlayerId = Object.keys(currentScores).find(id => id !== playerId);
-                losingPlayerId = otherPlayerId;
+                losingPlayerId = otherPlayerId || null;
                 break;
             }
         }
@@ -198,7 +233,8 @@ function initializeGame(playerId) {
     });
 
     // Add game end handler
-    clientConnection.onGameEnd((gameEndData) => {
+    clientConnection.onGameEnd((msg: any) => {
+        const gameEndData = msg as GameEndData;
         isGameOver = true;
         
         console.log('='.repeat(50));
@@ -222,7 +258,7 @@ function initializeGame(playerId) {
     });
 
     // Add handler for waiting status
-    clientConnection.socket.addEventListener('message', (event) => {
+    clientConnection.socket.addEventListener('message', (event: MessageEvent) => {
         try {
             const message = JSON.parse(event.data);
             if (message.type === 'waitingForPlayers') {
@@ -237,8 +273,8 @@ function initializeGame(playerId) {
     clientConnection.onInit(async ({ playerId, roomId: rId, role, opponentId }) => {
         console.log('Received init:', { playerId, roomId: rId, role, opponentId });
         initTime = Date.now();
-        roomId = rId;
-        localPlayerId = playerId;
+        roomId = rId || null;
+        localPlayerId = playerId || null;
 
         // Only create new map if it doesn't exist
         if (!map) {
@@ -259,6 +295,11 @@ function initializeGame(playerId) {
 
         // Only create paddles if they don't exist
         if (!player1 || !player2) {
+            if (!playerId || !opponentId) {
+                console.error('Missing player IDs');
+                return;
+            }
+            
             if (role === 0) {
                 player1 = new playerPaddle('Player1', playerId, 0);
                 player2 = new playerPaddle('Player2', opponentId, 1);
@@ -268,8 +309,8 @@ function initializeGame(playerId) {
             }
 
             try {
-                player1.createPaddle(map.getScene, 19.5, 2, 20);
-                player2.createPaddle(map.getScene, -19.5, 2, 20);
+                player1.createPaddle(map.getScene!, 19.5, 2, 20);
+                player2.createPaddle(map.getScene!, -19.5, 2, 20);
             } catch (e) {
                 console.error('Paddle creation failed:', e);
                 return;
@@ -280,17 +321,19 @@ function initializeGame(playerId) {
         if (!ball) {
             try {
                 ball = new Ball(player1, player2);
-                ball.createBall(map.getScene);
-                ball.ballBody.metadata = { roomId };
+                ball.createBall(map.getScene!);
+                if (ball.ballBody) {
+                    ball.ballBody.metadata = { roomId };
+                    ball.ballBody.position = new BABYLON.Vector3(0, -2, 0);
+                    ball.ballBody.isVisible = true;
+                }
                 ball.position = new BABYLON.Vector3(0, -2, 0);
-                ball.ballBody.position = new BABYLON.Vector3(0, -2, 0);
-                ball.ballBody.isVisible = true;
                 ball.isRespawning = true;
                 ball.respawnTime = 0;
                 ball.hasValidPosition = true;
                 
                 // Request initial ball respawn from server
-                clientConnection.send({
+                clientConnection!.send({
                     type: 'requestBallRespawn',
                     isInitial: true
                 });
@@ -304,29 +347,29 @@ function initializeGame(playerId) {
         updateGameStatus('Game starting...');
         
         // Set up keyboard controls if not already set
-        if (!window.gameControlsInitialized) {
-            document.addEventListener('keydown', (event) => {
+        if (!(window as any).gameControlsInitialized) {
+            document.addEventListener('keydown', (event: KeyboardEvent) => {
                 if (isGameOver) return;
                 if (event.key === 'ArrowUp' && !isUpPressed) {
                     isUpPressed = true;
-                    clientConnection.send({ type: 'keyDown', direction: 'up' });
+                    clientConnection!.send({ type: 'keyDown', direction: 'up' });
                 } else if (event.key === 'ArrowDown' && !isDownPressed) {
                     isDownPressed = true;
-                    clientConnection.send({ type: 'keyDown', direction: 'down' });
+                    clientConnection!.send({ type: 'keyDown', direction: 'down' });
                 }
             });
 
-            document.addEventListener('keyup', (event) => {
+            document.addEventListener('keyup', (event: KeyboardEvent) => {
                 if (isGameOver) return;
                 if (event.key === 'ArrowUp' && isUpPressed) {
                     isUpPressed = false;
-                    clientConnection.send({ type: 'keyUp', direction: 'up' });
+                    clientConnection!.send({ type: 'keyUp', direction: 'up' });
                 } else if (event.key === 'ArrowDown' && isDownPressed) {
                     isDownPressed = false;
-                    clientConnection.send({ type: 'keyUp', direction: 'down' });
+                    clientConnection!.send({ type: 'keyUp', direction: 'down' });
                 }
             });
-            window.gameControlsInitialized = true;
+            (window as any).gameControlsInitialized = true;
         }
         
         // Start the game loop after match animation if not already running
@@ -335,7 +378,7 @@ function initializeGame(playerId) {
                 await map.launchMatchAnimation();
                 
                 // Ensure paddles are ready
-                if (player1 && player2) {
+                if (player1 && player2 && player1.paddleBody && player2.paddleBody) {
                     player1.paddleBody.isVisible = true;
                     player2.paddleBody.isVisible = true;
                 }
@@ -350,7 +393,7 @@ function initializeGame(playerId) {
 }
 
 // Function to setup game loop
-function setupGameLoop() {
+function setupGameLoop(): void {
     if (isGameLoopRunning) {
         console.log('Game loop already running, skipping setup');
         return;
@@ -364,7 +407,9 @@ function setupGameLoop() {
     
     const renderLoop = () => {
         if (isGameOver) {
-            map.getEngine.stopRenderLoop();
+            if (map && map.getEngine) {
+                map.getEngine.stopRenderLoop();
+            }
             isGameLoopRunning = false;
             return;
         }
@@ -376,33 +421,37 @@ function setupGameLoop() {
             lastTime = now;
         }
 
-        const deltaTime = map.getEngine.getDeltaTime() / 1000;
+        const deltaTime = map && map.getEngine ? map.getEngine.getDeltaTime() / 1000 : 0;
         
         // Handle player movement
-        const localPlayer = player1.getPlayerId() === localPlayerId ? player1 : player2;
-        const playerNumber = player1.getPlayerId() === localPlayerId ? 1 : 2;
-        let paddleMoved = false;
+        if (player1 && player2 && localPlayerId) {
+            const localPlayer = player1.getPlayerId() === localPlayerId ? player1 : player2;
+            let paddleMoved = false;
 
-        if (isUpPressed && !isDownPressed) {
-            localPlayer.move(-1, deltaTime);
-            paddleMoved = true;
-        } else if (isDownPressed && !isUpPressed) {
-            localPlayer.move(1, deltaTime);
-            paddleMoved = true;
-        }
+            if (isUpPressed && !isDownPressed) {
+                localPlayer.move(-1, deltaTime);
+                paddleMoved = true;
+            } else if (isDownPressed && !isUpPressed) {
+                localPlayer.move(1, deltaTime);
+                paddleMoved = true;
+            }
 
-        // Send paddle position updates at a fixed rate
-        if (paddleMoved && now - lastPaddleUpdate >= PADDLE_UPDATE_INTERVAL) {
-            clientConnection.send({
-                type: 'paddlePosition',
-                playerId: localPlayerId,
-                positionZ: localPlayer.getPaddleBodyPos.z,
-            });
-            lastPaddleUpdate = now;
+            // Send paddle position updates at a fixed rate
+            if (paddleMoved && now - lastPaddleUpdate >= PADDLE_UPDATE_INTERVAL && clientConnection) {
+                const paddlePos = localPlayer.getPaddleBodyPos;
+                if (paddlePos) {
+                    clientConnection.send({
+                        type: 'paddlePosition',
+                        playerId: localPlayerId,
+                        positionZ: paddlePos.z,
+                    });
+                    lastPaddleUpdate = now;
+                }
+            }
         }
 
         // Update ball position and ensure it's visible
-        if (ball && ball.ballBody) {
+        if (ball && ball.ballBody && map && map.getScene) {
             ball.updateClient(map.getScene);
         }
 
@@ -423,43 +472,45 @@ function setupGameLoop() {
 
 // Handle join game button click
 document.addEventListener('DOMContentLoaded', () => {
-    const joinGameBtn = document.getElementById('joinGameBtn');
+    const joinGameBtn = document.getElementById('joinGameBtn') as HTMLButtonElement;
     
-    joinGameBtn.addEventListener('click', async () => {
-        joinGameBtn.disabled = true;
-        updateGameStatus('Checking for available players...');
-        
-        try {
-            const players = await checkAvailablePlayers();
+    if (joinGameBtn) {
+        joinGameBtn.addEventListener('click', async () => {
+            joinGameBtn.disabled = true;
+            updateGameStatus('Checking for available players...');
             
-            if (players.length < 2) {
-                updateGameStatus('Not enough players registered. Please wait for more players.');
+            try {
+                const players = await checkAvailablePlayers();
+                
+                if (players.length < 2) {
+                    updateGameStatus('Not enough players registered. Please wait for more players.');
+                    joinGameBtn.disabled = false;
+                    return;
+                }
+
+                // Find an available player slot
+                const availablePlayers = players.filter(p => !p.readyToPlay);
+                if (availablePlayers.length === 0) {
+                    updateGameStatus('All players are already in game. Please wait.');
+                    joinGameBtn.disabled = false;
+                    return;
+                }
+
+                const playerId = availablePlayers[0].id;
+                updateGameStatus('Joining game...');
+                
+                // Initialize game connection
+                initializeGame(playerId);
+                
+                // Set player as ready
+                await setPlayerReady(playerId);
+                updateGameStatus('Waiting for other player to join...');
+
+            } catch (error) {
+                console.error('Error joining game:', error);
+                updateGameStatus('Error joining game. Please try again.');
                 joinGameBtn.disabled = false;
-                return;
             }
-
-            // Find an available player slot
-            const availablePlayers = players.filter(p => !p.readyToPlay);
-            if (availablePlayers.length === 0) {
-                updateGameStatus('All players are already in game. Please wait.');
-                joinGameBtn.disabled = false;
-                return;
-            }
-
-            const playerId = availablePlayers[0].id;
-            updateGameStatus('Joining game...');
-            
-            // Initialize game connection
-            initializeGame(playerId);
-            
-            // Set player as ready
-            await setPlayerReady(playerId);
-            updateGameStatus('Waiting for other player to join...');
-
-        } catch (error) {
-            console.error('Error joining game:', error);
-            updateGameStatus('Error joining game. Please try again.');
-            joinGameBtn.disabled = false;
-        }
-    });
-});
+        });
+    }
+}); 

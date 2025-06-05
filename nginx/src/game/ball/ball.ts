@@ -1,8 +1,42 @@
 import * as BABYLON from '@babylonjs/core';
-import { createExplosion } from './ballEffects.js';
+import { createExplosion } from './ballEffects';
+import { playerPaddle } from '../player/player';
+
+interface BallState {
+    position: { x: number; y: number; z: number };
+    velocity: { x: number; y: number; z: number };
+    previousVelocity: { x: number; y: number; z: number };
+    rebounds?: number;
+    isRespawning?: boolean;
+    respawnTime?: number;
+    wasHitByPlayer?: any;
+    speed?: number;
+    currentGlowColor?: { r: number; g: number; b: number };
+    isInitialSpawn?: boolean;
+}
 
 class Ball {
-    constructor(player1, player2) {
+    public position: BABYLON.Vector3;
+    public velocity: BABYLON.Vector3;
+    public previousVelocity: BABYLON.Vector3;
+    public radius: number;
+    public rebounds: number;
+    public wasHitByPlayer: any;
+    public ballBody: BABYLON.Mesh | null;
+    public ballMaterial: BABYLON.StandardMaterial | null;
+    public isGlowing: boolean;
+    public currentGlowColor: BABYLON.Color3;
+    public isRespawning: boolean;
+    public respawnTime: number;
+    public respawnDuration: number;
+    public player1: playerPaddle;
+    public player2: playerPaddle;
+    public lastPosition: BABYLON.Vector3;
+    public lastUpdateTime: number;
+    public hasValidPosition: boolean;
+    public speed: number;
+
+    constructor(player1: playerPaddle, player2: playerPaddle) {
         this.position = new BABYLON.Vector3(0, -2, 0);
         this.velocity = new BABYLON.Vector3(0, 0, 0);
         this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
@@ -24,7 +58,7 @@ class Ball {
         this.speed = 25;
     }
 
-    init() {
+    init(): void {
         this.position = new BABYLON.Vector3(0, -2, 0);
         this.velocity = new BABYLON.Vector3(0, 0, 0);
         this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
@@ -41,7 +75,7 @@ class Ball {
         }
     }
 
-    createBall(scene) {
+    createBall(scene: BABYLON.Scene): void {
         this.ballBody = BABYLON.MeshBuilder.CreateSphere("ball", { diameter: 1.5 }, scene);
         this.ballMaterial = new BABYLON.StandardMaterial("glowMat", scene);
         
@@ -58,14 +92,14 @@ class Ball {
         this.ballBody.isVisible = false;
     }
 
-    updateClient(scene) {
+    updateClient(scene: BABYLON.Scene): void {
         if (this.ballBody && this.hasValidPosition) {
             this.ballBody.position.copyFrom(this.position);
             this.ballBody.isVisible = this.isRespawning || this.position.y >= -2;
         }
     }
 
-    setState(state) {
+    setState(state: BallState): void {
         if (state.isInitialSpawn) {
             this.position = new BABYLON.Vector3(0, -2, 0);
             this.velocity = new BABYLON.Vector3(0, 0, 0);
@@ -147,7 +181,7 @@ class Ball {
         }
     }
 
-    startGlowTransition(targetColor, duration) {
+    startGlowTransition(targetColor: BABYLON.Color3, duration: number): void {
         if (!this.ballBody || !this.ballMaterial) {
             return;
         }
@@ -176,7 +210,7 @@ class Ball {
         );
         
         // Generate heating curve colors (like metal heating up)
-        const generateHeatingColor = (intensity) => {
+        const generateHeatingColor = (intensity: number): BABYLON.Color3 => {
             if (intensity <= 0) return new BABYLON.Color3(0, 0, 0); // Cold/black
             
             if (intensity <= 0.3) {
@@ -211,7 +245,7 @@ class Ball {
         };
         
         // Create smooth progression with 8 keyframes for ultra-smooth heating effect
-        const keys = [];
+        const keys: Array<{ frame: number; value: BABYLON.Color3 }> = [];
         const numSteps = 8;
         
         for (let i = 0; i <= numSteps; i++) {
@@ -237,11 +271,11 @@ class Ball {
         });
     }
 
-    getSpeedTier(rebounds) {
+    getSpeedTier(rebounds: number): number {
         if (rebounds < 10) return 0;
         else if (rebounds < 20) return 1;
         else return 2;
     }
 }
 
-export { Ball };
+export { Ball }; 
