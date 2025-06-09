@@ -18,56 +18,71 @@ const serverConfig = {
   cert: fs.readFileSync('src/server/certs/cert.pem'),
 };
 
+// Function to register common plugins and routes
+function registerCommonComponents(server) {
+  // Add UUID generator to Fastify instance
+  server.decorate('uuid', uuidv4);
+
+  // Register CORS
+  server.register(cors, {
+    origin: ['http://localhost', 'https://localhost', 'http://localhost:80', 'https://localhost:80'],
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+  });
+
+  // Register WebSocket plugin
+  server.register(WebSocketPlugin, {
+    options: {
+      clientTracking: true,
+      verifyClient: (info, next) => {
+        console.log('Verifying WebSocket client:', info.req.url);
+        next(true);
+      },
+    },
+  });
+
+  // Register API routes
+  server.register(registerApiRoutes, { players: getPlayers() });
+
+  // Register WebSocket routes
+  server.register(registerWebSocketRoutes);
+}
+
 // Initialize Fastify with HTTPS
-const fastify = Fastify({
+const httpsServer = Fastify({
   https: serverConfig,
   logger: true,
 });
 
-// Add UUID generator to Fastify instance
-// GET PLAYER ID FROM USER SERVICE ? OR BLOCKCHAIN SERVICE ?
-fastify.decorate('uuid', uuidv4);
-
-// Register CORS
-fastify.register(cors, {
-  origin: ['http://localhost:5173', 'https://localhost:5173'],
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+// Initialize Fastify with HTTP
+const httpServer = Fastify({
+  logger: true,
 });
 
-console.log('Registering @fastify/websocket plugin');
+console.log('Registering components for both HTTP and HTTPS servers');
 
-// Register WebSocket plugin
-fastify.register(WebSocketPlugin, {
-  options: {
-    clientTracking: true,
-    verifyClient: (info, next) => {
-      console.log('Verifying WebSocket client:', info.req.url);
-      next(true);
-    },
-  },
-}).after(err => {
-  if (err) {
-    console.error('Failed to register @fastify/websocket:', err);
-    process.exit(1);
-  }
-  console.log('@fastify/websocket registered successfully');
-});
+// Register components for both servers
+registerCommonComponents(httpsServer);
+registerCommonComponents(httpServer);
 
-// Register API routes
-fastify.register(registerApiRoutes, { players: getPlayers() });
-
-// Register WebSocket routes
-fastify.register(registerWebSocketRoutes);
-
-// Start the server
+// Start both servers
 const port = process.env.GAME_SERVICE_PORT || 8080;
-fastify.listen({ port, host: '0.0.0.0' }, (err) => {
+const httpPort = 8081; // HTTP port
+
+httpsServer.listen({ port, host: '0.0.0.0' }, (err) => {
   if (err) {
-    fastify.log.error(err);
+    httpsServer.log.error(err);
     process.exit(1);
   }
-  console.log(`Game server running on port ${port}`);
+  console.log(`HTTPS Game server running on port ${port}`);
+});
+
+httpServer.listen({ port: httpPort, host: '0.0.0.0' }, (err) => {
+  if (err) {
+    httpServer.log.error(err);
+    process.exit(1);
+  }
+  console.log(`HTTP Game server running on port ${httpPort}`);
   startGameLoop();
 });
