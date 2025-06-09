@@ -87,6 +87,7 @@ export async function registerWebSocketRoutes(fastify) {
         }
         if (player.username) {
           console.log(`Player ${playerId} already has username ${player.username} from API`);
+          player.readyToPlay = true; // Set player as ready since they have username from API
           broadcastToRoom(roomId, {
             type: 'usernameUpdate',
             playerId,
@@ -98,6 +99,7 @@ export async function registerWebSocketRoutes(fastify) {
         const username = msg.username?.trim();
         if (typeof username === 'string' && username.length > 0 && username.length <= 20) {
           player.username = username;
+          player.readyToPlay = true; // Set player as ready since they now have a username
           console.log(`Player ${playerId} set username to ${username}`);
           broadcastToRoom(roomId, {
             type: 'usernameUpdate',
