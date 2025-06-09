@@ -15,6 +15,7 @@
 
 import APITestPage from "../views/apiTestPage/APITestPage.js";
 import HomePage from "../views/homePage.js";
+import GamePage from "../views/gamePage.js";
 import { getCurrentUser, getUserResponseData, registerCurrentUserForGame } from "../game/utils/fetch.js";
 
 interface Route {
@@ -26,6 +27,7 @@ interface Route {
 export default class Router {
 	private constructor() {}
 	private static	_instance: Router;
+
 	private			_routes: Route[] = [
 		{
 			path: "/",
@@ -56,8 +58,20 @@ export default class Router {
 					console.log(`Successfully registered player:`, playerData);
 					console.log(`Player ID: ${playerData.id}, Username: ${playerData.username}`);
 					
-					// TODO: Navigate to actual game interface or show game lobby
-					alert(`Successfully registered for 1v1 game!\nPlayer ID: ${playerData.id}\nUsername: ${playerData.username}`);
+					// Create and render the game page
+					if (!this.cache) {
+						this.cache = new GamePage("app-container");
+					}
+					this.cache.render();
+					
+
+					// Dynamically import and initialize the game client using the existing client code
+					console.log("Loading game client...");
+					const { initializeGame } = await import("../game/client/client.js");
+					console.log("Initializing game with player ID:", playerData.id);
+					await initializeGame(playerData.id);
+					
+					console.log("Game client initialized successfully!");
 					
 				} catch (error) {
 					console.error("Error registering user for game:", error);
@@ -142,6 +156,8 @@ export default class Router {
 		 else
 			this.navigate(currentPath, true);
 	}
+
+
 
 	// public destroy(): void {
 	// 	if (this._initialized) {

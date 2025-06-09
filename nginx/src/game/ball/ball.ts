@@ -1,6 +1,6 @@
 import * as BABYLON from '@babylonjs/core';
-import { createExplosion } from './ballEffects';
-import { playerPaddle } from '../player/player';
+import { createExplosion } from './ballEffects.js';
+import { playerPaddle } from '../player/player.js';
 
 interface BallState {
     position: { x: number; y: number; z: number };

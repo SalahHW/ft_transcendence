@@ -1,5 +1,5 @@
 import * as BABYLON from '@babylonjs/core';
-import { playerPaddle } from '../player/player';
+import { playerPaddle } from '../player/player.js';
 import "@babylonjs/core/PostProcesses/depthOfFieldEffect";
 import "@babylonjs/core/PostProcesses/RenderPipeline/postProcessRenderPipelineManager";
 import "@babylonjs/core/Rendering/depthRenderer";

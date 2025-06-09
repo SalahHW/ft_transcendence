@@ -1,10 +1,9 @@
-import { playerPaddle } from '../player/player';
-import { gameMap } from '../map/gameMap';
-import { webSocketClient } from '../webSocketClient/webSocketClient';
-import { Ball } from '../ball/ball';
+import { playerPaddle } from '../player/player.js';
+import { gameMap } from '../map/gameMap.js';
+import { webSocketClient } from '../webSocketClient/webSocketClient.js';
+import { Ball } from '../ball/ball.js';
 import * as BABYLON from '@babylonjs/core';
-import { fetchWithSelfSigned } from '../utils/fetch';
-import '../style.css';
+import { fetchWithSelfSigned } from '../utils/fetch.js';
 
 interface PlayerData {
     id: string;
@@ -60,7 +59,7 @@ let isGameLoopRunning: boolean = false;
 // Function to check available players
 async function checkAvailablePlayers(): Promise<PlayerData[]> {
     try {
-        const response = await fetchWithSelfSigned(`https://localhost:${serverPort}/api/players`, {
+        const response = await fetchWithSelfSigned(`http://localhost:8081/api/players`, {
             method: 'GET',
         });
         
@@ -79,7 +78,7 @@ async function checkAvailablePlayers(): Promise<PlayerData[]> {
 // Function to set player ready status
 async function setPlayerReady(playerId: string): Promise<boolean> {
     try {
-        const response = await fetchWithSelfSigned(`https://localhost:${serverPort}/api/players/${playerId}/ready`, {
+        const response = await fetchWithSelfSigned(`http://localhost:8081/api/players/${playerId}/ready`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -107,13 +106,14 @@ function updateGameStatus(message: string): void {
 }
 
 // Function to initialize the game
-function initializeGame(playerId: string): void {
+export function initializeGame(playerId: string): void {
     if (clientConnection) {
         clientConnection.socket.close();
     }
     
     localPlayerId = playerId;
-    clientConnection = new webSocketClient(`wss://localhost:${serverPort}/ws`, playerId);
+    // Use ws:// for HTTP since game service HTTP server is on port 8081 (which includes WebSocket)
+    clientConnection = new webSocketClient(`ws://localhost:8081/ws`, playerId);
 
     clientConnection.socket.addEventListener('open', () => {
         console.log('WebSocket connection opened');

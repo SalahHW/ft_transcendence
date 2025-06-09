@@ -1,5 +1,5 @@
 import * as BABYLON from '@babylonjs/core';
-import { playerPaddle as paddle } from './player';
+import { playerPaddle as paddle } from './player.js';
 
 interface KeyState {
     w: boolean;
