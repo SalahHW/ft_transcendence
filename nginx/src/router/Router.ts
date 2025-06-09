@@ -15,7 +15,7 @@
 
 import APITestPage from "../views/apiTestPage/APITestPage.js";
 import HomePage from "../views/homePage.js";
-import { getCurrentUser } from "../game/utils/fetch.js";
+import { getCurrentUser, getUserResponseData, registerCurrentUserForGame } from "../game/utils/fetch.js";
 
 interface Route {
 	path: string;
@@ -47,9 +47,22 @@ export default class Router {
 			path: "/1v1",
 			handler: async function() {
 				console.log("1v1 page handler called");
-				const response = await getCurrentUser();
-				console.log(response);
-				// TODO: Implement 1v1 page by adding your function
+				try {
+					const username = await getUserResponseData("username");
+					console.log(`Welcome ${username}! Registering for 1v1 game...`);
+					
+					// Register the current user for the game
+					const playerData = await registerCurrentUserForGame();
+					console.log(`Successfully registered player:`, playerData);
+					console.log(`Player ID: ${playerData.id}, Username: ${playerData.username}`);
+					
+					// TODO: Navigate to actual game interface or show game lobby
+					alert(`Successfully registered for 1v1 game!\nPlayer ID: ${playerData.id}\nUsername: ${playerData.username}`);
+					
+				} catch (error) {
+					console.error("Error registering user for game:", error);
+					alert(`Failed to register for 1v1 game: ${error.message}`);
+				}
 			}
 		},
 		{

@@ -43,4 +43,47 @@ export async function getCurrentUser(): Promise<UserResponse | null> {
 		return null;
 	else
 		throw new Error(`failed to get current user:\n${JSON.stringify(responseData, null, 2)}`);
-} 
+}
+
+export async function getUserResponseData(key: string): Promise<any> {
+	const userResponse = await getCurrentUser();
+	
+	if (!userResponse) {
+		throw new Error('User not authenticated');
+	}
+	
+	if (!userResponse.user) {
+		throw new Error('Invalid user response format');
+	}
+	
+	if (!(key in userResponse.user)) {
+		throw new Error(`Key '${key}' not found in user data`);
+	}
+	
+	return userResponse.user[key];
+}
+
+export async function registerCurrentUserForGame(): Promise<{ id: string; username: string }> {
+	const username = await getUserResponseData('username');
+	const serverPort = 8081; // Game service HTTP port
+	
+	const response = await fetch(`http://localhost:${serverPort}/api/players`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({ username }),
+	});
+	
+	if (!response.ok) {
+		const error = await response.text();
+		throw new Error(`Failed to register user for game: ${error}`);
+	}
+	
+	const result = await response.json();
+	if (!result.data || !result.data.id) {
+		throw new Error('Invalid response from game service');
+	}
+	
+	return result.data;
+}
