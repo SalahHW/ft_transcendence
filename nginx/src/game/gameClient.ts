@@ -345,4 +345,30 @@ export class GameClient {
         this.localPlayerId = null;
         this.isGameOver = false;
     }
+
+    public leaveGame(): void {
+        console.log('Player leaving game...');
+        
+        // Set game as over to stop input and rendering
+        this.isGameOver = true;
+        
+        // Stop the game loop immediately
+        if (this.isGameLoopRunning && this.map?.getEngine) {
+            this.map.getEngine.stopRenderLoop();
+            this.isGameLoopRunning = false;
+        }
+
+        // Send leave game message to server
+        if (this.clientConnection) {
+            this.clientConnection.leaveGame();
+        }
+
+        // Clean up remaining resources
+        this.player1 = null;
+        this.player2 = null;
+        this.ball = null;
+        this.map = null;
+        this.roomId = null;
+        this.localPlayerId = null;
+    }
 } 

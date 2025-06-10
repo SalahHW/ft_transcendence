@@ -117,6 +117,21 @@ export class webSocketClient {
         }
     }
 
+    leaveGame(): void {
+        console.log('Sending leave game message to server...');
+        this.send({
+            type: 'leaveGame',
+            playerId: this.playerId
+        });
+        
+        // Give a small delay to ensure the message is sent before closing
+        setTimeout(() => {
+            if (this.socket.readyState === WebSocket.OPEN) {
+                this.socket.close();
+            }
+        }, 100);
+    }
+
     getMatchEndTime(): Date | null {
         return this.matchEndTime;
     }

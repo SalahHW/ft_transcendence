@@ -75,6 +75,14 @@ export default class GamePage {
 		// Clean up game resources if needed
 		const confirmLeave = confirm("Are you sure you want to leave the game?");
 		if (confirmLeave) {
+			console.log("Leave game confirmed, calling cleanup...");
+			// Notify the game client to clean up properly
+			if ((window as any).leaveGame) {
+				console.log("Calling leaveGame cleanup function");
+				(window as any).leaveGame();
+			} else {
+				console.error("leaveGame cleanup function not found on window");
+			}
 			// Navigate back to home or API test page
 			window.history.back();
 		}

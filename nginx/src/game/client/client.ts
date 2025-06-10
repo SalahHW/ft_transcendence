@@ -30,6 +30,8 @@ interface GameEndData {
     matchDuration: number;
     gameStats: {
         totalRebounds: number;
+        forfeit?: boolean;
+        reason?: 'player_left' | 'disconnect';
     };
     matchEndTime: Date;
 }
@@ -107,6 +109,8 @@ function updateGameStatus(message: string): void {
 
 // Function to initialize the game
 export function initializeGame(playerId: string): void {
+    console.log('🎮 Initializing game for player:', playerId);
+    
     if (clientConnection) {
         clientConnection.socket.close();
     }
@@ -114,6 +118,10 @@ export function initializeGame(playerId: string): void {
     localPlayerId = playerId;
     // Use ws:// for HTTP since game service HTTP server is on port 8081 (which includes WebSocket)
     clientConnection = new webSocketClient(`ws://localhost:8081/ws`, playerId);
+    
+    // Make leaveGame function available globally for Leave Game button
+    console.log('🌍 Setting global leaveGame function...');
+    (window as any).leaveGame = leaveGame;
 
     clientConnection.socket.addEventListener('open', () => {
         console.log('WebSocket connection opened');
@@ -250,11 +258,35 @@ export function initializeGame(playerId: string): void {
         
         // Update UI to show game results
         const isWinner = gameEndData.winner.id === localPlayerId;
-        const resultText = isWinner 
-            ? `🎉 YOU WON! Final Score: ${gameEndData.winner.score}-${gameEndData.loser.score}`
-            : `😔 You Lost. Final Score: ${gameEndData.winner.score}-${gameEndData.loser.score}`;
+        let resultText;
+        
+        if (gameEndData.gameStats?.reason === 'player_left') {
+            resultText = isWinner 
+                ? `🎉 YOU WON! Your opponent left the game.`
+                : `😔 You forfeited the game.`;
+        } else if (gameEndData.gameStats?.reason === 'disconnect') {
+            resultText = isWinner 
+                ? `🎉 YOU WON! Your opponent disconnected.`
+                : `😔 You disconnected from the game.`;
+        } else {
+            resultText = isWinner 
+                ? `🎉 YOU WON! Final Score: ${gameEndData.winner.score}-${gameEndData.loser.score}`
+                : `😔 You Lost. Final Score: ${gameEndData.winner.score}-${gameEndData.loser.score}`;
+        }
         
         updateGameStatus(resultText);
+        
+        // Stop the game loop and clean up
+        if (isGameLoopRunning && map?.getEngine) {
+            map.getEngine.stopRenderLoop();
+            isGameLoopRunning = false;
+        }
+        
+        // Automatically navigate back to main page after a short delay
+        setTimeout(() => {
+            console.log('🏠 Navigating back to main page...');
+            window.history.back();
+        }, 3000); // 3 second delay to show the result
     });
 
     // Add handler for waiting status
@@ -390,6 +422,92 @@ export function initializeGame(playerId: string): void {
             }
         }
     });
+}
+
+// Export cleanup function for Leave Game button
+export function cleanup(): void {
+    console.log('🧹 Cleaning up game client...');
+    
+    // Set game as over to immediately stop input and rendering
+    isGameOver = true;
+    
+    if (isGameLoopRunning && map?.getEngine) {
+        console.log('🔄 Stopping render loop...');
+        map.getEngine.stopRenderLoop();
+        isGameLoopRunning = false;
+    }
+
+    if (clientConnection?.socket) {
+        console.log(`🔌 WebSocket state: ${clientConnection.socket.readyState} (${clientConnection.socket.readyState === WebSocket.OPEN ? 'OPEN' : 'NOT OPEN'})`);
+        if (clientConnection.socket.readyState === WebSocket.OPEN) {
+            console.log('🚪 Closing WebSocket connection...');
+            clientConnection.socket.close();
+        }
+    } else {
+        console.log('❌ No WebSocket connection found');
+    }
+
+    // Remove global keyboard event listeners if they exist
+    if ((window as any).gameControlsInitialized) {
+        console.log('🎮 Removing keyboard controls...');
+        // Note: We can't easily remove specific event listeners, but setting isGameOver should prevent input
+    }
+
+    console.log('🗑️ Nullifying game objects...');
+    clientConnection = null;
+    player1 = null;
+    player2 = null;
+    ball = null;
+    map = null;
+    roomId = null;
+    localPlayerId = null;
+    
+    console.log('✅ Game client cleanup completed');
+}
+
+// Export leaveGame function for Leave Game button
+export function leaveGame(): void {
+    console.log('🏃 Player leaving game...');
+    
+    // Set game as over to immediately stop input and rendering
+    isGameOver = true;
+    
+    if (isGameLoopRunning && map?.getEngine) {
+        console.log('🔄 Stopping render loop...');
+        map.getEngine.stopRenderLoop();
+        isGameLoopRunning = false;
+    }
+
+    // Send leave game message to server if connection exists
+    if (clientConnection) {
+        if (clientConnection.leaveGame) {
+            console.log('📤 Sending leave game message to server...');
+            clientConnection.leaveGame();
+        } else {
+            console.log('🚪 leaveGame method not available, closing connection directly...');
+            if (clientConnection.socket?.readyState === WebSocket.OPEN) {
+                clientConnection.send({ type: 'leaveGame', playerId: localPlayerId });
+                setTimeout(() => {
+                    if (clientConnection?.socket?.readyState === WebSocket.OPEN) {
+                        clientConnection.socket.close();
+                    }
+                }, 100);
+            }
+        }
+    } else {
+        console.log('❌ No WebSocket connection found');
+    }
+
+    // Clean up remaining resources
+    console.log('🗑️ Nullifying game objects...');
+    player1 = null;
+    player2 = null;
+    ball = null;
+    map = null;
+    roomId = null;
+    localPlayerId = null;
+    
+    console.log('✅ Leave game completed');
 }
 
 // Function to setup game loop

@@ -122,7 +122,7 @@ export async function registerWebSocketRoutes(fastify) {
 
     // Handle player disconnect
     ws.on('close', () => {
-      console.log('WebSocket closed for player');
+      console.log(`🚪 WebSocket closed for player ${playerId} in room ${roomId}`);
       handlePlayerDisconnect(playerId, roomId);
     });
   });
@@ -167,6 +167,12 @@ function handlePlayerInput(data, playerId, roomId) {
       player.positionZ = Number(clampedZ.toFixed(3));
     }
     player.lastUpdate = now;
+  } else if (msg.type === 'leaveGame') {
+    console.log(`🏃 Player ${playerId} is leaving the game in room ${roomId}`);
+    // Mark the player as leaving to distinguish from unexpected disconnect
+    player.isLeaving = true;
+    // Call disconnect handler which already has forfeit logic
+    handlePlayerDisconnect(playerId, roomId);
   } else if (msg.type === 'requestBallRespawn') {
     if (!room.ball) {
       room.ball = new Ball(
@@ -210,8 +216,11 @@ function handlePlayerInput(data, playerId, roomId) {
 
 // Handle player disconnect
 function handlePlayerDisconnect(playerId, roomId) {
-  console.log(`Player disconnected: ${playerId} from room ${roomId}`);
   const player = getPlayers().get(playerId);
+  const isExplicitLeave = player?.isLeaving === true;
+  
+  console.log(`🔥 DISCONNECT HANDLER: Player ${playerId} from room ${roomId} ${isExplicitLeave ? '(EXPLICIT LEAVE)' : '(UNEXPECTED DISCONNECT)'}`);
+  
   if (player && player.ws) {
     try {
       if (player.ws.readyState === 1) {
@@ -223,7 +232,71 @@ function handlePlayerDisconnect(playerId, roomId) {
     getPlayers().delete(playerId);
   }
   const room = getGameState().gameRooms.get(roomId) || { players: [] };
+  
+  // Check if the game was in progress and award win to remaining player
+  if (room.ready && !room.isGameOver && room.players.length === 2) {
+    const remainingPlayer = room.players.find(p => p.id !== playerId);
+    const disconnectedPlayer = room.players.find(p => p.id === playerId);
+    
+    if (remainingPlayer && disconnectedPlayer) {
+      const actionText = isExplicitLeave ? 'left the game' : 'disconnected during active game';
+      console.log(`Player ${playerId} ${actionText}. Awarding win to ${remainingPlayer.id}`);
+      
+      // Mark game as over
+      room.isGameOver = true;
+      
+      // Create match end data
+      const matchEndTime = new Date().toISOString();
+      const matchStartTime = room.startTime || new Date().toISOString();
+      
+      const matchData = {
+        roomId,
+        matchStartTime,
+        matchEndTime,
+        matchDuration: new Date() - new Date(matchStartTime),
+        winner: {
+          id: remainingPlayer.id,
+          username: remainingPlayer.username || 'Anonymous',
+          score: 11 // Award full score for forfeit win
+        },
+        loser: {
+          id: disconnectedPlayer.id,
+          username: disconnectedPlayer.username || 'Anonymous',
+          score: room.ball?.player1?.playerId === disconnectedPlayer.id ? 
+                  (room.ball?.player1?.playerScore || 0) : 
+                  (room.ball?.player2?.playerScore || 0)
+        },
+        gameStats: {
+          totalRebounds: room.ball?.rebounds || 0,
+          forfeit: true,
+          reason: isExplicitLeave ? 'player_left' : 'disconnect'
+        },
+        serverTime: Date.now(),
+        matchEndTime: new Date()
+      };
+      
+      console.log(`=== ${isExplicitLeave ? 'PLAYER LEFT' : 'FORFEIT WIN'} ===`);
+      console.log(`Winner: ${matchData.winner.username} (${matchData.winner.id})`);
+      console.log(`${isExplicitLeave ? 'Left' : 'Disconnected'}: ${matchData.loser.username} (${matchData.loser.id})`);
+      console.log(`==================`);
+      
+      // Send game end message to remaining player
+      if (remainingPlayer.ws && remainingPlayer.ws.readyState === 1) {
+        try {
+          remainingPlayer.ws.send(JSON.stringify({
+            type: 'gameEnd',
+            ...matchData
+          }));
+        } catch (e) {
+          console.error(`Failed to send gameEnd to remaining player ${remainingPlayer.id}:`, e);
+        }
+      }
+    }
+  }
+  
+  // Remove disconnected player from room
   room.players = room.players.filter(p => p.id !== playerId);
+  
   if (room.players.length === 0) {
     getGameState().gameRooms.delete(roomId);
     getGameState().animationStatus.delete(roomId);

@@ -196,6 +196,12 @@ export class webSocketGameServer {
                 player.positionZ = Number(clampedZ.toFixed(3));
             }
             player.lastUpdate = now;
+        } else if (msg.type === 'leaveGame') {
+            console.log(`🏃 Player ${playerId} is leaving the game in room ${roomId}`);
+            // Mark the player as leaving to distinguish from unexpected disconnect
+            player.isLeaving = true;
+            // Call disconnect handler which already has forfeit logic
+            this.handlePlayerDisconnect(playerId, roomId);
         } else if (msg.type === 'requestBallRespawn') {
             if (!room.ball) {
                 room.ball = new Ball(
@@ -357,9 +363,42 @@ export class webSocketGameServer {
     }
 
     handlePlayerDisconnect(playerId, roomId) {
-        console.log(`Player disconnected: ${playerId} from room ${roomId}`);
-        this.players.delete(playerId);
+        const player = this.players.get(playerId);
+        const isExplicitLeave = player?.isLeaving === true;
+        
+        console.log(`Player ${isExplicitLeave ? 'left' : 'disconnected'}: ${playerId} from room ${roomId}`);
+        
         const room = this.gameRooms.get(roomId) || { players: [] };
+        
+        // Check if the game was in progress and award win to remaining player
+        if (!room.isGameOver && room.players.length === 2) {
+            const remainingPlayer = room.players.find(p => p.id !== playerId);
+            const disconnectedPlayer = room.players.find(p => p.id === playerId);
+            
+            if (remainingPlayer && disconnectedPlayer) {
+                const actionText = isExplicitLeave ? 'left the game' : 'disconnected during active game';
+                console.log(`Player ${playerId} ${actionText}. Awarding win to ${remainingPlayer.id}`);
+                
+                // Mark game as over
+                room.isGameOver = true;
+                
+                // Send game end message to remaining player
+                this.broadcastToRoom(roomId, {
+                    type: 'gameEnd',
+                    winnerId: remainingPlayer.id,
+                    loserId: playerId,
+                    reason: isExplicitLeave ? 'player_left' : 'disconnect',
+                    scores: {
+                        [remainingPlayer.id]: 11, // Award full score for forfeit win
+                        [playerId]: room.ball?.player1?.playerId === playerId ? 
+                                   (room.ball?.player1?.playerScore || 0) : 
+                                   (room.ball?.player2?.playerScore || 0)
+                    },
+                });
+            }
+        }
+        
+        this.players.delete(playerId);
         const remaining = room.players.filter(p => p.id !== playerId);
         if (remaining.length === 0) {
             this.gameRooms.delete(roomId);
