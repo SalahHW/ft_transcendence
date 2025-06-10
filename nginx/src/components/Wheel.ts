@@ -6,9 +6,11 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 16:41:12 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/09 19:44:53 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/09 20:32:22 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
+import Router from "../router/Router.js";
 
 interface Option {
 	label: string;
@@ -25,8 +27,17 @@ export default class Wheel {
 	private _isVisible: boolean = false;
 	private _wheelOptions: Option[] = [
 		{
-			label: "PLAY",
-			icon: "🎮",
+			label: "API Test page",
+			icon: "🔧",
+			onClick: () => {
+				console.log("API Test page clicked");
+				const router = Router.getInstance();
+				router.navigate("/api-test");
+			},
+		},
+		{
+			label: "Play",
+			icon: "🕹️",
 			subMenu: [
 				{
 					label: "1v1",
@@ -45,33 +56,33 @@ export default class Wheel {
 			]
 		},
 		{
-			label: "PROFILE",
-			icon: "👤",
+			label: "Profile",
+			icon: "●",
 			onClick: () => {
 				console.log("Profile clicked");
 			}
 		},
 		{
-			label: "SETTINGS",
-			icon: "⚙️",
+			label: "Settings",
+			icon: "◐",
 			onClick: () => {
 				console.log("Settings clicked");
 			}
 		},
 		{
-			label: "LOGIN",
-			icon: "🔑",
+			label: "Login",
+			icon: "◆",
 			subMenu: [
 				{
 					label: "Sign In",
-					icon: "🚪",
+					icon: "→",
 					onClick: () => {
 						console.log("Sign In clicked");
 					}
 				},
 				{
 					label: "Register",
-					icon: "📝",
+					icon: "+",
 					onClick: () => {
 						console.log("Register clicked");
 					}
@@ -226,13 +237,13 @@ export default class Wheel {
 		// Structure de base de la roue
 		this._element.className = `
 			fixed inset-0 z-50 hidden items-center justify-center
-			bg-black/20 backdrop-blur-sm
+			bg-black/30 backdrop-blur-md select-none
 			opacity-0 scale-95 transition-all duration-150 ease-out
 		`.trim();
 
 		this._element.innerHTML = `
-			<div class="wheel-content relative">
-				<svg class="wheel-svg" width="960" height="960" viewBox="0 0 960 960">
+			<div class="wheel-content relative select-none">
+				<svg class="wheel-svg select-none" width="960" height="960" viewBox="0 0 960 960" style="user-select: none; -webkit-user-select: none; -moz-user-select: none;">
 					<!-- Le contenu sera généré dynamiquement -->
 				</svg>
 			</div>
@@ -262,9 +273,16 @@ export default class Wheel {
 		centerCircle.setAttribute('cx', centerX.toString());
 		centerCircle.setAttribute('cy', centerY.toString());
 		centerCircle.setAttribute('r', innerRadius.toString());
-		centerCircle.setAttribute('fill', 'rgba(75, 85, 99, 0.8)');
-		centerCircle.setAttribute('stroke', 'rgba(107, 114, 128, 0.5)');
+		centerCircle.setAttribute('fill', 'rgba(31, 41, 55, 0.9)');
+		centerCircle.setAttribute('stroke', 'rgba(75, 85, 99, 0.3)');
 		centerCircle.setAttribute('stroke-width', '1');
+		centerCircle.setAttribute('class', 'cursor-pointer transition-all duration-200 hover:fill-gray-600/90');
+
+		// Gestionnaire de clic pour revenir en arrière
+		centerCircle.addEventListener('click', () => {
+			this._goBack();
+		});
+
 		svg.appendChild(centerCircle);
 
 		this._currentOptions.forEach((option, index) => {
@@ -297,10 +315,10 @@ export default class Wheel {
 			].join(' ');
 
 			path.setAttribute('d', pathData);
-			path.setAttribute('fill', isSelected ? 'rgba(59, 130, 246, 0.8)' : 'rgba(75, 85, 99, 0.8)');
-			path.setAttribute('stroke', isSelected ? 'rgba(59, 130, 246, 1)' : 'rgba(107, 114, 128, 0.5)');
+			path.setAttribute('fill', isSelected ? 'rgba(55, 65, 81, 0.95)' : 'rgba(31, 41, 55, 0.85)');
+			path.setAttribute('stroke', isSelected ? 'rgba(156, 163, 175, 0.6)' : 'rgba(75, 85, 99, 0.3)');
 			path.setAttribute('stroke-width', '1');
-			path.setAttribute('class', 'cursor-pointer transition-all duration-200 hover:fill-blue-500/60');
+			path.setAttribute('class', 'cursor-pointer transition-all duration-200 hover:fill-gray-600/90');
 
 			// Gestionnaire de clic
 			path.addEventListener('click', () => {
@@ -327,16 +345,21 @@ export default class Wheel {
 			// Créer un groupe pour le texte et l'icône
 			const textGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
 			textGroup.setAttribute('class', 'pointer-events-none');
+			textGroup.style.userSelect = 'none';
+			textGroup.style.webkitUserSelect = 'none';
+			(textGroup.style as any).MozUserSelect = 'none';
 
 			// Icône
 			if (option.icon) {
 				const iconText = document.createElementNS("http://www.w3.org/2000/svg", "text");
 				iconText.setAttribute('x', textX.toString());
-				iconText.setAttribute('y', (textY - 12).toString());
+				iconText.setAttribute('y', (textY - 20).toString());
 				iconText.setAttribute('text-anchor', 'middle');
 				iconText.setAttribute('dominant-baseline', 'middle');
-				iconText.setAttribute('fill', isSelected ? 'white' : 'rgb(209, 213, 219)');
-				iconText.setAttribute('font-size', '48');
+				iconText.setAttribute('fill', isSelected ? 'rgb(243, 244, 246)' : 'rgb(156, 163, 175)');
+				iconText.setAttribute('font-size', '32');
+				iconText.setAttribute('font-family', 'SF Pro Display, system-ui, -apple-system, sans-serif');
+				iconText.setAttribute('font-weight', '300');
 				iconText.textContent = option.icon;
 				textGroup.appendChild(iconText);
 			}
@@ -344,13 +367,13 @@ export default class Wheel {
 			// Label
 			const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
 			label.setAttribute('x', textX.toString());
-			label.setAttribute('y', (textY + 24).toString());
+			label.setAttribute('y', (textY + 20).toString());
 			label.setAttribute('text-anchor', 'middle');
 			label.setAttribute('dominant-baseline', 'middle');
-			label.setAttribute('fill', isSelected ? 'white' : 'rgb(209, 213, 219)');
-			label.setAttribute('font-size', '32');
-			label.setAttribute('font-weight', isSelected ? '600' : '400');
-			label.setAttribute('font-family', 'system-ui, -apple-system, sans-serif');
+			label.setAttribute('fill', isSelected ? 'rgb(243, 244, 246)' : 'rgb(156, 163, 175)');
+			label.setAttribute('font-size', '24');
+			label.setAttribute('font-weight', isSelected ? '500' : '400');
+			label.setAttribute('font-family', 'SF Pro Display, system-ui, -apple-system, sans-serif');
 			label.textContent = option.label;
 			textGroup.appendChild(label);
 
@@ -364,9 +387,10 @@ export default class Wheel {
 			backIndicator.setAttribute('y', centerY.toString());
 			backIndicator.setAttribute('text-anchor', 'middle');
 			backIndicator.setAttribute('dominant-baseline', 'middle');
-			backIndicator.setAttribute('fill', 'rgb(209, 213, 219)');
-			backIndicator.setAttribute('font-size', '24');
-			backIndicator.setAttribute('font-family', 'system-ui, -apple-system, sans-serif');
+			backIndicator.setAttribute('fill', 'rgb(156, 163, 175)');
+			backIndicator.setAttribute('font-size', '20');
+			backIndicator.setAttribute('font-family', 'SF Pro Display, system-ui, -apple-system, sans-serif');
+			backIndicator.setAttribute('font-weight', '400');
 			backIndicator.textContent = '← ESC';
 			svg.appendChild(backIndicator);
 		}
