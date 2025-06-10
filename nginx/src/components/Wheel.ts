@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 16:41:12 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/09 20:32:22 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/10 18:56:58 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,14 +25,14 @@ export default class Wheel {
 	private _optionHistory: Option[][] = []; // Pour naviguer dans les sous-menus
 	private _selectedIndex: number = 0;
 	private _isVisible: boolean = false;
+	private _router: Router = Router.getInstance();
 	private _wheelOptions: Option[] = [
 		{
 			label: "API Test page",
 			icon: "🔧",
 			onClick: () => {
 				console.log("API Test page clicked");
-				const router = Router.getInstance();
-				router.navigate("/api-test");
+				this._router.navigate("/api-test");
 			},
 		},
 		{
@@ -44,6 +44,7 @@ export default class Wheel {
 					icon: "⚔️",
 					onClick: () => {
 						console.log("1v1 clicked");
+						this._router.navigate("/1v1");
 					}
 				},
 				{
