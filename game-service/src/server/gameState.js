@@ -42,22 +42,22 @@ export function checkRoomReady(roomId) {
       animationStatus.set(roomId, new Set());
       console.log(`Initialized animationStatus for room ${roomId}`);
     }
-    // Retry ball update
+    // Retry ball update with shorter delays
     const attemptBallUpdate = (attempt = 1) => {
       const roomAnimStatus = animationStatus.get(roomId);
       if (roomAnimStatus?.size === 2 && gameRooms.get(roomId)?.ready) {
         console.log(`Sending initial ballUpdate for room ${roomId}`);
         sendBallUpdateForced(roomId);
-      } else if (attempt <= 3) {
+      } else if (attempt <= 5) {
         console.warn(`Waiting for animations in room ${roomId}, attempt ${attempt}, status size: ${roomAnimStatus?.size || 0}`);
-        setTimeout(() => attemptBallUpdate(attempt + 1), 500);
+        setTimeout(() => attemptBallUpdate(attempt + 1), 200); // Reduced from 500ms to 200ms
       } else {
         console.error(`Forcing ballUpdate for room ${roomId} after ${attempt - 1} attempts`);
         room.ballUpdateSent = false;
         sendBallUpdateForced(roomId);
       }
     };
-    setTimeout(() => attemptBallUpdate(), 500);
+    setTimeout(() => attemptBallUpdate(), 100); // Reduced initial delay from 500ms to 100ms
   } else {
     // Notify players about waiting status
     const readyPlayers = room.players.filter(p => p.readyToPlay).length;
