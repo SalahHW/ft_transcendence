@@ -48,15 +48,11 @@ export default class Router {
 		{
 			path: "/1v1",
 			handler: async function() {
-				console.log("1v1 page handler called");
 				try {
 					const username = await getUserResponseData("username");
-					console.log(`Welcome ${username}! Registering for 1v1 game...`);
 					
 					// Register the current user for the game
 					const playerData = await registerCurrentUserForGame();
-					console.log(`Successfully registered player:`, playerData);
-					console.log(`Player ID: ${playerData.id}, Username: ${playerData.username}`);
 					
 					// Create and render the game page
 					if (!this.cache) {
@@ -64,14 +60,11 @@ export default class Router {
 					}
 					this.cache.render();
 					
-
-					// Dynamically import and initialize the game client using the existing client code
-					console.log("Loading game client...");
-					const { initializeGame } = await import("../game/client/client.js");
-					console.log("Initializing game with player ID:", playerData.id);
-					await initializeGame(playerData.id);
+					// Load the pre-bundled game client
+					const gameBundlePath = "/js/game.bundle.js";
+					const gameClientModule = await import(gameBundlePath);
 					
-					console.log("Game client initialized successfully!");
+					await gameClientModule.initializeGame(playerData.id);
 					
 				} catch (error) {
 					console.error("Error registering user for game:", error);

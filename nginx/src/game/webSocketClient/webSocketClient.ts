@@ -39,7 +39,6 @@ export class webSocketClient {
         this.matchEndTime = null;
 
         this.socket.addEventListener('open', () => {
-            console.log('WebSocket opened');
             // Send setUsername message
             this.send({
                 type: 'setUsername',
@@ -66,7 +65,6 @@ export class webSocketClient {
             }
 
             if (msg.type === 'usernameUpdate') {
-                console.log(`Player ${msg.playerId} set username: ${msg.username}`);
                 return;
             }
             if (msg.type === 'error') {
@@ -105,7 +103,7 @@ export class webSocketClient {
         });
 
         this.socket.addEventListener('error', err => console.error('WS error:', err));
-        this.socket.addEventListener('close', () => console.log('WS closed'));
+        this.socket.addEventListener('close', () => {});
     }
 
     send(obj: any): void {
@@ -118,7 +116,6 @@ export class webSocketClient {
     }
 
     leaveGame(): void {
-        console.log('Sending leave game message to server...');
         this.send({
             type: 'leaveGame',
             playerId: this.playerId

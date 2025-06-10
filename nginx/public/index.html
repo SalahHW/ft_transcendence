@@ -4,23 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ft_transcendence</title>
-        <link href="style/style.css" rel="stylesheet" />
-    
-    <!-- Import Maps for locally installed Babylon.js packages -->
-    <script type="importmap">
-    {
-      "imports": {
-        "@babylonjs/core": "/node_modules/@babylonjs/core/index.js",
-        "@babylonjs/core/": "/node_modules/@babylonjs/core/",
-        "@babylonjs/core/PostProcesses/depthOfFieldEffect": "/node_modules/@babylonjs/core/PostProcesses/depthOfFieldEffect.js",
-        "@babylonjs/core/PostProcesses/RenderPipeline/postProcessRenderPipelineManager": "/node_modules/@babylonjs/core/PostProcesses/RenderPipeline/postProcessRenderPipelineManager.js",
-        "@babylonjs/core/Rendering/depthRenderer": "/node_modules/@babylonjs/core/Rendering/depthRenderer.js"
-      }
-    }
-    </script>
+    <link href="style/style.css" rel="stylesheet" />
   </head>
   <body>
     <div id="app-container"></div>
-    <script type="module" src="./js/main.js"></script>
+    <!-- Load pre-bundled app with BABYLON.js included -->
+    <script type="module" src="./js/main.bundle.js"></script>
+    <!-- Preload game client bundle for instant game start -->
+    <link rel="modulepreload" href="./js/game.bundle.js" />
   </body>
 </html>
