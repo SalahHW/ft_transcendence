@@ -18,9 +18,6 @@ export const initializeDatabase = async () => {
       username TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
       email TEXT UNIQUE NOT NULL,
-      wallet TEXT UNIQUE NOT NULL,
-      has_2fa BOOLEAN DEFAULT 0,
-      login_type TEXT DEFAULT 'credentials',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );`;
 

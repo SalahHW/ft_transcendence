@@ -2,36 +2,28 @@ import * as userModels from "../models/userModels.js";
 import { createUsername } from "./usernameControllers.js";
 import { createEmail } from "./emailControllers.js";
 import { createPassword } from "./passwordControllers.js";
-import { createWallet } from "./walletControllers.js";
 
 export async function createUser(request, reply) {
-  const { username, password, email, wallet } = request.body;
+  const { username, password, email } = request.body;
 
+  if (!username || !password || !email) {
+    return reply
+      .code(400)
+      .send({ error: "Lack of information related to the user" });
+  }
   try {
     const usernameExists = await userModels.userExists(username);
-    if (usernameExists)
-      return reply.code(409).send({ error: "User already exists" });
-    
-    const emailLower = createEmail(email).toLowerCase(); 
+    if (usernameExists) return reply.code(409).send({ error: "User already exists" });
+    const emailLower = createEmail(email).toLowerCase();
     const emailExists = await userModels.emailExists(emailLower);
-    if (emailExists)
-      return reply.code(409).send({ error: "Email already used" });
-
-    const walletExists = await userModels.walletExists(wallet);
-    if (walletExists)
-      return reply.code(409).send({ error: "Wallet already used" });
-    
+    if (emailExists) return reply.code(409).send({ error: "Email already used" });
     const newUsername = createUsername(username);
     const hashedPassword = await createPassword(password);
-    const newWallet = await createWallet(username, wallet);
-
     const newUser = await userModels.createUser({
       username: newUsername,
       password: hashedPassword,
       email: emailLower,
-      wallet: newWallet,
     });
-
     return reply.code(201).send(newUser);
   } catch (error) {
     return reply.code(500).send({
