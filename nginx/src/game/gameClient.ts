@@ -52,7 +52,7 @@ export class GameClient {
 
         // Initialize WebSocket connection using WSS for HTTPS or WS for HTTP
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//localhost:8080/ws`;
+        const wsUrl = `${protocol}//localhost:8081/ws`;
         console.log('Creating WebSocket connection to:', wsUrl);
         
         this.clientConnection = new webSocketClient(wsUrl, playerId);
@@ -147,10 +147,27 @@ export class GameClient {
         try {
             if (this.map) {
                 await this.map.launchMatchAnimation();
+                
+                // Notify server that animation is complete
+                if (this.clientConnection) {
+                    this.clientConnection.send({
+                        type: 'animationComplete',
+                        playerId: this.localPlayerId
+                    });
+                    console.log('Sent animationComplete to server');
+                }
             }
             this.startGameLoop();
         } catch (error) {
             console.error('Error during game initialization:', error);
+            // Send animation complete anyway to prevent server hanging
+            if (this.clientConnection) {
+                this.clientConnection.send({
+                    type: 'animationComplete',
+                    playerId: this.localPlayerId
+                });
+                console.log('Sent animationComplete to server (after error)');
+            }
             this.startGameLoop(); // Start anyway
         }
     }
