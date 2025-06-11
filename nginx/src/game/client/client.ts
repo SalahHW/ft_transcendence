@@ -61,6 +61,7 @@ let isGameLoopRunning: boolean = false;
 // Function to check available players
 async function checkAvailablePlayers(): Promise<PlayerData[]> {
     try {
+        //TODO: USE SIGNED OF JO
         const response = await fetchWithSelfSigned(`http://localhost:8081/api/players`, {
             method: 'GET',
         });
@@ -80,6 +81,7 @@ async function checkAvailablePlayers(): Promise<PlayerData[]> {
 // Function to set player ready status
 async function setPlayerReady(playerId: string): Promise<boolean> {
     try {
+        //TODO: USE SIGNED OF JO
         const response = await fetchWithSelfSigned(`http://localhost:8081/api/players/${playerId}/ready`, {
             method: 'POST',
             headers: {
@@ -112,7 +114,8 @@ export function initializeGame(playerId: string): void {
     if (clientConnection) {
         clientConnection.socket.close();
     }
-    
+    isGameOver = false;
+    isGameLoopRunning = false;
     localPlayerId = playerId;
     // Use ws:// for HTTP since game service HTTP server is on port 8081 (which includes WebSocket)
     clientConnection = new webSocketClient(`ws://localhost:8081/ws`, playerId);
@@ -141,11 +144,7 @@ export function initializeGame(playerId: string): void {
     // Set up paddle movement handler
     clientConnection.onPaddleMove((msg) => {
         if (!player1 || !player2) return;
-        
-        // Find the player whose paddle needs to be updated
         const movingPlayer = msg.playerId === player1.getPlayerId() ? player1 : player2;
-        
-        // Only update if it's not our own paddle
         if (movingPlayer && movingPlayer.getPlayerId() !== localPlayerId) {
             movingPlayer.setZ(msg.positionZ || 0);
         }
@@ -154,14 +153,11 @@ export function initializeGame(playerId: string): void {
     // Add ball update handler
     clientConnection.onBallUpdate((msg) => {
         if (!ball) return;
-        
-        // Ensure ball is visible during respawn
         if (msg.ballState?.isRespawning || msg.isInitialSpawn || msg.isScoreRespawn) {
             if (ball.ballBody) {
                 ball.ballBody.isVisible = true;
             }
         }
-        
         if (msg.ballState) {
             ball.setState(msg.ballState);
         }
@@ -170,8 +166,6 @@ export function initializeGame(playerId: string): void {
     // Add sync handler to ensure positions are correct
     clientConnection.onSync((msg) => {
         if (!player1 || !player2) return;
-        
-        // Update paddle positions from sync message
         if (msg.playerPositions) {
             Object.entries(msg.playerPositions).forEach(([playerId, positionZ]) => {
                 const syncPlayer = playerId === player1!.getPlayerId() ? player1 : player2;
@@ -180,8 +174,6 @@ export function initializeGame(playerId: string): void {
                 }
             });
         }
-
-        // Update ball state if available
         if (msg.ballState && ball) {
             ball.setState(msg.ballState);
         }
@@ -191,40 +183,30 @@ export function initializeGame(playerId: string): void {
     let previousScores: { [key: string]: number } = {};
     clientConnection.onScoreUpdate((msg) => {
         if (!player1 || !player2 || !map || !msg.scores) return;
-        
         const currentScores = msg.scores;
-        
-        // Initialize previous scores with zeros if this is the first update
         if (Object.keys(previousScores).length === 0) {
-            // Initialize with zeros for both players
             Object.keys(currentScores).forEach(playerId => {
                 previousScores[playerId] = 0;
             });
         }
-        
-        // Check which player's score increased (they scored, opponent lost a point)
         let losingPlayerId: string | null = null;
         
         for (const [playerId, currentScore] of Object.entries(currentScores)) {
             const previousScore = previousScores[playerId] || 0;
             if (currentScore > previousScore) {
-                // This player scored, so the other player lost a point
                 const otherPlayerId = Object.keys(currentScores).find(id => id !== playerId);
                 losingPlayerId = otherPlayerId || null;
                 break;
             }
         }
         
-        // Trigger camera shake only if the local player lost the point
         if (losingPlayerId === localPlayerId) {
-            console.log('You lost a point! Triggering camera shake...');
             map.triggerCameraShake().catch(error => {
                 console.error('Camera shake failed:', error);
             });
         }
         previousScores = { ...currentScores };
         
-        // Update local player scores for display
         if (player1 && player2) {
             const player1Score = currentScores[player1.getPlayerId()] || 0;
             const player2Score = currentScores[player2.getPlayerId()] || 0;
@@ -277,15 +259,12 @@ export function initializeGame(playerId: string): void {
             isGameLoopRunning = false;
         }
         
-        // **CRITICAL FIX**: Clean up before navigating to prevent recursion
         setTimeout(() => {
-            console.log('🏠 Game ended - cleaning up before navigation...');
             cleanup(); // Clean up resources first
             setTimeout(() => {
-                console.log('🏠 Navigating back to main page...');
                 window.history.back();
-            }, 500); // Small delay to ensure cleanup completes
-        }, 3000); // 3 second delay to show the result
+            }, 25);
+        }, 50);
     });
 
     // Add handler for waiting status
@@ -300,7 +279,6 @@ export function initializeGame(playerId: string): void {
         }
     });
 
-    // Set up the game initialization handlers
     clientConnection.onInit(async ({ playerId, roomId: rId, role, opponentId }) => {
         console.log('Received init:', { playerId, roomId: rId, role, opponentId });
         initTime = Date.now();
@@ -409,7 +387,7 @@ export function initializeGame(playerId: string): void {
             (window as any).gameKeydownHandler = keydownHandler;
             (window as any).gameKeyupHandler = keyupHandler;
             (window as any).gameControlsInitialized = true;
-            console.log('✅ Game keyboard controls setup with cleanup references');
+
         }
         
         // Start the game loop after match animation if not already running
@@ -451,20 +429,16 @@ export function initializeGame(playerId: string): void {
 
 // Export cleanup function for Leave Game button
 export function cleanup(): void {
-    console.log('🧹 Starting game cleanup...');
-    
     // Set game as over to immediately stop input and rendering
     isGameOver = true;
     
     if (isGameLoopRunning && map?.getEngine) {
         map.getEngine.stopRenderLoop();
         isGameLoopRunning = false;
-        console.log('✅ Render loop stopped');
     }
 
     if (clientConnection?.socket?.readyState === WebSocket.OPEN) {
         clientConnection.socket.close();
-        console.log('✅ WebSocket closed');
     }
 
     // Clean up join game button handler
@@ -475,29 +449,24 @@ export function cleanup(): void {
         }
         delete (window as any).joinGameButtonHandler;
         (window as any).joinGameButtonSetup = false;
-        console.log('✅ Join game button handler removed');
     }
 
-    // **CRITICAL FIX**: Remove keyboard event listeners that interfere with other pages
+    // **CRITICAL FIX**: Clean up keyboard event listeners for proper re-initialization
     if ((window as any).gameControlsInitialized) {
         if ((window as any).gameKeydownHandler) {
             document.removeEventListener('keydown', (window as any).gameKeydownHandler);
             delete (window as any).gameKeydownHandler;
-            console.log('✅ Game keydown listener removed');
         }
         if ((window as any).gameKeyupHandler) {
             document.removeEventListener('keyup', (window as any).gameKeyupHandler);
             delete (window as any).gameKeyupHandler;
-            console.log('✅ Game keyup listener removed');
         }
         (window as any).gameControlsInitialized = false;
-        console.log('✅ Game keyboard controls completely cleaned up');
     }
 
     // **ADDITIONAL SAFETY**: Reset key states to prevent stuck keys
     isUpPressed = false;
     isDownPressed = false;
-    console.log('✅ Game key states reset');
     
     // Remove global leaveGame function
     if ((window as any).leaveGame) {
@@ -512,14 +481,10 @@ export function cleanup(): void {
     map = null;
     roomId = null;
     localPlayerId = null;
-    
-    console.log('🎉 Game cleanup completed');
 }
 
 // Export leaveGame function for Leave Game button
 export function leaveGame(): void {
-    console.log('🚪 leaveGame called - using comprehensive cleanup...');
-    
     // Set game as over to immediately stop input and rendering
     isGameOver = true;
     
@@ -536,15 +501,12 @@ export function leaveGame(): void {
             }, 100);
         }
     }
-
-    // **CRITICAL FIX**: Use the comprehensive cleanup function
     cleanup();
 }
 
 // Function to setup game loop
 function setupGameLoop(): void {
     if (isGameLoopRunning) {
-        console.log('Game loop already running, skipping setup');
         return;
     }
 
@@ -671,6 +633,5 @@ export function setupJoinGameButton(): void {
         // Store reference for cleanup
         (window as any).joinGameButtonHandler = clickHandler;
         (window as any).joinGameButtonSetup = true;
-        console.log('✅ Join game button setup completed');
     }
 } 

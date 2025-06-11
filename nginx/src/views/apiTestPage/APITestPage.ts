@@ -217,15 +217,6 @@ export default class APITestPage {
 	}
 
 	public cleanup(): void {
-		console.log('🧹 APITestPage cleanup starting...');
-		
-		if (this._customTerminal) {
-			this._customTerminal.cleanup();
-			this._customTerminal = null;
-		}
-		
 		CustomTerminal.restoreConsoleLog();
-		
-		console.log('✅ APITestPage cleanup completed');
 	}
 }

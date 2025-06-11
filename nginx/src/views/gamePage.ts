@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   gamePage.ts                                        :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/06/09 15:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/09 15:00:00 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 import { COMMON_CLASSES } from "../style/tailwindClasses.js";
 import { buttonHTML } from "../components/button.js";
 
@@ -78,17 +66,12 @@ export default class GamePage {
 		// Clean up game resources if needed
 		const confirmLeave = confirm("Are you sure you want to leave the game?");
 		if (confirmLeave) {
-			console.log("Leave game confirmed, calling cleanup...");
-			
 			// Set flag to prevent double cleanup during navigation
 			(window as any).gameCleanupInProgress = true;
 			
 			// Notify the game client to clean up properly
 			if ((window as any).leaveGame) {
-				console.log("Calling leaveGame cleanup function");
 				(window as any).leaveGame();
-			} else {
-				console.error("leaveGame cleanup function not found on window");
 			}
 			
 			// Navigate back to home or API test page
@@ -128,8 +111,6 @@ export default class GamePage {
 
 	// **CRITICAL**: Cleanup method to remove event listeners
 	public cleanup(): void {
-		console.log('🧹 Cleaning up GamePage event listeners...');
-		
 		// Remove leave game button handler
 		if (this._leaveGameHandler) {
 			const leaveButton = document.getElementById("leave-game-button");
@@ -144,7 +125,5 @@ export default class GamePage {
 			window.removeEventListener('resize', this._resizeHandler);
 			this._resizeHandler = undefined;
 		}
-		
-		console.log('✅ GamePage cleanup completed');
 	}
 } 

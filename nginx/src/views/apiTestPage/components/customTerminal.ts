@@ -146,8 +146,6 @@ export default class CustomTerminal {
 
     // **CRITICAL FIX**: Add instance cleanup method
     public cleanup(): void {
-        console.log('🧹 CustomTerminal cleanup starting...');
-        
         // Remove keyboard event listener
         if (this._keydownHandler) {
             document.removeEventListener('keydown', this._keydownHandler);
@@ -157,8 +155,6 @@ export default class CustomTerminal {
         if (CustomTerminal._instance === this) {
             CustomTerminal._instance = null;
         }
-        
-        console.log('✅ CustomTerminal cleanup completed');
     }
 
     // Method to restore the original console methods
@@ -181,8 +177,6 @@ export default class CustomTerminal {
             document.removeEventListener('keydown', CustomTerminal._instance._keydownHandler);
             CustomTerminal._instance = null;
         }
-        
-        console.log('✅ Console methods restored to original');
     }
 
     private _createTerminal(): void {

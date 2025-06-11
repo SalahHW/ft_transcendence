@@ -73,7 +73,6 @@ export default class Router {
 					
 				} catch (error) {
 					console.error("Error registering user for game:", error);
-					alert(`Failed to register for 1v1 game: ${error.message}`);
 				}
 			}
 		},
@@ -101,7 +100,6 @@ export default class Router {
 		const isPopstateNavigation = (window as any).popstateInProgress;
 		
 		if (isLeavingRoute && !isPopstateNavigation) {
-			console.log(`🧹 Navigating away from ${currentPath} to ${path}, cleaning up...`);
 			this._cleanupCurrentRoute();
 		}
 		
@@ -118,8 +116,6 @@ export default class Router {
 		// **CRITICAL FIX**: Universal cleanup for any route
 		const currentPath = this.getCurrentPath();
 		if (!(window as any).routeCleanupInProgress) {
-			console.log(`🧹 Leaving route ${currentPath} - cleaning up...`);
-			
 			// Set flag to prevent double cleanup
 			(window as any).routeCleanupInProgress = true;
 			
@@ -127,7 +123,6 @@ export default class Router {
 			const currentRoute = this._routes.find(route => route.path === currentPath);
 			if (currentRoute?.cache?.cleanup) {
 				try {
-					console.log(`🧹 Calling cleanup for ${currentPath} route...`);
 					currentRoute.cache.cleanup();
 				} catch (error) {
 					console.error(`Error during ${currentPath} route cleanup:`, error);
@@ -168,14 +163,12 @@ export default class Router {
 	private _redirectToHome(): void {
 		// **CRITICAL FIX**: Prevent recursive calls by checking if we're already redirecting
 		if ((window as any).redirectingToHome) {
-			console.warn('Already redirecting to home, ignoring...');
 			return;
 		}
 		
 		(window as any).redirectingToHome = true;
 		
 		try {
-			console.log('🏠 Redirecting to home...');
 			window.history.replaceState({ path: '/' }, '', '/');
 			this._executeHandler('/');
 		} catch (error) {
@@ -192,15 +185,12 @@ export default class Router {
 	public navigate(path: string, replaceState: boolean = false): boolean {
 		// **CRITICAL FIX**: Prevent recursive navigation
 		if ((window as any).navigationInProgress) {
-			console.warn(`Navigation already in progress, ignoring navigate to: ${path}`);
 			return false;
 		}
 		
 		(window as any).navigationInProgress = true;
 		
 		try {
-			console.log(`🧭 Navigating to: ${path}`);
-			
 			if (this._isValidRoute(path)) {
 				if (replaceState)
 					window.history.replaceState({ path }, '', path);
@@ -233,7 +223,6 @@ export default class Router {
 	private _handlePopState = (): void => {
 		// **CRITICAL FIX**: Prevent recursive popstate handling
 		if ((window as any).popstateInProgress) {
-			console.warn('Popstate already in progress, ignoring...');
 			return;
 		}
 		
@@ -241,12 +230,9 @@ export default class Router {
 		
 		try {
 			const path = this.getCurrentPath();
-			console.log(`🔄 Handling popstate to: ${path}`);
 
 			if (!this._executeHandler(path)) {
-				console.warn(`Popstate: route not found: ${path}`);
 				if (path !== '/') {
-					console.log('🏠 Redirecting to home from popstate...');
 					// **CRITICAL**: Use replaceState without calling _executeHandler to prevent recursion
 					window.history.replaceState({ path: '/' }, '', '/');
 					// Force a page reload instead of recursive navigation
