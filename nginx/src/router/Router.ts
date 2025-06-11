@@ -64,6 +64,11 @@ export default class Router {
 					const gameBundlePath = "/js/game.bundle.js";
 					const gameClientModule = await import(gameBundlePath);
 					
+					// **CRITICAL FIX**: Explicitly setup button handlers (no side effects)
+					if (gameClientModule.setupJoinGameButton) {
+						gameClientModule.setupJoinGameButton();
+					}
+					
 					await gameClientModule.initializeGame(playerData.id);
 					
 				} catch (error) {
@@ -89,6 +94,17 @@ export default class Router {
 	}
 
 	private _executeHandler(path: string) {
+		// **CRITICAL FIX**: Clean up ANY route when navigating away
+		// Don't clean up during popstate events (back navigation) as cleanup should already be done
+		const currentPath = this.getCurrentPath();
+		const isLeavingRoute = path !== currentPath;
+		const isPopstateNavigation = (window as any).popstateInProgress;
+		
+		if (isLeavingRoute && !isPopstateNavigation) {
+			console.log(`🧹 Navigating away from ${currentPath} to ${path}, cleaning up...`);
+			this._cleanupCurrentRoute();
+		}
+		
 		var route = this._routes.find(route => route.path === path);
 		if (route?.handler) {
 			route.handler();
@@ -98,30 +114,115 @@ export default class Router {
 		return false;
 	}
 
+	private _cleanupCurrentRoute(): void {
+		// **CRITICAL FIX**: Universal cleanup for any route
+		const currentPath = this.getCurrentPath();
+		if (!(window as any).routeCleanupInProgress) {
+			console.log(`🧹 Leaving route ${currentPath} - cleaning up...`);
+			
+			// Set flag to prevent double cleanup
+			(window as any).routeCleanupInProgress = true;
+			
+			// **CRITICAL**: Clean up current route's cached component if it has cleanup method
+			const currentRoute = this._routes.find(route => route.path === currentPath);
+			if (currentRoute?.cache?.cleanup) {
+				try {
+					console.log(`🧹 Calling cleanup for ${currentPath} route...`);
+					currentRoute.cache.cleanup();
+				} catch (error) {
+					console.error(`Error during ${currentPath} route cleanup:`, error);
+				}
+			}
+			
+			// **CRITICAL**: Special cleanup for game routes
+			if (currentPath === '/1v1' || currentPath === '/tournament') {
+				// Call cleanup if available globally
+				if ((window as any).leaveGame) {
+					try {
+						(window as any).leaveGame();
+					} catch (error) {
+						console.error('Error during global game cleanup:', error);
+					}
+				}
+				
+				// Additional cleanup for global game state
+				if ((window as any).gameControlsInitialized) {
+					(window as any).gameControlsInitialized = false;
+				}
+				if ((window as any).joinGameButtonSetup) {
+					(window as any).joinGameButtonSetup = false;
+				}
+			}
+			
+			// Clear the cleanup flag after a short delay
+			setTimeout(() => {
+				(window as any).routeCleanupInProgress = false;
+			}, 100);
+		}
+	}
+
 	private _isValidRoute(path: string): boolean {
 		return this._routes.some(route => route.path === path);
 	}
 
 	private _redirectToHome(): void {
-		window.history.replaceState({ path: '/' }, '', '/');
-		this._executeHandler('/');
+		// **CRITICAL FIX**: Prevent recursive calls by checking if we're already redirecting
+		if ((window as any).redirectingToHome) {
+			console.warn('Already redirecting to home, ignoring...');
+			return;
+		}
+		
+		(window as any).redirectingToHome = true;
+		
+		try {
+			console.log('🏠 Redirecting to home...');
+			window.history.replaceState({ path: '/' }, '', '/');
+			this._executeHandler('/');
+		} catch (error) {
+			console.error('Error redirecting to home:', error);
+			// Force navigation on error
+			window.location.pathname = '/';
+		} finally {
+			setTimeout(() => {
+				(window as any).redirectingToHome = false;
+			}, 100);
+		}
 	}
 
 	public navigate(path: string, replaceState: boolean = false): boolean {
-		if (this._isValidRoute(path)) {
-			if (replaceState)
-				window.history.replaceState({ path }, '', path);
-			else
-				window.history.pushState({ path }, '', path);
-
-			this._executeHandler(path);
-			return true;
-		}
-		else {
-			console.warn(`Route not found: ${path}`);
-			if (path !== '/')
-				this._redirectToHome();
+		// **CRITICAL FIX**: Prevent recursive navigation
+		if ((window as any).navigationInProgress) {
+			console.warn(`Navigation already in progress, ignoring navigate to: ${path}`);
 			return false;
+		}
+		
+		(window as any).navigationInProgress = true;
+		
+		try {
+			console.log(`🧭 Navigating to: ${path}`);
+			
+			if (this._isValidRoute(path)) {
+				if (replaceState)
+					window.history.replaceState({ path }, '', path);
+				else
+					window.history.pushState({ path }, '', path);
+
+				this._executeHandler(path);
+				return true;
+			}
+			else {
+				console.warn(`Route not found: ${path}`);
+				if (path !== '/')
+					this._redirectToHome();
+				return false;
+			}
+		} catch (error) {
+			console.error(`Error navigating to ${path}:`, error);
+			return false;
+		} finally {
+			setTimeout(() => {
+				(window as any).navigationInProgress = false;
+			}, 100);
 		}
 	}
 
@@ -130,13 +231,37 @@ export default class Router {
 	}
 
 	private _handlePopState = (): void => {
-		const path = this.getCurrentPath();
+		// **CRITICAL FIX**: Prevent recursive popstate handling
+		if ((window as any).popstateInProgress) {
+			console.warn('Popstate already in progress, ignoring...');
+			return;
+		}
+		
+		(window as any).popstateInProgress = true;
+		
+		try {
+			const path = this.getCurrentPath();
+			console.log(`🔄 Handling popstate to: ${path}`);
 
-		if (!this._executeHandler(path)) {
-			console.warn(`Popstate: route not found: ${path}`);
-			if (path !== '/') {
-				this._redirectToHome();
+			if (!this._executeHandler(path)) {
+				console.warn(`Popstate: route not found: ${path}`);
+				if (path !== '/') {
+					console.log('🏠 Redirecting to home from popstate...');
+					// **CRITICAL**: Use replaceState without calling _executeHandler to prevent recursion
+					window.history.replaceState({ path: '/' }, '', '/');
+					// Force a page reload instead of recursive navigation
+					window.location.pathname = '/';
+				}
 			}
+		} catch (error) {
+			console.error('Error in popstate handler:', error);
+			// Force navigation to home on error
+			window.location.pathname = '/';
+		} finally {
+			// Clear the flag after a short delay
+			setTimeout(() => {
+				(window as any).popstateInProgress = false;
+			}, 100);
 		}
 	}
 

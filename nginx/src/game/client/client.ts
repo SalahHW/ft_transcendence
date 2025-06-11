@@ -277,10 +277,14 @@ export function initializeGame(playerId: string): void {
             isGameLoopRunning = false;
         }
         
-        // Automatically navigate back to main page after a short delay
+        // **CRITICAL FIX**: Clean up before navigating to prevent recursion
         setTimeout(() => {
-            console.log('🏠 Navigating back to main page...');
-            window.history.back();
+            console.log('🏠 Game ended - cleaning up before navigation...');
+            cleanup(); // Clean up resources first
+            setTimeout(() => {
+                console.log('🏠 Navigating back to main page...');
+                window.history.back();
+            }, 500); // Small delay to ensure cleanup completes
         }, 3000); // 3 second delay to show the result
     });
 
@@ -375,7 +379,8 @@ export function initializeGame(playerId: string): void {
         
         // Set up keyboard controls if not already set
         if (!(window as any).gameControlsInitialized) {
-            document.addEventListener('keydown', (event: KeyboardEvent) => {
+            // **CRITICAL FIX**: Store event handler references for proper cleanup
+            const keydownHandler = (event: KeyboardEvent) => {
                 if (isGameOver) return;
                 if (event.key === 'ArrowUp' && !isUpPressed) {
                     isUpPressed = true;
@@ -384,9 +389,9 @@ export function initializeGame(playerId: string): void {
                     isDownPressed = true;
                     clientConnection!.send({ type: 'keyDown', direction: 'down' });
                 }
-            });
+            };
 
-            document.addEventListener('keyup', (event: KeyboardEvent) => {
+            const keyupHandler = (event: KeyboardEvent) => {
                 if (isGameOver) return;
                 if (event.key === 'ArrowUp' && isUpPressed) {
                     isUpPressed = false;
@@ -395,8 +400,16 @@ export function initializeGame(playerId: string): void {
                     isDownPressed = false;
                     clientConnection!.send({ type: 'keyUp', direction: 'down' });
                 }
-            });
+            };
+
+            document.addEventListener('keydown', keydownHandler);
+            document.addEventListener('keyup', keyupHandler);
+            
+            // **CRITICAL**: Store handlers globally for cleanup
+            (window as any).gameKeydownHandler = keydownHandler;
+            (window as any).gameKeyupHandler = keyupHandler;
             (window as any).gameControlsInitialized = true;
+            console.log('✅ Game keyboard controls setup with cleanup references');
         }
         
         // Start the game loop after match animation if not already running
@@ -438,16 +451,57 @@ export function initializeGame(playerId: string): void {
 
 // Export cleanup function for Leave Game button
 export function cleanup(): void {
+    console.log('🧹 Starting game cleanup...');
+    
     // Set game as over to immediately stop input and rendering
     isGameOver = true;
     
     if (isGameLoopRunning && map?.getEngine) {
         map.getEngine.stopRenderLoop();
         isGameLoopRunning = false;
+        console.log('✅ Render loop stopped');
     }
 
     if (clientConnection?.socket?.readyState === WebSocket.OPEN) {
         clientConnection.socket.close();
+        console.log('✅ WebSocket closed');
+    }
+
+    // Clean up join game button handler
+    if ((window as any).joinGameButtonHandler && (window as any).joinGameButtonSetup) {
+        const joinGameBtn = document.getElementById('joinGameBtn') as HTMLButtonElement;
+        if (joinGameBtn) {
+            joinGameBtn.removeEventListener('click', (window as any).joinGameButtonHandler);
+        }
+        delete (window as any).joinGameButtonHandler;
+        (window as any).joinGameButtonSetup = false;
+        console.log('✅ Join game button handler removed');
+    }
+
+    // **CRITICAL FIX**: Remove keyboard event listeners that interfere with other pages
+    if ((window as any).gameControlsInitialized) {
+        if ((window as any).gameKeydownHandler) {
+            document.removeEventListener('keydown', (window as any).gameKeydownHandler);
+            delete (window as any).gameKeydownHandler;
+            console.log('✅ Game keydown listener removed');
+        }
+        if ((window as any).gameKeyupHandler) {
+            document.removeEventListener('keyup', (window as any).gameKeyupHandler);
+            delete (window as any).gameKeyupHandler;
+            console.log('✅ Game keyup listener removed');
+        }
+        (window as any).gameControlsInitialized = false;
+        console.log('✅ Game keyboard controls completely cleaned up');
+    }
+
+    // **ADDITIONAL SAFETY**: Reset key states to prevent stuck keys
+    isUpPressed = false;
+    isDownPressed = false;
+    console.log('✅ Game key states reset');
+    
+    // Remove global leaveGame function
+    if ((window as any).leaveGame) {
+        delete (window as any).leaveGame;
     }
 
     // Nullify game objects
@@ -458,18 +512,17 @@ export function cleanup(): void {
     map = null;
     roomId = null;
     localPlayerId = null;
+    
+    console.log('🎉 Game cleanup completed');
 }
 
 // Export leaveGame function for Leave Game button
 export function leaveGame(): void {
+    console.log('🚪 leaveGame called - using comprehensive cleanup...');
+    
     // Set game as over to immediately stop input and rendering
     isGameOver = true;
     
-    if (isGameLoopRunning && map?.getEngine) {
-        map.getEngine.stopRenderLoop();
-        isGameLoopRunning = false;
-    }
-
     // Send leave game message to server if connection exists
     if (clientConnection) {
         if (clientConnection.leaveGame) {
@@ -484,13 +537,8 @@ export function leaveGame(): void {
         }
     }
 
-    // Clean up remaining resources
-    player1 = null;
-    player2 = null;
-    ball = null;
-    map = null;
-    roomId = null;
-    localPlayerId = null;
+    // **CRITICAL FIX**: Use the comprehensive cleanup function
+    cleanup();
 }
 
 // Function to setup game loop
@@ -570,12 +618,17 @@ function setupGameLoop(): void {
     }
 }
 
-// Handle join game button click
-document.addEventListener('DOMContentLoaded', () => {
+// Export function to setup join game button (called explicitly when needed)
+export function setupJoinGameButton(): void {
+    // Only setup if not already setup
+    if ((window as any).joinGameButtonSetup) {
+        return;
+    }
+    
     const joinGameBtn = document.getElementById('joinGameBtn') as HTMLButtonElement;
     
     if (joinGameBtn) {
-        joinGameBtn.addEventListener('click', async () => {
+        const clickHandler = async () => {
             joinGameBtn.disabled = true;
             updateGameStatus('Checking for available players...');
             
@@ -611,6 +664,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateGameStatus('Error joining game. Please try again.');
                 joinGameBtn.disabled = false;
             }
-        });
+        };
+        
+        joinGameBtn.addEventListener('click', clickHandler);
+        
+        // Store reference for cleanup
+        (window as any).joinGameButtonHandler = clickHandler;
+        (window as any).joinGameButtonSetup = true;
+        console.log('✅ Join game button setup completed');
     }
-}); 
+} 

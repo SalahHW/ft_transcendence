@@ -18,6 +18,8 @@ export default class CustomTerminal {
     private static _originalConsoleError: (...data: any[]) => void;
     private static _originalConsoleWarn: (...data: any[]) => void;
     private _keydownHandler: (event: KeyboardEvent) => void;
+    private static _loggingInProgress = false;
+    private static _consoleOverridden = false;
 
     constructor(containerId: string) {
         this._container = document.getElementById(containerId) as HTMLElement;
@@ -30,53 +32,11 @@ export default class CustomTerminal {
         // Store the instance for global access
         CustomTerminal._instance = this;
 
-        // Save the original console methods
-        CustomTerminal._originalConsoleLog = console.log;
-        CustomTerminal._originalConsoleError = console.error;
-        CustomTerminal._originalConsoleWarn = console.warn;
-
-        // Override console methods
-        console.log = (...data: any[]) => {
-            // Call the original console.log
-            CustomTerminal._originalConsoleLog.apply(console, data);
-
-            // Log to our terminal
-            if (CustomTerminal._instance) {
-                const message = data.map(item =>
-                    typeof item === 'object' ? JSON.stringify(item, null, 2) : String(item)
-                ).join(' ');
-
-                CustomTerminal._instance.log(message);
-            }
-        };
-
-        console.error = (...data: any[]) => {
-            // Call the original console.error
-            CustomTerminal._originalConsoleError.apply(console, data);
-
-            // Log to our terminal with error styling
-            if (CustomTerminal._instance) {
-                const message = data.map(item =>
-                    typeof item === 'object' ? JSON.stringify(item, null, 2) : String(item)
-                ).join(' ');
-
-                CustomTerminal._instance.logError(message);
-            }
-        };
-
-        console.warn = (...data: any[]) => {
-            // Call the original console.warn
-            CustomTerminal._originalConsoleWarn.apply(console, data);
-
-            // Log to our terminal with warning styling
-            if (CustomTerminal._instance) {
-                const message = data.map(item =>
-                    typeof item === 'object' ? JSON.stringify(item, null, 2) : String(item)
-                ).join(' ');
-
-                CustomTerminal._instance.logWarn(message);
-            }
-        };
+        // **CRITICAL FIX**: Only override console if not already done
+        if (!CustomTerminal._consoleOverridden) {
+            this._overrideConsoleMethods();
+            CustomTerminal._consoleOverridden = true;
+        }
 
         // Create keyboard event handler for Ctrl+L
         this._keydownHandler = (event: KeyboardEvent) => {
@@ -91,22 +51,138 @@ export default class CustomTerminal {
         document.addEventListener('keydown', this._keydownHandler);
     }
 
+    // **CRITICAL FIX**: Separate method to override console methods with recursion prevention
+    private _overrideConsoleMethods(): void {
+        // Save the original console methods
+        CustomTerminal._originalConsoleLog = console.log;
+        CustomTerminal._originalConsoleError = console.error;
+        CustomTerminal._originalConsoleWarn = console.warn;
+
+        // Override console methods with recursion prevention
+        console.log = (...data: any[]) => {
+            // **CRITICAL**: Prevent infinite recursion
+            if (CustomTerminal._loggingInProgress) {
+                CustomTerminal._originalConsoleLog.apply(console, data);
+                return;
+            }
+
+            CustomTerminal._loggingInProgress = true;
+            try {
+                // Call the original console.log
+                CustomTerminal._originalConsoleLog.apply(console, data);
+
+                // Log to our terminal
+                if (CustomTerminal._instance) {
+                    const message = data.map(item =>
+                        typeof item === 'object' ? JSON.stringify(item, null, 2) : String(item)
+                    ).join(' ');
+
+                    CustomTerminal._instance.log(message);
+                }
+            } catch (error) {
+                // Fallback to original console in case of error
+                CustomTerminal._originalConsoleLog.apply(console, data);
+            } finally {
+                CustomTerminal._loggingInProgress = false;
+            }
+        };
+
+        console.error = (...data: any[]) => {
+            // **CRITICAL**: Prevent infinite recursion
+            if (CustomTerminal._loggingInProgress) {
+                CustomTerminal._originalConsoleError.apply(console, data);
+                return;
+            }
+
+            CustomTerminal._loggingInProgress = true;
+            try {
+                // Call the original console.error
+                CustomTerminal._originalConsoleError.apply(console, data);
+
+                // Log to our terminal with error styling
+                if (CustomTerminal._instance) {
+                    const message = data.map(item =>
+                        typeof item === 'object' ? JSON.stringify(item, null, 2) : String(item)
+                    ).join(' ');
+
+                    CustomTerminal._instance.logError(message);
+                }
+            } catch (error) {
+                // Fallback to original console in case of error
+                CustomTerminal._originalConsoleError.apply(console, data);
+            } finally {
+                CustomTerminal._loggingInProgress = false;
+            }
+        };
+
+        console.warn = (...data: any[]) => {
+            // **CRITICAL**: Prevent infinite recursion
+            if (CustomTerminal._loggingInProgress) {
+                CustomTerminal._originalConsoleWarn.apply(console, data);
+                return;
+            }
+
+            CustomTerminal._loggingInProgress = true;
+            try {
+                // Call the original console.warn
+                CustomTerminal._originalConsoleWarn.apply(console, data);
+
+                // Log to our terminal with warning styling
+                if (CustomTerminal._instance) {
+                    const message = data.map(item =>
+                        typeof item === 'object' ? JSON.stringify(item, null, 2) : String(item)
+                    ).join(' ');
+
+                    CustomTerminal._instance.logWarn(message);
+                }
+            } catch (error) {
+                // Fallback to original console in case of error
+                CustomTerminal._originalConsoleWarn.apply(console, data);
+            } finally {
+                CustomTerminal._loggingInProgress = false;
+            }
+        };
+    }
+
+    // **CRITICAL FIX**: Add instance cleanup method
+    public cleanup(): void {
+        console.log('🧹 CustomTerminal cleanup starting...');
+        
+        // Remove keyboard event listener
+        if (this._keydownHandler) {
+            document.removeEventListener('keydown', this._keydownHandler);
+        }
+        
+        // Clear the instance reference
+        if (CustomTerminal._instance === this) {
+            CustomTerminal._instance = null;
+        }
+        
+        console.log('✅ CustomTerminal cleanup completed');
+    }
+
     // Method to restore the original console methods
     static restoreConsoleLog(): void {
-        if (CustomTerminal._originalConsoleLog) {
-            console.log = CustomTerminal._originalConsoleLog;
-        }
-        if (CustomTerminal._originalConsoleError) {
-            console.error = CustomTerminal._originalConsoleError;
-        }
-        if (CustomTerminal._originalConsoleWarn) {
-            console.warn = CustomTerminal._originalConsoleWarn;
+        if (CustomTerminal._consoleOverridden) {
+            if (CustomTerminal._originalConsoleLog) {
+                console.log = CustomTerminal._originalConsoleLog;
+            }
+            if (CustomTerminal._originalConsoleError) {
+                console.error = CustomTerminal._originalConsoleError;
+            }
+            if (CustomTerminal._originalConsoleWarn) {
+                console.warn = CustomTerminal._originalConsoleWarn;
+            }
+            CustomTerminal._consoleOverridden = false;
         }
 
         // Remove keyboard event listener if instance exists
         if (CustomTerminal._instance) {
             document.removeEventListener('keydown', CustomTerminal._instance._keydownHandler);
+            CustomTerminal._instance = null;
         }
+        
+        console.log('✅ Console methods restored to original');
     }
 
     private _createTerminal(): void {

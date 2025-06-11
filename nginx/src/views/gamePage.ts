@@ -15,6 +15,8 @@ import { buttonHTML } from "../components/button.js";
 
 export default class GamePage {
 	private _container: HTMLElement;
+	private _leaveGameHandler?: () => void;
+	private _resizeHandler?: () => void;
 
 	constructor(containerId: string) {
 		this._container = document.getElementById(containerId) as HTMLElement;
@@ -62,13 +64,14 @@ export default class GamePage {
 		// Leave game button
 		const leaveButton = document.getElementById("leave-game-button");
 		if (leaveButton) {
-			leaveButton.addEventListener("click", () => {
-				this._leaveGame();
-			});
+			// Store handler reference for cleanup
+			this._leaveGameHandler = () => this._leaveGame();
+			leaveButton.addEventListener("click", this._leaveGameHandler);
 		}
 
-		// Handle window resize for canvas
-		window.addEventListener('resize', this._handleResize.bind(this));
+		// Handle window resize for canvas - store reference for cleanup
+		this._resizeHandler = this._handleResize.bind(this);
+		window.addEventListener('resize', this._resizeHandler);
 	}
 
 	private _leaveGame(): void {
@@ -76,6 +79,10 @@ export default class GamePage {
 		const confirmLeave = confirm("Are you sure you want to leave the game?");
 		if (confirmLeave) {
 			console.log("Leave game confirmed, calling cleanup...");
+			
+			// Set flag to prevent double cleanup during navigation
+			(window as any).gameCleanupInProgress = true;
+			
 			// Notify the game client to clean up properly
 			if ((window as any).leaveGame) {
 				console.log("Calling leaveGame cleanup function");
@@ -83,6 +90,7 @@ export default class GamePage {
 			} else {
 				console.error("leaveGame cleanup function not found on window");
 			}
+			
 			// Navigate back to home or API test page
 			window.history.back();
 		}
@@ -116,5 +124,27 @@ export default class GamePage {
 		if (player2Element) {
 			player2Element.textContent = `Player 2: ${player2Score}`;
 		}
+	}
+
+	// **CRITICAL**: Cleanup method to remove event listeners
+	public cleanup(): void {
+		console.log('🧹 Cleaning up GamePage event listeners...');
+		
+		// Remove leave game button handler
+		if (this._leaveGameHandler) {
+			const leaveButton = document.getElementById("leave-game-button");
+			if (leaveButton) {
+				leaveButton.removeEventListener("click", this._leaveGameHandler);
+			}
+			this._leaveGameHandler = undefined;
+		}
+
+		// Remove resize handler
+		if (this._resizeHandler) {
+			window.removeEventListener('resize', this._resizeHandler);
+			this._resizeHandler = undefined;
+		}
+		
+		console.log('✅ GamePage cleanup completed');
 	}
 } 

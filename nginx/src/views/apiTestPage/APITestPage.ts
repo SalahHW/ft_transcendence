@@ -27,6 +27,7 @@ import CustomTerminal from './components/customTerminal.js';
 
 export default class APITestPage {
 	private _container: HTMLElement;
+	private _customTerminal: CustomTerminal | null = null;
 
 	constructor(containerId: string) {
 		this._container = document.getElementById(containerId) as HTMLElement;
@@ -212,6 +213,19 @@ export default class APITestPage {
 	}
 
 	private _renderRightCardContent(): void {
-		new CustomTerminal("right-card-content");
+		this._customTerminal = new CustomTerminal("right-card-content");
+	}
+
+	public cleanup(): void {
+		console.log('🧹 APITestPage cleanup starting...');
+		
+		if (this._customTerminal) {
+			this._customTerminal.cleanup();
+			this._customTerminal = null;
+		}
+		
+		CustomTerminal.restoreConsoleLog();
+		
+		console.log('✅ APITestPage cleanup completed');
 	}
 }
