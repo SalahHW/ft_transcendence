@@ -4,6 +4,8 @@ import { gameStateManager } from '../game/GameStateManager.js';
 import { gameEngine } from '../game/GameEngine.js';
 import { MESSAGE_TYPES } from '../core/constants.js';
 import { ValidationUtils, PositionUtils } from '../utils/helpers.js';
+import { playerManager } from '../player/PlayerManager.js';
+import { playerInput } from '../player/PlayerInput.js';
 
 /**
  * Routes WebSocket messages to appropriate handlers
@@ -64,35 +66,33 @@ export class MessageRouter {
    * Handle username setting
    */
   _handleSetUsername(msg, playerId, roomId, ws) {
-    const player = gameStateManager.getPlayer(playerId);
-    if (!player) {
-      this._sendError(ws, 'Player not found');
-      return;
-    }
-
     const providedPlayerId = msg.playerId || playerId;
     if (providedPlayerId !== playerId) {
       this._sendError(ws, 'Invalid playerId');
       return;
     }
 
-    if (player.username) {
-      console.log(`Player ${playerId} already has username ${player.username} from API`);
-      player.readyToPlay = true;
-      gameEngine.broadcastToRoom(roomId, {
-        type: 'usernameUpdate',
-        playerId,
-        username: player.username,
-      });
-      gameEngine.checkRoomReady(roomId);
-      return;
-    }
+    try {
+      const player = playerManager.getPlayer(playerId);
+      if (!player) {
+        this._sendError(ws, 'Player not found');
+        return;
+      }
 
-    const username = msg.username?.trim();
-    if (ValidationUtils.isValidUsername(username)) {
-      player.username = username;
-      player.readyToPlay = true;
-      console.log(`Player ${playerId} set username to ${username}`);
+      if (player.username) {
+        console.log(`Player ${playerId} already has username ${player.username} from API`);
+        player.setReady();
+        gameEngine.broadcastToRoom(roomId, {
+          type: 'usernameUpdate',
+          playerId,
+          username: player.username,
+        });
+        gameEngine.checkRoomReady(roomId);
+        return;
+      }
+
+      const username = msg.username?.trim();
+      playerManager.setPlayerUsername(playerId, username);
       
       gameEngine.broadcastToRoom(roomId, {
         type: 'usernameUpdate',
@@ -100,8 +100,8 @@ export class MessageRouter {
         username,
       });
       gameEngine.checkRoomReady(roomId);
-    } else {
-      this._sendError(ws, 'Invalid username: must be a string (1-20 characters)');
+    } catch (error) {
+      this._sendError(ws, error.message);
     }
   }
 
@@ -109,49 +109,21 @@ export class MessageRouter {
    * Handle key down events
    */
   _handleKeyDown(msg, playerId) {
-    const player = gameStateManager.getPlayer(playerId);
-    if (!player) return;
-
-    if (msg.direction === 'up') {
-      player.isUpPressed = true;
-    } else if (msg.direction === 'down') {
-      player.isDownPressed = true;
-    }
+    return playerInput.processKeyDown(playerId, msg.direction);
   }
 
   /**
    * Handle key up events
    */
   _handleKeyUp(msg, playerId) {
-    const player = gameStateManager.getPlayer(playerId);
-    if (!player) return;
-
-    if (msg.direction === 'up') {
-      player.isUpPressed = false;
-    } else if (msg.direction === 'down') {
-      player.isDownPressed = false;
-    }
+    return playerInput.processKeyUp(playerId, msg.direction);
   }
 
   /**
    * Handle paddle position updates
    */
   _handlePaddlePosition(msg, playerId) {
-    const player = gameStateManager.getPlayer(playerId);
-    if (!player) return;
-
-    const { positionZ } = msg;
-    const now = Date.now();
-    const deltaTime = (now - player.lastUpdate) / 1000;
-    
-    const safePosition = PositionUtils.calculateSafePosition(
-      player.positionZ, 
-      positionZ, 
-      deltaTime
-    );
-    
-    player.positionZ = safePosition;
-    player.lastUpdate = now;
+    return playerInput.processPaddlePosition(playerId, msg.positionZ);
   }
 
   /**
@@ -159,10 +131,7 @@ export class MessageRouter {
    */
   _handleLeaveGame(msg, playerId, roomId, ws, disconnectHandler) {
     console.log(`🏃 Player ${playerId} is leaving the game in room ${roomId}`);
-    const player = gameStateManager.getPlayer(playerId);
-    if (player) {
-      player.isLeaving = true;
-    }
+    playerManager.markPlayerLeaving(playerId);
     disconnectHandler(playerId, roomId);
   }
 

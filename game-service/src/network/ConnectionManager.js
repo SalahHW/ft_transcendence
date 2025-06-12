@@ -2,6 +2,7 @@ import { gameStateManager } from '../game/GameStateManager.js';
 import { gameEngine } from '../game/GameEngine.js';
 import { reportMatchResultsToAPI } from '../server/api.js';
 import { LogUtils, TimeUtils } from '../utils/helpers.js';
+import { playerManager } from '../player/PlayerManager.js';
 
 /**
  * Manages player connections and disconnections
@@ -54,27 +55,7 @@ export class ConnectionManager {
    * Get or create player
    */
   _getOrCreatePlayer(ws, playerId) {
-    let player = gameStateManager.getPlayer(playerId);
-    
-    if (!player) {
-      player = {
-        ws,
-        id: playerId,
-        username: null,
-        positionZ: 0,
-        isUpPressed: false,
-        isDownPressed: false,
-        lastUpdate: Date.now(),
-        playerScore: 0,
-        readyToPlay: false,
-      };
-      gameStateManager.addPlayer(playerId, player);
-    } else {
-      // Update WebSocket connection for existing player
-      player.ws = ws;
-    }
-
-    return player;
+    return playerManager.getOrCreatePlayer(playerId, ws);
   }
 
   /**
