@@ -8,14 +8,15 @@ import { startGameLoop } from './gameLoop.js';
 import { registerWebSocketRoutes } from './gameWebSocket.js';
 import { getPlayers } from './gameState.js';
 import cors from '@fastify/cors';
+import { SERVER_CONFIG } from '../core/constants.js';
 
 // Load environment variables
 dotenv.config();
 
 // Read HTTPS certificates
 const serverConfig = {
-  key: fs.readFileSync('src/server/certs/key.pem'),
-  cert: fs.readFileSync('src/server/certs/cert.pem'),
+  key: fs.readFileSync(SERVER_CONFIG.KEY_PATH),
+  cert: fs.readFileSync(SERVER_CONFIG.CERT_PATH),
 };
 
 // Function to register common plugins and routes
@@ -25,9 +26,9 @@ function registerCommonComponents(server) {
 
   // Register CORS
   server.register(cors, {
-    origin: ['http://localhost', 'https://localhost', 'http://localhost:80', 'https://localhost:80'],
-    methods: ['GET', 'POST'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    origin: SERVER_CONFIG.ALLOWED_ORIGINS,
+    methods: SERVER_CONFIG.ALLOWED_METHODS,
+    allowedHeaders: SERVER_CONFIG.ALLOWED_HEADERS,
     credentials: true
   });
 
@@ -67,8 +68,8 @@ registerCommonComponents(httpsServer);
 registerCommonComponents(httpServer);
 
 // Start both servers
-const port = process.env.GAME_SERVICE_PORT || 8080;
-const httpPort = 8081; // HTTP port
+const port = process.env.GAME_SERVICE_PORT || SERVER_CONFIG.DEFAULT_HTTPS_PORT;
+const httpPort = SERVER_CONFIG.DEFAULT_HTTP_PORT;
 
 httpsServer.listen({ port, host: '0.0.0.0' }, (err) => {
   if (err) {
