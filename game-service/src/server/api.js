@@ -1,6 +1,7 @@
 import { setPlayerReady } from './gameState.js';
 import { GAME_CONFIG, HTTP_STATUS } from '../core/constants.js';
 import { ValidationUtils, LogUtils } from '../utils/helpers.js';
+import { playerManager } from '../player/PlayerManager.js';
 
 export async function registerApiRoutes(fastify, options) {
   const { players } = options;
@@ -9,11 +10,7 @@ export async function registerApiRoutes(fastify, options) {
   fastify.get('/api/players', async (request, reply) => {
     try {
       console.log('API request: GET /api/players');
-      const playerList = Array.from(players.values()).map(player => ({
-        id: player.id,
-        username: player.username || 'Anonymous',
-        readyToPlay: player.readyToPlay || false
-      }));
+      const playerList = playerManager.getPlayersSummary();
       return reply.status(HTTP_STATUS.OK).send({
         status: 'success',
         data: playerList,
@@ -33,36 +30,20 @@ export async function registerApiRoutes(fastify, options) {
     try {
       console.log('API request: POST /api/players');
       const { username } = request.body || {};
-      if (!ValidationUtils.isValidUsername(username)) {
-        return reply.status(HTTP_STATUS.BAD_REQUEST).send({
-          status: 'error',
-          message: `Invalid username: must be a string (${GAME_CONFIG.MIN_USERNAME_LENGTH}-${GAME_CONFIG.MAX_USERNAME_LENGTH} characters)`,
-        });
-      }
-      // GET PLAYER ID WITH API OF USER SERVICE ? OR BLOCKCHAIN SERVICE ?
-      const playerId = fastify.uuid();
-      const player = {
-        id: playerId,
-        username: username.trim(),
-        ws: null, // No WebSocket connection yet
-        positionZ: 0,
-        isUpPressed: false,
-        isDownPressed: false,
-        lastUpdate: Date.now(),
-        playerScore: 0,
-        readyToPlay: false
-      };
-      players.set(playerId, player);
-      console.log(`Created player ${playerId} with username ${username}`);
+      
+      const player = playerManager.registerPlayerWithUsername(username);
+      
+      console.log(`Created player ${player.id} with username ${username}`);
       return reply.status(201).send({
         status: 'success',
-        data: { id: playerId, username: player.username },
+        data: { id: player.id, username: player.username },
       });
     } catch (error) {
       console.error('Error in POST /api/players:', error);
-      return reply.status(500).send({
+      const status = error.message.includes('Invalid username') ? HTTP_STATUS.BAD_REQUEST : 500;
+      return reply.status(status).send({
         status: 'error',
-        message: 'Internal server error',
+        message: error.message || 'Internal server error',
       });
     }
   });
@@ -78,26 +59,20 @@ export async function registerApiRoutes(fastify, options) {
   }, async (request, reply) => {
     try {
       const { id } = request.params;
-      const player = players.get(id);
       
-      if (!player) {
-        return reply.status(404).send({
-          status: 'error',
-          message: 'Player not found',
-        });
-      }
-
-      setPlayerReady(id);
+      const isReady = playerManager.setPlayerReady(id);
       
       return reply.status(200).send({
         status: 'success',
         message: 'Player ready status updated',
+        data: { playerId: id, isReady }
       });
     } catch (error) {
       console.error('Error in POST /api/players/:id/ready:', error);
-      return reply.status(500).send({
+      const status = error.message.includes('not found') ? 404 : 500;
+      return reply.status(status).send({
         status: 'error',
-        message: 'Internal server error',
+        message: error.message || 'Internal server error',
       });
     }
   });
