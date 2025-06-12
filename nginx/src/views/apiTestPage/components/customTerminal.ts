@@ -218,7 +218,7 @@ export default class CustomTerminal {
     logError(message: string): void {
         const line = document.createElement('p');
         line.className = 'm-0 py-0.5 whitespace-pre-wrap break-words text-red-400';
-        line.textContent = `❌ ${message}`;
+        line.textContent = `{message}`;
         this._outputElement.appendChild(line);
 
         // Auto-scroll to bottom
@@ -228,7 +228,7 @@ export default class CustomTerminal {
     logWarn(message: string): void {
         const line = document.createElement('p');
         line.className = 'm-0 py-0.5 whitespace-pre-wrap break-words text-yellow-400';
-        line.textContent = `⚠️ ${message}`;
+        line.textContent = `${message}`;
         this._outputElement.appendChild(line);
 
         // Auto-scroll to bottom
