@@ -61,11 +61,12 @@ export async function registerWebSocketRoutes(fastify) {
 
       // Handle animation completion
       if (msg.type === 'animationComplete') {
-        const roomAnimStatus = getGameState().animationStatus.get(roomId);
+        const { animationStatus, gameRooms } = getGameState();
+        const roomAnimStatus = animationStatus.get(roomId);
         if (roomAnimStatus) {
           roomAnimStatus.add(playerId);
           console.log(`Player ${playerId} completed animation in room ${roomId}, status size: ${roomAnimStatus.size}`);
-          if (roomAnimStatus.size === 2 && getGameState().gameRooms.get(roomId)?.ready) {
+          if (roomAnimStatus.size === 2 && gameRooms.get(roomId)?.ready) {
             console.log(`Both players completed animations in room ${roomId}, sending ballUpdate`);
             sendBallUpdateForced(roomId);
           }

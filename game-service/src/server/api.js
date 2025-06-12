@@ -1,4 +1,6 @@
 import { setPlayerReady } from './gameState.js';
+import { GAME_CONFIG, HTTP_STATUS } from '../core/constants.js';
+import { ValidationUtils, LogUtils } from '../utils/helpers.js';
 
 export async function registerApiRoutes(fastify, options) {
   const { players } = options;
@@ -12,7 +14,7 @@ export async function registerApiRoutes(fastify, options) {
         username: player.username || 'Anonymous',
         readyToPlay: player.readyToPlay || false
       }));
-      return reply.status(200).send({
+      return reply.status(HTTP_STATUS.OK).send({
         status: 'success',
         data: playerList,
         count: playerList.length,
@@ -31,10 +33,10 @@ export async function registerApiRoutes(fastify, options) {
     try {
       console.log('API request: POST /api/players');
       const { username } = request.body || {};
-      if (typeof username !== 'string' || username.trim().length === 0 || username.trim().length > 20) {
-        return reply.status(400).send({
+      if (!ValidationUtils.isValidUsername(username)) {
+        return reply.status(HTTP_STATUS.BAD_REQUEST).send({
           status: 'error',
-          message: 'Invalid username: must be a string (1-20 characters)',
+          message: `Invalid username: must be a string (${GAME_CONFIG.MIN_USERNAME_LENGTH}-${GAME_CONFIG.MAX_USERNAME_LENGTH} characters)`,
         });
       }
       // GET PLAYER ID WITH API OF USER SERVICE ? OR BLOCKCHAIN SERVICE ?

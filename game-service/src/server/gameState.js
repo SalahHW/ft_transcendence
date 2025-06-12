@@ -1,305 +1,43 @@
-import { Ball } from '../ball/ball.js';
-import * as BABYLON from '@babylonjs/core';
-import { reportMatchResultsToAPI } from './api.js';
-
-const gameRooms = new Map();
-const players = new Map();
-const animationStatus = new Map();
+import { gameStateManager } from '../game/GameStateManager.js';
+import { gameEngine } from '../game/GameEngine.js';
 
 export function checkRoomReady(roomId) {
-  const room = gameRooms.get(roomId);
-  if (!room || room.players.length !== 2 || room.ready) return;
-
-  const allReady = room.players.every(player => 
-    player.username && 
-    player.ws && 
-    player.ws.readyState === 1 && 
-    player.readyToPlay
-  );
-
-  if (allReady) {
-    room.ready = true;
-    console.log(`Room ${roomId} is ready, starting game at ${Date.now()}`);
-    room.players.forEach((p, i) => {
-      const otherPlayer = room.players[1 - i];
-      if (p.ws && p.ws.readyState === 1) {
-        try {
-          p.ws.send(JSON.stringify({
-            type: 'init',
-            playerId: p.id,
-            roomId,
-            role: i,
-            opponentId: otherPlayer.id,
-          }));
-          console.log(`Sent init to player ${p.id} in room ${roomId}`);
-        } catch (e) {
-          console.error(`Failed to send init to player ${p.id}:`, e);
-        }
-      }
-    });
-    // Ensure animationStatus is initialized
-    if (!animationStatus.has(roomId)) {
-      animationStatus.set(roomId, new Set());
-      console.log(`Initialized animationStatus for room ${roomId}`);
-    }
-    // Retry ball update with shorter delays
-    const attemptBallUpdate = (attempt = 1) => {
-      const roomAnimStatus = animationStatus.get(roomId);
-      if (roomAnimStatus?.size === 2 && gameRooms.get(roomId)?.ready) {
-        console.log(`Sending initial ballUpdate for room ${roomId}`);
-        sendBallUpdateForced(roomId);
-      } else if (attempt <= 5) {
-        console.warn(`Waiting for animations in room ${roomId}, attempt ${attempt}, status size: ${roomAnimStatus?.size || 0}`);
-        setTimeout(() => attemptBallUpdate(attempt + 1), 200); // Reduced from 500ms to 200ms
-      } else {
-        console.error(`Forcing ballUpdate for room ${roomId} after ${attempt - 1} attempts`);
-        room.ballUpdateSent = false;
-        sendBallUpdateForced(roomId);
-      }
-    };
-    setTimeout(() => attemptBallUpdate(), 100); // Reduced initial delay from 500ms to 100ms
-  } else {
-    // Notify players about waiting status
-    const readyPlayers = room.players.filter(p => p.readyToPlay).length;
-    room.players.forEach(p => {
-      if (p.ws && p.ws.readyState === 1) {
-        p.ws.send(JSON.stringify({
-          type: 'waitingForPlayers',
-          readyCount: readyPlayers,
-          totalNeeded: 2
-        }));
-      }
-    });
-  }
+  return gameEngine.checkRoomReady(roomId);
 }
 
 export function sendBallUpdate(roomId) {
-  const room = gameRooms.get(roomId);
-  if (!room || room.players.length !== 2) return;
-
-  if (!room.ballUpdateSent) {
-    console.log(`Sending ballUpdate for room ${roomId} at ${Date.now()}`);
-    sendBallUpdateForced(roomId);
-  }
+  return gameEngine.sendBallUpdate(roomId);
 }
 
 export function sendBallUpdateForced(roomId) {
-  const room = gameRooms.get(roomId);
-  if (!room || room.players.length !== 2) {
-    console.warn(`Cannot send forced ballUpdate for room ${roomId}: invalid state`, {
-      exists: !!room,
-      playerCount: room?.players.length
-    });
-    return;
-  }
-
-  if (!room.ball) {
-    console.error(`Ball not initialized for room ${roomId}, creating new`);
-    room.ball = new Ball(
-      { playerId: room.players[0].id, playerScore: 0 },
-      { playerId: room.players[1].id, playerScore: 0 }
-    );
-    room.ball.position = new BABYLON.Vector3(0, -2, 0);
-    room.ball.velocity = new BABYLON.Vector3(0, 0, 0);
-    room.ball.previousVelocity = new BABYLON.Vector3(0, 0, 0);
-    room.ball.isRespawning = true;
-    room.ball.respawnTime = 0;
-    room.ball.hasValidPosition = true;
-  }
-
-  // Ensure consistent state for respawn
-  if (!room.ballUpdateSent) {
-    room.ball.position = new BABYLON.Vector3(0, -2, 0);
-    room.ball.velocity = new BABYLON.Vector3(0, 0, 0);
-    room.ball.previousVelocity = new BABYLON.Vector3(0, 0, 0);
-    room.ball.isRespawning = true;
-    room.ball.respawnTime = 0;
-    room.ball.hasValidPosition = true;
-  }
-
-  const ballState = {
-    position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
-    velocity: { x: room.ball.velocity.x, y: room.ball.velocity.y, z: room.ball.velocity.z },
-    previousVelocity: { x: room.ball.previousVelocity.x, y: room.ball.previousVelocity.y, z: room.ball.previousVelocity.z },
-    rebounds: room.ball.rebounds,
-    isRespawning: room.ball.isRespawning,
-    respawnTime: room.ball.respawnTime,
-    wasHitByPlayer: room.ball.wasHitByPlayer,
-    speed: room.ball.speed,
-    hasValidPosition: true,
-    currentGlowColor: room.ball.currentGlowColor ? 
-      { r: room.ball.currentGlowColor.r, g: room.ball.currentGlowColor.g, b: room.ball.currentGlowColor.b } :
-      { r: 0, g: 0, b: 0 },
-    shouldGlow: room.ball.shouldGlow || false
-  };
-
-  console.log(`Sending initial ballUpdate for room ${roomId} at ${Date.now()}:`, ballState);
-  broadcastToRoom(roomId, {
-    type: 'ballUpdate',
-    ballState,
-    isInitialSpawn: !room.ballUpdateSent,
-    isScoreRespawn: false
-  });
-
-  room.ballUpdateSent = true;
-  room.ballUpdateTimeout = null;
+  return gameEngine.sendBallUpdateForced(roomId);
 }
 
 export function broadcastToRoom(roomId, message) {
-  const json = JSON.stringify(message);
-  const room = gameRooms.get(roomId) || { players: [] };
-  room.players = room.players.filter(p => p.ws && p.ws.readyState === 1);
-  room.players.forEach(({ ws, id }) => {
-    if (ws && ws.readyState === 1) {
-      try {
-        ws.send(json);
-      } catch (e) {
-        console.error(`Failed to send ${message.type} to player ${id} in room ${roomId}:`, e);
-      }
-    } else {
-      console.warn(`Failed to send ${message.type} to player ${id} in room ${roomId}: WebSocket not open, readyState=${ws?.readyState}`);
-    }
-  });
+  return gameEngine.broadcastToRoom(roomId, message);
 }
 
 export async function endGame(room, roomId) {
-  if (room.ball.player1.playerScore >= 11 || room.ball.player2.playerScore >= 11) {
-    room.isGameOver = true;
-    
-    const player1 = room.players[0];
-    const player2 = room.players[1];
-    const score1 = room.ball.player1.playerScore;
-    const score2 = room.ball.player2.playerScore;
-    
-    const winner = score1 >= 11 ? player1 : player2;
-    const loser = score1 >= 11 ? player2 : player1;
-    const winnerScore = score1 >= 11 ? score1 : score2;
-    const loserScore = score1 >= 11 ? score2 : score1;
-    
-    const matchEndTime = new Date().toISOString();
-    const matchStartTime = room.startTime || new Date().toISOString();
-    
-    // Comprehensive match data
-    const matchData = {
-      roomId,
-      matchStartTime,
-      matchEndTime,
-      matchDuration: new Date() - new Date(matchStartTime),
-      winner: {
-        id: winner.id,
-        username: winner.username || 'Anonymous',
-        score: winnerScore
-      },
-      loser: {
-        id: loser.id,
-        username: loser.username || 'Anonymous',
-        score: loserScore
-      },
-      gameStats: {
-        totalRebounds: room.ball.rebounds,
-        finalScore: `${winnerScore}-${loserScore}`,
-        scoreHistory: room.scoreHistory || [],
-        ballSpeed: room.ball.speed,
-        lastHitBy: room.ball.wasHitByPlayer
-      },
-      serverTime: Date.now(),
-    };
-
-    // Enhanced logging
-    console.log('='.repeat(60));
-    console.log('MATCH COMPLETED');
-    console.log('='.repeat(60));
-    console.log(`Room ID: ${roomId}`);
-    console.log(`Match End Time: ${matchEndTime}`);
-    console.log(`Winner: ${winner.username || 'Anonymous'} (ID: ${winner.id}) - Score: ${winnerScore}`);
-    console.log(`Loser: ${loser.username || 'Anonymous'} (ID: ${loser.id}) - Score: ${loserScore}`);
-    console.log(`Final Score: ${winnerScore}-${loserScore}`);
-    console.log(`Total Ball Rebounds: ${room.ball.rebounds}`);
-    console.log(`Match Duration: ${matchData.matchDuration}ms`);
-    console.log('='.repeat(60));
-    
-    // Display API packet format for match results
-    console.log('MATCH RESULTS API PACKET:');
-    console.log(JSON.stringify({
-      status: 'success',
-      message: 'Match completed successfully',
-      data: matchData
-    }, null, 2));
-    console.log('='.repeat(60));
-    
-    // Report to external services (async, don't wait for completion)
-    reportMatchResultsToAPI(matchData).catch(err => {
-      console.error('Failed to report match results to external services:', err.message);
-    });
-    
-    // Enhanced client message (existing functionality)
-    broadcastToRoom(roomId, {
-      type: 'gameEnd',
-      ...matchData
-    });
-  }
+  return gameEngine.endGame(room, roomId);
 }
 
 export function createOrJoinRoom(playerId, player, ws) {
-  let roomId = null;
-  for (const [rId, room] of gameRooms.entries()) {
-    if (room.players.length < 2 && !room.isGameOver && !room.ready) {
-      room.players.push(player);
-      roomId = rId;
-      console.log(`Player ${playerId} joined existing room ${roomId}`);
-      break;
-    }
-  }
-  if (!roomId) {
-    roomId = playerId;
-    const newRoom = {
-      players: [player],
-      ball: new Ball(
-        { playerId: playerId, playerScore: 0 },
-        { playerId: null, playerScore: 0 }
-      ),
-      isGameOver: false,
-      ready: false,
-      ballUpdateSent: false,
-      ballUpdateTimeout: null,
-      startTime: new Date().toISOString(), // Track match start time
-      scoreHistory: [], // Track score progression
-    };
-    newRoom.ball.position = new BABYLON.Vector3(0, -2, 0);
-    newRoom.ball.isRespawning = true;
-    newRoom.ball.respawnTime = 0;
-    newRoom.ball.hasValidPosition = true;
-    gameRooms.set(roomId, newRoom);
-    animationStatus.set(roomId, new Set());
-    console.log(`Created new room ${roomId} for player ${playerId} with ball initialized at ${newRoom.startTime}`);
-  } else {
-    const room = gameRooms.get(roomId);
-    room.ball.player2.playerId = playerId;
-    room.ballUpdateSent = false; // Reset to ensure ballUpdate
-    console.log(`Updated ball player2 ID to ${playerId} in room ${roomId}`);
-    checkRoomReady(roomId);
-  }
-  return roomId;
+  return gameEngine.createOrJoinRoom(playerId, player, ws);
 }
 
 export function getGameState() {
-  return { gameRooms, players, animationStatus };
+  return gameStateManager.getGameState();
 }
 
 export function getPlayers() {
-  return players;
+  return gameStateManager.getPlayers();
 }
 
 export function setPlayerReady(playerId) {
-  const player = players.get(playerId);
-  if (player) {
-    player.readyToPlay = true;
-    // Find the room this player is in
-    for (const [roomId, room] of gameRooms.entries()) {
-      if (room.players.some(p => p.id === playerId)) {
-        checkRoomReady(roomId);
-        break;
-      }
-    }
+  const roomId = gameStateManager.setPlayerReady(playerId);
+  if (roomId && typeof roomId === 'string') {
+    // Check if room is ready after setting player ready
+    gameEngine.checkRoomReady(roomId);
   }
+  return roomId;
 }

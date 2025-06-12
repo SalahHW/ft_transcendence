@@ -1,16 +1,20 @@
 import * as BABYLON from '@babylonjs/core';
 import { getGameState, broadcastToRoom, endGame } from './gameState.js';
+import { GAME_CONFIG } from '../core/constants.js';
+import { RoomUtils } from '../utils/helpers.js';
+import { gameStateManager } from '../game/GameStateManager.js';
+import { gameEngine } from '../game/GameEngine.js';
 
 export function startGameLoop() {
-  const FPS = 240;
-  const BROADCAST_FPS = 60;
-  const SYNC_INTERVAL = 5;
+  const FPS = GAME_CONFIG.FPS;
+  const BROADCAST_FPS = GAME_CONFIG.BROADCAST_FPS;
+  const SYNC_INTERVAL = GAME_CONFIG.SYNC_INTERVAL;
   let lastBroadcast = Date.now();
   let lastSync = Date.now();
   let frameCount = 0;
   let lastFrameTime = Date.now();
 
-  const { gameRooms } = getGameState();
+  const { gameRooms } = gameStateManager.getGameState();
 
   const update = () => {
     const now = Date.now();
@@ -23,11 +27,11 @@ export function startGameLoop() {
 
     try {
       gameRooms.forEach((room, roomId) => {
-        if (room.players.length !== 2 || room.isGameOver) return;
+        if (!RoomUtils.isRoomReadyForGame(room)) return;
 
         room.players.forEach((player, index) => {
-          const speed = 20;
-          const halfD = 7.5;
+          const speed = GAME_CONFIG.PADDLE_SPEED;
+          const halfD = GAME_CONFIG.PADDLE_BOUNDARY;
           let moved = false;
           if (player.isUpPressed && !player.isDownPressed) {
             const newZ = player.positionZ - speed * deltaTime;
@@ -41,7 +45,7 @@ export function startGameLoop() {
           player.positionZ = Number(player.positionZ.toFixed(3));
 
           if ((player.isUpPressed || player.isDownPressed) && now - lastBroadcast >= 1000 / BROADCAST_FPS) {
-            broadcastToRoom(roomId, {
+            gameEngine.broadcastToRoom(roomId, {
               type: 'paddleMove',
               playerId: player.id,
               positionZ: player.positionZ,
@@ -84,7 +88,7 @@ export function startGameLoop() {
                 shouldGlow: room.ball.shouldGlow
               };
 
-              broadcastToRoom(roomId, {
+              gameEngine.broadcastToRoom(roomId, {
                 type: 'ballUpdate',
                 ballState,
                 isInitialSpawn: false,
@@ -124,7 +128,7 @@ export function startGameLoop() {
               currentGlowColor: { r: room.ball.currentGlowColor.r, g: room.ball.currentGlowColor.g, b: room.ball.currentGlowColor.b },
               shouldGlow: room.ball.shouldGlow
             } : null;
-            broadcastToRoom(roomId, {
+            gameEngine.broadcastToRoom(roomId, {
               type: 'ballUpdate',
               ballState,
               isInitialSpawn: false,
@@ -134,7 +138,7 @@ export function startGameLoop() {
           }
 
           if (room.ball.player1.playerScore !== prevScore1 || room.ball.player2.playerScore !== prevScore2) {
-            broadcastToRoom(roomId, {
+            gameEngine.broadcastToRoom(roomId, {
               type: 'scoreUpdate',
               scores: {
                 [room.players[0].id]: room.ball.player1.playerScore,
@@ -142,7 +146,7 @@ export function startGameLoop() {
               },
               roomId: roomId
             });
-            endGame(room, roomId);
+            gameEngine.endGame(room, roomId);
           }
         }
 
@@ -163,7 +167,7 @@ export function startGameLoop() {
             currentGlowColor: { r: room.ball.currentGlowColor.r, g: room.ball.currentGlowColor.g, b: room.ball.currentGlowColor.b },
             shouldGlow: room.ball.shouldGlow
           } : null;
-          broadcastToRoom(roomId, {
+          gameEngine.broadcastToRoom(roomId, {
             type: 'sync',
             playerPositions,
             ballState,
