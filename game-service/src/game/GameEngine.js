@@ -3,6 +3,8 @@ import * as BABYLON from '@babylonjs/core';
 import { reportMatchResultsToAPI } from '../server/api.js';
 import { gameStateManager } from './GameStateManager.js';
 import { RoomUtils, WebSocketUtils } from '../utils/helpers.js';
+import { roomManager } from '../room/RoomManager.js';
+import { roomMatchmaker } from '../room/RoomMatchmaker.js';
 
 /**
  * Core game engine responsible for game logic orchestration
@@ -17,16 +19,9 @@ export class GameEngine {
    */
   checkRoomReady(roomId) {
     const room = this.stateManager.getRoom(roomId);
-    if (!room || room.players.length !== 2 || room.ready) return;
+    if (!room || room.ready) return;
 
-    const allReady = room.players.every(player => 
-      player.username && 
-      player.ws && 
-      player.ws.readyState === 1 && 
-      player.readyToPlay
-    );
-
-    if (allReady) {
+    if (room.isReadyForGame()) {
       this._startGame(room, roomId);
     } else {
       this._notifyWaitingStatus(room);
@@ -128,42 +123,14 @@ export class GameEngine {
    * Create or join a room for a player
    */
   createOrJoinRoom(playerId, player, ws) {
-    let roomId = null;
-    const rooms = this.stateManager.getGameRooms();
-    
-    // Try to find an existing room
-    for (const [rId, room] of rooms.entries()) {
-      if (room.players.length < 2 && !room.isGameOver && !room.ready) {
-        room.players.push(player);
-        roomId = rId;
-        console.log(`Player ${playerId} joined existing room ${roomId}`);
-        break;
-      }
-    }
-
-    // Create new room if none available
-    if (!roomId) {
-      roomId = this._generateRoomId();
-      const newRoom = {
-        players: [player],
-        ball: null,
-        ready: false,
-        isGameOver: false,
-        ballUpdateSent: false,
-        startTime: new Date().toISOString()
-      };
-      this.stateManager.createRoom(roomId, newRoom);
-      console.log(`Player ${playerId} created new room ${roomId}`);
-    }
-
-    this.checkRoomReady(roomId);
-    return roomId;
+    const result = roomMatchmaker.findOrCreateRoom(player);
+    this.checkRoomReady(result.roomId);
+    return result.roomId;
   }
 
   // Private helper methods
   _startGame(room, roomId) {
-    room.ready = true;
-    console.log(`Room ${roomId} is ready, starting game at ${Date.now()}`);
+    room.setReady();
     
     room.players.forEach((p, i) => {
       const otherPlayer = room.players[1 - i];

@@ -3,6 +3,7 @@ import { gameEngine } from '../game/GameEngine.js';
 import { reportMatchResultsToAPI } from '../server/api.js';
 import { LogUtils, TimeUtils } from '../utils/helpers.js';
 import { playerManager } from '../player/PlayerManager.js';
+import { roomManager } from '../room/RoomManager.js';
 
 /**
  * Manages player connections and disconnections
