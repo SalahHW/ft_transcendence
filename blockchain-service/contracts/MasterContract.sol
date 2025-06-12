@@ -75,9 +75,13 @@ contract MasterContract is Ownable {
      * @dev Mapping to store player
      * string: player name to address mapping
      * address: player address
+     * @dev Mapping to store reward eligibility
+     * address: player address
+     * bool: player has wallet
      */
 
     mapping(string => address) private players;
+    mapping(address => bool) private playerWallets;
 
     /**
      * @dev Event to log match reported
@@ -115,9 +119,10 @@ contract MasterContract is Ownable {
      * @dev Event to log player added
      * @param name: player name
      * @param playerAddress: player address
+     * @param hasWallet: token reward eligibility
      */
 
-    event PlayerAdded(string name, address playerAddress);
+    event PlayerAdded(string name, address playerAddress, bool hasWallet);
 
     /**
      * @dev Constructor to initialize the contract
@@ -140,13 +145,16 @@ contract MasterContract is Ownable {
      * @dev Function to add player
      * @param _name: player name
      * @param _player: player address
+     * @param _hasWallet: token reward eligibility
      */
 
-    function addPlayer(string memory _name, address _player) public onlyOwner {
+    function addPlayer(string memory _name, address _player, bool hasWallet) public onlyOwner {
         require(players[_name] == address(0), "Player already exists");
         players[_name] = _player;
-        pongToken.mint(_player, 100);
-        emit PlayerAdded(_name, _player);
+        playerWallets[_player] = hasWallet;
+        if(_hasWallet == true)
+            pongToken.mint(_player, 100);
+        emit PlayerAdded(_name, _player, _hasWallet);
     }
 
     /**
@@ -193,18 +201,22 @@ contract MasterContract is Ownable {
             "Player2 not registered"
         );
         require(winner != address(0), "Winner address is invalid");
-        pongToken.mint(winner, 10);
-        if (
-            pongToken.balanceOf(goatNft.getGoatAddress()) <
-            pongToken.balanceOf(winner)
-        ) {
-            goatNft.transferNft(goatNft.getGoatAddress(), winner);
+        if(playerWallets[winner] == true) {
+            pongToken.mint(winner, 10);
+            if (
+                pongToken.balanceOf(goatNft.getGoatAddress()) <
+                pongToken.balanceOf(winner)
+            ) {
+                goatNft.transferNft(goatNft.getGoatAddress(), winner);
+            }
+            address loser = (getPlayerAddress(player1) != winner)
+                ? getPlayerAddress(player1)
+                : getPlayerAddress(player2);
         }
-        address loser = (getPlayerAddress(player1) != winner)
-            ? getPlayerAddress(player1)
-            : getPlayerAddress(player2);
+    if((playerWallets[loser] == true)) {
         uint256 amountToBurn = calculateBurnAmount(pongToken.balanceOf(loser));
         pongToken.burn(loser, amountToBurn);
+    }
         Match memory tempMatch = fillMatchStruct(
             player1,
             player2,
