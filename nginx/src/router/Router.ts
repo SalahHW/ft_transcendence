@@ -15,8 +15,7 @@
 
 import APITestPage from "../views/apiTestPage/APITestPage.js";
 import HomePage from "../views/homePage.js";
-import GamePage from "../views/gamePage.js";
-import { getCurrentUser, getUserResponseData, registerCurrentUserForGame } from "../game/utils/fetch.js";
+import { handleSimpleMatch } from "../game/utils/1v1Handler.js";
 
 interface Route {
 	path: string;
@@ -48,32 +47,7 @@ export default class Router {
 		{
 			path: "/1v1",
 			handler: async function() {
-				try {
-					const username = await getUserResponseData("username");
-					
-					// Register the current user for the game
-					const playerData = await registerCurrentUserForGame();
-					
-					// Create and render the game page
-					if (!this.cache) {
-						this.cache = new GamePage("app-container");
-					}
-					this.cache.render();
-					
-					// Load the pre-bundled game client
-					const gameBundlePath = "/js/game.bundle.js";
-					const gameClientModule = await import(gameBundlePath);
-					
-					// **CRITICAL FIX**: Explicitly setup button handlers (no side effects)
-					if (gameClientModule.setupJoinGameButton) {
-						gameClientModule.setupJoinGameButton();
-					}
-					
-					await gameClientModule.initializeGame(playerData.id);
-					
-				} catch (error) {
-					console.error("Error registering user for game:", error);
-				}
+				await handleSimpleMatch(this);
 			}
 		},
 		{
