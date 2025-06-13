@@ -166,7 +166,7 @@ export class GameEngine {
         p.ws.send(JSON.stringify({
           type: 'waitingForPlayers',
           readyCount: readyPlayers,
-          totalNeeded: 2
+          totalNeeded: room.maxPlayers
         }));
       }
     });
