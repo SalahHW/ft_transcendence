@@ -4,8 +4,7 @@ import { webSocketClient } from '../webSocketClient/webSocketClient.js';
 import { Ball } from '../ball/ball.js';
 import * as BABYLON from '@babylonjs/core';
 import { fetchWithSelfSigned } from '../utils/fetch.js';
-import { updateScoresUI, updateGameStatus } from '../playerUi/playerUi.js';
-import { handleWaitingForPlayers, handleGameInitNames } from '../ui/waitingStatusHandler.js';
+import { updatePlayerNames, updateScoresUI, updateGameStatus } from '../playerUi/playerUi.js';
 
 interface PlayerData {
     id: string;
@@ -48,7 +47,16 @@ let roomId: string | null = null;
 let localPlayerId: string | null = null;
 let isUpPressed: boolean = false;
 let isDownPressed: boolean = false;
+let lastBallPosition: BABYLON.Vector3 | null = null;
+let lastSyncTime: number | null = null;
+let predictedPosition: BABYLON.Vector3 | null = null;
+let ping: number = 0;
+let pingSamples: number[] = [];
 let isGameOver: boolean = false;
+let matchEndTime: Date | null = null;
+let initTime: number | null = null;
+let syncCount: number = 0;
+let ballUpdateReceived: boolean = false;
 let isGameLoopRunning: boolean = false;
 
 // Function to check available players
@@ -261,9 +269,6 @@ export function initializeGame(playerId: string): void {
             const message = JSON.parse(event.data);
             if (message.type === 'waitingForPlayers') {
                 updateGameStatus(`Waiting for players... (${message.readyCount}/${message.totalNeeded} ready)`);
-                
-                // Handle waiting status and update player names
-                handleWaitingForPlayers(message, updateGameStatus);
             }
         } catch (error) {
             console.error('Error parsing message:', error);
@@ -272,11 +277,19 @@ export function initializeGame(playerId: string): void {
 
     clientConnection.onInit(async ({ playerId, roomId: rId, role, opponentId, playerName, opponentName }) => {
         console.log('Received init:', { playerId, roomId: rId, role, opponentId, playerName, opponentName });
+        initTime = Date.now();
         roomId = rId || null;
         localPlayerId = playerId || null;
 
-        // Handle game initialization names
-        handleGameInitNames(playerName || 'Player 1', opponentName || 'Player 2');
+        // Store player names for UI updates
+        let player1Name, player2Name;
+        if (role === 0) {
+            player1Name = playerName || 'Player 1';
+            player2Name = opponentName || 'Player 2';
+        } else {
+            player1Name = opponentName || 'Player 1';
+            player2Name = playerName || 'Player 2';
+        }
 
         // Only create new map if it doesn't exist
         if (!map) {
@@ -303,11 +316,11 @@ export function initializeGame(playerId: string): void {
             }
             
             if (role === 0) {
-                player1 = new playerPaddle(playerName || 'Player 1', playerId, 0);
-                player2 = new playerPaddle(opponentName || 'Player 2', opponentId, 1);
+                player1 = new playerPaddle(player1Name, playerId, 0);
+                player2 = new playerPaddle(player2Name, opponentId, 1);
             } else {
-                player1 = new playerPaddle(opponentName || 'Player 1', opponentId, 0);
-                player2 = new playerPaddle(playerName || 'Player 2', playerId, 1);
+                player1 = new playerPaddle(player1Name, opponentId, 0);
+                player2 = new playerPaddle(player2Name, playerId, 1);
             }
 
             try {
@@ -347,6 +360,9 @@ export function initializeGame(playerId: string): void {
         }
 
         updateGameStatus('Game starting...');
+        
+        // Update player names in UI
+        updatePlayerNames(player1Name, player2Name);
         
         // Set up keyboard controls if not already set
         if (!(window as any).gameControlsInitialized) {
@@ -402,13 +418,7 @@ export function initializeGame(playerId: string): void {
                     player1.paddleBody.isVisible = true;
                     player2.paddleBody.isVisible = true;
                 }
-                const gameLoopStarted = setupGameLoop();
-                // Update status to show the game is now running (with small delay to ensure it's not overridden)
-                if (gameLoopStarted) {
-                    setTimeout(() => {
-                        updateGameStatus('Good luck and have fun!');
-                    }, 100);
-                }
+                setupGameLoop();
             } catch (e) {
                 console.error('Error during game initialization:', e);
                 // Send animation complete anyway to prevent server hanging
@@ -420,13 +430,7 @@ export function initializeGame(playerId: string): void {
                     console.log('Sent animationComplete to server (after error)');
                 }
                 // Start game loop anyway if animation fails
-                const gameLoopStarted = setupGameLoop();
-                // Update status even if animation failed (with small delay to ensure it's not overridden)
-                if (gameLoopStarted) {
-                    setTimeout(() => {
-                        updateGameStatus('Good luck and have fun!');
-                    }, 100);
-                }
+                setupGameLoop();
             }
         }
     });
@@ -510,10 +514,11 @@ export function leaveGame(): void {
 }
 
 // Function to setup game loop
-function setupGameLoop(): boolean {
+function setupGameLoop(): void {
     if (isGameLoopRunning) {
-        return true;
+        return;
     }
+
     let frameCount = 0;
     let lastTime = Date.now();
     let lastPaddleUpdate = Date.now();
@@ -579,10 +584,8 @@ function setupGameLoop(): boolean {
     if (map && map.getEngine) {
         map.getEngine.runRenderLoop(renderLoop);
         isGameLoopRunning = true;
-        return true;
     } else {
         console.error('Failed to start game loop: map or engine not initialized');
-        return false;
     }
 }
 
