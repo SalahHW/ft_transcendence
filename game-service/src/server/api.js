@@ -143,8 +143,8 @@ async function notifyOtherServices(matchData) {
 
 async function notifyService(serviceName, url, matchData) {
   try {
-    console.log(`Notifying ${serviceName} at ${url}`);
-    console.log(`Sending match data:`, JSON.stringify(matchData, null, 2));
+    // console.log(`Notifying ${serviceName} at ${url}`);
+    // console.log(`Sending match data:`, JSON.stringify(matchData, null, 2));
     
     const response = await fetch(url, {
       method: 'POST',
@@ -162,9 +162,9 @@ async function notifyService(serviceName, url, matchData) {
     }
 
     const responseData = await response.json();
-    console.log(`✅ Successfully notified ${serviceName}`);
-    console.log(`📥 ${serviceName} response:`, JSON.stringify(responseData, null, 2));
-    console.log('-'.repeat(60));
+    //console.log(`✅ Successfully notified ${serviceName}`);
+    //console.log(`📥 ${serviceName} response:`, JSON.stringify(responseData, null, 2));
+    //console.log('-'.repeat(60));
     
     return responseData;
   } catch (error) {
