@@ -11,7 +11,7 @@
 /* ************************************************************************** */
 
 import GamePage from "../../views/gamePage.js";
-import { getUserResponseData, registerCurrentUserForGame } from "./fetch.js";
+import { getUserResponseData, registerCurrentUserForGame } from "../utils/fetch.js";
 
 /**
  * Handles the logic for starting a 1v1 simple match
@@ -19,12 +19,8 @@ import { getUserResponseData, registerCurrentUserForGame } from "./fetch.js";
  */
 export async function handleSimpleMatch(cache: any): Promise<void> {
 	try {
-		//const username = await getUserResponseData("username");
+		const playerData = await registerCurrentUserForGame(false);
 		
-		// Register the current user for the game
-		const playerData = await registerCurrentUserForGame();
-		
-		// Create and render the game page
 		if (!cache.cache) {
 			cache.cache = new GamePage("app-container");
 		}
@@ -34,14 +30,12 @@ export async function handleSimpleMatch(cache: any): Promise<void> {
 		const gameBundlePath = "/js/game.bundle.js";
 		const gameClientModule = await import(gameBundlePath);
 		
-		// **CRITICAL FIX**: Explicitly setup button handlers (no side effects)
 		if (gameClientModule.setupJoinGameButton) {
 			gameClientModule.setupJoinGameButton();
 		}
-		
 		await gameClientModule.initializeGame(playerData.id);
 		
 	} catch (error) {
 		console.error("Error registering user for game:", error);
 	}
-} 
+}

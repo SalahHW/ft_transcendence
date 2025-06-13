@@ -4,10 +4,11 @@ class playerPaddle {
   public playerName: string;
   public playerId: string;
   public role: number;
+  public tournament: boolean;
   public hasPowerup: boolean;
   public playerRebounds: number;
   public isWinner: boolean | undefined;
-  public poweupType: string | undefined;
+  public powerUpType: string | undefined;
   public paddleBody: BABYLON.Mesh | undefined;
   public playerPov: BABYLON.Camera | undefined;
   public paddleSpeed: number | undefined;
@@ -20,9 +21,10 @@ class playerPaddle {
     this.playerId = playerId;
     this.role = role;
     this.hasPowerup = false;
+    this.tournament = false;
     this.playerRebounds = 0;
     this.isWinner = undefined;
-    this.poweupType = undefined;
+    this.powerUpType = undefined;
     this.paddleBody = undefined;
     this.playerPov = undefined;
     this.paddleSpeed = undefined;

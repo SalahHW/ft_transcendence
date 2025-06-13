@@ -29,14 +29,14 @@ export async function registerApiRoutes(fastify, options) {
   fastify.post('/api/players', async (request, reply) => {
     try {
       console.log('API request: POST /api/players');
-      const { username } = request.body || {};
+      const { username, tournament = false } = request.body || {};
       
-      const player = playerManager.registerPlayerWithUsername(username);
+      const player = playerManager.registerPlayerWithUsername(username, { tournament });
       
-      console.log(`Created player ${player.id} with username ${username}`);
+      console.log(`Created player ${player.id} with username ${username}, tournament: ${tournament}`);
       return reply.status(201).send({
         status: 'success',
-        data: { id: player.id, username: player.username },
+        data: { id: player.id, username: player.username, tournament: player.tournament },
       });
     } catch (error) {
       console.error('Error in POST /api/players:', error);

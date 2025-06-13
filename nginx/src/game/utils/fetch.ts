@@ -63,7 +63,7 @@ export async function getUserResponseData(key: string): Promise<any> {
 	return userResponse.user[key];
 }
 
-export async function registerCurrentUserForGame(): Promise<{ id: string; username: string }> {
+export async function registerCurrentUserForGame(tournament: boolean = false): Promise<{ id: string; username: string }> {
 	const username = await getUserResponseData('username');
 	const serverPort = 8081; // Game service HTTP port
 	
@@ -72,7 +72,7 @@ export async function registerCurrentUserForGame(): Promise<{ id: string; userna
 		headers: {
 			'Content-Type': 'application/json',
 		},
-		body: JSON.stringify({ username }),
+		body: JSON.stringify({ username, tournament }),
 	});
 	
 	if (!response.ok) {

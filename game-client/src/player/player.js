@@ -8,7 +8,7 @@ class playerPaddle {
     this.hasPowerup = false;
     this.playerRebounds = 0;
     this.isWinner = undefined;
-    this.poweupType = undefined;
+    this.powerUpType = undefined;
     this.paddleBody = undefined;
     this.playerPov = undefined;
     this.paddleSpeed = undefined;

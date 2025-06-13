@@ -15,7 +15,8 @@
 
 import APITestPage from "../views/apiTestPage/APITestPage.js";
 import HomePage from "../views/homePage.js";
-import { handleSimpleMatch } from "../game/utils/1v1Handler.js";
+import { handleSimpleMatch } from "../game/gameMode/1v1Handler.js";
+import { handleTournament } from "../game/gameMode/tournamentHandler.js";
 
 interface Route {
 	path: string;
@@ -52,9 +53,8 @@ export default class Router {
 		},
 		{
 			path: "/tournament",
-			handler: function() {
-				console.log("Tournament page handler called");
-				// TODO: Implement tournament page by adding your function
+			handler: async function() {
+				await handleTournament(this);
 			}
 		}
 	];
@@ -87,7 +87,6 @@ export default class Router {
 	}
 
 	private _cleanupCurrentRoute(): void {
-		// **CRITICAL FIX**: Universal cleanup for any route
 		const currentPath = this.getCurrentPath();
 		if (!(window as any).routeCleanupInProgress) {
 			// Set flag to prevent double cleanup
@@ -113,8 +112,6 @@ export default class Router {
 						console.error('Error during global game cleanup:', error);
 					}
 				}
-				
-				// Additional cleanup for global game state
 				if ((window as any).gameControlsInitialized) {
 					(window as any).gameControlsInitialized = false;
 				}
