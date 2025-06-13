@@ -8,8 +8,7 @@ import { getUserResponseData, registerCurrentUserForGame } from "../utils/fetch.
  */
 export async function handleTournament(cache: any): Promise<void> {
 	try {
-		const playerData = await registerCurrentUserForGame(true); // Set tournament to true
-		
+		const playerData = await registerCurrentUserForGame(true);
 		if (!cache.cache) {
 			cache.cache = new GamePage("app-container");
 		}
