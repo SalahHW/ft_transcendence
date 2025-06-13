@@ -4,6 +4,7 @@ import { webSocketClient } from '../webSocketClient/webSocketClient.js';
 import { Ball } from '../ball/ball.js';
 import * as BABYLON from '@babylonjs/core';
 import { fetchWithSelfSigned } from '../utils/fetch.js';
+import { handleWaitingForPlayers } from '../ui/playerDisplay.js';
 import '../style.css';
 
 const serverPort = import.meta.env.VITE_SERVER_PORT || 8080;
@@ -74,6 +75,8 @@ function updateGameStatus(message) {
         statusElement.textContent = message;
     }
 }
+
+// Player UI functions are now handled by ../ui/playerDisplay.js
 
 // Function to initialize the game
 function initializeGame(playerId) {
@@ -226,7 +229,7 @@ function initializeGame(playerId) {
         try {
             const message = JSON.parse(event.data);
             if (message.type === 'waitingForPlayers') {
-                updateGameStatus(`Waiting for players... (${message.readyCount}/${message.totalNeeded} ready)`);
+                handleWaitingForPlayers(message, updateGameStatus);
             }
         } catch (error) {
             console.error('Error parsing message:', error);

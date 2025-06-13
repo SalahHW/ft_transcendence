@@ -1,6 +1,6 @@
 
 import GamePage from "../../views/gamePage.js";
-import { getUserResponseData, registerCurrentUserForGame } from "../utils/fetch.js";
+import { registerCurrentUserForGame } from "../utils/fetch.js";
 
 /**
  * Handles the logic for starting a tournament match

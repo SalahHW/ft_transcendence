@@ -5,6 +5,7 @@ import { gameStateManager } from './GameStateManager.js';
 import { RoomUtils, WebSocketUtils } from '../utils/helpers.js';
 import { roomManager } from '../room/RoomManager.js';
 import { roomMatchmaker } from '../room/RoomMatchmaker.js';
+import { createWaitingMessage } from '../player/playerStatus.js';
 
 /**
  * Core game engine responsible for game logic orchestration
@@ -160,14 +161,10 @@ export class GameEngine {
   }
 
   _notifyWaitingStatus(room) {
-    const readyPlayers = room.players.filter(p => p.readyToPlay).length;
-    room.players.forEach(p => {
+    room.players.forEach((p, index) => {
       if (p.ws && p.ws.readyState === 1) {
-        p.ws.send(JSON.stringify({
-          type: 'waitingForPlayers',
-          readyCount: readyPlayers,
-          totalNeeded: room.maxPlayers
-        }));
+        const message = createWaitingMessage(room, p, index);
+        p.ws.send(JSON.stringify(message));
       }
     });
   }

@@ -15,6 +15,7 @@ import { gameMap } from './map/gameMap.js';
 import { playerPaddle } from './player/player.js';
 import { Ball } from './ball/ball.js';
 import * as BABYLON from '@babylonjs/core';
+import { handleWaitingForPlayers } from './ui/waitingStatusHandler.js';
 
 export class GameClient {
     private clientConnection: webSocketClient | null = null;
@@ -98,6 +99,9 @@ export class GameClient {
                 const message = JSON.parse(event.data);
                 if (message.type === 'waitingForPlayers') {
                     this.updateGameStatus(`Waiting for players... (${message.readyCount}/${message.totalNeeded} ready)`);
+                    
+                    // Handle waiting status and update player names
+                    handleWaitingForPlayers(message, this.updateGameStatus.bind(this));
                 }
             } catch (error) {
                 console.error('Error parsing message:', error);

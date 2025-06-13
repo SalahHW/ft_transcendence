@@ -4,7 +4,8 @@ import { webSocketClient } from '../webSocketClient/webSocketClient.js';
 import { Ball } from '../ball/ball.js';
 import * as BABYLON from '@babylonjs/core';
 import { fetchWithSelfSigned } from '../utils/fetch.js';
-import { updatePlayerNames, updateScoresUI, updateGameStatus } from '../playerUi/playerUi.js';
+import { updateScoresUI, updateGameStatus } from '../playerUi/playerUi.js';
+import { handleWaitingForPlayers, handleGameInitNames } from '../ui/waitingStatusHandler.js';
 
 interface PlayerData {
     id: string;
@@ -260,6 +261,9 @@ export function initializeGame(playerId: string): void {
             const message = JSON.parse(event.data);
             if (message.type === 'waitingForPlayers') {
                 updateGameStatus(`Waiting for players... (${message.readyCount}/${message.totalNeeded} ready)`);
+                
+                // Handle waiting status and update player names
+                handleWaitingForPlayers(message, updateGameStatus);
             }
         } catch (error) {
             console.error('Error parsing message:', error);
@@ -271,15 +275,8 @@ export function initializeGame(playerId: string): void {
         roomId = rId || null;
         localPlayerId = playerId || null;
 
-        // Store player names for UI updates
-        let player1Name, player2Name;
-        if (role === 0) {
-            player1Name = playerName || 'Player 1';
-            player2Name = opponentName || 'Player 2';
-        } else {
-            player1Name = opponentName || 'Player 1';
-            player2Name = playerName || 'Player 2';
-        }
+        // Handle game initialization names
+        handleGameInitNames(playerName || 'Player 1', opponentName || 'Player 2');
 
         // Only create new map if it doesn't exist
         if (!map) {
@@ -306,11 +303,11 @@ export function initializeGame(playerId: string): void {
             }
             
             if (role === 0) {
-                player1 = new playerPaddle(player1Name, playerId, 0);
-                player2 = new playerPaddle(player2Name, opponentId, 1);
+                player1 = new playerPaddle(playerName || 'Player 1', playerId, 0);
+                player2 = new playerPaddle(opponentName || 'Player 2', opponentId, 1);
             } else {
-                player1 = new playerPaddle(player1Name, opponentId, 0);
-                player2 = new playerPaddle(player2Name, playerId, 1);
+                player1 = new playerPaddle(opponentName || 'Player 1', opponentId, 0);
+                player2 = new playerPaddle(playerName || 'Player 2', playerId, 1);
             }
 
             try {
@@ -350,9 +347,6 @@ export function initializeGame(playerId: string): void {
         }
 
         updateGameStatus('Game starting...');
-        
-        // Update player names in UI
-        updatePlayerNames(player1Name, player2Name);
         
         // Set up keyboard controls if not already set
         if (!(window as any).gameControlsInitialized) {
