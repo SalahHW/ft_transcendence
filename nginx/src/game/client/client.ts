@@ -47,16 +47,7 @@ let roomId: string | null = null;
 let localPlayerId: string | null = null;
 let isUpPressed: boolean = false;
 let isDownPressed: boolean = false;
-let lastBallPosition: BABYLON.Vector3 | null = null;
-let lastSyncTime: number | null = null;
-let predictedPosition: BABYLON.Vector3 | null = null;
-let ping: number = 0;
-let pingSamples: number[] = [];
 let isGameOver: boolean = false;
-let matchEndTime: Date | null = null;
-let initTime: number | null = null;
-let syncCount: number = 0;
-let ballUpdateReceived: boolean = false;
 let isGameLoopRunning: boolean = false;
 
 // Function to check available players
@@ -277,7 +268,6 @@ export function initializeGame(playerId: string): void {
 
     clientConnection.onInit(async ({ playerId, roomId: rId, role, opponentId, playerName, opponentName }) => {
         console.log('Received init:', { playerId, roomId: rId, role, opponentId, playerName, opponentName });
-        initTime = Date.now();
         roomId = rId || null;
         localPlayerId = playerId || null;
 
