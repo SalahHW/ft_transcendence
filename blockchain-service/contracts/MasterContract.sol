@@ -152,8 +152,9 @@ contract MasterContract is Ownable {
         require(players[_name] == address(0), "Player already exists");
         players[_name] = _player;
         playerWallets[_player] = hasWallet;
-        if(_hasWallet == true)
+        if (_hasWallet == true) {
             pongToken.mint(_player, 100);
+        }
         emit PlayerAdded(_name, _player, _hasWallet);
     }
 
@@ -187,7 +188,7 @@ contract MasterContract is Ownable {
         uint8 player2Score,
         address winner
     ) public onlyOwner {
-        for (uint i = 0; i < globalMatchesArray.length; i++) {
+        for (uint i = 0; i < globalMatchesArray.length; ++i) {
             if (globalMatchesArray[i].matchId == matchId) {
                 revert("Match ID already used");
             }
@@ -201,7 +202,7 @@ contract MasterContract is Ownable {
             "Player2 not registered"
         );
         require(winner != address(0), "Winner address is invalid");
-        if(playerWallets[winner] == true) {
+        if (playerWallets[winner] == true) {
             pongToken.mint(winner, 10);
             if (
                 pongToken.balanceOf(goatNft.getGoatAddress()) <
@@ -209,11 +210,11 @@ contract MasterContract is Ownable {
             ) {
                 goatNft.transferNft(goatNft.getGoatAddress(), winner);
             }
-            address loser = (getPlayerAddress(player1) != winner)
-                ? getPlayerAddress(player1)
-                : getPlayerAddress(player2);
         }
-    if((playerWallets[loser] == true)) {
+        address loser = (getPlayerAddress(player1) != winner)
+            ? getPlayerAddress(player1)
+            : getPlayerAddress(player2);
+    if ((playerWallets[loser] == true)) {
         uint256 amountToBurn = calculateBurnAmount(pongToken.balanceOf(loser));
         pongToken.burn(loser, amountToBurn);
     }
