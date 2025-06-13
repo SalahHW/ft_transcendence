@@ -418,7 +418,13 @@ export function initializeGame(playerId: string): void {
                     player1.paddleBody.isVisible = true;
                     player2.paddleBody.isVisible = true;
                 }
-                setupGameLoop();
+                const gameLoopStarted = setupGameLoop();
+                // Update status to show the game is now running (with small delay to ensure it's not overridden)
+                if (gameLoopStarted) {
+                    setTimeout(() => {
+                        updateGameStatus('Good luck and have fun!');
+                    }, 100);
+                }
             } catch (e) {
                 console.error('Error during game initialization:', e);
                 // Send animation complete anyway to prevent server hanging
@@ -430,7 +436,13 @@ export function initializeGame(playerId: string): void {
                     console.log('Sent animationComplete to server (after error)');
                 }
                 // Start game loop anyway if animation fails
-                setupGameLoop();
+                const gameLoopStarted = setupGameLoop();
+                // Update status even if animation failed (with small delay to ensure it's not overridden)
+                if (gameLoopStarted) {
+                    setTimeout(() => {
+                        updateGameStatus('Good luck and have fun!');
+                    }, 100);
+                }
             }
         }
     });
@@ -514,11 +526,10 @@ export function leaveGame(): void {
 }
 
 // Function to setup game loop
-function setupGameLoop(): void {
+function setupGameLoop(): boolean {
     if (isGameLoopRunning) {
-        return;
+        return true;
     }
-
     let frameCount = 0;
     let lastTime = Date.now();
     let lastPaddleUpdate = Date.now();
@@ -584,8 +595,10 @@ function setupGameLoop(): void {
     if (map && map.getEngine) {
         map.getEngine.runRenderLoop(renderLoop);
         isGameLoopRunning = true;
+        return true;
     } else {
         console.error('Failed to start game loop: map or engine not initialized');
+        return false;
     }
 }
 
