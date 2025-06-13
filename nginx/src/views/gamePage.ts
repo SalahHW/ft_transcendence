@@ -1,5 +1,6 @@
 import { COMMON_CLASSES } from "../style/tailwindClasses.js";
 import { buttonHTML } from "../components/button.js";
+import { updatePlayerNames, updateScoresUI, updateGameStatus } from "../game/playerUi/playerUi.js";
 
 export default class GamePage {
 	private _container: HTMLElement;
@@ -90,23 +91,19 @@ export default class GamePage {
 
 	// Method to update game status
 	public updateGameStatus(message: string): void {
-		const statusElement = document.getElementById('gameStatus');
-		if (statusElement) {
-			statusElement.textContent = message;
-		}
+		updateGameStatus(message);
 	}
 
-	// Method to update scores
-	public updateScores(player1Score: number, player2Score: number): void {
-		const player1Element = document.getElementById('player1Score');
-		const player2Element = document.getElementById('player2Score');
-		
-		if (player1Element) {
-			player1Element.textContent = `Player 1: ${player1Score}`;
-		}
-		if (player2Element) {
-			player2Element.textContent = `Player 2: ${player2Score}`;
-		}
+	// Method to update scores with usernames
+	public updateScores(player1Score: number, player2Score: number, player1Name?: string, player2Name?: string): void {
+		const player1Display = player1Name || 'Player 1';
+		const player2Display = player2Name || 'Player 2';
+		updateScoresUI(player1Score, player2Score, player1Display, player2Display);
+	}
+
+	// Method to update just the player names (useful for initial setup)
+	public updatePlayerNames(player1Name: string, player2Name: string): void {
+		updatePlayerNames(player1Name, player2Name);
 	}
 
 	// **CRITICAL**: Cleanup method to remove event listeners

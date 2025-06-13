@@ -142,8 +142,10 @@ export class GameEngine {
             roomId,
             role: i,
             opponentId: otherPlayer.id,
+            playerName: p.username || 'Anonymous',
+            opponentName: otherPlayer.username || 'Anonymous',
           }));
-          console.log(`Sent init to player ${p.id} in room ${roomId}`);
+          console.log(`Sent init to player ${p.id} (${p.username}) in room ${roomId}`);
         } catch (e) {
           console.error(`Failed to send init to player ${p.id}:`, e);
         }

@@ -4,6 +4,7 @@ import { webSocketClient } from '../webSocketClient/webSocketClient.js';
 import { Ball } from '../ball/ball.js';
 import * as BABYLON from '@babylonjs/core';
 import { fetchWithSelfSigned } from '../utils/fetch.js';
+import { updatePlayerNames, updateScoresUI, updateGameStatus } from '../playerUi/playerUi.js';
 
 interface PlayerData {
     id: string;
@@ -98,14 +99,6 @@ async function setPlayerReady(playerId: string): Promise<boolean> {
     } catch (error) {
         console.error('Error setting player ready:', error);
         throw error;
-    }
-}
-
-// Function to update game status
-function updateGameStatus(message: string): void {
-    const statusElement = document.getElementById('gameStatus');
-    if (statusElement) {
-        statusElement.textContent = message;
     }
 }
 
@@ -213,7 +206,10 @@ export function initializeGame(playerId: string): void {
             player1.playerScore = player1Score;
             player2.playerScore = player2Score;
             
-            console.log(`Score update: Player1: ${player1Score}, Player2: ${player2Score}`);
+            // Update UI with scores and player names
+            updateScoresUI(player1Score, player2Score, player1.playerName, player2.playerName);
+            
+            console.log(`Score update: ${player1.playerName}: ${player1Score}, ${player2.playerName}: ${player2Score}`);
         }
     });
 
@@ -279,11 +275,21 @@ export function initializeGame(playerId: string): void {
         }
     });
 
-    clientConnection.onInit(async ({ playerId, roomId: rId, role, opponentId }) => {
-        console.log('Received init:', { playerId, roomId: rId, role, opponentId });
+    clientConnection.onInit(async ({ playerId, roomId: rId, role, opponentId, playerName, opponentName }) => {
+        console.log('Received init:', { playerId, roomId: rId, role, opponentId, playerName, opponentName });
         initTime = Date.now();
         roomId = rId || null;
         localPlayerId = playerId || null;
+
+        // Store player names for UI updates
+        let player1Name, player2Name;
+        if (role === 0) {
+            player1Name = playerName || 'Player 1';
+            player2Name = opponentName || 'Player 2';
+        } else {
+            player1Name = opponentName || 'Player 1';
+            player2Name = playerName || 'Player 2';
+        }
 
         // Only create new map if it doesn't exist
         if (!map) {
@@ -310,11 +316,11 @@ export function initializeGame(playerId: string): void {
             }
             
             if (role === 0) {
-                player1 = new playerPaddle('Player1', playerId, 0);
-                player2 = new playerPaddle('Player2', opponentId, 1);
+                player1 = new playerPaddle(player1Name, playerId, 0);
+                player2 = new playerPaddle(player2Name, opponentId, 1);
             } else {
-                player1 = new playerPaddle('Player1', opponentId, 0);
-                player2 = new playerPaddle('Player2', playerId, 1);
+                player1 = new playerPaddle(player1Name, opponentId, 0);
+                player2 = new playerPaddle(player2Name, playerId, 1);
             }
 
             try {
@@ -354,6 +360,9 @@ export function initializeGame(playerId: string): void {
         }
 
         updateGameStatus('Game starting...');
+        
+        // Update player names in UI
+        updatePlayerNames(player1Name, player2Name);
         
         // Set up keyboard controls if not already set
         if (!(window as any).gameControlsInitialized) {
