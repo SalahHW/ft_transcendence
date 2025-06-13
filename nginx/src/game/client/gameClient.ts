@@ -10,12 +10,11 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-import { webSocketClient } from './webSocketClient/webSocketClient.js';
-import { gameMap } from './map/gameMap.js';
-import { playerPaddle } from './player/player.js';
-import { Ball } from './ball/ball.js';
-import * as BABYLON from '@babylonjs/core';
-import { handleWaitingForPlayers } from './ui/waitingStatusHandler.js';
+import { webSocketClient } from '../webSocketClient/webSocketClient.js';
+import { gameMap } from '../map/gameMap.js';
+import { playerPaddle } from '../player/player.js';
+import { Ball } from '../ball/ball.js';
+import { handleWaitingForPlayers } from '../ui/waitingStatusHandler.js';
 
 export class GameClient {
     private clientConnection: webSocketClient | null = null;
