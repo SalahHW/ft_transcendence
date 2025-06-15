@@ -55,11 +55,10 @@ export function startGameLoop() {
         });
 
         if (room.ball) {
-          // 🔊 Ensure ball has sound context (for existing balls)
+          // Ensure ball has sound context (for existing balls)
           if (!room.ball.gameEngine || !room.ball.roomId) {
             room.ball.gameEngine = gameEngine;
             room.ball.roomId = roomId;
-            console.log(`🔊 Set sound context for existing ball in room ${roomId}`);
           }
           
           const paddle1Pos = new BABYLON.Vector3(19.5, 2, room.players[0].positionZ);

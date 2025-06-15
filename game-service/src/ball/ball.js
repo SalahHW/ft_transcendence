@@ -113,17 +113,14 @@ class Ball {
             wallHit = true;
         }
 
-        // 🔊 Broadcast wall hit sound event
+        // Broadcast wall hit sound event
         if (wallHit && this.gameEngine && this.roomId) {
-            console.log(`🔊 Broadcasting wall hit sound for room ${this.roomId}`);
             this.gameEngine.broadcastToRoom(this.roomId, {
                 type: 'soundEvent',
                 sound: 'wallHit',
                 timestamp: Date.now(),
                 ballSpeed: this.speed
             });
-        } else if (wallHit) {
-            console.warn(`🔊 Wall hit detected but missing context: gameEngine=${!!this.gameEngine}, roomId=${this.roomId}`);
         }
     }
 
@@ -214,9 +211,8 @@ class Ball {
                 this.lastSpeedTier = newSpeedTier;
             }
 
-            // 🔊 Broadcast paddle hit sound event
+            // Broadcast paddle hit sound event
             if (this.gameEngine && this.roomId) {
-                console.log(`🔊 Broadcasting paddle hit sound for room ${this.roomId} (rebounds: ${this.rebounds})`);
                 this.gameEngine.broadcastToRoom(this.roomId, {
                     type: 'soundEvent',
                     sound: 'paddleHit',
@@ -225,8 +221,6 @@ class Ball {
                     rebounds: this.rebounds,
                     hitByPlayer: this.wasHitByPlayer
                 });
-            } else {
-                console.warn(`🔊 Paddle hit detected but missing context: gameEngine=${!!this.gameEngine}, roomId=${this.roomId}`);
             }
         }
     }
@@ -234,21 +228,29 @@ class Ball {
     handleScoreZone() {
         if (Math.abs(this.position.x) > 20) {
             let newVelocity;
+            let losingPlayerId;
             
             if (this.position.x < 0) {
                 // Ball went past left side (Player 2's side), Player 1 scores
-                console.log(`🎯 POINT SCORED! ${this.player1.username || this.player1.playerId} (Player 1) scored! ${this.player2.username || this.player2.playerId} (Player 2) lost a point!`);
-                console.log(`📊 Score: ${this.player1.username || 'Player 1'}: ${this.player1.playerScore} → ${this.player1.playerScore + 1}, ${this.player2.username || 'Player 2'}: ${this.player2.playerScore} (lost point)`);
                 this.player1.playerScore++;
+                losingPlayerId = this.player2.playerId; // Player 2 lost the point
                 // Ball goes towards the loser (Player 2 - left side)
                 newVelocity = new BABYLON.Vector3(-GAME_CONFIG.INITIAL_BALL_SPEED, 0, 0);
             } else {
                 // Ball went past right side (Player 1's side), Player 2 scores  
-                console.log(`🎯 POINT SCORED! ${this.player2.username || this.player2.playerId} (Player 2) scored! ${this.player1.username || this.player1.playerId} (Player 1) lost a point!`);
-                console.log(`📊 Score: ${this.player1.username || 'Player 1'}: ${this.player1.playerScore} (lost point), ${this.player2.username || 'Player 2'}: ${this.player2.playerScore} → ${this.player2.playerScore + 1}`);
                 this.player2.playerScore++;
+                losingPlayerId = this.player1.playerId; // Player 1 lost the point
                 // Ball goes towards the loser (Player 1 - right side)
                 newVelocity = new BABYLON.Vector3(GAME_CONFIG.INITIAL_BALL_SPEED, 0, 0);
+            }
+
+            // Send lost point sound only to the player who lost
+            if (this.gameEngine && this.roomId && losingPlayerId) {
+                this.gameEngine.sendToPlayer(this.roomId, losingPlayerId, {
+                    type: 'soundEvent',
+                    sound: 'lostPoint',
+                    timestamp: Date.now()
+                });
             }
             
             this.handleBallRespawn(newVelocity);

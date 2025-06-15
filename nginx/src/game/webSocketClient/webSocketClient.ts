@@ -22,6 +22,7 @@ export class webSocketClient {
     private ballUpdateCallback: ((msg: WebSocketMessage) => void) | null;
     private scoreUpdateCallback: ((msg: WebSocketMessage) => void) | null;
     private gameEndCallback: ((msg: WebSocketMessage) => void) | null;
+    private soundEventCallback: ((msg: WebSocketMessage) => void) | null;
     private messageCallback: ((msg: { data: string }) => void) | null;
     public matchEndTime: Date | null;
 
@@ -35,6 +36,7 @@ export class webSocketClient {
         this.ballUpdateCallback = null;
         this.scoreUpdateCallback = null;
         this.gameEndCallback = null;
+        this.soundEventCallback = null;
         this.messageCallback = null;
         this.matchEndTime = null;
 
@@ -100,6 +102,10 @@ export class webSocketClient {
                     matchEndTime: this.matchEndTime,
                 });
             }
+
+            if (msg.type === 'soundEvent' && this.soundEventCallback) {
+                this.soundEventCallback(msg);
+            }
         });
 
         this.socket.addEventListener('error', err => console.error('WS error:', err));
@@ -155,6 +161,10 @@ export class webSocketClient {
 
     onGameEnd(callback: (msg: WebSocketMessage) => void): void {
         this.gameEndCallback = callback;
+    }
+
+    onSoundEvent(callback: (msg: WebSocketMessage) => void): void {
+        this.soundEventCallback = callback;
     }
 
     set onMessage(callback: (msg: { data: string }) => void) {

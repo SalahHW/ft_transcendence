@@ -98,6 +98,27 @@ export class GameEngine {
   }
 
   /**
+   * Send message to a specific player
+   */
+  sendToPlayer(roomId, playerId, message) {
+    const room = this.stateManager.getRoom(roomId);
+    if (!room) return false;
+
+    const player = room.players.find(p => p.id === playerId);
+    if (!player || !WebSocketUtils.isWebSocketReady(player.ws)) {
+      return false;
+    }
+
+    try {
+      player.ws.send(JSON.stringify(message));
+      return true;
+    } catch (e) {
+      console.error(`Failed to send ${message.type} to player ${playerId} in room ${roomId}:`, e);
+      return false;
+    }
+  }
+
+  /**
    * End game and report results
    */
   async endGame(room, roomId) {

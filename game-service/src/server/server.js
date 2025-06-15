@@ -39,7 +39,7 @@ function registerCommonComponents(server) {
     credentials: true
   });
 
-  // 🔊 Register static file serving for sounds
+  // Register static file serving for sounds
   server.register(fastifyStatic, {
     root: path.join(__dirname, '../../public'),
     prefix: '/',

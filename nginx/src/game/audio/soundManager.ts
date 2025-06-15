@@ -13,7 +13,8 @@ class SoundManager {
     async preloadSounds(): Promise<void> {
         const soundFiles = {
             paddleHit: 'http://localhost:8081/sounds/matchSounds/pop.mp3',
-            wallHit: 'http://localhost:8081/sounds/matchSounds/laser_low.mp3'
+            wallHit: 'http://localhost:8081/sounds/matchSounds/laser_low.mp3',
+            lostPoint: 'http://localhost:8081/sounds/matchSounds/lost_point.mp3'
         };
 
         console.log('Preloading sounds...');
@@ -46,17 +47,9 @@ class SoundManager {
      * Play a sound effect
      */
     playSound(soundName: string, volumeMultiplier: number = 1): void {
-        console.log(`🔊 Attempting to play sound: ${soundName} (enabled: ${this.isEnabled}, initialized: ${this.isInitialized})`);
-        
         if (!this.isEnabled || !this.isInitialized || !this.sounds[soundName]) {
             if (!this.sounds[soundName]) {
-                console.warn(`🔊 Sound not found: ${soundName}. Available sounds:`, Object.keys(this.sounds));
-            }
-            if (!this.isEnabled) {
-                console.warn(`🔊 Sound manager is disabled`);
-            }
-            if (!this.isInitialized) {
-                console.warn(`🔊 Sound manager not initialized`);
+                console.warn(`Sound not found: ${soundName}. Available sounds:`, Object.keys(this.sounds));
             }
             return;
         }
@@ -67,12 +60,8 @@ class SoundManager {
         const audioClone = sound.cloneNode() as HTMLAudioElement;
         audioClone.volume = this.volume * volumeMultiplier;
         
-        console.log(`🔊 Playing sound: ${soundName} at volume ${audioClone.volume}`);
-        
-        audioClone.play().then(() => {
-            console.log(`🔊 Successfully played sound: ${soundName}`);
-        }).catch(error => {
-            console.warn(`🔊 Failed to play sound: ${soundName}`, error);
+        audioClone.play().catch(error => {
+            console.warn(`Failed to play sound: ${soundName}`, error);
         });
     }
 

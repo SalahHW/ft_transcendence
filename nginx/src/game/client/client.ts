@@ -61,26 +61,27 @@ let syncCount: number = 0;
 let ballUpdateReceived: boolean = false;
 let isGameLoopRunning: boolean = false;
 
-// 🔊 Function to handle sound events
+// Function to handle sound events
 function handleSoundEvent(msg: any): void {
-    console.log('🔊 Received sound event:', msg);
     const { sound, ballSpeed, rebounds } = msg;
     
     switch (sound) {
         case 'paddleHit':
             // Vary volume based on ball speed for more immersion
             const volumeMultiplier = Math.min(1, (ballSpeed || 25) / 50);
-            console.log(`🔊 Playing paddle hit at volume: ${volumeMultiplier}`);
             soundManager.playSound('paddleHit', volumeMultiplier);
             break;
             
         case 'wallHit':
-            console.log('🔊 Playing wall hit at volume: 0.7');
             soundManager.playSound('wallHit', 0.7);
             break;
             
+        case 'lostPoint':
+            soundManager.playSound('lostPoint', 1.0);
+            break;
+            
         default:
-            console.warn('🔊 Unknown sound event:', sound);
+            console.warn('Unknown sound event:', sound);
     }
 }
 
