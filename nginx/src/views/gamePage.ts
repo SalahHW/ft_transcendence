@@ -1,6 +1,6 @@
 import { COMMON_CLASSES } from "../style/tailwindClasses.js";
 import { buttonHTML } from "../components/button.js";
-import { updatePlayerNames, updateScoresUI, updateGameStatus } from "../game/playerUi/playerUi.js";
+import { updatePlayerNames, updateScoresUI, updateScoresUIVersus, updatePlayerNamesVersus, updateGameStatus } from "../game/playerUi/playerUi.js";
 
 export default class GamePage {
 	private _container: HTMLElement;
@@ -37,9 +37,9 @@ export default class GamePage {
 					<div class="text-white text-center">
 						<div class="text-sm mb-2">Controls: Use ↑ and ↓ arrow keys to move your paddle</div>
 						<div class="flex justify-center items-center space-x-8">
-							<div id="player1Score" class="text-lg">Player 1: 0</div>
+							<div id="player1Score" class="text-lg">Waiting: 0</div>
 							<div class="text-xs">vs</div>
-							<div id="player2Score" class="text-lg">Player 2: 0</div>
+							<div id="player2Score" class="text-lg">Nobody: 0</div>
 						</div>
 					</div>
 				</div>
@@ -101,9 +101,19 @@ export default class GamePage {
 		updateScoresUI(player1Score, player2Score, player1Display, player2Display);
 	}
 
+	// Method to update scores from current player's perspective (recommended)
+	public updateScoresVersus(currentPlayerScore: number, opponentScore: number, currentPlayerName: string, opponentName: string): void {
+		updateScoresUIVersus(currentPlayerScore, opponentScore, currentPlayerName, opponentName);
+	}
+
 	// Method to update just the player names (useful for initial setup)
 	public updatePlayerNames(player1Name: string, player2Name: string): void {
 		updatePlayerNames(player1Name, player2Name);
+	}
+
+	// Method to update player names from current player's perspective (recommended)
+	public updatePlayerNamesVersus(currentPlayerName: string, opponentName: string): void {
+		updatePlayerNamesVersus(currentPlayerName, opponentName);
 	}
 
 	// **CRITICAL**: Cleanup method to remove event listeners

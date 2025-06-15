@@ -2,7 +2,7 @@
  * Waiting status handler utilities for handling waitingForPlayers messages
  */
 
-import { updatePlayerNames } from '../playerUi/playerUi.js';
+import { updatePlayerNamesVersus } from '../playerUi/playerUi.js';
 
 /**
  * Handle waiting for players message and update UI accordingly
@@ -13,25 +13,26 @@ export function handleWaitingForPlayers(message: any, updateGameStatus: (msg: st
     // Update game status message
     updateGameStatus(`Waiting for players... (${message.readyCount}/${message.totalNeeded} ready)`);
     
-    // Update player names UI while waiting
-    if (message.currentPlayerName && message.opponentName !== undefined) {
-        // Always show current player on the left, opponent on the right
-        const player1Name = message.currentPlayerName;
-        const player2Name = message.opponentName;
+    // Update player names UI while waiting - always show current player vs opponent
+    if (message.currentPlayerName) {
+        const currentPlayerName = message.currentPlayerName;
+        // Normalize "Nobody." to "Nobody" for consistent display
+        const rawOpponentName = message.opponentName || 'Nobody';
+        const opponentName = rawOpponentName === 'Nobody.' ? 'Nobody' : rawOpponentName;
         
-        updatePlayerNames(player1Name, player2Name);
+        updatePlayerNamesVersus(currentPlayerName, opponentName);
     }
 }
 
 /**
- * Handle game initialization name display (always current player on left)
+ * Handle game initialization name display (always current player first)
  * @param playerName - Current player's name
  * @param opponentName - Opponent's name
  */
 export function handleGameInitNames(playerName: string, opponentName: string): void {
-    // Always show current player on left, opponent on right for UI consistency
-    const player1Name = playerName || 'Player 1';
-    const player2Name = opponentName || 'Player 2';
+    // Always show current player first, opponent second for UI consistency
+    const currentPlayerName = playerName || 'Player';
+    const opponent = opponentName || 'Opponent';
     
-    updatePlayerNames(player1Name, player2Name);
+    updatePlayerNamesVersus(currentPlayerName, opponent);
 } 

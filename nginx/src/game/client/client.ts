@@ -4,7 +4,8 @@ import { webSocketClient } from '../webSocketClient/webSocketClient.js';
 import { Ball } from '../ball/ball.js';
 import * as BABYLON from '@babylonjs/core';
 import { fetchWithSelfSigned } from '../utils/fetch.js';
-import { updatePlayerNames, updateScoresUI, updateGameStatus } from '../playerUi/playerUi.js';
+import { updatePlayerNames, updateScoresUI, updateScoresUIVersus, updatePlayerNamesVersus, updateGameStatus } from '../playerUi/playerUi.js';
+import { handleWaitingForPlayers } from '../ui/waitingStatusHandler.js';
 
 interface PlayerData {
     id: string;
@@ -206,10 +207,15 @@ export function initializeGame(playerId: string): void {
             player1.playerScore = player1Score;
             player2.playerScore = player2Score;
             
-            // Update UI with scores and player names
-            updateScoresUI(player1Score, player2Score, player1.playerName, player2.playerName);
+            // Update UI with scores and player names from current player's perspective
+            const currentPlayer = localPlayerId === player1.getPlayerId() ? player1 : player2;
+            const opponent = localPlayerId === player1.getPlayerId() ? player2 : player1;
+            const currentPlayerScore = currentScores[currentPlayer.getPlayerId()] || 0;
+            const opponentScore = currentScores[opponent.getPlayerId()] || 0;
             
-            console.log(`Score update: ${player1.playerName}: ${player1Score}, ${player2.playerName}: ${player2Score}`);
+            updateScoresUIVersus(currentPlayerScore, opponentScore, currentPlayer.playerName, opponent.playerName);
+            
+            console.log(`Score update: ${currentPlayer.playerName}: ${currentPlayerScore}, ${opponent.playerName}: ${opponentScore}`);
         }
     });
 
@@ -268,7 +274,7 @@ export function initializeGame(playerId: string): void {
         try {
             const message = JSON.parse(event.data);
             if (message.type === 'waitingForPlayers') {
-                updateGameStatus(`Waiting for players... (${message.readyCount}/${message.totalNeeded} ready)`);
+                handleWaitingForPlayers(message, updateGameStatus);
             }
         } catch (error) {
             console.error('Error parsing message:', error);
@@ -361,8 +367,9 @@ export function initializeGame(playerId: string): void {
 
         updateGameStatus('Game starting...');
         
-        // Update player names in UI
-        updatePlayerNames(player1Name, player2Name);
+        // Update player names in UI from current player's perspective
+        // Always show current player first, then opponent
+        updatePlayerNamesVersus(playerName || 'Player', opponentName || 'Opponent');
         
         // Set up keyboard controls if not already set
         if (!(window as any).gameControlsInitialized) {

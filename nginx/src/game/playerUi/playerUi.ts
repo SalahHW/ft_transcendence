@@ -3,7 +3,30 @@
  */
 
 /**
- * Update player names in the score display elements
+ * Update player names display in "vs" format from current player's perspective
+ * @param currentPlayerName - Current player's name (will be shown first)
+ * @param opponentName - Opponent's name (will be shown second)
+ */
+export function updatePlayerNamesVersus(currentPlayerName: string, opponentName: string): void {
+    const player1Element = document.getElementById('player1Score');
+    const player2Element = document.getElementById('player2Score');
+    
+    // Extract current scores if they exist
+    const currentPlayer1Score = player1Element?.textContent?.match(/\d+$/) ? 
+        player1Element.textContent.match(/\d+$/)![0] : '0';
+    const currentPlayer2Score = player2Element?.textContent?.match(/\d+$/) ? 
+        player2Element.textContent.match(/\d+$/)![0] : '0';
+    
+    if (player1Element) {
+        player1Element.textContent = `${currentPlayerName}: ${currentPlayer1Score}`;
+    }
+    if (player2Element) {
+        player2Element.textContent = `${opponentName}: ${currentPlayer2Score}`;
+    }
+}
+
+/**
+ * Update player names in the score display elements (legacy function - kept for backwards compatibility)
  * @param player1Name - Name of player 1
  * @param player2Name - Name of player 2
  */
@@ -22,7 +45,26 @@ export function updatePlayerNames(player1Name: string, player2Name: string): voi
 }
 
 /**
- * Update both scores and player names in the UI
+ * Update both scores and player names in the UI from current player's perspective
+ * @param currentPlayerScore - Current player's score
+ * @param opponentScore - Opponent's score
+ * @param currentPlayerName - Current player's name
+ * @param opponentName - Opponent's name
+ */
+export function updateScoresUIVersus(currentPlayerScore: number, opponentScore: number, currentPlayerName: string, opponentName: string): void {
+    const player1Element = document.getElementById('player1Score');
+    const player2Element = document.getElementById('player2Score');
+    
+    if (player1Element) {
+        player1Element.textContent = `${currentPlayerName}: ${currentPlayerScore}`;
+    }
+    if (player2Element) {
+        player2Element.textContent = `${opponentName}: ${opponentScore}`;
+    }
+}
+
+/**
+ * Update both scores and player names in the UI (legacy function - kept for backwards compatibility)
  * @param player1Score - Score for player 1
  * @param player2Score - Score for player 2
  * @param player1Name - Name of player 1
