@@ -1,5 +1,6 @@
 import * as BABYLON from '@babylonjs/core';
 import { createExplosion } from './ballEffects.js';
+import { GAME_CONFIG } from '../core/constants.js';
 
 class Ball {
     constructor(player1, player2) {
@@ -17,7 +18,7 @@ class Ball {
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
         this.hasValidPosition = true;
-        this.speed = 25;
+        this.speed = GAME_CONFIG.INITIAL_BALL_SPEED;
         this.currentGlowColor = new BABYLON.Color3(0, 0, 0);
         this.shouldGlow = false;
         this.lastSpeedTier = 0; // Track speed tier changes
@@ -31,7 +32,7 @@ class Ball {
         this.isRespawning = false;
         this.respawnTime = 0;
         this.hasValidPosition = true;
-        this.speed = 25;
+        this.speed = GAME_CONFIG.INITIAL_BALL_SPEED;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
         // Reset glow properties
@@ -41,9 +42,9 @@ class Ball {
     }
 
     setFirstVelocity() {
-        this.velocity = new BABYLON.Vector3(Math.random() >= 0.5 ? 20 : -20, 0, 0);
+        this.velocity = new BABYLON.Vector3(Math.random() >= 0.5 ? GAME_CONFIG.INITIAL_BALL_SPEED : -GAME_CONFIG.INITIAL_BALL_SPEED, 0, 0);
         this.previousVelocity.copyFrom(this.velocity);
-        this.speed = 25;
+        this.speed = GAME_CONFIG.INITIAL_BALL_SPEED;
     }
 
     handleBallRespawn(previousVelocity) {
@@ -53,7 +54,7 @@ class Ball {
         this.isRespawning = true;
         this.respawnTime = 0;
         this.hasValidPosition = true;
-        this.speed = 25;
+        this.speed = GAME_CONFIG.INITIAL_BALL_SPEED;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
     }
@@ -112,17 +113,19 @@ class Ball {
         let glowColor = null;
         
         // New speed tiers based on rebounds with glowing effects
-        if (this.rebounds < 10) {
-            speed = 25; // Base speed
+        if (this.rebounds < GAME_CONFIG.SPEED_BOOST_THRESHOLD_1) {
+            speed = GAME_CONFIG.INITIAL_BALL_SPEED; // Base speed
             glowColor = new BABYLON.Color3(0, 0, 0); // No glow
-        } else if (this.rebounds >= 10 && this.rebounds < 20) {
-            speed = 37.5; // First speed boost
+        } else if (this.rebounds >= GAME_CONFIG.SPEED_BOOST_THRESHOLD_1 && this.rebounds < GAME_CONFIG.SPEED_BOOST_THRESHOLD_2) {
+            speed = GAME_CONFIG.FIRST_SPEED_BOOST; // First speed boost
             glowColor = new BABYLON.Color3(0.8, 0.4, 0); // Orange glow
-        } else if (this.rebounds >= 20) {
-            // Scale speed between 40-45 based on rebounds beyond 20
-            const extraRebounds = this.rebounds - 20;
+        } else if (this.rebounds >= GAME_CONFIG.SPEED_BOOST_THRESHOLD_2) {
+            // Scale speed between 40-45 based on rebounds beyond threshold
+            const extraRebounds = this.rebounds - GAME_CONFIG.SPEED_BOOST_THRESHOLD_2;
             const scalingFactor = Math.min(extraRebounds / 10, 1); // Scale over 10 rebounds
-            speed = 40 + (5 * scalingFactor); // Between 40-45
+            const minSpeed = 40;
+            const speedRange = GAME_CONFIG.MAX_BALL_SPEED - minSpeed;
+            speed = minSpeed + (speedRange * scalingFactor);
             
             // Transition from orange to red-white
             const redIntensity = 1;
@@ -142,7 +145,7 @@ class Ball {
         
         // Store glow information for client synchronization
         this.currentGlowColor = glowColor;
-        this.shouldGlow = this.rebounds >= 10;
+        this.shouldGlow = this.rebounds >= GAME_CONFIG.SPEED_BOOST_THRESHOLD_1;
     }
 
     handlePaddleCollisions(paddle1Pos, paddle2Pos) {
@@ -204,14 +207,14 @@ class Ball {
                 console.log(`📊 Score: ${this.player1.username || 'Player 1'}: ${this.player1.playerScore} → ${this.player1.playerScore + 1}, ${this.player2.username || 'Player 2'}: ${this.player2.playerScore} (lost point)`);
                 this.player1.playerScore++;
                 // Ball goes towards the loser (Player 2 - left side)
-                newVelocity = new BABYLON.Vector3(-25, 0, 0);
+                newVelocity = new BABYLON.Vector3(-GAME_CONFIG.INITIAL_BALL_SPEED, 0, 0);
             } else {
                 // Ball went past right side (Player 1's side), Player 2 scores  
                 console.log(`🎯 POINT SCORED! ${this.player2.username || this.player2.playerId} (Player 2) scored! ${this.player1.username || this.player1.playerId} (Player 1) lost a point!`);
                 console.log(`📊 Score: ${this.player1.username || 'Player 1'}: ${this.player1.playerScore} (lost point), ${this.player2.username || 'Player 2'}: ${this.player2.playerScore} → ${this.player2.playerScore + 1}`);
                 this.player2.playerScore++;
                 // Ball goes towards the loser (Player 1 - right side)
-                newVelocity = new BABYLON.Vector3(25, 0, 0);
+                newVelocity = new BABYLON.Vector3(GAME_CONFIG.INITIAL_BALL_SPEED, 0, 0);
             }
             
             this.handleBallRespawn(newVelocity);
@@ -241,8 +244,8 @@ class Ball {
     }
 
     getSpeedTier(rebounds) {
-        if (rebounds < 10) return 0;
-        else if (rebounds < 20) return 1;
+        if (rebounds < GAME_CONFIG.SPEED_BOOST_THRESHOLD_1) return 0;
+        else if (rebounds < GAME_CONFIG.SPEED_BOOST_THRESHOLD_2) return 1;
         else return 2;
     }
 
@@ -278,7 +281,7 @@ class Ball {
         this.respawnTime = state.respawnTime || 0;
         this.wasHitByPlayer = state.wasHitByPlayer;
         this.hasValidPosition = state.hasValidPosition;
-        this.speed = state.speed || 25;
+        this.speed = state.speed || GAME_CONFIG.INITIAL_BALL_SPEED;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
     }

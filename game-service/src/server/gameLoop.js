@@ -63,7 +63,7 @@ export function startGameLoop() {
           // Handle ball state
           if (room.ball.isRespawning) {
             room.ball.respawnTime += deltaTime;
-            const t = Math.min(room.ball.respawnTime / 3, 1);  // 3 second animation
+            const t = Math.min(room.ball.respawnTime / GAME_CONFIG.BALL_RESPAWN_DURATION, 1);  // Respawn animation
             
             // Smoothly interpolate position
             room.ball.position = new BABYLON.Vector3(
