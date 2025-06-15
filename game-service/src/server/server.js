@@ -1,14 +1,21 @@
 import Fastify from 'fastify';
 import WebSocketPlugin from '@fastify/websocket';
+import fastifyStatic from '@fastify/static';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { registerApiRoutes } from './api.js';
 import { startGameLoop } from './gameLoop.js';
 import { registerWebSocketRoutes } from './gameWebSocket.js';
 import { getPlayers } from './gameState.js';
 import cors from '@fastify/cors';
 import { SERVER_CONFIG } from '../core/constants.js';
+
+// Get current directory for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load environment variables
 dotenv.config();
@@ -30,6 +37,12 @@ function registerCommonComponents(server) {
     methods: SERVER_CONFIG.ALLOWED_METHODS,
     allowedHeaders: SERVER_CONFIG.ALLOWED_HEADERS,
     credentials: true
+  });
+
+  // 🔊 Register static file serving for sounds
+  server.register(fastifyStatic, {
+    root: path.join(__dirname, '../../public'),
+    prefix: '/',
   });
 
   // Register WebSocket plugin

@@ -79,6 +79,7 @@ export const MESSAGE_TYPES = {
   GAME_END: 'gameEnd',
   WAITING_FOR_PLAYERS: 'waitingForPlayers',
   SYNC: 'sync',
+  SOUND_EVENT: 'soundEvent',
   ERROR: 'error',
 };
 

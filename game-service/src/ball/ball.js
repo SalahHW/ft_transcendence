@@ -3,7 +3,7 @@ import { createExplosion } from './ballEffects.js';
 import { GAME_CONFIG } from '../core/constants.js';
 
 class Ball {
-    constructor(player1, player2) {
+    constructor(player1, player2, gameEngine = null, roomId = null) {
         this.position = new BABYLON.Vector3(0, -2, 0);
         this.velocity = new BABYLON.Vector3(0, 0, 0);
         this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
@@ -15,6 +15,8 @@ class Ball {
         this.respawnDuration = 2;
         this.player1 = player1;
         this.player2 = player2;
+        this.gameEngine = gameEngine;
+        this.roomId = roomId;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
         this.hasValidPosition = true;
@@ -99,12 +101,29 @@ class Ball {
 
     handleWallCollisions() {
         const mapHalfDepth = 10;
+        let wallHit = false;
+        
         if (this.position.z >= mapHalfDepth - this.radius) {
             this.velocity.z *= -1;
             this.position.z = mapHalfDepth - this.radius;
+            wallHit = true;
         } else if (this.position.z <= -mapHalfDepth + this.radius) {
             this.velocity.z *= -1;
             this.position.z = -mapHalfDepth + this.radius;
+            wallHit = true;
+        }
+
+        // 🔊 Broadcast wall hit sound event
+        if (wallHit && this.gameEngine && this.roomId) {
+            console.log(`🔊 Broadcasting wall hit sound for room ${this.roomId}`);
+            this.gameEngine.broadcastToRoom(this.roomId, {
+                type: 'soundEvent',
+                sound: 'wallHit',
+                timestamp: Date.now(),
+                ballSpeed: this.speed
+            });
+        } else if (wallHit) {
+            console.warn(`🔊 Wall hit detected but missing context: gameEngine=${!!this.gameEngine}, roomId=${this.roomId}`);
         }
     }
 
@@ -193,6 +212,21 @@ class Ball {
             if (newSpeedTier !== previousSpeedTier) {
                 this.speedTierChanged = true;
                 this.lastSpeedTier = newSpeedTier;
+            }
+
+            // 🔊 Broadcast paddle hit sound event
+            if (this.gameEngine && this.roomId) {
+                console.log(`🔊 Broadcasting paddle hit sound for room ${this.roomId} (rebounds: ${this.rebounds})`);
+                this.gameEngine.broadcastToRoom(this.roomId, {
+                    type: 'soundEvent',
+                    sound: 'paddleHit',
+                    timestamp: Date.now(),
+                    ballSpeed: this.speed,
+                    rebounds: this.rebounds,
+                    hitByPlayer: this.wasHitByPlayer
+                });
+            } else {
+                console.warn(`🔊 Paddle hit detected but missing context: gameEngine=${!!this.gameEngine}, roomId=${this.roomId}`);
             }
         }
     }

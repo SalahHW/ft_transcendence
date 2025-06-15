@@ -173,7 +173,9 @@ export class GameEngine {
     console.error(`Ball not initialized for room, creating new`);
     room.ball = new Ball(
       { playerId: room.players[0].id, playerScore: 0, username: room.players[0].username || 'Player 1' },
-      { playerId: room.players[1].id, playerScore: 0, username: room.players[1].username || 'Player 2' }
+      { playerId: room.players[1].id, playerScore: 0, username: room.players[1].username || 'Player 2' },
+      this,
+      room.id
     );
     room.ball.position = new BABYLON.Vector3(0, -2, 0);
     room.ball.velocity = new BABYLON.Vector3(0, 0, 0);
@@ -181,6 +183,11 @@ export class GameEngine {
     room.ball.isRespawning = true;
     room.ball.respawnTime = 0;
     room.ball.hasValidPosition = true;
+    
+    // Set ball context for sound events
+    if (room.setBallContext) {
+      room.setBallContext(this);
+    }
   }
 
   _ensureBallRespawnState(room) {

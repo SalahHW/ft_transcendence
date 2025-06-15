@@ -40,11 +40,10 @@ function movePaddle(player, direction) {
   return { currentPos, newPos };
 }
 
-export async function registerApiRoutes(fastify, options) {
-  const { players } = options;
+export async function registerApiRoutes(fastify) {
 
   // GET /api/players: Return list of connected players with usernames
-  fastify.get('/api/players', async (request, reply) => {
+  fastify.get('/api/players', async (reply) => {
     try {
       console.log('API request: GET /api/players');
       const playerList = playerManager.getPlayersSummary();
@@ -126,7 +125,7 @@ export async function registerApiRoutes(fastify, options) {
     return { player };
   };
 
-  // 🎮 POST /api/players/:id/paddle/up - Move paddle up
+  // POST /api/players/:id/paddle/up - Move paddle up
   fastify.post('/api/players/:id/paddle/up', async (request, reply) => {
     try {
       const { id } = request.params;
@@ -155,7 +154,7 @@ export async function registerApiRoutes(fastify, options) {
     }
   });
 
-  // 🎮 POST /api/players/:id/paddle/down - Move paddle down
+  // POST /api/players/:id/paddle/down - Move paddle down
   fastify.post('/api/players/:id/paddle/down', async (request, reply) => {
     try {
       const { id } = request.params;

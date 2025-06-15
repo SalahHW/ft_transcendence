@@ -152,7 +152,9 @@ export class Room {
 
     this.ball = new Ball(
       { playerId: this.players[0].id, playerScore: 0, username: this.players[0].username || 'Player 1' },
-      { playerId: this.players[1].id, playerScore: 0, username: this.players[1].username || 'Player 2' }
+      { playerId: this.players[1].id, playerScore: 0, username: this.players[1].username || 'Player 2' },
+      null, // gameEngine will be set by the caller
+      this.id
     );
     
     // Set initial ball state
@@ -347,5 +349,16 @@ export class Room {
    */
   isStale(thresholdMs = 10 * 60 * 1000) { // 10 minutes default
     return Date.now() - this.metadata.lastActivity > thresholdMs;
+  }
+
+  /**
+   * Set gameEngine and roomId on the ball object
+   */
+  setBallContext(gameEngine) {
+    if (this.ball) {
+      this.ball.gameEngine = gameEngine;
+      this.ball.roomId = this.id;
+      console.log(`Ball context set for room ${this.id}`);
+    }
   }
 } 
