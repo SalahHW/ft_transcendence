@@ -138,6 +138,18 @@ export function startGameLoop() {
           }
 
           if (room.ball.player1.playerScore !== prevScore1 || room.ball.player2.playerScore !== prevScore2) {
+            // Use the ball's player objects directly for accurate mapping
+            const ballPlayer1Name = room.ball.player1.username || 'Player 1';
+            const ballPlayer2Name = room.ball.player2.username || 'Player 2';
+            
+            if (room.ball.player1.playerScore > prevScore1) {
+              console.log(`💥 ${ballPlayer1Name} scored! ${ballPlayer2Name} lost a point!`);
+              console.log(`🏓 Current Score: ${ballPlayer1Name}: ${room.ball.player1.playerScore} - ${ballPlayer2Name}: ${room.ball.player2.playerScore}`);
+            }
+            if (room.ball.player2.playerScore > prevScore2) {
+              console.log(`💥 ${ballPlayer2Name} scored! ${ballPlayer1Name} lost a point!`);
+              console.log(`🏓 Current Score: ${ballPlayer1Name}: ${room.ball.player1.playerScore} - ${ballPlayer2Name}: ${room.ball.player2.playerScore}`);
+            }
             gameEngine.broadcastToRoom(roomId, {
               type: 'scoreUpdate',
               scores: {

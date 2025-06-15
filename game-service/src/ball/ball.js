@@ -200,11 +200,15 @@ class Ball {
             
             if (this.position.x < 0) {
                 // Ball went past left side (Player 2's side), Player 1 scores
+                console.log(`🎯 POINT SCORED! ${this.player1.username || this.player1.playerId} (Player 1) scored! ${this.player2.username || this.player2.playerId} (Player 2) lost a point!`);
+                console.log(`📊 Score: ${this.player1.username || 'Player 1'}: ${this.player1.playerScore} → ${this.player1.playerScore + 1}, ${this.player2.username || 'Player 2'}: ${this.player2.playerScore} (lost point)`);
                 this.player1.playerScore++;
                 // Ball goes towards the loser (Player 2 - left side)
                 newVelocity = new BABYLON.Vector3(-25, 0, 0);
             } else {
                 // Ball went past right side (Player 1's side), Player 2 scores  
+                console.log(`🎯 POINT SCORED! ${this.player2.username || this.player2.playerId} (Player 2) scored! ${this.player1.username || this.player1.playerId} (Player 1) lost a point!`);
+                console.log(`📊 Score: ${this.player1.username || 'Player 1'}: ${this.player1.playerScore} (lost point), ${this.player2.username || 'Player 2'}: ${this.player2.playerScore} → ${this.player2.playerScore + 1}`);
                 this.player2.playerScore++;
                 // Ball goes towards the loser (Player 1 - right side)
                 newVelocity = new BABYLON.Vector3(25, 0, 0);

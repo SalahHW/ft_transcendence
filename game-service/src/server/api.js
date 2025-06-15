@@ -2,6 +2,8 @@ import { setPlayerReady } from './gameState.js';
 import { GAME_CONFIG, HTTP_STATUS } from '../core/constants.js';
 import { ValidationUtils, LogUtils } from '../utils/helpers.js';
 import { playerManager } from '../player/PlayerManager.js';
+import { playerInput } from '../player/PlayerInput.js';
+import { gameStateManager } from '../game/GameStateManager.js';
 
 export async function registerApiRoutes(fastify, options) {
   const { players } = options;
@@ -71,6 +73,124 @@ export async function registerApiRoutes(fastify, options) {
       console.error('Error in POST /api/players/:id/ready:', error);
       const status = error.message.includes('not found') ? 404 : 500;
       return reply.status(status).send({
+        status: 'error',
+        message: error.message || 'Internal server error',
+      });
+    }
+  });
+
+  // 🎮 NEW: POST /api/players/:id/paddle/up - Move paddle up
+  fastify.post('/api/players/:id/paddle/up', async (request, reply) => {
+    try {
+      const { id } = request.params;
+      
+      const player = playerManager.getPlayer(id);
+      if (!player) {
+        return reply.status(404).send({
+          status: 'error',
+          message: 'Player not found'
+        });
+      }
+
+      if (!player.isConnected()) {
+        return reply.status(400).send({
+          status: 'error',
+          message: 'Player not connected to game'
+        });
+      }
+
+      // Simulate keyDown up
+      const roomId = playerInput.processKeyDown(id, 'up');
+      
+      return reply.status(200).send({
+        status: 'success',
+        message: 'Paddle moving up',
+        data: { playerId: id, direction: 'up', roomId }
+      });
+    } catch (error) {
+      console.error('Error in POST /api/players/:id/paddle/up:', error);
+      return reply.status(500).send({
+        status: 'error',
+        message: error.message || 'Internal server error',
+      });
+    }
+  });
+
+  // 🎮 NEW: POST /api/players/:id/paddle/down - Move paddle down
+  fastify.post('/api/players/:id/paddle/down', async (request, reply) => {
+    try {
+      const { id } = request.params;
+      
+      const player = playerManager.getPlayer(id);
+      if (!player) {
+        return reply.status(404).send({
+          status: 'error',
+          message: 'Player not found'
+        });
+      }
+
+      if (!player.isConnected()) {
+        return reply.status(400).send({
+          status: 'error',
+          message: 'Player not connected to game'
+        });
+      }
+
+      // Simulate keyDown down
+      const roomId = playerInput.processKeyDown(id, 'down');
+      
+      return reply.status(200).send({
+        status: 'success',
+        message: 'Paddle moving down',
+        data: { playerId: id, direction: 'down', roomId }
+      });
+    } catch (error) {
+      console.error('Error in POST /api/players/:id/paddle/down:', error);
+      return reply.status(500).send({
+        status: 'error',
+        message: error.message || 'Internal server error',
+      });
+    }
+  });
+
+  // 🎮 NEW: POST /api/players/:id/paddle/stop - Stop paddle movement
+  fastify.post('/api/players/:id/paddle/stop', async (request, reply) => {
+    try {
+      const { id } = request.params;
+      const { direction } = request.body || {};
+      
+      const player = playerManager.getPlayer(id);
+      if (!player) {
+        return reply.status(404).send({
+          status: 'error',
+          message: 'Player not found'
+        });
+      }
+
+      if (!player.isConnected()) {
+        return reply.status(400).send({
+          status: 'error',
+          message: 'Player not connected to game'
+        });
+      }
+
+      // Stop movement in specified direction (or both if not specified)
+      const directions = direction ? [direction] : ['up', 'down'];
+      const roomIds = [];
+      
+      for (const dir of directions) {
+        const roomId = playerInput.processKeyUp(id, dir);
+        if (roomId) roomIds.push(roomId);
+      }
+      
+      return reply.status(200).send({
+        status: 'success',
+        message: `Paddle stopped ${directions.join(' and ')}`,
+        data: { playerId: id, directions, roomIds }
+      });
+    } catch (error) {
+      console.error('Error in POST /api/players/:id/paddle/stop:', error);
+      return reply.status(500).send({
         status: 'error',
         message: error.message || 'Internal server error',
       });

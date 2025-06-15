@@ -1,0 +1,175 @@
+# 🎮 COMPLETE PONG GAME SETUP AND CONTROL COMMANDS
+# ================================================
+
+## STEP 1: Register Two Players
+# =============================
+
+# Register Player 1 (riri)
+curl -s -X POST http://localhost:8081/api/players \
+  -H "Content-Type: application/json" \
+  -d '{"username": "riri"}' | jq -r '.data.id'
+
+
+# Register Player 2 (fifi)  
+curl -s -X POST http://localhost:8081/api/players \
+  -H "Content-Type: application/json" \
+  -d '{"username": "fifi"}' | jq -r '.data.id'
+
+# Set Player 1 ready
+curl -X POST http://localhost:8081/api/players/$PLAYER1ID/ready \
+  -H "Content-Type: application/json" \
+  -d '{}'
+
+# Set Player 2 ready
+curl -X POST http://localhost:8081/api/players/$PLAYER2ID/ready \
+  -H "Content-Type: application/json" \
+  -d '{}'
+
+echo "Both players are now ready!"
+
+## STEP 3: Connect Players via WebSocket (REQUIRED!)
+# ==================================================
+# You MUST open these in separate terminals for the game to start
+
+# Terminal 1: Connect Player 1
+wscat -c ws://localhost:8081/ws?playerId=$PLAYER1
+
+# Terminal 2: Connect Player 2  
+wscat -c ws://localhost:8081/ws?playerId=$PLAYER2
+
+# Once both players connect, you should see messages like:
+# - "waitingForPlayers"
+# - "init" (when game starts)
+# - Player names should show "riri vs fifi" and "fifi vs riri"
+
+## STEP 4: Control Paddles (Use these in NEW terminals)
+# =====================================================
+
+# 🎮 PLAYER 1 (riri) CONTROLS:
+# Move riri's paddle UP
+curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/up
+
+# Move riri's paddle DOWN
+curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/down
+
+# Stop riri's paddle movement
+curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/stop
+
+# 🎮 PLAYER 2 (fifi) CONTROLS:
+# Move fifi's paddle UP
+curl -X POST http://localhost:8081/api/players/$PLAYER2/paddle/up
+
+# Move fifi's paddle DOWN
+curl -X POST http://localhost:8081/api/players/$PLAYER2/paddle/down
+
+# Stop fifi's paddle movement
+curl -X POST http://localhost:8081/api/players/$PLAYER2/paddle/stop
+
+## ADVANCED PADDLE CONTROLS:
+# ==========================
+
+# Stop only UP movement (player continues moving down if they were)
+curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/stop \
+  -H "Content-Type: application/json" \
+  -d '{"direction": "up"}'
+
+# Stop only DOWN movement
+curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/stop \
+  -H "Content-Type: application/json" \
+  -d '{"direction": "down"}'
+
+## QUICK TESTING COMMANDS:
+# ========================
+
+# Check if players are registered
+curl -X GET http://localhost:8081/api/players | jq
+
+# Test rapid paddle movement (Player 1 goes up-down-up-down)
+curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/up && \
+sleep 1 && \
+curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/stop && \
+curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/down && \
+sleep 1 && \
+curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/stop
+
+## AUTOMATED GAME SETUP SCRIPT:
+# =============================
+# Save this as setup_game.sh and run: chmod +x setup_game.sh && ./setup_game.sh
+
+#!/bin/bash
+echo "🎮 Setting up Pong game..."
+
+# Register players
+echo "Registering players..."
+PLAYER1=$(curl -s -X POST http://localhost:8081/api/players -H "Content-Type: application/json" -d '{"username": "riri"}' | jq -r '.data.id')
+PLAYER2=$(curl -s -X POST http://localhost:8081/api/players -H "Content-Type: application/json" -d '{"username": "fifi"}' | jq -r '.data.id')
+
+echo "✅ Player 1 (riri): $PLAYER1"
+echo "✅ Player 2 (fifi): $PLAYER2"
+
+# Set ready
+echo "Setting players ready..."
+curl -s -X POST http://localhost:8081/api/players/$PLAYER1/ready -H "Content-Type: application/json" -d '{}'
+curl -s -X POST http://localhost:8081/api/players/$PLAYER2/ready -H "Content-Type: application/json" -d '{}'
+
+echo "✅ Players are ready!"
+echo ""
+echo "🔌 Now connect via WebSocket in separate terminals:"
+echo "Terminal 1: wscat -c ws://localhost:8081/ws?playerId=$PLAYER1"
+echo "Terminal 2: wscat -c ws://localhost:8081/ws?playerId=$PLAYER2"
+echo ""
+echo "🎮 Then control paddles with these commands:"
+echo "Player 1 UP:    curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/up"
+echo "Player 1 DOWN:  curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/down"
+echo "Player 1 STOP:  curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/stop"
+echo "Player 2 UP:    curl -X POST http://localhost:8081/api/players/$PLAYER2/paddle/up"
+echo "Player 2 DOWN:  curl -X POST http://localhost:8081/api/players/$PLAYER2/paddle/down"
+echo "Player 2 STOP:  curl -X POST http://localhost:8081/api/players/$PLAYER2/paddle/stop"
+
+## TROUBLESHOOTING:
+# ================
+
+# If players don't connect properly:
+# 1. Check server is running on port 8081
+# 2. Make sure both WebSocket terminals are connected
+# 3. Check for any error messages in the WebSocket terminals
+
+# If paddle commands return errors:
+# 1. Make sure players are connected via WebSocket first
+# 2. Check the player IDs are correct
+# 3. Verify the game has started (you should see "init" message)
+
+# Expected WebSocket message flow:
+# 1. Connection opens
+# 2. Server sends setUsername confirmation  
+# 3. Server sends waitingForPlayers message
+# 4. When 2nd player connects, server sends "init" message
+# 5. Game starts - you can now control paddles!
+
+## EXAMPLE GAME SESSION:
+# =====================
+# 1. Run the setup script
+# 2. Connect both players via WebSocket
+# 3. Wait for "init" message in both terminals
+# 4. Use curl commands to move paddles
+# 5. Watch the game play out in real-time!
+
+# Game ends when one player reaches 11 points
+# You'll see "gameEnd" message with winner information
+
+## NOTE:
+# =====
+# The WebSocket connection is ESSENTIAL - without it:
+# ❌ No game room assignment
+# ❌ No matchmaking
+# ❌ No game initialization  
+# ❌ Paddle commands will fail
+
+# The game requires real-time WebSocket for:
+# ✅ Room joining and matchmaking
+# ✅ Game synchronization
+# ✅ Ball movement
+# ✅ Score updates
+# ✅ Game state management
+
+# But once connected, you can use simple curl commands for paddle control! 🎮 

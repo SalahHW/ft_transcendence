@@ -151,8 +151,8 @@ export class Room {
     }
 
     this.ball = new Ball(
-      { playerId: this.players[0].id, playerScore: 0 },
-      { playerId: this.players[1].id, playerScore: 0 }
+      { playerId: this.players[0].id, playerScore: 0, username: this.players[0].username || 'Player 1' },
+      { playerId: this.players[1].id, playerScore: 0, username: this.players[1].username || 'Player 2' }
     );
     
     // Set initial ball state

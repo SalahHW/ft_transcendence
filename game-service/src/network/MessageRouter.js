@@ -144,8 +144,8 @@ export class MessageRouter {
 
     if (!room.ball) {
       room.ball = new Ball(
-        { playerId: room.players[0]?.id || playerId, playerScore: 0 },
-        { playerId: room.players[1]?.id || playerId, playerScore: 0 }
+        { playerId: room.players[0]?.id || playerId, playerScore: 0, username: room.players[0]?.username || 'Player 1' },
+        { playerId: room.players[1]?.id || playerId, playerScore: 0, username: room.players[1]?.username || 'Player 2' }
       );
     }
 
