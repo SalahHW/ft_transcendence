@@ -6,6 +6,7 @@ import * as BABYLON from '@babylonjs/core';
 import { fetchWithSelfSigned } from '../utils/fetch.js';
 import { updatePlayerNames, updateScoresUI, updateScoresUIVersus, updatePlayerNamesVersus, updateGameStatus } from '../playerUi/playerUi.js';
 import { handleWaitingForPlayers } from '../ui/waitingStatusHandler.js';
+import { soundManager } from '../audio/soundManager.js';
 
 interface PlayerData {
     id: string;
@@ -59,6 +60,29 @@ let initTime: number | null = null;
 let syncCount: number = 0;
 let ballUpdateReceived: boolean = false;
 let isGameLoopRunning: boolean = false;
+
+// 🔊 Function to handle sound events
+function handleSoundEvent(msg: any): void {
+    console.log('🔊 Received sound event:', msg);
+    const { sound, ballSpeed, rebounds } = msg;
+    
+    switch (sound) {
+        case 'paddleHit':
+            // Vary volume based on ball speed for more immersion
+            const volumeMultiplier = Math.min(1, (ballSpeed || 25) / 50);
+            console.log(`🔊 Playing paddle hit at volume: ${volumeMultiplier}`);
+            soundManager.playSound('paddleHit', volumeMultiplier);
+            break;
+            
+        case 'wallHit':
+            console.log('🔊 Playing wall hit at volume: 0.7');
+            soundManager.playSound('wallHit', 0.7);
+            break;
+            
+        default:
+            console.warn('🔊 Unknown sound event:', sound);
+    }
+}
 
 // Function to check available players
 async function checkAvailablePlayers(): Promise<PlayerData[]> {
@@ -143,6 +167,11 @@ export function initializeGame(playerId: string): void {
             // Always update paddle position from server (for HTTP commands and sync)
             movingPlayer.setZ(msg.positionZ || 0);
         }
+    });
+
+    // 🔊 Set up sound event handler
+    clientConnection.onSoundEvent((msg) => {
+        handleSoundEvent(msg);
     });
 
     // Add ball update handler
@@ -368,6 +397,11 @@ export function initializeGame(playerId: string): void {
         }
 
         updateGameStatus('Game starting...');
+        
+        // 🔊 Initialize sound manager
+        soundManager.preloadSounds().catch(error => {
+            console.warn('Failed to initialize sound manager:', error);
+        });
         
         // Update player names in UI from current player's perspective
         // Always show current player first, then opponent
