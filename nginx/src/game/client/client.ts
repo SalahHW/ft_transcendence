@@ -139,7 +139,8 @@ export function initializeGame(playerId: string): void {
     clientConnection.onPaddleMove((msg) => {
         if (!player1 || !player2) return;
         const movingPlayer = msg.playerId === player1.getPlayerId() ? player1 : player2;
-        if (movingPlayer && movingPlayer.getPlayerId() !== localPlayerId) {
+        if (movingPlayer) {
+            // Always update paddle position from server (for HTTP commands and sync)
             movingPlayer.setZ(msg.positionZ || 0);
         }
     });
@@ -163,7 +164,8 @@ export function initializeGame(playerId: string): void {
         if (msg.playerPositions) {
             Object.entries(msg.playerPositions).forEach(([playerId, positionZ]) => {
                 const syncPlayer = playerId === player1!.getPlayerId() ? player1 : player2;
-                if (syncPlayer && syncPlayer.getPlayerId() !== localPlayerId) {
+                if (syncPlayer) {
+                    // Always sync paddle positions from server (important for HTTP commands)
                     syncPlayer.setZ(positionZ);
                 }
             });

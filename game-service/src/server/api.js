@@ -2,8 +2,43 @@ import { setPlayerReady } from './gameState.js';
 import { GAME_CONFIG, HTTP_STATUS } from '../core/constants.js';
 import { ValidationUtils, LogUtils } from '../utils/helpers.js';
 import { playerManager } from '../player/PlayerManager.js';
-import { playerInput } from '../player/PlayerInput.js';
 import { gameStateManager } from '../game/GameStateManager.js';
+import { gameEngine } from '../game/GameEngine.js';
+
+// Constants for paddle movement
+const PADDLE_PULSE_DISTANCE = 1.0;
+const PADDLE_BOUNDARY = GAME_CONFIG.PADDLE_BOUNDARY;
+
+// Helper function for paddle movement
+function movePaddle(player, direction) {
+  const currentPos = player.positionZ;
+  let newPos;
+  
+  if (direction === 'up') {
+    newPos = Math.max(-PADDLE_BOUNDARY, currentPos - PADDLE_PULSE_DISTANCE);
+  } else if (direction === 'down') {
+    newPos = Math.min(PADDLE_BOUNDARY, currentPos + PADDLE_PULSE_DISTANCE);
+  } else {
+    throw new Error('Invalid direction');
+  }
+  
+  player.positionZ = newPos;
+  player.lastActivity = Date.now();
+  
+  console.log(`🎮 HTTP ${direction.toUpperCase()}: Player ${player.id} moved from ${currentPos} to ${newPos}`);
+  
+  // Broadcast the new position
+  if (player.roomId) {
+    gameEngine.broadcastToRoom(player.roomId, {
+      type: 'paddleMove',
+      playerId: player.id,
+      positionZ: player.positionZ,
+      roomId: player.roomId
+    });
+  }
+  
+  return { currentPos, newPos };
+}
 
 export async function registerApiRoutes(fastify, options) {
   const { players } = options;
@@ -79,33 +114,37 @@ export async function registerApiRoutes(fastify, options) {
     }
   });
 
-  // 🎮 NEW: POST /api/players/:id/paddle/up - Move paddle up
+  // Helper function for paddle endpoint validation
+  const validatePaddleRequest = (id) => {
+    const player = playerManager.getPlayer(id);
+    if (!player) {
+      return { error: { status: 404, message: 'Player not found' } };
+    }
+    if (!player.isConnected()) {
+      return { error: { status: 400, message: 'Player not connected to game' } };
+    }
+    return { player };
+  };
+
+  // 🎮 POST /api/players/:id/paddle/up - Move paddle up
   fastify.post('/api/players/:id/paddle/up', async (request, reply) => {
     try {
       const { id } = request.params;
+      const validation = validatePaddleRequest(id);
       
-      const player = playerManager.getPlayer(id);
-      if (!player) {
-        return reply.status(404).send({
+      if (validation.error) {
+        return reply.status(validation.error.status).send({
           status: 'error',
-          message: 'Player not found'
+          message: validation.error.message
         });
       }
 
-      if (!player.isConnected()) {
-        return reply.status(400).send({
-          status: 'error',
-          message: 'Player not connected to game'
-        });
-      }
-
-      // Simulate keyDown up
-      const roomId = playerInput.processKeyDown(id, 'up');
+      movePaddle(validation.player, 'up');
       
       return reply.status(200).send({
         status: 'success',
-        message: 'Paddle moving up',
-        data: { playerId: id, direction: 'up', roomId }
+        message: 'Paddle moved up',
+        data: { playerId: id, direction: 'up', roomId: validation.player.roomId }
       });
     } catch (error) {
       console.error('Error in POST /api/players/:id/paddle/up:', error);
@@ -116,33 +155,25 @@ export async function registerApiRoutes(fastify, options) {
     }
   });
 
-  // 🎮 NEW: POST /api/players/:id/paddle/down - Move paddle down
+  // 🎮 POST /api/players/:id/paddle/down - Move paddle down
   fastify.post('/api/players/:id/paddle/down', async (request, reply) => {
     try {
       const { id } = request.params;
+      const validation = validatePaddleRequest(id);
       
-      const player = playerManager.getPlayer(id);
-      if (!player) {
-        return reply.status(404).send({
+      if (validation.error) {
+        return reply.status(validation.error.status).send({
           status: 'error',
-          message: 'Player not found'
+          message: validation.error.message
         });
       }
 
-      if (!player.isConnected()) {
-        return reply.status(400).send({
-          status: 'error',
-          message: 'Player not connected to game'
-        });
-      }
-
-      // Simulate keyDown down
-      const roomId = playerInput.processKeyDown(id, 'down');
+      movePaddle(validation.player, 'down');
       
       return reply.status(200).send({
         status: 'success',
-        message: 'Paddle moving down',
-        data: { playerId: id, direction: 'down', roomId }
+        message: 'Paddle moved down',
+        data: { playerId: id, direction: 'down', roomId: validation.player.roomId }
       });
     } catch (error) {
       console.error('Error in POST /api/players/:id/paddle/down:', error);
@@ -153,49 +184,7 @@ export async function registerApiRoutes(fastify, options) {
     }
   });
 
-  // 🎮 NEW: POST /api/players/:id/paddle/stop - Stop paddle movement
-  fastify.post('/api/players/:id/paddle/stop', async (request, reply) => {
-    try {
-      const { id } = request.params;
-      const { direction } = request.body || {};
-      
-      const player = playerManager.getPlayer(id);
-      if (!player) {
-        return reply.status(404).send({
-          status: 'error',
-          message: 'Player not found'
-        });
-      }
 
-      if (!player.isConnected()) {
-        return reply.status(400).send({
-          status: 'error',
-          message: 'Player not connected to game'
-        });
-      }
-
-      // Stop movement in specified direction (or both if not specified)
-      const directions = direction ? [direction] : ['up', 'down'];
-      const roomIds = [];
-      
-      for (const dir of directions) {
-        const roomId = playerInput.processKeyUp(id, dir);
-        if (roomId) roomIds.push(roomId);
-      }
-      
-      return reply.status(200).send({
-        status: 'success',
-        message: `Paddle stopped ${directions.join(' and ')}`,
-        data: { playerId: id, directions, roomIds }
-      });
-    } catch (error) {
-      console.error('Error in POST /api/players/:id/paddle/stop:', error);
-      return reply.status(500).send({
-        status: 'error',
-        message: error.message || 'Internal server error',
-      });
-    }
-  });
 
   // POST /api/matches/results: Report match completion to other services
   fastify.post('/api/matches/results', async (request, reply) => {
