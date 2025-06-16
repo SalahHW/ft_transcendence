@@ -6,17 +6,18 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 16:41:12 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/09 20:32:22 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/16 18:49:11 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 import Router from "../router/Router.js";
+import { UI_THEME } from "../style/tailwindClasses.js";
 
 interface Option {
 	label: string;
 	onClick?: () => void;
 	subMenu?: Option[];
-	icon?: string; // Pour les icônes
+	icon?: string;
 }
 
 export default class Wheel {
@@ -25,59 +26,62 @@ export default class Wheel {
 	private _optionHistory: Option[][] = []; // Pour naviguer dans les sous-menus
 	private _selectedIndex: number = 0;
 	private _isVisible: boolean = false;
+	private _router: Router = Router.getInstance();
 	private _wheelOptions: Option[] = [
 		{
 			label: "API Test page",
 			icon: "🔧",
 			onClick: () => {
 				console.log("API Test page clicked");
-				const router = Router.getInstance();
-				router.navigate("/api-test");
+				this._router.navigate("/api-test");
 			},
 		},
-		{
-			label: "Play",
-			icon: "🕹️",
-			subMenu: [
-				{
-					label: "1v1",
-					icon: "⚔️",
-					onClick: () => {
-						console.log("1v1 clicked");
-					}
-				},
-				{
-					label: "Tournament",
-					icon: "🏆",
-					onClick: () => {
-						console.log("Tournament clicked");
-					}
-				}
-			]
-		},
-		{
-			label: "Profile",
-			icon: "●",
-			onClick: () => {
-				console.log("Profile clicked");
-			}
-		},
-		{
-			label: "Settings",
-			icon: "◐",
-			onClick: () => {
-				console.log("Settings clicked");
-			}
-		},
+		// {
+		// 	label: "Play",
+		// 	icon: "🕹️",
+		// 	subMenu: [
+		// 		{
+		// 			label: "1v1",
+		// 			icon: "⚔️",
+		// 			onClick: () => {
+		// 				console.log("1v1 clicked");
+		// 			}
+		// 		},
+		// 		{
+		// 			label: "Tournament",
+		// 			icon: "🏆",
+		// 			onClick: () => {
+		// 				console.log("Tournament clicked");
+		// 			}
+		// 		}
+		// 	]
+		// },
+		// {
+		// 	label: "Profile",
+		// 	icon: "●",
+		// 	onClick: () => {
+		// 		console.log("Profile clicked");
+		// 	}
+		// },
+		// {
+		// 	label: "Settings",
+		// 	icon: "◐",
+		// 	onClick: () => {
+		// 		console.log("Settings clicked");
+		// 	}
+		// },
 		{
 			label: "Login",
-			icon: "◆",
+			icon: "🔑",
 			subMenu: [
 				{
 					label: "Sign In",
 					icon: "→",
 					onClick: () => {
 						console.log("Sign In clicked");
+						// Cacher la wheel et naviguer vers login
+						this.hideWheel();
+						this._router.navigate("/login");
 					}
 				},
 				{
@@ -85,6 +89,9 @@ export default class Wheel {
 					icon: "+",
 					onClick: () => {
 						console.log("Register clicked");
+						// Cacher la wheel et naviguer vers register
+						this.hideWheel();
+						this._router.navigate("/register");
 					}
 				}
 			]
@@ -234,12 +241,8 @@ export default class Wheel {
 	}
 
 	public render(): void {
-		// Structure de base de la roue
-		this._element.className = `
-			fixed inset-0 z-50 hidden items-center justify-center
-			bg-black/30 backdrop-blur-md select-none
-			opacity-0 scale-95 transition-all duration-150 ease-out
-		`.trim();
+		// Structure de base de la roue avec les styles centralisés
+		this._element.className = UI_THEME.components.overlay;
 
 		this._element.innerHTML = `
 			<div class="wheel-content relative select-none">
@@ -268,13 +271,13 @@ export default class Wheel {
 		const angleStep = (2 * Math.PI) / optionCount;
 		const startAngle = -Math.PI / 2; // Commencer en haut
 
-		// Créer le cercle central avec le même style que les segments
+		// Créer le cercle central avec les styles centralisés
 		const centerCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
 		centerCircle.setAttribute('cx', centerX.toString());
 		centerCircle.setAttribute('cy', centerY.toString());
 		centerCircle.setAttribute('r', innerRadius.toString());
-		centerCircle.setAttribute('fill', 'rgba(31, 41, 55, 0.9)');
-		centerCircle.setAttribute('stroke', 'rgba(75, 85, 99, 0.3)');
+		centerCircle.setAttribute('fill', UI_THEME.wheel.svg.fill.center);
+		centerCircle.setAttribute('stroke', UI_THEME.wheel.svg.stroke.normal);
 		centerCircle.setAttribute('stroke-width', '1');
 		centerCircle.setAttribute('class', 'cursor-pointer transition-all duration-200 hover:fill-gray-600/90');
 
@@ -315,8 +318,8 @@ export default class Wheel {
 			].join(' ');
 
 			path.setAttribute('d', pathData);
-			path.setAttribute('fill', isSelected ? 'rgba(55, 65, 81, 0.95)' : 'rgba(31, 41, 55, 0.85)');
-			path.setAttribute('stroke', isSelected ? 'rgba(156, 163, 175, 0.6)' : 'rgba(75, 85, 99, 0.3)');
+			path.setAttribute('fill', isSelected ? UI_THEME.wheel.svg.fill.selected : UI_THEME.wheel.svg.fill.normal);
+			path.setAttribute('stroke', isSelected ? UI_THEME.wheel.svg.stroke.selected : UI_THEME.wheel.svg.stroke.normal);
 			path.setAttribute('stroke-width', '1');
 			path.setAttribute('class', 'cursor-pointer transition-all duration-200 hover:fill-gray-600/90');
 
@@ -356,9 +359,9 @@ export default class Wheel {
 				iconText.setAttribute('y', (textY - 20).toString());
 				iconText.setAttribute('text-anchor', 'middle');
 				iconText.setAttribute('dominant-baseline', 'middle');
-				iconText.setAttribute('fill', isSelected ? 'rgb(243, 244, 246)' : 'rgb(156, 163, 175)');
+				iconText.setAttribute('fill', isSelected ? UI_THEME.wheel.svg.text.selected : UI_THEME.wheel.svg.text.normal);
 				iconText.setAttribute('font-size', '32');
-				iconText.setAttribute('font-family', 'SF Pro Display, system-ui, -apple-system, sans-serif');
+				iconText.setAttribute('font-family', UI_THEME.wheel.svg.text.font);
 				iconText.setAttribute('font-weight', '300');
 				iconText.textContent = option.icon;
 				textGroup.appendChild(iconText);
@@ -370,10 +373,10 @@ export default class Wheel {
 			label.setAttribute('y', (textY + 20).toString());
 			label.setAttribute('text-anchor', 'middle');
 			label.setAttribute('dominant-baseline', 'middle');
-			label.setAttribute('fill', isSelected ? 'rgb(243, 244, 246)' : 'rgb(156, 163, 175)');
+			label.setAttribute('fill', isSelected ? UI_THEME.wheel.svg.text.selected : UI_THEME.wheel.svg.text.normal);
 			label.setAttribute('font-size', '24');
 			label.setAttribute('font-weight', isSelected ? '500' : '400');
-			label.setAttribute('font-family', 'SF Pro Display, system-ui, -apple-system, sans-serif');
+			label.setAttribute('font-family', UI_THEME.wheel.svg.text.font);
 			label.textContent = option.label;
 			textGroup.appendChild(label);
 
