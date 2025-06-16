@@ -52,6 +52,7 @@ export default class Wheel {
 					icon: "🏆",
 					onClick: () => {
 						console.log("Tournament clicked");
+						this._router.navigate("/tournament");
 					}
 				}
 			]
