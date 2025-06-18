@@ -3,7 +3,7 @@
 const host = "http://localhost";
 //const userPath = "/users";
 const mePath = "/me";
-//const usersBaseUrl= `${this._host}${this._userPath}`;
+
 
 export async function fetchWithSelfSigned(url: string, options: RequestInit = {}): Promise<Response> {
     try {

@@ -326,6 +326,52 @@ class gameMap {
     get getGlobalPovY(): number {
         return this.globalPov?.position.y || 0;
     }
+
+    /**
+     * Properly dispose of the scene and engine to clean up resources
+     */
+    dispose(): void {
+        console.log('🗑️ Disposing gameMap resources...');
+        
+        // Stop render loop if running
+        if (this.engine) {
+            this.engine.stopRenderLoop();
+        }
+
+        // Dispose scene and all its resources
+        if (this.scene) {
+            try {
+                this.scene.dispose();
+                console.log('🗑️ Scene disposed');
+            } catch (e) {
+                console.warn('Warning during scene disposal:', e);
+            }
+        }
+
+        // Dispose engine
+        if (this.engine) {
+            try {
+                this.engine.dispose();
+                console.log('🗑️ Engine disposed');
+            } catch (e) {
+                console.warn('Warning during engine disposal:', e);
+            }
+        }
+
+        // Clear all references
+        this.scene = undefined;
+        this.engine = undefined;
+        this.canvas = undefined;
+        this.playground = undefined;
+        this.playgroundMaterial = undefined;
+        this.globalPov = undefined;
+        this.light = undefined;
+        this.shadowGenerator = undefined;
+        this.skyBox = undefined;
+        this.pipeline = undefined;
+        
+        console.log('🗑️ GameMap disposal completed');
+    }
 }
 
 export {gameMap}; 

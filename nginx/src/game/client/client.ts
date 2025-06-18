@@ -7,6 +7,7 @@ import { fetchWithSelfSigned } from '../utils/fetch.js';
 import { updatePlayerNames, updateScoresUI, updateScoresUIVersus, updatePlayerNamesVersus, updateGameStatus } from '../playerUi/playerUi.js';
 import { handleWaitingForPlayers } from '../ui/waitingStatusHandler.js';
 import { soundManager } from '../audio/soundManager.js';
+import { TournamentClientHandler } from '../tournament/tournamentClientHandler.js';
 
 interface PlayerData {
     id: string;
@@ -301,12 +302,37 @@ export function initializeGame(playerId: string): void {
         }, 50);
     });
 
-    // Add handler for waiting status
+    // Add handler for waiting status and tournament advancement
     clientConnection.socket.addEventListener('message', (event: MessageEvent) => {
         try {
             const message = JSON.parse(event.data);
             if (message.type === 'waitingForPlayers') {
                 handleWaitingForPlayers(message, updateGameStatus);
+            } else if (message.type === 'tournamentAdvancement') {
+                TournamentClientHandler.handleTournamentAdvancement(message, updateGameStatus, {
+                    isGameOver,
+                    isGameLoopRunning,
+                    map,
+                    ball,
+                    player1,
+                    player2
+                });
+                
+                // Update local variables after handler modifies them
+                if (message.status === 'transferred_to_final') {
+                    isGameOver = true;
+                    isGameLoopRunning = false;
+                    map = null;
+                    ball = null;
+                    player1 = null;
+                    player2 = null;
+                }
+            } else if (message.type === 'hideGameElements') {
+                TournamentClientHandler.handleHideGameElements(message, updateGameStatus, {
+                    ball,
+                    player1,
+                    player2
+                });
             }
         } catch (error) {
             console.error('Error parsing message:', error);
@@ -315,6 +341,12 @@ export function initializeGame(playerId: string): void {
 
     clientConnection.onInit(async ({ playerId, roomId: rId, role, opponentId, playerName, opponentName }) => {
         console.log('Received init:', { playerId, roomId: rId, role, opponentId, playerName, opponentName });
+        
+        // ⭐ TOURNAMENT FIX: Reset game state for clean start (especially for final games)
+        TournamentClientHandler.resetTournamentGameState({ isGameOver, isGameLoopRunning });
+        isGameOver = false;
+        isGameLoopRunning = false;
+        
         initTime = Date.now();
         roomId = rId || null;
         localPlayerId = playerId || null;
@@ -328,6 +360,10 @@ export function initializeGame(playerId: string): void {
             player1Name = opponentName || 'Player 1';
             player2Name = playerName || 'Player 2';
         }
+
+        // ⭐ TOURNAMENT FIX: Reset scores display when game initializes
+        updateScoresUI(0, 0, player1Name, player2Name);
+        console.log('✅ Score display reset to 0-0 for new game');
 
         // Only create new map if it doesn't exist
         if (!map) {
@@ -346,55 +382,58 @@ export function initializeGame(playerId: string): void {
             }
         }
 
-        // Only create paddles if they don't exist
-        if (!player1 || !player2) {
-            if (!playerId || !opponentId) {
-                console.error('Missing player IDs');
-                return;
-            }
-            
-            if (role === 0) {
-                player1 = new playerPaddle(player1Name, playerId, 0);
-                player2 = new playerPaddle(player2Name, opponentId, 1);
-            } else {
-                player1 = new playerPaddle(player1Name, opponentId, 0);
-                player2 = new playerPaddle(player2Name, playerId, 1);
-            }
-
-            try {
-                player1.createPaddle(map.getScene!, 19.5, 2, 20);
-                player2.createPaddle(map.getScene!, -19.5, 2, 20);
-            } catch (e) {
-                console.error('Paddle creation failed:', e);
-                return;
-            }
+        // ⭐ TOURNAMENT FIX: Always recreate paddles for clean start (especially for final games)
+        if (!playerId || !opponentId) {
+            console.error('Missing player IDs');
+            return;
+        }
+        
+        // Create fresh paddles for this game
+        if (role === 0) {
+            player1 = new playerPaddle(player1Name, playerId, 0);
+            player2 = new playerPaddle(player2Name, opponentId, 1);
+        } else {
+            player1 = new playerPaddle(player1Name, opponentId, 0);
+            player2 = new playerPaddle(player2Name, playerId, 1);
         }
 
-        // Only create ball if it doesn't exist
-        if (!ball) {
-            try {
-                ball = new Ball(player1, player2);
-                ball.createBall(map.getScene!);
-                if (ball.ballBody) {
-                    ball.ballBody.metadata = { roomId };
-                    ball.ballBody.position = new BABYLON.Vector3(0, -2, 0);
-                    ball.ballBody.isVisible = true;
-                }
-                ball.position = new BABYLON.Vector3(0, -2, 0);
-                ball.isRespawning = true;
-                ball.respawnTime = 0;
-                ball.hasValidPosition = true;
-                
-                // Request initial ball respawn from server
-                clientConnection!.send({
-                    type: 'requestBallRespawn',
-                    isInitial: true
-                });
-                console.log('Requested initial ball respawn');
-            } catch (e) {
-                console.error('Ball creation failed:', e);
-                return;
+        try {
+            player1.createPaddle(map.getScene!, 19.5, 2, 20);
+            player2.createPaddle(map.getScene!, -19.5, 2, 20);
+            
+            // ⭐ TOURNAMENT FIX: Reset paddle positions and ensure visibility
+            TournamentClientHandler.resetTournamentPaddlePositions(player1, player2);
+            TournamentClientHandler.ensureTournamentElementsVisible({ ball: null, player1, player2 });
+            
+            console.log('✅ Paddles created and configured for new tournament game');
+        } catch (e) {
+            console.error('Paddle creation failed:', e);
+            return;
+        }
+
+        // ⭐ TOURNAMENT FIX: Always recreate ball for clean start (especially for final games)
+        try {
+            ball = new Ball(player1, player2);
+            ball.createBall(map.getScene!);
+            if (ball.ballBody) {
+                ball.ballBody.metadata = { roomId };
+                ball.ballBody.position = new BABYLON.Vector3(0, -2, 0);
+                ball.ballBody.isVisible = true;
             }
+            ball.position = new BABYLON.Vector3(0, -2, 0);
+            ball.isRespawning = true;
+            ball.respawnTime = 0;
+            ball.hasValidPosition = true;
+            
+            // Request initial ball respawn from server
+            clientConnection!.send({
+                type: 'requestBallRespawn',
+                isInitial: true
+            });
+            console.log('✅ Ball created and made visible for new game');
+        } catch (e) {
+            console.error('Ball creation failed:', e);
+            return;
         }
 
         updateGameStatus('Game starting...');
@@ -443,39 +482,44 @@ export function initializeGame(playerId: string): void {
 
         }
         
-        // Start the game loop after match animation if not already running
-        if (!isGameLoopRunning) {
-            try {
-                await map.launchMatchAnimation();
-                
-                // Notify server that animation is complete
-                if (clientConnection) {
-                    clientConnection.send({
-                        type: 'animationComplete',
-                        playerId: localPlayerId
-                    });
-                    console.log('Sent animationComplete to server');
-                }
-                
-                // Ensure paddles are ready
-                if (player1 && player2 && player1.paddleBody && player2.paddleBody) {
-                    player1.paddleBody.isVisible = true;
-                    player2.paddleBody.isVisible = true;
-                }
-                setupGameLoop();
-            } catch (e) {
-                console.error('Error during game initialization:', e);
-                // Send animation complete anyway to prevent server hanging
-                if (clientConnection) {
-                    clientConnection.send({
-                        type: 'animationComplete',
-                        playerId: localPlayerId
-                    });
-                    console.log('Sent animationComplete to server (after error)');
-                }
-                // Start game loop anyway if animation fails
-                setupGameLoop();
+        // ⭐ TOURNAMENT FIX: Always start fresh game loop for clean start
+        try {
+            await map.launchMatchAnimation();
+            
+            // Notify server that animation is complete
+            if (clientConnection) {
+                clientConnection.send({
+                    type: 'animationComplete',
+                    playerId: localPlayerId
+                });
+                console.log('Sent animationComplete to server');
             }
+            
+            // ⭐ TOURNAMENT FIX: Ensure all game elements are visible and ready
+            if (player1 && player1.paddleBody) {
+                player1.paddleBody.isVisible = true;
+            }
+            if (player2 && player2.paddleBody) {
+                player2.paddleBody.isVisible = true;
+            }
+            if (ball && ball.ballBody) {
+                ball.ballBody.isVisible = true;
+            }
+            
+            console.log('✅ All game elements made visible for new game');
+            setupGameLoop();
+        } catch (e) {
+            console.error('Error during game initialization:', e);
+            // Send animation complete anyway to prevent server hanging
+            if (clientConnection) {
+                clientConnection.send({
+                    type: 'animationComplete',
+                    playerId: localPlayerId
+                });
+                console.log('Sent animationComplete to server (after error)');
+            }
+            // Start game loop anyway if animation fails
+            setupGameLoop();
         }
     });
 }
@@ -524,6 +568,12 @@ export function cleanup(): void {
     // Remove global leaveGame function
     if ((window as any).leaveGame) {
         delete (window as any).leaveGame;
+    }
+
+    // ⭐ CLEANUP: Properly dispose of map resources
+    if (map) {
+        console.log('🗑️ Disposing map during cleanup...');
+        map.dispose();
     }
 
     // Nullify game objects

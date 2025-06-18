@@ -56,7 +56,7 @@ export class webSocketClient {
             let msg: WebSocketMessage;
             try {
                 msg = JSON.parse(data);
-                // console.log('Received:', msg);
+    
             } catch (e) {
                 console.error('Invalid JSON:', e);
                 return;
