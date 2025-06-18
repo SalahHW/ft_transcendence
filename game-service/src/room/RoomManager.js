@@ -7,6 +7,7 @@ import { gameStateManager } from '../game/GameStateManager.js';
 export class RoomManager {
   constructor() {
     this.stateManager = gameStateManager;
+    this._roomCounter = 0; // Counter for collision prevention
   }
 
   /**
@@ -336,7 +337,11 @@ export class RoomManager {
    * Generate unique room ID
    */
   _generateRoomId() {
-    return 'room_' + Math.random().toString(36).substring(2, 15);
+    // Use timestamp + counter + random for collision-resistant IDs
+    const timestamp = Date.now().toString(36);
+    const counter = (this._roomCounter = (this._roomCounter || 0) + 1).toString(36);
+    const random = Math.random().toString(36).substring(2, 8);
+    return `room_${timestamp}_${counter}_${random}`;
   }
 
   /**

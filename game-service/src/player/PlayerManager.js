@@ -8,6 +8,7 @@ import { gameStateManager } from '../game/GameStateManager.js';
 export class PlayerManager {
   constructor() {
     this.stateManager = gameStateManager;
+    this._playerCounter = 0; // Counter for collision prevention
   }
 
   /**
@@ -318,8 +319,11 @@ export class PlayerManager {
    * Generate unique player ID
    */
   _generatePlayerId() {
-    // Simple ID generation - could be enhanced with external service
-    return Math.random().toString(36).substring(2, 15);
+    // Use timestamp + counter + random for collision-resistant IDs
+    const timestamp = Date.now().toString(36);
+    const counter = (this._playerCounter = (this._playerCounter || 0) + 1).toString(36);
+    const random = Math.random().toString(36).substring(2, 8);
+    return `player_${timestamp}_${counter}_${random}`;
   }
 
   /**

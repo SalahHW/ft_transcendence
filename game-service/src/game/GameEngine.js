@@ -6,6 +6,8 @@ import { RoomUtils, WebSocketUtils } from '../utils/helpers.js';
 import { roomManager } from '../room/RoomManager.js';
 import { roomMatchmaker } from '../room/RoomMatchmaker.js';
 import { createWaitingMessage } from '../player/playerStatus.js';
+import { tournamentManager } from '../room/tournamentManager.js';
+import { TournamentGameHandler } from '../tournament/tournamentGameHandler.js';
 
 /**
  * Core game engine responsible for game logic orchestration
@@ -132,6 +134,9 @@ export class GameEngine {
       reportMatchResultsToAPI(matchData).catch(err => {
         console.error('Failed to report match results to external services:', err.message);
       });
+      
+      // ⭐ TOURNAMENT LOGIC: Handle tournament game completion
+      TournamentGameHandler.handleTournamentGameEnd(room, roomId, matchData, this.broadcastToRoom.bind(this));
       
       // Enhanced client message
       this.broadcastToRoom(roomId, {
@@ -295,20 +300,14 @@ export class GameEngine {
   }
 
   _attemptBallUpdate(roomId, attempt = 1) {
-    const roomAnimStatus = this.stateManager.getAnimationStatus().get(roomId);
-    if (roomAnimStatus?.size === 2 && this.stateManager.getRoom(roomId)?.ready) {
-      console.log(`Sending initial ballUpdate for room ${roomId}`);
+    const room = this.stateManager.getRoom(roomId);
+    if (!room || room.ballUpdateSent || attempt > 5) return;
+
+    console.log(`Attempting ball update for room ${roomId}, attempt ${attempt}`);
+    if (room.players.length === 2) {
       this.sendBallUpdateForced(roomId);
-    } else if (attempt <= 5) {
-      console.warn(`Waiting for animations in room ${roomId}, attempt ${attempt}, status size: ${roomAnimStatus?.size || 0}`);
-      setTimeout(() => this._attemptBallUpdate(roomId, attempt + 1), 200);
     } else {
-      console.error(`Forcing ballUpdate for room ${roomId} after ${attempt - 1} attempts`);
-      const room = this.stateManager.getRoom(roomId);
-      if (room) {
-        room.ballUpdateSent = false;
-        this.sendBallUpdateForced(roomId);
-      }
+      setTimeout(() => this._attemptBallUpdate(roomId, attempt + 1), 100 * attempt);
     }
   }
 
