@@ -95,7 +95,16 @@ class Ball {
     updateClient(scene: BABYLON.Scene): void {
         if (this.ballBody && this.hasValidPosition) {
             this.ballBody.position.copyFrom(this.position);
-            this.ballBody.isVisible = this.isRespawning || this.position.y >= -2;
+            
+            // ⭐ CRITICAL FIX: More robust visibility logic for tournament games
+            const shouldBeVisible = this.isRespawning || this.position.y >= -3;
+            
+            // Force visibility if respawning (important for tournament final initialization)
+            if (this.isRespawning) {
+                this.ballBody.isVisible = true;
+            } else {
+                this.ballBody.isVisible = shouldBeVisible;
+            }
         }
     }
 

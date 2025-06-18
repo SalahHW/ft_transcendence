@@ -391,8 +391,12 @@ export class TournamentManager {
     // Reset player state for new game
     player.readyToPlay = false; // Put in waiting state
     player.score = 0; // Reset score
+    player.playerScore = 0; // Reset tournament score tracking
+    player.gamesWon = player.gamesWon || 0; // Preserve overall stats but reset match score
     player.paddlePosition = { x: 0, y: 0, z: 0 }; // Reset paddle position
     player.positionZ = 0; // Reset server-side paddle Z position for sync
+    
+    console.log(`🏆 Player ${player.username} scores reset: score=${player.score}, playerScore=${player.playerScore}`);
     
     // Update WebSocket room association
     if (player.ws) {

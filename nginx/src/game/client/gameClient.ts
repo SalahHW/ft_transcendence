@@ -114,12 +114,14 @@ export class GameClient {
                     
                     // Update instance variables after handler modifies them
                     if (message.status === 'transferred_to_final') {
-                        this.isGameOver = true;
+                        // ⭐ CRITICAL FIX: Reset to false so final match can start
+                        this.isGameOver = false;
                         this.isGameLoopRunning = false;
                         this.map = null;
                         this.ball = null;
                         this.player1 = null;
                         this.player2 = null;
+                        console.log('🏆 GameClient reset for final match');
                     }
                 } else if (message.type === 'hideGameElements') {
                     TournamentClientHandler.handleHideGameElements(message, this.updateGameStatus.bind(this), {
@@ -362,7 +364,7 @@ export class GameClient {
                 }
 
                 // Send paddle position updates
-                if (paddleMoved && this.clientConnection) {
+                if (paddleMoved && this.clientConnection && localPlayer.getPaddleBodyPos) {
                     this.clientConnection.send({
                         type: 'paddlePosition',
                         playerId: this.localPlayerId,

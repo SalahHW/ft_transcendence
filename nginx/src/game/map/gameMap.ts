@@ -30,7 +30,6 @@ class gameMap {
     }
 
     createMap(): void {
-        // TODO: renderCanvas -> app-container
         this.canvas = document.getElementById('renderCanvas') as HTMLCanvasElement;
         this.setUpEngine();
         this.setUpScene();
