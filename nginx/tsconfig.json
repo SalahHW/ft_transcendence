@@ -3,6 +3,10 @@
 		"outDir": "./public/js/",
 		"module": "ES2020",
 		"target": "ES2020",
+		"moduleResolution": "node",
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"resolveJsonModule": true,
 		"strict": true, // active tous les flags strict
 		"noImplicitAny": true, // signale les types implicites
 		"noImplicitReturns": true, // signale les fonctions sans return
