@@ -12,7 +12,8 @@ class playerPaddle {
   public paddleBody: BABYLON.Mesh | undefined;
   public playerPov: BABYLON.Camera | undefined;
   public paddleSpeed: number | undefined;
-  public paddleMaterial: BABYLON.StandardMaterial | undefined;
+  public paddleMaterial: BABYLON.PBRMaterial | undefined;
+  // public paddleMaterial: BABYLON.StandardMaterial | undefined;
   public playerScore: number;
   private scene: BABYLON.Scene | undefined;
 
@@ -34,7 +35,10 @@ class playerPaddle {
 
   createPaddle(scene: BABYLON.Scene, posX: number, posY: number, paddleSpeed: number): void {
     this.scene = scene;
-    this.paddleBody = BABYLON.MeshBuilder.CreateBox(this.playerName, { width: 1, height: 4, depth: 5 }, scene);
+    this.paddleBody = BABYLON.MeshBuilder.CreateBox(this.playerName, { 
+      width: 1, 
+      height: 4, 
+      depth: 5 }, scene);
     this.paddleBody.position.x = posX;
     this.paddleBody.position.y = posY;
     this.paddleSpeed = paddleSpeed;
@@ -43,16 +47,34 @@ class playerPaddle {
 
   paddleColor(): void {
     if (!this.paddleBody || !this.scene) return;
-    
-    this.paddleMaterial = new BABYLON.StandardMaterial(this.playerName + '_material', this.scene);
+  
+    this.paddleMaterial = new BABYLON.PBRMaterial(this.playerName + '_pbrMaterial', this.scene);
     this.paddleBody.material = this.paddleMaterial;
+  
+    // Base color (albedo)
     if (this.role === 0) {
-      this.paddleMaterial.diffuseColor = new BABYLON.Color3(0, 0, 1); // Blue for role 0
+      this.paddleMaterial.albedoColor = new BABYLON.Color3(0, 0, 1); // Blue
     } else {
-      this.paddleMaterial.diffuseColor = new BABYLON.Color3(1, 0, 0); // Red for role 1
+      this.paddleMaterial.albedoColor = new BABYLON.Color3(1, 0, 0); // Red
     }
-    this.paddleMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+    this.paddleMaterial.metallic = 0.2;
+    this.paddleMaterial.roughness = 0.4;
+    this.paddleMaterial.reflectivityColor = new BABYLON.Color3(0, 0, 0);
   }
+
+
+  //paddleColor(): void {
+  //  if (!this.paddleBody || !this.scene) return;
+  //  
+  //  this.paddleMaterial = new BABYLON.StandardMaterial(this.playerName + '_material', this.scene);
+  //  this.paddleBody.material = this.paddleMaterial;
+  //  if (this.role === 0) {
+  //    this.paddleMaterial.diffuseColor = new BABYLON.Color3(0, 0, 1); // Blue for role 0
+  //  } else {
+  //    this.paddleMaterial.diffuseColor = new BABYLON.Color3(1, 0, 0); // Red for role 1
+  //  }
+  //  this.paddleMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+  //}
 
   move(direction: number, deltaTime: number): void {
     if (this.paddleBody && this.paddleSpeed) {

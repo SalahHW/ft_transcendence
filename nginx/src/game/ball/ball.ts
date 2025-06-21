@@ -76,7 +76,8 @@ class Ball {
     }
 
     createBall(scene: BABYLON.Scene): void {
-        this.ballBody = BABYLON.MeshBuilder.CreateSphere("ball", { diameter: 1.5 }, scene);
+        this.ballBody = BABYLON.MeshBuilder.CreateSphere("ball", { diameter: 1.5, 
+            segments: 42 }, scene);
         this.ballMaterial = new BABYLON.StandardMaterial("glowMat", scene);
         
         // Enhanced material setup for glowing effects
