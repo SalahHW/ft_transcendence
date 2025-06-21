@@ -12,7 +12,7 @@
 
 import MatchServiceAPI from "../../../api/matche.js";
 import { buttonHTML } from "../../../components/button.js";
-import { COMMON_CLASSES } from "../../../style/tailwindClasses.js";
+import { UI_THEME } from "../../../style/tailwindClasses.js";
 
 export default class GetMatchForm {
 	private _container: HTMLElement;
@@ -27,10 +27,9 @@ export default class GetMatchForm {
 
 	render(): void {
 		this._container.innerHTML = /* HTML */ `
-			<form id="get-match-form" class="${COMMON_CLASSES.form}">
+			<form id="get-match-form" class="${UI_THEME.components.form}">
 				<div>
-					<label class="${COMMON_CLASSES.label}">ID</label>
-					<input type="number" id="getform-match-id" class="${COMMON_CLASSES.input}">
+					<input type="number" id="getform-match-id" placeholder="Match ID" class="${UI_THEME.components.input}">
 				</div>
 
 				${buttonHTML({

@@ -12,7 +12,7 @@
 
 import UsersApi from "../../../api/user.js";
 import { buttonHTML } from "../../../components/button.js";
-import { COMMON_CLASSES } from "../../../style/tailwindClasses.js";
+import { UI_THEME } from "../../../style/tailwindClasses.js";
 
 export default class GetUserForm {
 	private _container: HTMLElement;
@@ -27,15 +27,13 @@ export default class GetUserForm {
 
 	render(): void {
 		this._container.innerHTML = /* HTML */ `
-			<form id="get-user-form" class="${COMMON_CLASSES.form}">
+			<form id="get-user-form" class="${UI_THEME.components.form}">
 				<div>
-					<label class="${COMMON_CLASSES.label}">ID (optional)</label>
-					<input type="number" id="getform-user-id" class="${COMMON_CLASSES.input}">
+					<input type="number" id="getform-user-id" placeholder="ID (optional)" class="${UI_THEME.components.input}">
 				</div>
 
 				<div>
-					<label class="${COMMON_CLASSES.label}">Name (optional)</label>
-					<input type="text" id="getform-user-name" class="${COMMON_CLASSES.input}">
+					<input type="text" id="getform-user-name" placeholder="Name (optional)" class="${UI_THEME.components.input}">
 				</div>
 
 				${buttonHTML({label: "Get User", type: "submit"})}

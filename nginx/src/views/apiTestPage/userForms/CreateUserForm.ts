@@ -1,6 +1,6 @@
 import UsersApi, { User } from "../../../api/user.js";
 import { buttonHTML } from "../../../components/button.js";
-import { COMMON_CLASSES } from "../../../style/tailwindClasses.js";
+import { UI_THEME } from "../../../style/tailwindClasses.js";
 
 export default class CreateUserForm {
 	private _container: HTMLElement;
@@ -15,20 +15,17 @@ export default class CreateUserForm {
 
 	render(): void {
 		this._container.innerHTML = /* HTML */ `
-			<form id="create-user-form" class="${COMMON_CLASSES.form}">
+			<form id="create-user-form" class="${UI_THEME.components.form}">
 				<div>
-					<label class="${COMMON_CLASSES.label}">Name (required)</label>
-					<input type="text" id="createform-user-name" class="${COMMON_CLASSES.input}">
+					<input type="text" id="createform-user-name" placeholder="Name (required)" class="${UI_THEME.components.input}">
 				</div>
 
 				<div>
-					<label class="${COMMON_CLASSES.label}">Email (required)</label>
-					<input type="email" id="createform-user-email" class="${COMMON_CLASSES.input}">
+					<input type="email" id="createform-user-email" placeholder="Email (required)" class="${UI_THEME.components.input}">
 				</div>
 
 				<div>
-					<label class="${COMMON_CLASSES.label}">Password (required)</label>
-					<input type="password" id="createform-user-password" class="${COMMON_CLASSES.input}">
+					<input type="password" id="createform-user-password" placeholder="Password (required)" class="${UI_THEME.components.input}">
 				</div>
 
 				${buttonHTML({

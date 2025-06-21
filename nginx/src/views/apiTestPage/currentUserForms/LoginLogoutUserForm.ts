@@ -12,7 +12,7 @@
 
 import UsersApi from "../../../api/user.js";
 import { buttonHTML } from "../../../components/button.js";
-import { COMMON_CLASSES } from "../../../style/tailwindClasses.js";
+import { UI_THEME } from "../../../style/tailwindClasses.js";
 
 export default class LoginLogoutUserForm {
 	private _container: HTMLElement;
@@ -41,15 +41,13 @@ export default class LoginLogoutUserForm {
 
 	private _renderLoginForm(): void {
 		this._container.innerHTML = /* HTML */ `
-			<form id="login-logout-user-form" class="${COMMON_CLASSES.form}">
+			<form id="login-logout-user-form" class="${UI_THEME.components.form}">
 				<div>
-					<label class="${COMMON_CLASSES.label}">Username (required)</label>
-					<input type="text" id="login-logout-user-form-username" class="${COMMON_CLASSES.input}">
+					<input type="text" id="login-logout-user-form-username" placeholder="Username (required)" class="${UI_THEME.components.input}">
 				</div>
 
 				<div>
-					<label class="${COMMON_CLASSES.label}">Password (required)</label>
-					<input type="password" id="login-logout-user-form-password" class="${COMMON_CLASSES.input}">
+					<input type="password" id="login-logout-user-form-password" placeholder="Password (required)" class="${UI_THEME.components.input}">
 				</div>
 
 				${buttonHTML({
@@ -91,7 +89,7 @@ export default class LoginLogoutUserForm {
 
 	private _renderLogoutForm(): void {
 		this._container.innerHTML = /* HTML */ `
-			<form id="login-logout-user-form" class="${COMMON_CLASSES.form}">
+			<form id="login-logout-user-form" class="${UI_THEME.components.form}">
 				${buttonHTML({
 					id: "login-logout-user-form-logout",
 					type: "submit",

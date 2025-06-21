@@ -1,6 +1,6 @@
 import UsersApi, { User } from "../../../api/user.js";
 import { buttonHTML } from "../../../components/button.js";
-import { COMMON_CLASSES } from "../../../style/tailwindClasses.js";
+import { UI_THEME } from "../../../style/tailwindClasses.js";
 
 export default class UpdateUserForm {
 	private _container: HTMLElement;
@@ -15,20 +15,17 @@ export default class UpdateUserForm {
 
 	render(): void {
 		this._container.innerHTML = /* HTML */ `
-			<form id="update-user-form" class="${COMMON_CLASSES.form}">
+			<form id="update-user-form" class="${UI_THEME.components.form}">
 				<div>
-					<label class="${COMMON_CLASSES.label}">User ID (required)</label>
-					<input type="number" id="updateform-user-id" class="${COMMON_CLASSES.input}">
+					<input type="number" id="updateform-user-id" placeholder="User ID (required)" class="${UI_THEME.components.input}">
 				</div>
 
 				<div>
-					<label class="${COMMON_CLASSES.label}">New Name</label>
-					<input type="text" id="updateform-user-name" class="${COMMON_CLASSES.input}">
+					<input type="text" id="updateform-user-name" placeholder="New Name" class="${UI_THEME.components.input}">
 				</div>
 
 				<div>
-					<label class="${COMMON_CLASSES.label}">New Email</label>
-					<input type="email" id="updateform-user-email" class="${COMMON_CLASSES.input}">
+					<input type="email" id="updateform-user-email" placeholder="New Email" class="${UI_THEME.components.input}">
 				</div>
 
 				${buttonHTML({
