@@ -59,7 +59,7 @@ class gameMap {
 
     setUpEngine(): void {
         if (!this.canvas) return;
-        this.engine = new BABYLON.Engine(this.canvas);
+        this.engine = new BABYLON.Engine(this.canvas, true, {antialias: true});
     }
 
     setUpScene(): void {
@@ -98,6 +98,7 @@ class gameMap {
         this.pipeline.depthOfField.focusDistance = 50; 
         this.pipeline.depthOfField.focalLength = 50;
         this.pipeline.depthOfField.fStop = 1.8;      
+        this.pipeline.fxaaEnabled = true; 
     }
 
     createSkyBox(scene: BABYLON.Scene): void {
