@@ -14,14 +14,21 @@ import { UI_THEME } from "../../../style/tailwindClasses.js";
 
 export default class CustomTerminal {
     private _container: HTMLElement;
-    private _outputElement!: HTMLElement; // Using definite assignment assertion
+    private _outputElement!: HTMLElement;
     private static _instance: CustomTerminal | null = null;
     private static _originalConsoleLog: (...data: any[]) => void;
     private static _originalConsoleError: (...data: any[]) => void;
     private static _originalConsoleWarn: (...data: any[]) => void;
+    private static _isConsoleOverridden: boolean = false;
     private _keydownHandler: (event: KeyboardEvent) => void;
 
     constructor(containerId: string) {
+        // If there's already an instance, just update its container and return
+        if (CustomTerminal._instance) {
+            CustomTerminal._instance._updateContainer(containerId);
+            return CustomTerminal._instance;
+        }
+
         this._container = document.getElementById(containerId) as HTMLElement;
         if (!this._container) {
             throw new Error(`Container with id ${containerId} not found`);
@@ -32,6 +39,33 @@ export default class CustomTerminal {
         // Store the instance for global access
         CustomTerminal._instance = this;
 
+        // Only override console methods if not already done
+        if (!CustomTerminal._isConsoleOverridden) {
+            this._overrideConsoleMethods();
+        }
+
+        // Create keyboard event handler for Ctrl+L
+        this._keydownHandler = (event: KeyboardEvent) => {
+            if (event.ctrlKey && event.key === 'l') {
+                event.preventDefault();
+                this.clear();
+            }
+        };
+
+        document.addEventListener('keydown', this._keydownHandler);
+    }
+
+    private _updateContainer(containerId: string): void {
+        const newContainer = document.getElementById(containerId) as HTMLElement;
+        if (!newContainer) {
+            throw new Error(`Container with id ${containerId} not found`);
+        }
+        
+        this._container = newContainer;
+        this._createTerminal();
+    }
+
+    private _overrideConsoleMethods(): void {
         // Save the original console methods
         CustomTerminal._originalConsoleLog = console.log;
         CustomTerminal._originalConsoleError = console.error;
@@ -80,34 +114,28 @@ export default class CustomTerminal {
             }
         };
 
-        // Create keyboard event handler for Ctrl+L
-        this._keydownHandler = (event: KeyboardEvent) => {
-            // Check if Ctrl+L is pressed
-            if (event.ctrlKey && event.key === 'l') {
-                event.preventDefault(); // Prevent browser from handling this shortcut
-                this.clear();
-            }
-        };
-
-        // Add global keyboard event listener
-        document.addEventListener('keydown', this._keydownHandler);
+        CustomTerminal._isConsoleOverridden = true;
     }
 
     // Method to restore the original console methods
     static restoreConsoleLog(): void {
-        if (CustomTerminal._originalConsoleLog) {
-            console.log = CustomTerminal._originalConsoleLog;
-        }
-        if (CustomTerminal._originalConsoleError) {
-            console.error = CustomTerminal._originalConsoleError;
-        }
-        if (CustomTerminal._originalConsoleWarn) {
-            console.warn = CustomTerminal._originalConsoleWarn;
+        if (CustomTerminal._isConsoleOverridden) {
+            if (CustomTerminal._originalConsoleLog) {
+                console.log = CustomTerminal._originalConsoleLog;
+            }
+            if (CustomTerminal._originalConsoleError) {
+                console.error = CustomTerminal._originalConsoleError;
+            }
+            if (CustomTerminal._originalConsoleWarn) {
+                console.warn = CustomTerminal._originalConsoleWarn;
+            }
+            CustomTerminal._isConsoleOverridden = false;
         }
 
         // Remove keyboard event listener if instance exists
         if (CustomTerminal._instance) {
             document.removeEventListener('keydown', CustomTerminal._instance._keydownHandler);
+            CustomTerminal._instance = null;
         }
     }
 
