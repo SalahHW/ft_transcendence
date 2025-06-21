@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 16:41:12 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/21 14:41:55 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/21 16:29:24 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,6 +40,7 @@ export default class Wheel {
 			label: "Profile",
 			icon: "👤",
 			onClick: () => {
+				this._router.navigate("/profile");
 			}
 		},
 		{

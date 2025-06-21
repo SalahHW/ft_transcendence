@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:40:51 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/16 18:48:38 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/21 16:29:24 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,7 @@ import APITestPage from "../views/apiTestPage/APITestPage.js";
 import HomePage from "../views/homePage.js";
 import LoginPopup from "../components/LoginPopup.js";
 import RegisterPopup from "../components/RegisterPopup.js";
+import ProfileView from "../views/ProfileView.js";
 interface Route {
 	path: string;
 	cache?: any;
@@ -64,6 +65,18 @@ export default class Router {
 				// Afficher la popup de register
 				if (!this.cache)
 					this.cache = new RegisterPopup("popup-container");
+				this.cache.show();
+			}
+		},
+		{
+			path: "/profile",
+			handler: function() {
+				// Revenir à la page précédente dans l'historique
+				window.history.back();
+
+				// Afficher la vue de profil
+				if (!this.cache)
+					this.cache = new ProfileView();
 				this.cache.show();
 			}
 		}
