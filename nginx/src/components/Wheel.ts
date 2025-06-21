@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 16:41:12 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/16 18:49:11 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/21 14:41:55 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,40 +36,12 @@ export default class Wheel {
 				this._router.navigate("/api-test");
 			},
 		},
-		// {
-		// 	label: "Play",
-		// 	icon: "🕹️",
-		// 	subMenu: [
-		// 		{
-		// 			label: "1v1",
-		// 			icon: "⚔️",
-		// 			onClick: () => {
-		// 				console.log("1v1 clicked");
-		// 			}
-		// 		},
-		// 		{
-		// 			label: "Tournament",
-		// 			icon: "🏆",
-		// 			onClick: () => {
-		// 				console.log("Tournament clicked");
-		// 			}
-		// 		}
-		// 	]
-		// },
-		// {
-		// 	label: "Profile",
-		// 	icon: "●",
-		// 	onClick: () => {
-		// 		console.log("Profile clicked");
-		// 	}
-		// },
-		// {
-		// 	label: "Settings",
-		// 	icon: "◐",
-		// 	onClick: () => {
-		// 		console.log("Settings clicked");
-		// 	}
-		// },
+		{
+			label: "Profile",
+			icon: "👤",
+			onClick: () => {
+			}
+		},
 		{
 			label: "Login",
 			icon: "🔑",
@@ -79,7 +51,6 @@ export default class Wheel {
 					icon: "→",
 					onClick: () => {
 						console.log("Sign In clicked");
-						// Cacher la wheel et naviguer vers login
 						this.hideWheel();
 						this._router.navigate("/login");
 					}
@@ -89,7 +60,6 @@ export default class Wheel {
 					icon: "+",
 					onClick: () => {
 						console.log("Register clicked");
-						// Cacher la wheel et naviguer vers register
 						this.hideWheel();
 						this._router.navigate("/register");
 					}
@@ -398,5 +368,4 @@ export default class Wheel {
 			svg.appendChild(backIndicator);
 		}
 	}
-
 }
