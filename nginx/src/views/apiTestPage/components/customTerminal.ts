@@ -13,14 +13,14 @@
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 
 export default class CustomTerminal {
-    private _container: HTMLElement;
+    private _container!: HTMLElement;
     private _outputElement!: HTMLElement;
     private static _instance: CustomTerminal | null = null;
     private static _originalConsoleLog: (...data: any[]) => void;
     private static _originalConsoleError: (...data: any[]) => void;
     private static _originalConsoleWarn: (...data: any[]) => void;
     private static _isConsoleOverridden: boolean = false;
-    private _keydownHandler: (event: KeyboardEvent) => void;
+    private _keydownHandler!: (event: KeyboardEvent) => void;
 
     constructor(containerId: string) {
         // If there's already an instance, just update its container and return
