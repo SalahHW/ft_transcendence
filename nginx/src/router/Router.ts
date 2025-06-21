@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:40:51 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/21 16:29:24 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/21 16:55:06 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,7 +52,7 @@ export default class Router {
 
 				// Afficher la popup de login
 				if (!this.cache)
-					this.cache = new LoginPopup("popup-container");
+					this.cache = new LoginPopup();
 				this.cache.show();
 			}
 		},
@@ -64,7 +64,7 @@ export default class Router {
 
 				// Afficher la popup de register
 				if (!this.cache)
-					this.cache = new RegisterPopup("popup-container");
+					this.cache = new RegisterPopup();
 				this.cache.show();
 			}
 		},
