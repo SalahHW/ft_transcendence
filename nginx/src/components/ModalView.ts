@@ -1,6 +1,7 @@
 export interface ModalViewOptions {
     width?: string;
     height?: string;
+    maxWidth?: string;
     contentContainerClasses?: string;
 }
 
@@ -27,11 +28,12 @@ export default class ModalView {
 
         const width = options?.width || 'auto';
         const height = options?.height || 'auto';
+        const maxWidth = options?.maxWidth || 'none';
         const contentClasses = options?.contentContainerClasses || '';
 
         this._element.innerHTML = /* HTML */`
 			<div class="modal-content-container bg-[#313131]/90 backdrop-blur-xl rounded-2xl shadow-2xl border-2 border-[#5A5A5A] ${contentClasses}"
-                 style="width: ${width}; height: ${height};">
+                 style="width: ${width}; height: ${height}; max-width: ${maxWidth};">
 				<!-- Content will be injected here by child classes -->
 			</div>
 		`;
