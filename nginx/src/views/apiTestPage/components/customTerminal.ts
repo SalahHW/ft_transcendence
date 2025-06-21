@@ -6,9 +6,11 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:42:23 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/28 01:09:33 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/22 12:00:00 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
+import { UI_THEME } from "../../../style/tailwindClasses.js";
 
 export default class CustomTerminal {
     private _container: HTMLElement;
@@ -111,18 +113,18 @@ export default class CustomTerminal {
 
     private _createTerminal(): void {
         this._container.innerHTML = /* HTML */`
-            <div class="custom-terminal flex flex-col h-full overflow-hidden rounded-lg bg-gray-900 text-gray-100">
-                <div class="custom-terminal-header flex justify-between items-center px-3 py-2 bg-gradient-to-r from-gray-800 to-gray-900 border-b border-gray-700">
+            <div class="custom-terminal ${UI_THEME.components.terminal.container}">
+                <div class="custom-terminal-header ${UI_THEME.components.terminal.header}">
                     <div class="flex items-center">
                         <span class="text-green-400 mr-2">❯</span>
                         <h3 class="m-0 font-mono font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">API Console</h3>
                     </div>
 
                     <div class="flex items-center space-x-2">
-                        <button id="terminal-clear-btn" class="bg-gray-700 text-gray-300 border-0 rounded px-2 py-1 text-xs cursor-pointer hover:bg-gray-600 transition-colors">Clear (Ctrl+L)</button>
+                        <button id="terminal-clear-btn" class="${UI_THEME.components.terminal.clearButton}">Clear (Ctrl+L)</button>
                     </div>
                 </div>
-                <div id="terminal-output" class="flex-1 p-3 overflow-y-auto font-mono text-sm leading-6"></div>
+                <div id="terminal-output" class="${UI_THEME.components.terminal.output}"></div>
             </div>
         `;
 
