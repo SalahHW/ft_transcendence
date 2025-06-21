@@ -18,6 +18,7 @@ import HomePage from "../views/homePage.js";
 import LoginPopup from "../components/LoginPopup.js";
 import RegisterPopup from "../components/RegisterPopup.js";
 import ProfileView from "../views/ProfileView.js";
+
 interface Route {
 	path: string;
 	cache?: any;
@@ -39,9 +40,13 @@ export default class Router {
 		{
 			path: "/api-test",
 			handler: function() {
+				// Revenir à la page précédente dans l'historique
+				window.history.back();
+
+				// Afficher la vue API test
 				if (!this.cache)
-					this.cache = new APITestPage("app-container");
-				this.cache.render();
+					this.cache = new APITestPage();
+				this.cache.show();
 			}
 		},
 		{

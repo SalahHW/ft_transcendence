@@ -33,6 +33,7 @@ export default class Wheel {
 			icon: "🔧",
 			onClick: () => {
 				console.log("API Test page clicked");
+				this.hideWheel();
 				this._router.navigate("/api-test");
 			},
 		},
@@ -40,6 +41,7 @@ export default class Wheel {
 			label: "Profile",
 			icon: "👤",
 			onClick: () => {
+				this.hideWheel();
 				this._router.navigate("/profile");
 			}
 		},
