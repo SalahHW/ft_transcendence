@@ -21,12 +21,17 @@ export const initializeDatabase = async () => {
     const userAvatarTableQuery = `
     CREATE TABLE IF NOT EXISTS user_avatar (
       user_id INTEGER PRIMARY KEY,
-      avatar_id INTEGER NOT NULL,
+      avatar_id INTEGER NOT NULL DEFAULT 1,
       FOREIGN KEY (avatar_id) REFERENCES avatars(id)
       );`
 
+    const defaultAvatarQuery = `
+    INSERT INTO avatars (id, image_url)
+    VALUES (1, '/avatars/default.png');`
+
     await database.exec(avatarTableQuery);
     await database.exec(userAvatarTableQuery);
+    await database.run(defaultAvatarQuery);
     
     console.log("Database initialized");
   } catch (error) {
