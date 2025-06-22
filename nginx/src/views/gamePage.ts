@@ -1,6 +1,7 @@
 import { COMMON_CLASSES } from "../style/tailwindClasses.js";
 import { buttonHTML } from "../components/button.js";
 import { updatePlayerNames, updateScoresUI, updateScoresUIVersus, updatePlayerNamesVersus, updateGameStatus } from "../game/playerUi/playerUi.js";
+import { removeSplashScreen } from "../game/ui/splashScreen.js";
 
 export default class GamePage {
 	private _container: HTMLElement;
@@ -118,6 +119,9 @@ export default class GamePage {
 
 	// **CRITICAL**: Cleanup method to remove event listeners
 	public cleanup(): void {
+		// Remove splash screen if it exists
+		removeSplashScreen();
+		
 		// Remove leave game button handler
 		if (this._leaveGameHandler) {
 			const leaveButton = document.getElementById("leave-game-button");

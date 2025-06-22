@@ -8,6 +8,7 @@ import { updatePlayerNames, updateScoresUI, updateScoresUIVersus, updatePlayerNa
 import { handleWaitingForPlayers } from '../ui/waitingStatusHandler.js';
 import { soundManager } from '../audio/soundManager.js';
 import { TournamentClientHandler } from '../tournament/tournamentClientHandler.js';
+import { showSplashScreen } from '../ui/splashScreen.js';
 
 interface PlayerData {
     id: string;
@@ -381,6 +382,25 @@ export function initializeGame(playerId: string): void {
             player1Name = opponentName || 'Player 1';
             player2Name = playerName || 'Player 2';
         }
+
+        // Get player names for splash screen (from current player's perspective)
+        const currentPlayerName = playerName || 'You';
+        const opponentDisplayName = opponentName || 'Opponent';
+        
+        // 🎬 Show splash screen BEFORE creating any game elements
+        console.log('🎬 Showing splash screen before game starts...');
+        updateGameStatus('Preparing match...');
+        
+        try {
+            // Show splash screen for 3 seconds
+            await showSplashScreen(currentPlayerName, opponentDisplayName, 3000);
+            console.log('🎬 Splash screen completed, starting game initialization...');
+        } catch (error) {
+            console.error('Error showing splash screen:', error);
+            // Continue with game initialization even if splash screen fails
+        }
+        
+        // NOW create the game elements AFTER splash screen
 
         // Create new map (should always be fresh for tournament games)
         if (!map) {

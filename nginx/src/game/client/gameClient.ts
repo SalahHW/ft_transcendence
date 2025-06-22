@@ -16,6 +16,7 @@ import { playerPaddle } from '../player/player.js';
 import { Ball } from '../ball/ball.js';
 import { handleWaitingForPlayers } from '../ui/waitingStatusHandler.js';
 import { TournamentClientHandler } from '../tournament/tournamentClientHandler.js';
+import { showSplashScreen } from '../ui/splashScreen.js';
 
 export class GameClient {
     private clientConnection: webSocketClient | null = null;
@@ -148,6 +149,25 @@ export class GameClient {
         this.isGameLoopRunning = false;
         
         this.roomId = data.roomId;
+        
+        // Get player names for splash screen
+        const currentPlayerName = data.playerName || 'You';
+        const opponentName = data.opponentName || 'Opponent';
+        
+        // 🎬 Show splash screen BEFORE creating any game elements
+        console.log('🎬 Showing splash screen before game starts...');
+        this.updateGameStatus('Preparing match...');
+        
+        try {
+            // Show splash screen for 3 seconds
+            await showSplashScreen(currentPlayerName, opponentName, 3000);
+            console.log('🎬 Splash screen completed, starting game initialization...');
+        } catch (error) {
+            console.error('Error showing splash screen:', error);
+            // Continue with game initialization even if splash screen fails
+        }
+        
+        // NOW create the game elements AFTER splash screen
         
         // Create the game map if it doesn't exist
         if (!this.map) {
