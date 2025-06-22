@@ -305,7 +305,27 @@ export class GameEngine {
 
     console.log(`Attempting ball update for room ${roomId}, attempt ${attempt}`);
     if (room.players.length === 2) {
-      this.sendBallUpdateForced(roomId);
+      // 🎬 Check if this is a tournament room - if so, add splash screen delay
+      const isTournamentRoom = room.metadata?.isTournament === true;
+      
+      if (isTournamentRoom) {
+        console.log(`🏆 Tournament room ${roomId} detected - adding splash screen delay before ball update`);
+        
+        // Add the same delay as in MessageRouter for tournament games
+        setTimeout(() => {
+          // Double-check that room still exists and is valid
+          const roomCheck = this.stateManager.getRoom(roomId);
+          if (roomCheck && !roomCheck.ballUpdateSent) {
+            console.log(`🏆 Sending ballUpdate for tournament room ${roomId} after splash screen delay`);
+            this.sendBallUpdateForced(roomId);
+          } else {
+            console.log(`🏆 Skipping ballUpdate for tournament room ${roomId} - room state changed or ball already sent`);
+          }
+        }, 3500); // 3000ms splash screen + 500ms buffer
+      } else {
+        // Regular 1v1 room - immediate ball update (will wait for animationComplete)
+        this.sendBallUpdateForced(roomId);
+      }
     } else {
       setTimeout(() => this._attemptBallUpdate(roomId, attempt + 1), 100 * attempt);
     }

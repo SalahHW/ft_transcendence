@@ -57,8 +57,20 @@ export class MessageRouter {
     const room = gameStateManager.getRoom(roomId);
     
     if (statusSize === 2 && room?.ready) {
-      console.log(`Both players completed animations in room ${roomId}, sending ballUpdate`);
-      gameEngine.sendBallUpdateForced(roomId);
+      console.log(`Both players completed animations in room ${roomId}, scheduling ballUpdate after splash screen delay`);
+      
+      // 🎬 Add delay to ensure splash screen completes on both clients
+      // The splash screen shows for 3000ms, so we add a small buffer
+      setTimeout(() => {
+        // Double-check that room still exists and is valid
+        const roomCheck = gameStateManager.getRoom(roomId);
+        if (roomCheck && roomCheck.ready && !roomCheck.ballUpdateSent) {
+          console.log(`Sending ballUpdate for room ${roomId} after splash screen delay`);
+          gameEngine.sendBallUpdateForced(roomId);
+        } else {
+          console.log(`Skipping ballUpdate for room ${roomId} - room state changed or ball already sent`);
+        }
+      }, 3500); // 3000ms splash screen + 500ms buffer
     }
   }
 
