@@ -1,0 +1,16 @@
+{
+  "name": "avatars-service",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "NODE_ENV=dev node src/app.js"
+  },
+  "dependencies": {
+    "fastify": "^5.3.3",
+    "fastify-plugin": "^5.0.1",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7",
+    "@fastify/cookie": "^11.0.2"
+  }
+}
