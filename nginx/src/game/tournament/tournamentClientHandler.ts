@@ -1,6 +1,7 @@
 import { gameMap } from '../map/gameMap.js';
 import { Ball } from '../ball/ball.js';
 import { playerPaddle } from '../player/player.js';
+import { showSemiFinalSplashScreen } from '../utils/splashScreenUtils.js';
 
 /**
  * Tournament Client Handler
@@ -147,6 +148,35 @@ export class TournamentClientHandler {
         player2.setZ(0);
         
         console.log('✅ Paddle positions reset to center (Z=0) for tournament game');
+    }
+
+    /**
+     * Handle semi-final game end and show appropriate splash screen
+     * @param gameEndData - Game result data
+     * @param localPlayerId - Current player's ID
+     * @param opponentName - Opponent's name
+     * @returns Promise that resolves when splash screen is complete
+     */
+    static async handleSemiFinalGameEnd(
+        gameEndData: any,
+        localPlayerId: string | null,
+        opponentName: string
+    ): Promise<void> {
+        console.log('🏆 DEBUG: handleSemiFinalGameEnd called with:', { gameEndData, localPlayerId, opponentName });
+        
+        const isWinner = gameEndData.winner.id === localPlayerId;
+        const score = `${gameEndData.winner.score}-${gameEndData.loser.score}`;
+        
+        console.log('🏆 DEBUG: Calculated values:', { isWinner, score });
+        console.log(`🏆 Semi-final ended: ${isWinner ? 'WIN' : 'LOSE'} vs ${opponentName}`);
+        
+        try {
+            console.log('🏆 DEBUG: About to call showSemiFinalSplashScreen...');
+            await showSemiFinalSplashScreen(isWinner, opponentName, score, 5000);
+            console.log('🏆 Semi-final splash screen completed');
+        } catch (error) {
+            console.error('🏆 ERROR: Error showing semi-final splash screen:', error);
+        }
     }
 
     /**
