@@ -9,6 +9,7 @@ import { handleWaitingForPlayers } from '../ui/waitingStatusHandler.js';
 import { soundManager } from '../audio/soundManager.js';
 import { TournamentClientHandler } from '../tournament/tournamentClientHandler.js';
 import { showSplashScreen } from '../ui/splashScreen.js';
+import { showGameEndSplashScreen, GameEndData } from '../utils/splashScreenUtils.js';
 
 interface PlayerData {
     id: string;
@@ -20,26 +21,7 @@ interface ApiResponse {
     data: PlayerData[];
 }
 
-interface GameEndData {
-    winner: {
-        id: string;
-        username: string;
-        score: number;
-    };
-    loser: {
-        id: string;
-        username: string;
-        score: number;
-    };
-    roomId: string;
-    matchDuration: number;
-    gameStats: {
-        totalRebounds: number;
-        forfeit?: boolean;
-        reason?: 'player_left' | 'disconnect';
-    };
-    matchEndTime: Date;
-}
+
 
 const serverPort = 8081; // Game service port (WebSocket and API)
 let clientConnection: webSocketClient | null = null;
@@ -86,6 +68,8 @@ function handleSoundEvent(msg: any): void {
             console.warn('Unknown sound event:', sound);
     }
 }
+
+
 
 // Function to check available players
 async function checkAvailablePlayers(): Promise<PlayerData[]> {
@@ -249,7 +233,7 @@ export function initializeGame(playerId: string): void {
             
             updateScoresUIVersus(currentPlayerScore, opponentScore, currentPlayer.playerName, opponent.playerName);
             
-            console.log(`Score update: ${currentPlayer.playerName}: ${currentPlayerScore}, ${opponent.playerName}: ${opponentScore}`);
+
         }
     });
 
@@ -258,36 +242,7 @@ export function initializeGame(playerId: string): void {
         const gameEndData = msg as GameEndData;
         isGameOver = true;
         
-        console.log('='.repeat(50));
-        console.log('GAME OVER!');
-        console.log('='.repeat(50));
-        console.log(`Winner: ${gameEndData.winner.username} (${gameEndData.winner.score})`);
-        console.log(`Loser: ${gameEndData.loser.username} (${gameEndData.loser.score})`);
-        console.log(`Room: ${gameEndData.roomId}`);
-        console.log(`Match Duration: ${gameEndData.matchDuration}ms`);
-        console.log(`Total Rebounds: ${gameEndData.gameStats.totalRebounds}`);
-        console.log(`Ended at: ${gameEndData.matchEndTime}`);
-        console.log('='.repeat(50));
-        
-        // Update UI to show game results
-        const isWinner = gameEndData.winner.id === localPlayerId;
-        let resultText;
-        
-        if (gameEndData.gameStats?.reason === 'player_left') {
-            resultText = isWinner 
-                ? `🎉 YOU WON! Your opponent left the game.`
-                : `😔 You forfeited the game.`;
-        } else if (gameEndData.gameStats?.reason === 'disconnect') {
-            resultText = isWinner 
-                ? `🎉 YOU WON! Your opponent disconnected.`
-                : `😔 You disconnected from the game.`;
-        } else {
-            resultText = isWinner 
-                ? `🎉 YOU WON! Final Score: ${gameEndData.winner.score}-${gameEndData.loser.score}`
-                : `😔 You Lost. Final Score: ${gameEndData.winner.score}-${gameEndData.loser.score}`;
-        }
-        
-        updateGameStatus(resultText);
+
         
         // Stop the game loop and clean up
         if (isGameLoopRunning && map?.getEngine) {
@@ -295,12 +250,11 @@ export function initializeGame(playerId: string): void {
             isGameLoopRunning = false;
         }
         
-        setTimeout(() => {
-            cleanup(); // Clean up resources first
-            setTimeout(() => {
-                window.history.back();
-            }, 25);
-        }, 50);
+        // Show win/loss splash screen with sound BEFORE cleanup (while localPlayerId is still valid)
+        showGameEndSplashScreen(gameEndData, localPlayerId);
+        
+        // Clean up resources AFTER showing splash screen
+        cleanup();
     });
 
     // Add handler for waiting status and tournament advancement
@@ -310,7 +264,7 @@ export function initializeGame(playerId: string): void {
             if (message.type === 'waitingForPlayers') {
                 handleWaitingForPlayers(message, updateGameStatus);
             } else if (message.type === 'tournamentAdvancement') {
-                console.log('🏆 Tournament advancement received:', message);
+
                 updateGameStatus(message.message || 'Tournament advancement...');
                 
                 // Use TournamentClientHandler for proper advancement handling
@@ -344,7 +298,7 @@ export function initializeGame(playerId: string): void {
                     player1 = null;
                     player2 = null;
                     
-                    console.log('🏆 Game state completely reset for final match');
+
                 }
             } else if (message.type === 'hideGameElements') {
                 // Handle semi-final completion element hiding
@@ -360,7 +314,7 @@ export function initializeGame(playerId: string): void {
     });
 
     clientConnection.onInit(async ({ playerId, roomId: rId, role, opponentId, playerName, opponentName }) => {
-        console.log('Received init:', { playerId, roomId: rId, role, opponentId, playerName, opponentName });
+
         initTime = Date.now();
         roomId = rId || null;
         localPlayerId = playerId || null;
@@ -387,14 +341,12 @@ export function initializeGame(playerId: string): void {
         const currentPlayerName = playerName || 'You';
         const opponentDisplayName = opponentName || 'Opponent';
         
-        // 🎬 Show splash screen BEFORE creating any game elements
-        console.log('🎬 Showing splash screen before game starts...');
+        // Show splash screen BEFORE creating any game elements
         updateGameStatus('Preparing match...');
         
         try {
             // Show splash screen for 3 seconds
             await showSplashScreen(currentPlayerName, opponentDisplayName, 3000);
-            console.log('🎬 Splash screen completed, starting game initialization...');
         } catch (error) {
             console.error('Error showing splash screen:', error);
             // Continue with game initialization even if splash screen fails
@@ -406,7 +358,6 @@ export function initializeGame(playerId: string): void {
         if (!map) {
             try {
                 map = new gameMap();
-                console.log('Creating map...');
                 map.createMap();
                 map.createPlayground();
                 if (!map.getScene) {
