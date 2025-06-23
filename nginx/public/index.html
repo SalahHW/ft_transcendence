@@ -2,12 +2,143 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ft_transcendence</title>
-    <link href="style/style.css" rel="stylesheet" />
+    <title>Wallet Auth Debug</title>
   </head>
   <body>
-    <div id="app-container"></div>
-    <script type="module" src="./js/main.js"></script>
+    <h1>Register with Wallet</h1>
+    <label>Username:</label><br />
+    <input id="register-username" type="text" /><br /><br />
+    <button onclick="register()">Register</button>
+
+    <h1>Login with Wallet</h1>
+    <button onclick="login()">Login</button>
+
+    <p id="status"></p>
+    <pre id="log"></pre>
+
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script>
+      async function register() {
+        const username = document
+          .getElementById("register-username")
+          .value.trim();
+        const status = document.getElementById("status");
+        const log = document.getElementById("log");
+        log.textContent = "";
+
+        if (!username) {
+          status.textContent = "❌ Username is required";
+          return;
+        }
+
+        if (!window.ethereum) {
+          status.textContent = "❌ MetaMask not found";
+          return;
+        }
+
+        try {
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          await provider.send("eth_requestAccounts", []);
+          const signer = provider.getSigner();
+          const walletAddress = await signer.getAddress();
+          const message = "Register with wallet: " + walletAddress;
+          const signature = await signer.signMessage(message);
+
+          log.textContent += "Wallet: " + walletAddress + "\n";
+          log.textContent += "Message: " + message + "\n";
+          log.textContent += "Signature: " + signature + "\n";
+
+          const body = {
+            username,
+            walletAddress,
+            message,
+            signature,
+          };
+
+          log.textContent += "Sending request to backend...\n";
+
+          const response = await fetch(
+            "https://elsalmajori.games:8443/auth/wallet/register",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify(body),
+            }
+          );
+
+          const result = await response.json().catch(() => ({}));
+          log.textContent +=
+            "Response: " + JSON.stringify(result, null, 2) + "\n";
+
+          if (response.ok) {
+            status.textContent =
+              "✅ " + (result.message || "Registration successful");
+          } else {
+            status.textContent =
+              "❌ " + (result.error || "Registration failed");
+          }
+        } catch (err) {
+          status.textContent = "💥 Error: " + err.message;
+          log.textContent += "Exception: " + err.message + "\n";
+        }
+      }
+
+      async function login() {
+        const status = document.getElementById("status");
+        const log = document.getElementById("log");
+        log.textContent = "";
+
+        if (!window.ethereum) {
+          status.textContent = "❌ MetaMask not found";
+          return;
+        }
+
+        try {
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          await provider.send("eth_requestAccounts", []);
+          const signer = provider.getSigner();
+          const walletAddress = await signer.getAddress();
+
+          const message = "Login with wallet: " + walletAddress;
+          const signature = await signer.signMessage(message);
+
+          log.textContent += "Wallet: " + walletAddress + "\n";
+          log.textContent += "Message: " + message + "\n";
+          log.textContent += "Signature: " + signature + "\n";
+
+          const body = {
+            walletAddress,
+            message,
+            signature,
+          };
+
+          log.textContent += "Sending login request...\n";
+
+          const response = await fetch(
+            "https://elsalmajori.games:8443/auth/wallet/login",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify(body),
+            }
+          );
+
+          const result = await response.json().catch(() => ({}));
+          log.textContent +=
+            "Response: " + JSON.stringify(result, null, 2) + "\n";
+
+          if (response.ok) {
+            status.textContent = "✅ " + (result.message || "Login successful");
+          } else {
+            status.textContent = "❌ " + (result.error || "Login failed");
+          }
+        } catch (err) {
+          status.textContent = "💥 Error: " + err.message;
+          log.textContent += "Exception: " + err.message + "\n";
+        }
+      }
+    </script>
   </body>
 </html>

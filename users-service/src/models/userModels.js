@@ -1,3 +1,4 @@
+import authenticationRoutes from "../routes/authenticationRoutes.js";
 import { database } from "./database.js";
 import { translateSqliteError } from "./errors/translateSqliteError.js";
 
@@ -14,11 +15,14 @@ export const createUser = async (user) => {
       password,
       email,
       wallet,
+      authenticationMethod,
     ]);
     return {
       id: result.lastID,
       username,
       email,
+      wallet,
+      authenticationMethod: "credentials",
     };
   } catch (error) {
     throw translateSqliteError(error);

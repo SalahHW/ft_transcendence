@@ -30,6 +30,7 @@ export async function createUser(request, reply) {
       password: hashedPassword,
       email: emailLower,
       wallet: newWallet,
+      authenticationMethod: "credentials",
     });
 
     return reply.code(201).send(newUser);

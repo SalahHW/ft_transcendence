@@ -4,6 +4,7 @@ export default async function (fastify, opts) {
   fastify.post(
     "/add-player",
     {
+  //    preHandler: fastify.verifyJWT,
       schema: {
         body: {
           type: "object",
