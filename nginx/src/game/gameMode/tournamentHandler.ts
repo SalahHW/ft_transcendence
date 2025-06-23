@@ -1,5 +1,5 @@
 
-import GamePage from "../../views/gamePage.js";
+import GamePage from "../../views/gamePages/gamePage.js";
 import { registerCurrentUserForGame } from "../utils/fetch.js";
 
 /**
