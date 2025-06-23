@@ -44,6 +44,27 @@ let initTime: number | null = null;
 let syncCount: number = 0;
 let ballUpdateReceived: boolean = false;
 let isGameLoopRunning: boolean = false;
+let isShowingSemiFinalSplash: boolean = false;
+let queuedMessages: any[] = [];
+
+// Function to process queued messages after semi-final splash
+async function processQueuedMessages(): Promise<void> {
+    console.log('🏆 DEBUG: Processing queued messages:', queuedMessages.length);
+    while (queuedMessages.length > 0) {
+        const message = queuedMessages.shift();
+        console.log('🏆 DEBUG: Processing queued message:', message.type);
+        
+        if (message.type === 'waitingForPlayers') {
+            handleWaitingForPlayers(message, updateGameStatus);
+        } else if (message.type === 'init') {
+            // Re-trigger init handler - this will be handled by the onInit callback already set up
+            console.log('🏆 DEBUG: Init message will be processed when connection is ready');
+        }
+        
+        // Small delay between processing messages to avoid overwhelming
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+}
 
 // Function to handle sound events
 function handleSoundEvent(msg: any): void {
@@ -238,11 +259,15 @@ export function initializeGame(playerId: string): void {
     });
 
     // Add game end handler
-    clientConnection.onGameEnd((msg: any) => {
+    clientConnection.onGameEnd(async (msg: any) => {
+        console.log('🏆 DEBUG: onGameEnd handler triggered!', msg);
         const gameEndData = msg as GameEndData;
         isGameOver = true;
         
-
+        // DEBUG: Log the entire game end data to understand the structure
+        console.log('🏆 DEBUG: Game end data received:', JSON.stringify(gameEndData, null, 2));
+        console.log('🏆 DEBUG: Current roomId:', roomId);
+        console.log('🏆 DEBUG: localPlayerId:', localPlayerId);
         
         // Stop the game loop and clean up
         if (isGameLoopRunning && map?.getEngine) {
@@ -250,39 +275,140 @@ export function initializeGame(playerId: string): void {
             isGameLoopRunning = false;
         }
         
-        // Show win/loss splash screen with sound BEFORE cleanup (while localPlayerId is still valid)
-        showGameEndSplashScreen(gameEndData, localPlayerId);
+        // Check if this is a semi-final match - improved detection
+        const isSemiFinal = gameEndData.matchType === 'semi-final' || 
+                           gameEndData.gameStats?.matchType === 'semi-final' ||
+                           roomId?.includes('semi') ||
+                           gameEndData.roomId?.includes('semi') ||
+                           roomId?.includes('Semi') ||
+                           gameEndData.roomId?.includes('Semi') ||
+                           // Also check for tournament-related indicators
+                           roomId?.includes('tournament') ||
+                           gameEndData.roomId?.includes('tournament');
         
-        // Clean up resources AFTER showing splash screen
-        cleanup();
+        console.log('🏆 DEBUG: isSemiFinal detection result:', isSemiFinal);
+        console.log('🏆 DEBUG: Detection checks:', {
+            'gameEndData.matchType': gameEndData.matchType,
+            'gameEndData.gameStats?.matchType': gameEndData.gameStats?.matchType,
+            'roomId?.includes("semi")': roomId?.includes('semi'),
+            'gameEndData.roomId?.includes("semi")': gameEndData.roomId?.includes('semi'),
+            'roomId?.includes("Semi")': roomId?.includes('Semi'),
+            'gameEndData.roomId?.includes("Semi")': gameEndData.roomId?.includes('Semi'),
+            'roomId?.includes("tournament")': roomId?.includes('tournament'),
+            'gameEndData.roomId?.includes("tournament")': gameEndData.roomId?.includes('tournament')
+        });
+        
+        if (isSemiFinal) {
+            // For semi-finals, show tournament-specific splash screen as overlay
+            console.log('🏆 Semi-final match detected, showing tournament splash screen');
+            const opponentName = gameEndData.winner.id === localPlayerId ? 
+                                gameEndData.loser.username : 
+                                gameEndData.winner.username;
+            
+            console.log('🏆 DEBUG: Opponent name:', opponentName);
+            console.log('🏆 DEBUG: About to call TournamentClientHandler.handleSemiFinalGameEnd');
+            
+            try {
+                await TournamentClientHandler.handleSemiFinalGameEnd(gameEndData, localPlayerId, opponentName);
+                console.log('🏆 DEBUG: TournamentClientHandler.handleSemiFinalGameEnd completed successfully');
+            } catch (error) {
+                console.error('🏆 ERROR: Error showing semi-final splash:', error);
+            }
+            
+            // Don't cleanup immediately for tournament matches - let tournament system handle it
+        } else {
+            // Regular 1v1 match - show regular splash screen and cleanup
+            console.log('🏆 DEBUG: Regular match detected, showing normal splash screen');
+            showGameEndSplashScreen(gameEndData, localPlayerId);
+            cleanup();
+        }
     });
 
     // Add handler for waiting status and tournament advancement
-    clientConnection.socket.addEventListener('message', (event: MessageEvent) => {
+    clientConnection.socket.addEventListener('message', async (event: MessageEvent) => {
         try {
             const message = JSON.parse(event.data);
+            
+            // 🏆 DEBUG: Log ALL messages to see what's happening during semi-finals
+            console.log('🏆 DEBUG: WebSocket message received:', message.type, message);
+            
+            // 🏆 QUEUE MANAGEMENT: If showing semi-final splash, queue non-critical messages
+            if (isShowingSemiFinalSplash && (message.type === 'init' || message.type === 'waitingForPlayers')) {
+                console.log('🏆 DEBUG: Queueing message during semi-final splash:', message.type);
+                queuedMessages.push(message);
+                return;
+            }
+            
             if (message.type === 'waitingForPlayers') {
                 handleWaitingForPlayers(message, updateGameStatus);
             } else if (message.type === 'tournamentAdvancement') {
 
                 updateGameStatus(message.message || 'Tournament advancement...');
                 
-                // Use TournamentClientHandler for proper advancement handling
-                TournamentClientHandler.handleTournamentAdvancement(
-                    message,
-                    updateGameStatus,
-                    {
-                        isGameOver,
-                        isGameLoopRunning,
-                        map,
-                        ball,
-                        player1,
-                        player2
-                    }
-                );
-                
-                // Reset game state for finals
+                // 🏆 SEMI-FINAL DETECTION: Check if this is the end of a semi-final
                 if (message.status === 'transferred_to_final') {
+                    console.log('🏆 DEBUG: Semi-final ended detected in tournamentAdvancement:', message);
+                    
+                    // Show semi-final splash screen FIRST, then handle tournament advancement
+                    const isWinner = message.playerType === 'winner';
+                    const opponentName = message.opponentName || 'Opponent'; // Default if not provided
+                    const score = message.score || ''; // Default if not provided
+                    
+                    console.log('🏆 DEBUG: Semi-final result - isWinner:', isWinner, 'opponentName:', opponentName);
+                    
+                    // Show splash screen and WAIT for it to complete before tournament advancement
+                    try {
+                        console.log('🏆 DEBUG: Setting semi-final splash flag and showing splash screen...');
+                        isShowingSemiFinalSplash = true; // Block incoming messages
+                        
+                        await TournamentClientHandler.handleSemiFinalGameEnd(
+                            {
+                                winner: { 
+                                    id: isWinner ? localPlayerId : 'opponent',
+                                    username: isWinner ? 'You' : opponentName,
+                                    score: 0 // We'll use message.score if available
+                                },
+                                loser: {
+                                    id: !isWinner ? localPlayerId : 'opponent', 
+                                    username: !isWinner ? 'You' : opponentName,
+                                    score: 0
+                                },
+                                roomId: roomId || '',
+                                matchDuration: 0,
+                                gameStats: { totalRebounds: 0 },
+                                matchEndTime: new Date()
+                            },
+                            localPlayerId,
+                            opponentName
+                        );
+                        
+                        console.log('🏆 DEBUG: Semi-final splash screen completed successfully');
+                        isShowingSemiFinalSplash = false; // Allow new messages
+                        
+                        // Process any queued messages that arrived during splash
+                        await processQueuedMessages();
+                        
+                    } catch (error) {
+                        console.error('🏆 ERROR: Failed to show semi-final splash:', error);
+                        isShowingSemiFinalSplash = false; // Reset flag on error
+                    }
+                    
+                    // NOW handle tournament advancement after splash screen is done
+                    console.log('🏆 DEBUG: Semi-final splash complete, now handling tournament advancement...');
+                    TournamentClientHandler.handleTournamentAdvancement(
+                        message,
+                        updateGameStatus,
+                        {
+                            isGameOver,
+                            isGameLoopRunning,
+                            map,
+                            ball,
+                            player1,
+                            player2
+                        }
+                    );
+                    
+                    // Reset game state for finals
                     // ⭐ CRITICAL: Reset all game state for final match
                     isGameOver = false; // Allow new game to start
                     isGameLoopRunning = false;
@@ -297,8 +423,20 @@ export function initializeGame(playerId: string): void {
                     ball = null;
                     player1 = null;
                     player2 = null;
-                    
-
+                } else {
+                    // For non-semi-final tournament advancement, handle immediately
+                    TournamentClientHandler.handleTournamentAdvancement(
+                        message,
+                        updateGameStatus,
+                        {
+                            isGameOver,
+                            isGameLoopRunning,
+                            map,
+                            ball,
+                            player1,
+                            player2
+                        }
+                    );
                 }
             } else if (message.type === 'hideGameElements') {
                 // Handle semi-final completion element hiding
@@ -307,6 +445,33 @@ export function initializeGame(playerId: string): void {
                     updateGameStatus,
                     { ball, player1, player2 }
                 );
+            } else if (message.type === 'gameEnd' || message.type === 'matchEnd' || message.type === 'tournamentGameEnd') {
+                // 🏆 DEBUG: Catch different types of game end messages
+                console.log('🏆 DEBUG: Game end message detected in message listener:', message.type, message);
+                
+                // Handle semi-final game end here if not caught by onGameEnd
+                const gameEndData = message;
+                const isSemiFinal = gameEndData.matchType === 'semi-final' || 
+                                   gameEndData.gameStats?.matchType === 'semi-final' ||
+                                   roomId?.includes('semi') ||
+                                   gameEndData.roomId?.includes('semi') ||
+                                   roomId?.includes('Semi') ||
+                                   gameEndData.roomId?.includes('Semi') ||
+                                   roomId?.includes('tournament') ||
+                                   gameEndData.roomId?.includes('tournament');
+                
+                console.log('🏆 DEBUG: Semi-final detection in message listener:', isSemiFinal);
+                
+                if (isSemiFinal) {
+                    console.log('🏆 DEBUG: Handling semi-final end in message listener');
+                    const opponentName = gameEndData.winner?.id === localPlayerId ? 
+                                        gameEndData.loser?.username : 
+                                        gameEndData.winner?.username;
+                    
+                    if (opponentName) {
+                        TournamentClientHandler.handleSemiFinalGameEnd(gameEndData, localPlayerId, opponentName);
+                    }
+                }
             }
         } catch (error) {
             console.error('Error parsing message:', error);
