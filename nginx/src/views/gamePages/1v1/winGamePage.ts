@@ -88,7 +88,7 @@ export default class WinGamePage {
     }
 
     private startCountdown(): void {
-        let countdown = 4;
+        let countdown = 5;
         const countdownElement = document.getElementById('countdown');
         
         this.countdownTimer = window.setInterval(() => {
