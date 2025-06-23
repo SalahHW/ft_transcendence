@@ -2,11 +2,9 @@ import { Ball } from '../ball/ball.js';
 import * as BABYLON from '@babylonjs/core';
 import { reportMatchResultsToAPI } from '../server/api.js';
 import { gameStateManager } from './GameStateManager.js';
-import { RoomUtils, WebSocketUtils } from '../utils/helpers.js';
-import { roomManager } from '../room/RoomManager.js';
+import {  WebSocketUtils } from '../utils/helpers.js';
 import { roomMatchmaker } from '../room/RoomMatchmaker.js';
 import { createWaitingMessage } from '../player/playerStatus.js';
-import { tournamentManager } from '../room/tournamentManager.js';
 import { TournamentGameHandler } from '../tournament/tournamentGameHandler.js';
 
 /**
