@@ -14,7 +14,9 @@ class SoundManager {
         const soundFiles = {
             paddleHit: 'http://localhost:8081/sounds/matchSounds/pop.mp3',
             wallHit: 'http://localhost:8081/sounds/matchSounds/laser_low.mp3',
-            lostPoint: 'http://localhost:8081/sounds/matchSounds/lost_point.mp3'
+            lostPoint: 'http://localhost:8081/sounds/matchSounds/lost_point.mp3',
+            winnerSound: 'http://localhost:8081/sounds/endGameSounds/winner_sound.mp3',
+            loserSound: 'http://localhost:8081/sounds/endGameSounds/looser_sound.mp3'
         };
 
         console.log('Preloading sounds...');
