@@ -11,6 +11,8 @@
     "fastify-plugin": "^5.0.1",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
-    "@fastify/cookie": "^11.0.2"
+    "file-type":"^21.0.0",
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/multipart": "^9.0.3"
   }
 }
