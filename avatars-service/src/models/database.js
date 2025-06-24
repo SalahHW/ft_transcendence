@@ -16,10 +16,10 @@ export const initializeDatabase = async () => {
     CREATE TABLE IF NOT EXISTS avatars (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER UNIQUE NOT NULL,
-    avatar_url TEXT UNIQUE NOT NULL)`
+    avatar_url TEXT UNIQUE NOT NULL);`;
 
     await database.exec(query);
-    
+
     console.log("Database initialized");
   } catch (error) {
     console.error("Database initialization failed:", error.message);
