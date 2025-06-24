@@ -1,5 +1,6 @@
 import * as avatarModels from "../models/avatarModels.js";
 import { saveUploadedAvatar } from "../utils/uploadUtils.js";
+import { deleteFile } from "../utils/fileUtils.js";
 import path from "path";
 import { AVATARS_PATH } from "../config/config.js";
 import fs from "fs";
@@ -31,9 +32,7 @@ export const createAvatar = async (request, reply) => {
   } catch (err) {
     if (fileName) {
       const filePath = path.join(AVATARS_PATH, fileName);
-      if (fs.existsSync(filePath)) {
-        await fs.promises.unlink(filePath).catch(() => {});
-      }
+      await deleteFile(filePath);
     }
     return reply.code(400).send({
       error: err.message,
@@ -84,9 +83,7 @@ export const updateAvatar = async (request, reply) => {
     }
 
     const oldFilePath = path.join(AVATARS_PATH, avatar.avatar_name);
-    if (fs.existsSync(oldFilePath)) {
-      await fs.promises.unlink(oldFilePath).catch(() => {});
-    }
+    await deleteFile(oldFilePath);
 
     const { fileName } = await saveUploadedAvatar(fileData);
     await avatarModels.updateAvatar(userId, fileName);
@@ -110,9 +107,7 @@ export const deleteAvatar = async (request, reply) => {
     }
 
     const filePath = path.join(AVATARS_PATH, avatar.avatar_name);
-    if (fs.existsSync(filePath)) {
-      await fs.promises.unlink(filePath).catch(() => {});
-    }
+    await deleteFile(filePath);
 
     await avatarModels.deleteAvatar(userId);
 
