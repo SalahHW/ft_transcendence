@@ -1,7 +1,10 @@
 import * as avatarModels from "../models/avatarModels.js";
 import { saveUploadedAvatar } from "../utils/uploadUtils.js";
+import path from "path";
+import { AVATARS_PATH } from "../config/config.js";
+import fs from "fs";
 
-export const uploadAvatar = async (request, reply) => {
+export const createAvatar = async (request, reply) => {
   try {
     if (!request.isMultipart()) {
       return reply
@@ -33,9 +36,28 @@ export const uploadAvatar = async (request, reply) => {
   }
 };
 
-export const createAvatar = async (request, reply) => {};
+export const readAvatar = async (request, reply) => {
+  try {
+    const userId = request.params.id;
+    const avatar = await avatarModels.readAvatar(userId);
 
-export const readAvatar = async (request, reply) => {};
+    if (!avatar || !avatar.avatar_url) {
+      return reply.code(404).send({ error: "Avatar not found" });
+    }
+
+    const filePath = path.join(AVATARS_PATH, avatar.avatar_url);
+
+    if (!fs.existsSync(filePath)) {
+      return reply.code(404).send({ error: "Avatar file not found" });
+    }
+
+    return reply.sendFile(avatar.avatar_url, AVATARS_PATH);
+  } catch (err) {
+    return reply.code(400).send({
+      error: err.message,
+    });
+  }
+};
 
 export const updateAvatar = async (request, reply) => {};
 
