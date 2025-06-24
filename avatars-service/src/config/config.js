@@ -1,7 +1,7 @@
 export const isDev = process.env.NODE_ENV === "dev";
 
 const devPort = 3001;
-const devDBPath = "./database/avatar.db";
+const devDBPath = "./database/avatars.db";
 const devAvatarDir = "./avatars";
 
 export const PORT = isDev ? devPort : process.env.AVATARS_SERVICE_PORT;
