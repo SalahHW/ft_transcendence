@@ -6,27 +6,27 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:42:34 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/28 16:14:51 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/23 16:04:40 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-import UsersApi from "../../../api/user.js";
+import AuthNanoService from "../../../auth/AuthNanoService.js";
 import { buttonHTML } from "../../../components/button.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 
 export default class LoginLogoutUserForm {
 	private _container: HTMLElement;
-	private _userService: UsersApi;
+	private _authService: AuthNanoService;
 
 	constructor(containerId: string) {
 		this._container = document.getElementById(containerId) as HTMLElement;
-		this._userService = new UsersApi();
+		this._authService = AuthNanoService.getInstance();
 	}
 
 	async render(): Promise<void> {
 		try {
-			const response = await this._userService.getCurrentUser();
-			if (response)
+			const isLoggedIn = await this._authService.isLoggedIn();
+			if (isLoggedIn)
 				this._renderLogoutForm();
 			else
 				this._renderLoginForm();
@@ -75,8 +75,9 @@ export default class LoginLogoutUserForm {
 			}
 
 			try {
-				const response = await this._userService.login(usernameInput.value, passwordInput.value);
+				const response = await this._authService.login(usernameInput.value, passwordInput.value);
 				console.log(response);
+				this.render();
 			}
 			catch (error) {
 				if (error instanceof Error)
@@ -107,7 +108,16 @@ export default class LoginLogoutUserForm {
 		form.addEventListener("submit", async (element) => {
 			element.preventDefault();
 
-			// await this._userService.logout();
+			try {
+				await this._authService.logout();
+				this.render();
+			} catch (error) {
+				if (error instanceof Error) {
+					console.error(error.message);
+				} else {
+					console.error(error);
+				}
+			}
 		});
 	}
 

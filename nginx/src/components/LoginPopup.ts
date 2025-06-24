@@ -6,17 +6,17 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/16 18:20:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/21 17:11:24 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/23 16:03:11 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-import UsersApi from "../api/user.js";
+import AuthNanoService from "../auth/AuthNanoService.js";
 import { UI_THEME } from "../style/tailwindClasses.js";
 import { buttonHTML } from "./button.js";
 import ModalView from "./ModalView.js";
 
 export default class LoginPopup extends ModalView {
-	private _userService: UsersApi;
+	private _authService: AuthNanoService;
 
 	constructor() {
 		super({
@@ -24,7 +24,7 @@ export default class LoginPopup extends ModalView {
 			maxWidth: '36rem',
 			contentContainerClasses: 'p-8 mx-4'
 		});
-		this._userService = new UsersApi();
+		this._authService = AuthNanoService.getInstance();
 	}
 
 	public show(): void {
@@ -98,7 +98,7 @@ export default class LoginPopup extends ModalView {
 		}
 
 		try {
-			await this._userService.login(
+			await this._authService.login(
 				usernameInput.value,
 				passwordInput.value
 			);

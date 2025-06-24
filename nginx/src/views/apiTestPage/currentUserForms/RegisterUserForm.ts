@@ -6,21 +6,21 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:42:38 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/28 16:14:51 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/23 16:04:43 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-import UsersApi from "../../../api/user.js";
+import AuthNanoService from "../../../auth/AuthNanoService.js";
 import { buttonHTML } from "../../../components/button.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 
 export default class RegisterUserForm {
 	private _container: HTMLElement;
-	private _userService: UsersApi;
+	private _authService: AuthNanoService;
 
 	constructor(containerId: string) {
 		this._container = document.getElementById(containerId) as HTMLElement;
-		this._userService = new UsersApi();
+		this._authService = AuthNanoService.getInstance();
 	}
 
 	async render(): Promise<void> {
@@ -65,7 +65,7 @@ export default class RegisterUserForm {
 			}
 
 			try {
-				const response = await this._userService.register(usernameInput.value, emailInput.value, passwordInput.value);
+				const response = await this._authService.register(usernameInput.value, passwordInput.value, emailInput.value);
 				console.log(response);
 			}
 			catch (error) {
