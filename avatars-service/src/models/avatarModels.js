@@ -48,6 +48,6 @@ export const deleteAvatar = async (userId) => {
   try {
     await database.run(query, [userId]);
   } catch (err) {
-    translateSqliteError(err);
+    throw translateSqliteError(err);
   }
 };
