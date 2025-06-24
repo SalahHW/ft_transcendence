@@ -3,6 +3,11 @@ import { gameEngine } from '../game/GameEngine.js';
 
 /**
  * Handles tournament-specific room management and matchmaking
+ * 
+ * ⭐ RACE CONDITION FIX:
+ * - Final game initialization is coordinated with semi-final splash screen timing
+ * - Only starts final games when BOTH semi-finals complete (6000ms delay for splash screens)
+ * - Prevents visual conflicts between semi-final results and next opponent screens
  */
 export class TournamentManager {
   constructor() {
@@ -376,6 +381,64 @@ export class TournamentManager {
     semiFinalRoom.metadata.playersTransferred = true;
     
     console.log(`🏆 Semi-final ${semiFinalRoomId} completed: Winner ${winner.username} → ${finalRoomAId}, Loser ${loser.username} → ${finalRoomBId}`);
+
+    // ⭐ RACE CONDITION FIX: Check if this was the last semi-final to complete
+    // If both final rooms are now full (2 players each), this was the last semi-final
+    const bothFinalRoomsFull = finalRoomA.players.length === 2 && finalRoomB.players.length === 2;
+    
+    if (bothFinalRoomsFull) {
+      console.log('🏆 LAST semi-final completed - coordinating with splash screen timing');
+      console.log(`🏆 Both final rooms are full: ${finalRoomAId} (${finalRoomA.players.length}/2), ${finalRoomBId} (${finalRoomB.players.length}/2)`);
+      
+      // Update players in both final rooms with opponent information
+      this._updateFinalRoomPlayersWithOpponent(finalRoomA);
+      this._updateFinalRoomPlayersWithOpponent(finalRoomB);
+      
+      // Mark all players as ready for finals
+      finalRoomA.players.forEach(p => { p.readyToPlay = true; });
+      finalRoomB.players.forEach(p => { p.readyToPlay = true; });
+      
+      // Reset final room states for clean start
+      [finalRoomA, finalRoomB].forEach(room => {
+        room.ready = false;
+        room.gameStarted = false;
+        room.isGameOver = false;
+        room.ball = null;
+      });
+      
+      console.log(`🏆 Final rooms ${finalRoomAId} and ${finalRoomBId} reset for clean start`);
+      
+      // ⭐ TIMING COORDINATION: Wait for semi-final splash screens to complete
+      // Semi-final splash duration is 5000ms, so wait 6000ms (5000ms + 1000ms buffer)
+      const tournamentId = finalRoomA.metadata.tournamentId;
+      
+      setTimeout(() => {
+        // Safety check: Ensure rooms still exist and haven't been corrupted
+        const roomACheck = this.roomManager.getRoom(finalRoomAId);
+        const roomBCheck = this.roomManager.getRoom(finalRoomBId);
+        
+        if (roomACheck && roomBCheck && 
+            roomACheck.metadata.tournamentId === tournamentId && 
+            roomBCheck.metadata.tournamentId === tournamentId) {
+          
+          console.log(`🏆 Initializing final games for tournament ${tournamentId} after splash screen coordination`);
+          console.log(`🏆 Starting Winners Final: ${finalRoomAId}`);
+          console.log(`🏆 Starting Losers Final (3rd place): ${finalRoomBId}`);
+          
+          // Start both final games simultaneously
+          gameEngine.checkRoomReady(finalRoomAId);
+          gameEngine.checkRoomReady(finalRoomBId);
+          
+        } else {
+          console.error(`🏆 Cannot initialize final games: rooms ${finalRoomAId} or ${finalRoomBId} (tournament ${tournamentId}) no longer exist or have been corrupted`);
+        }
+      }, 6000); // 5000ms semi-final splash + 1000ms buffer
+      
+    } else {
+      console.log('🏆 FIRST semi-final completed - waiting for second semi-final to complete');
+      console.log(`🏆 Final room states: ${finalRoomAId} (${finalRoomA.players.length}/2), ${finalRoomBId} (${finalRoomB.players.length}/2)`);
+      // Don't start final games yet - wait for the second semi-final to complete
+    }
   }
 
   /**
@@ -475,41 +538,12 @@ export class TournamentManager {
       }
     }
     
-    // Check if final room is ready to start (2 players)
-    if (finalRoom.players.length === 2) {
-      console.log(`🏆 Final room ${finalRoom.id} (tournament ${finalRoom.metadata.tournamentId}) is full! Ready to start final game...`);
-      
-      // Update both players with opponent information
-      this._updateFinalRoomPlayersWithOpponent(finalRoom);
-      
-      // Mark both players as ready and start the game
-      finalRoom.players.forEach(p => {
-        p.readyToPlay = true;
-      });
-      
-      // ⭐ TOURNAMENT FIX: Ensure clean state for final room
-      finalRoom.ready = false;
-      finalRoom.gameStarted = false;
-      finalRoom.isGameOver = false;
-      finalRoom.ball = null; // Reset ball for clean start
-      
-      console.log(`🏆 Final room ${finalRoom.id} (tournament ${finalRoom.metadata.tournamentId}) reset for clean start`);
-      
-      // Trigger game initialization with safety checks
-      const tournamentId = finalRoom.metadata.tournamentId;
-      const roomId = finalRoom.id;
-      
-      setTimeout(() => {
-        // Safety check: Ensure room still exists and hasn't been corrupted
-        const roomCheck = this.roomManager.getRoom(roomId);
-        if (roomCheck && roomCheck.metadata.tournamentId === tournamentId) {
-          console.log(`🏆 Initializing final game for tournament ${tournamentId}, room ${roomId}`);
-          gameEngine.checkRoomReady(roomId);
-        } else {
-          console.error(`🏆 Cannot initialize final game: room ${roomId} (tournament ${tournamentId}) no longer exists or has been corrupted`);
-        }
-      }, 1000); // Small delay to ensure WebSocket messages are processed
-    }
+    // ⭐ RACE CONDITION FIX: Removed immediate final game start logic
+    // Final game initialization is now handled in handleSemiFinalCompletion()
+    // to coordinate timing with semi-final splash screens
+    console.log(`🏆 Player ${player.username} transferred to ${finalRoom.id} (${finalRoom.players.length}/2 players)`);
+    console.log(`🏆 Final game initialization will be handled by handleSemiFinalCompletion() when both semi-finals complete`);
+    
   }
 
   /**
