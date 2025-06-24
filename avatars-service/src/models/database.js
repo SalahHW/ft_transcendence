@@ -10,8 +10,6 @@ export const initializeDatabase = async () => {
       filename: DB_PATH,
       driver: sqlite3.Database,
     });
-    console.log("Connected to SQLite at ", DB_PATH);
-
     const query = `
     CREATE TABLE IF NOT EXISTS avatars (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -19,8 +17,6 @@ export const initializeDatabase = async () => {
     avatar_url TEXT UNIQUE NOT NULL);`;
 
     await database.exec(query);
-
-    console.log("Database initialized");
   } catch (error) {
     console.error("Database initialization failed:", error.message);
     console.error("File should be located at ", DB_PATH);
