@@ -9,11 +9,16 @@ export default async function userRoutes(fastify) {
       description: "Creates a new user with a unique username and email.",
       body: {
         type: "object",
-        required: ["username", "password", "email"],
+        required: ["username", "password", "email", "wallet"],
         properties: {
           username: { type: "string", description: "The user's username." },
           password: { type: "string", description: "The user's password." },
-          email: { type: "string", format: "email", description: "The user's email address." },
+          email: {
+            type: "string",
+            format: "email",
+            description: "The user's email address.",
+          },
+          wallet: { type: "string", description: "The user's wallet address." },
         },
       },
       response: {
@@ -24,10 +29,11 @@ export default async function userRoutes(fastify) {
             id: { type: "number" },
             username: { type: "string" },
             email: { type: "string" },
+            wallet: { type: "string" },
           },
         },
         409: {
-          description: "Conflict: Username or email already exists.",
+          description: "Conflict: Username, email or wallet already exists.",
           type: "object",
           properties: {
             error: { type: "string" },
@@ -54,6 +60,7 @@ export default async function userRoutes(fastify) {
               id: { type: "number" },
               username: { type: "string" },
               email: { type: "string" },
+              wallet: { type: "string" },
             },
           },
         },
@@ -191,7 +198,7 @@ export default async function userRoutes(fastify) {
       response: {
         204: {
           description: "User deleted successfully. No content returned.",
-          type: "null"
+          type: "null",
         },
         404: {
           description: "User not found.",

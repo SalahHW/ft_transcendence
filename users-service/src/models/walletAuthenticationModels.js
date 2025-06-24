@@ -12,9 +12,7 @@ export async function createUserWithWalletOnly({ username, walletAddress }) {
     walletAddress,
   ]);
   if (existing) {
-    throw new Error(
-      "This wallet is already linked to an existing user. Please login via credentials."
-    );
+    throw new Error("This wallet is already linked to an existing user.");
   }
 
   const email = `wallet_${walletAddress.slice(2, 10)}@example.com`;

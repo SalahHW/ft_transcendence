@@ -5,7 +5,8 @@ import { createPassword } from "./passwordControllers.js";
 import { createWallet } from "./walletControllers.js";
 
 export async function createUser(request, reply) {
-  const { username, password, email, wallet } = request.body;
+  const { username, password, email, wallet, authenticationMethod } =
+    request.body;
 
   try {
     const usernameExists = await userModels.userExists(username);
@@ -23,15 +24,25 @@ export async function createUser(request, reply) {
 
     const newUsername = createUsername(username);
     const hashedPassword = await createPassword(password);
-    const newWallet = await createWallet(username, wallet);
 
     const newUser = await userModels.createUser({
       username: newUsername,
       password: hashedPassword,
       email: emailLower,
-      wallet: newWallet,
-      authenticationMethod: "credentials",
+      wallet: wallet,
+      authenticationMethod: authenticationMethod,
     });
+
+    try {
+      await createWallet(username, wallet);
+    } catch (blockchainError) {
+      await userModels.deleteUser(newUser.id);
+
+      return reply.code(500).send({
+        error: "Blockchain registration failed",
+        cause: blockchainError.message,
+      });
+    }
 
     return reply.code(201).send(newUser);
   } catch (error) {

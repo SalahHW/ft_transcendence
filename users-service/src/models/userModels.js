@@ -3,11 +3,11 @@ import { database } from "./database.js";
 import { translateSqliteError } from "./errors/translateSqliteError.js";
 
 export const createUser = async (user) => {
-  const { username, password, email, wallet } = user;
+  const { username, password, email, wallet, authenticationMethod } = user;
 
   const query = `
   INSERT INTO users (username, password, email, wallet, authenticationMethod)
-  VALUES (?, ?, ?, ?, 'credentials');`;
+  VALUES (?, ?, ?, ?, ?);`;
 
   try {
     const result = await database.run(query, [
@@ -22,7 +22,7 @@ export const createUser = async (user) => {
       username,
       email,
       wallet,
-      authenticationMethod: "credentials",
+      authenticationMethod,
     };
   } catch (error) {
     throw translateSqliteError(error);
