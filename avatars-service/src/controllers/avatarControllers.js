@@ -5,6 +5,7 @@ import { AVATARS_PATH } from "../config/config.js";
 import fs from "fs";
 
 export const createAvatar = async (request, reply) => {
+  let fileName;
   try {
     if (!request.isMultipart()) {
       return reply
@@ -18,7 +19,7 @@ export const createAvatar = async (request, reply) => {
       return reply.code(400).send({ error: "No file uploaded" });
     }
 
-    const { fileName } = await saveUploadedAvatar(fileData);
+    ({ fileName } = await saveUploadedAvatar(fileData));
 
     const userId = request.params.id;
 
@@ -28,6 +29,12 @@ export const createAvatar = async (request, reply) => {
       message: "Avatar uploaded successfully",
     });
   } catch (err) {
+    if (fileName) {
+      const filePath = path.join(AVATARS_PATH, fileName);
+      if (fs.existsSync(filePath)) {
+        await fs.promises.unlink(filePath).catch(() => {});
+      }
+    }
     return reply.code(400).send({
       error: err.message,
     });
