@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   router.ts                                          :+:      :+:    :+:   */
+/*   Router.ts                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:40:51 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/21 16:55:06 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/23 15:31:20 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -155,11 +155,4 @@ export default class Router {
 		 else
 			this.navigate(currentPath, true);
 	}
-
-	// public destroy(): void {
-	// 	if (this._initialized) {
-	// 		window.removeEventListener('popstate', this._handlePopState);
-	// 		this._initialized = false;
-	// 	}
-	// }
 }
