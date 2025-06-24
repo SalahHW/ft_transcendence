@@ -4,6 +4,7 @@ import { createWriteStream } from "fs";
 import { pipeline } from "stream/promises";
 import { fileTypeFromFile } from "file-type";
 import { AVATARS_PATH } from "../config/config.js";
+import { deleteFile } from "./fileUtils.js";
 
 const ALLOWED_MIME_TYPES = ["image/png", "image/jpeg"];
 
@@ -34,7 +35,7 @@ export const saveUploadedAvatar = async (fileData) => {
 
   const type = await fileTypeFromFile(tempPath);
   if (!type || !ALLOWED_MIME_TYPES.includes(type.mime)) {
-    await fs.unlink(tempPath).catch(() => {});
+    await deleteFile(tempPath);
     throw new Error(`Invalid file type: ${type ? type.mime : "unknown"}`);
   }
 
@@ -44,7 +45,7 @@ export const saveUploadedAvatar = async (fileData) => {
   try {
     await fs.rename(tempPath, finalPath);
   } catch (err) {
-    await fs.unlink(tempPath).catch(() => {});
+    await deleteFile(tempPath);
     throw new Error(`Failed to finalize file: ${err.message}`);
   }
 
