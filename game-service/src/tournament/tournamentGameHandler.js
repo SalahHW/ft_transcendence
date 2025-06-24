@@ -14,9 +14,27 @@ export class TournamentGameHandler {
      * @param {Function} broadcastToRoom - Function to broadcast messages to room
      */
     static handleTournamentGameEnd(room, roomId, matchData, broadcastToRoom) {
-        // ⭐ TOURNAMENT LOGIC: Handle semi-final completion and player advancement
+        // ⭐ TOURNAMENT LOGIC: Handle tournament game completion
         if (tournamentManager.isSemiFinalRoom(room)) {
             console.log(`🏆 Semi-final game completed in room ${roomId}, processing tournament advancement...`);
+            
+            // Mark game end data as semi-final match for client detection
+            const semiMatchData = {
+                ...matchData,
+                matchType: 'semi-final',
+                roomId: roomId,
+                gameStats: {
+                    ...matchData.gameStats,
+                    matchType: 'semi-final'
+                }
+            };
+            
+            // ⭐ SEMI-FINAL: Send proper game end message first
+            broadcastToRoom(roomId, {
+                type: 'gameEnd',
+                ...semiMatchData
+            });
+            console.log(`🏆 Sent gameEnd message for semi-final room ${roomId}`);
             
             // ⭐ SEMI-FINAL FIX: Hide game elements immediately for clean map view
             broadcastToRoom(roomId, {
@@ -31,9 +49,49 @@ export class TournamentGameHandler {
             console.log(`🏆 Sent hideGameElements message to semi-final room ${roomId}`);
             
             try {
-                tournamentManager.handleSemiFinalCompletion(roomId, matchData);
+                tournamentManager.handleSemiFinalCompletion(roomId, semiMatchData);
             } catch (error) {
                 console.error(`🏆 Error handling semi-final completion for room ${roomId}:`, error);
+            }
+        } else if (tournamentManager.isFinalRoom(room)) {
+            console.log(`🏆 Final game completed in room ${roomId}, processing tournament completion...`);
+            console.log(`🏆 DEBUG: Final room metadata.finalMatch: '${room.metadata?.finalMatch}'`);
+            
+            // Mark game end data as final match for client detection
+            const finalMatchData = {
+                ...matchData,
+                matchType: 'final',
+                finalMatchType: room.metadata?.finalMatch, // ⭐ CRITICAL: Include final type ('winners' or 'losers')
+                roomId: roomId,
+                gameStats: {
+                    ...matchData.gameStats,
+                    matchType: 'final',
+                    finalMatchType: room.metadata?.finalMatch // ⭐ CRITICAL: Also in gameStats
+                }
+            };
+            
+            console.log(`🏆 DEBUG: Sending finalMatchData with finalMatchType: '${finalMatchData.finalMatchType}'`);
+            
+            // ⭐ FINAL: Send proper game end message first  
+            broadcastToRoom(roomId, {
+                type: 'gameEnd',
+                ...finalMatchData
+            });
+            console.log(`🏆 Sent gameEnd message for final room ${roomId} with finalMatchType: '${finalMatchData.finalMatchType}'`);
+            
+            // Broadcast final game end with match type
+            broadcastToRoom(roomId, {
+                type: 'tournamentGameEnd',
+                matchType: 'final', // Ensure this is set for detection
+                finalMatchType: room.metadata?.finalMatch, // ⭐ CRITICAL: Include final type here too
+                ...finalMatchData,
+                message: 'Tournament final completed!'
+            });
+            
+            try {
+                tournamentManager.handleFinalCompletion(roomId, matchData);
+            } catch (error) {
+                console.error(`🏆 Error handling final completion for room ${roomId}:`, error);
             }
         }
     }

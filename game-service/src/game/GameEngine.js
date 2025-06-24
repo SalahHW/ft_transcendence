@@ -134,13 +134,20 @@ export class GameEngine {
       });
       
       // ⭐ TOURNAMENT LOGIC: Handle tournament game completion
-      TournamentGameHandler.handleTournamentGameEnd(room, roomId, matchData, this.broadcastToRoom.bind(this));
+      const isTournamentGame = TournamentGameHandler.isTournamentRoom(room);
       
-      // Enhanced client message
-      this.broadcastToRoom(roomId, {
-        type: 'gameEnd',
-        ...matchData
-      });
+      if (isTournamentGame) {
+        console.log(`🏆 Tournament game ended in room ${roomId}, delegating to TournamentGameHandler`);
+        TournamentGameHandler.handleTournamentGameEnd(room, roomId, matchData, this.broadcastToRoom.bind(this));
+        // Tournament handler will send appropriate messages, don't send basic gameEnd
+      } else {
+        console.log(`🏆 Regular game ended in room ${roomId}, sending standard gameEnd message`);
+        // Enhanced client message for regular games
+        this.broadcastToRoom(roomId, {
+          type: 'gameEnd',
+          ...matchData
+        });
+      }
     }
   }
 
@@ -257,11 +264,39 @@ export class GameEngine {
     const matchEndTime = new Date().toISOString();
     const matchStartTime = room.startTime || new Date().toISOString();
     
+    // ⭐ TOURNAMENT FIX: Determine match type based on room metadata and ID
+    let matchType = 'regular';
+    let finalMatchType = null; // Track if this is winners or losers final
+    
+    if (room.metadata?.isTournament === true) {
+      if (room.metadata?.tournamentType === 'semifinal') {
+        matchType = 'semi-final';
+      } else if (room.metadata?.tournamentType === 'final') {
+        matchType = 'final';
+        finalMatchType = room.metadata?.finalMatch; // 'winners' or 'losers'
+      } else if (roomId?.includes('_sf_')) {
+        matchType = 'semi-final';
+      } else if (roomId?.includes('_final_')) {
+        matchType = 'final';
+        // Try to determine final type from room ID
+        if (roomId.includes('_final_winners')) {
+          finalMatchType = 'winners';
+        } else if (roomId.includes('_final_losers')) {
+          finalMatchType = 'losers';
+        }
+      }
+    }
+    
+    console.log(`🏆 DEBUG: _createMatchData - roomId: ${roomId}, matchType: ${matchType}, finalMatchType: ${finalMatchType}`);
+    console.log(`🏆 DEBUG: Full room.metadata:`, room.metadata);
+    
     return {
       roomId,
       matchStartTime,
       matchEndTime,
       matchDuration: new Date() - new Date(matchStartTime),
+      matchType, // ⭐ ADD MATCH TYPE
+      finalMatchType, // ⭐ ADD FINAL MATCH TYPE ('winners' or 'losers')
       winner: {
         id: winner.id,
         username: winner.username || 'Anonymous',
@@ -277,7 +312,9 @@ export class GameEngine {
         finalScore: `${winnerScore}-${loserScore}`,
         scoreHistory: room.scoreHistory || [],
         ballSpeed: room.ball.speed,
-        lastHitBy: room.ball.wasHitByPlayer
+        lastHitBy: room.ball.wasHitByPlayer,
+        matchType, // ⭐ ADD MATCH TYPE IN GAME STATS TOO
+        finalMatchType // ⭐ ADD FINAL MATCH TYPE IN GAME STATS TOO
       },
       serverTime: Date.now(),
     };

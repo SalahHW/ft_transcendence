@@ -636,6 +636,81 @@ export class TournamentManager {
     
     return stats;
   }
+
+  /**
+   * Handle final match completion
+   * @param {string} finalRoomId - The ID of the final room that completed
+   * @param {Object} matchData - Match result data
+   */
+  handleFinalCompletion(finalRoomId, matchData) {
+    console.log(`🏆 FINAL COMPLETION: Handling final match completion for room ${finalRoomId}`);
+    
+    try {
+      const finalRoom = this.roomManager.getRoom(finalRoomId);
+      if (!finalRoom) {
+        console.error(`🏆 Final room ${finalRoomId} not found`);
+        return;
+      }
+      
+      console.log(`🏆 Final match completed in ${finalRoom.id}`);
+      console.log(`🏆 Winner: ${matchData.winner.username} (${matchData.winner.score})`);
+      console.log(`🏆 Loser: ${matchData.loser.username} (${matchData.loser.score})`);
+      
+      // Determine final type and placements
+      const isWinnersFinal = finalRoom.metadata?.finalMatch === 'winners'; // 1st/2nd place
+      const isLosersFinal = finalRoom.metadata?.finalMatch === 'losers'; // 3rd/4th place
+      
+      console.log(`🏆 Final type - Winners: ${isWinnersFinal}, Losers: ${isLosersFinal}`);
+      
+      let winnerPlacement, loserPlacement;
+      if (isWinnersFinal) {
+        winnerPlacement = 1; // Champion
+        loserPlacement = 2; // Runner-up
+      } else if (isLosersFinal) {
+        winnerPlacement = 3; // Third place
+        loserPlacement = 4; // Fourth place
+      } else {
+        console.warn(`🏆 Unknown final type, defaulting to winners final`);
+        winnerPlacement = 1;
+        loserPlacement = 2;
+      }
+      
+      console.log(`🏆 Final placements determined - Winner: ${winnerPlacement}, Loser: ${loserPlacement}`);
+      
+      // Mark the room as complete
+      finalRoom.isGameOver = true;
+      
+      // Log tournament completion
+      console.log('🏆'.repeat(50));
+      console.log(`🏆 TOURNAMENT FINAL COMPLETED`);
+      console.log('🏆'.repeat(50));
+      console.log(`🏆 ${isWinnersFinal ? 'WINNERS' : 'LOSERS'} FINAL RESULTS:`);
+      console.log(`🏆 ${winnerPlacement}${this._getPlacementSuffix(winnerPlacement)} Place: ${matchData.winner.username}`);
+      console.log(`🏆 ${loserPlacement}${this._getPlacementSuffix(loserPlacement)} Place: ${matchData.loser.username}`);
+      console.log(`🏆 Final Score: ${matchData.winner.score}-${matchData.loser.score}`);
+      console.log('🏆'.repeat(50));
+      
+      // The client-side will handle final splash screens based on game end detection
+      console.log(`🏆 Final completion handled for room ${finalRoomId} - clients will show placement splash screens`);
+      
+    } catch (error) {
+      console.error(`🏆 Error handling final completion for room ${finalRoomId}:`, error);
+    }
+  }
+
+  /**
+   * Get placement suffix for display (1st, 2nd, 3rd, 4th)
+   * @param {number} placement - The placement number
+   * @returns {string} The placement suffix string
+   */
+  _getPlacementSuffix(placement) {
+    switch (placement) {
+      case 1: return 'st';
+      case 2: return 'nd'; 
+      case 3: return 'rd';
+      default: return 'th';
+    }
+  }
 }
 
 // Create singleton instance
