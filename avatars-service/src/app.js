@@ -1,8 +1,10 @@
-import { PORT, isDev } from "./config/config.js";
+import { PORT, isDev, AVATARS_PATH } from "./config/config.js";
 import Fastify from "fastify";
 import Multipart from "@fastify/multipart";
+import fastifyStatic from "@fastify/static";
 import { initializeDatabase } from "./models/database.js";
 import registerRoutes from "./routes/index.js";
+import path from "path";
 
 const fastify = Fastify();
 
@@ -19,6 +21,11 @@ async function main() {
     },
   });
 
+  await fastify.register(fastifyStatic, {
+    root: path.resolve(AVATARS_PATH),
+    prefix: "/avatars/",
+  });
+
   // Initialize the database
   try {
     await initializeDatabase();
@@ -30,7 +37,7 @@ async function main() {
   await fastify.register(registerRoutes);
 
   try {
-    const address = fastify.listen({
+    const address = await fastify.listen({
       port: PORT,
       host: "0.0.0.0",
     });
