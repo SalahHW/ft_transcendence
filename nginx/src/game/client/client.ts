@@ -260,14 +260,19 @@ export function initializeGame(playerId: string): void {
 
     // Add game end handler
     clientConnection.onGameEnd(async (msg: any) => {
-        console.log('🏆 DEBUG: onGameEnd handler triggered!', msg);
+        console.log('🏆 DEBUG: ⭐ PRIMARY onGameEnd handler triggered!', msg);
         const gameEndData = msg as GameEndData;
         isGameOver = true;
         
         // DEBUG: Log the entire game end data to understand the structure
-        console.log('🏆 DEBUG: Game end data received:', JSON.stringify(gameEndData, null, 2));
-        console.log('🏆 DEBUG: Current roomId:', roomId);
-        console.log('🏆 DEBUG: localPlayerId:', localPlayerId);
+        console.log('🏆 DEBUG: ⭐ FULL Game end data received:', JSON.stringify(gameEndData, null, 2));
+        console.log('🏆 DEBUG: ⭐ Current roomId:', roomId);
+        console.log('🏆 DEBUG: ⭐ localPlayerId:', localPlayerId);
+        console.log('🏆 DEBUG: ⭐ CRITICAL - Check finalMatchType:', {
+            'gameEndData.finalMatchType': gameEndData.finalMatchType,
+            'gameEndData.gameStats?.finalMatchType': gameEndData.gameStats?.finalMatchType,
+            'gameEndData.matchType': gameEndData.matchType
+        });
         
         // Stop the game loop and clean up
         if (isGameLoopRunning && map?.getEngine) {
@@ -275,30 +280,143 @@ export function initializeGame(playerId: string): void {
             isGameLoopRunning = false;
         }
         
-        // Check if this is a semi-final match - improved detection
-        const isSemiFinal = gameEndData.matchType === 'semi-final' || 
+        // ⭐ ENHANCED FINAL DETECTION: Check multiple indicators for finals
+        const isFinal = gameEndData.matchType === 'final' || 
+                       gameEndData.gameStats?.matchType === 'final' ||
+                       gameEndData.finalMatchType === 'winners' ||
+                       gameEndData.finalMatchType === 'losers' ||
+                       gameEndData.gameStats?.finalMatchType === 'winners' ||
+                       gameEndData.gameStats?.finalMatchType === 'losers' ||
+                       roomId?.includes('final') ||
+                       gameEndData.roomId?.includes('final') ||
+                       roomId?.includes('Final') ||
+                       gameEndData.roomId?.includes('Final');
+        
+        // Check if this is a semi-final match - improved detection (but exclude finals)
+        const isSemiFinal = !isFinal && (
+                           gameEndData.matchType === 'semi-final' || 
                            gameEndData.gameStats?.matchType === 'semi-final' ||
                            roomId?.includes('semi') ||
                            gameEndData.roomId?.includes('semi') ||
                            roomId?.includes('Semi') ||
-                           gameEndData.roomId?.includes('Semi') ||
-                           // Also check for tournament-related indicators
-                           roomId?.includes('tournament') ||
-                           gameEndData.roomId?.includes('tournament');
+                           gameEndData.roomId?.includes('Semi'));
         
-        console.log('🏆 DEBUG: isSemiFinal detection result:', isSemiFinal);
-        console.log('🏆 DEBUG: Detection checks:', {
+        console.log('🏆 DEBUG: Match type detection results:', { isFinal, isSemiFinal });
+        console.log('🏆 DEBUG: Detection data:', {
             'gameEndData.matchType': gameEndData.matchType,
             'gameEndData.gameStats?.matchType': gameEndData.gameStats?.matchType,
+            'roomId': roomId,
+            'gameEndData.roomId': gameEndData.roomId,
+            'roomId?.includes("final")': roomId?.includes('final'),
             'roomId?.includes("semi")': roomId?.includes('semi'),
-            'gameEndData.roomId?.includes("semi")': gameEndData.roomId?.includes('semi'),
-            'roomId?.includes("Semi")': roomId?.includes('Semi'),
-            'gameEndData.roomId?.includes("Semi")': gameEndData.roomId?.includes('Semi'),
-            'roomId?.includes("tournament")': roomId?.includes('tournament'),
-            'gameEndData.roomId?.includes("tournament")': gameEndData.roomId?.includes('tournament')
+            'Full gameEndData': gameEndData
         });
         
-        if (isSemiFinal) {
+        // 🏆 CRITICAL DEBUG: Log what type of match this is
+        if (isFinal) {
+            console.log('🏆 ✅ ⭐ FINAL MATCH DETECTED - Will show final placement splash screen');
+            console.log('🏆 ✅ ⭐ FINAL DETECTION DETAILS:', {
+                'gameEndData.matchType': gameEndData.matchType,
+                'gameEndData.finalMatchType': gameEndData.finalMatchType,
+                'gameEndData.gameStats?.matchType': gameEndData.gameStats?.matchType,
+                'gameEndData.gameStats?.finalMatchType': gameEndData.gameStats?.finalMatchType,
+                'roomId?.includes("final")': roomId?.includes('final'),
+                'roomId': roomId
+            });
+        } else if (isSemiFinal) {
+            console.log('🏆 ✅ SEMI-FINAL MATCH DETECTED - Will show semi-final splash screen');
+        } else {
+            console.log('🏆 ✅ REGULAR MATCH DETECTED - Will show regular splash screen');
+        }
+
+        if (isFinal) {
+            // For finals, show tournament final placement splash screen
+            console.log('🏆 Final match detected, showing tournament final placement splash screen');
+            const isWinner = gameEndData.winner.id === localPlayerId;
+            const opponentName = gameEndData.winner.id === localPlayerId ? 
+                                gameEndData.loser.username : 
+                                gameEndData.winner.username;
+            
+            console.log('🏆 DEBUG: Final game - isWinner:', isWinner, 'opponentName:', opponentName);
+            
+            // Determine final placement based on room type and result
+            let finalPlacement: 1 | 2 | 3 | 4;
+            
+            // ⭐ IMPROVED: Use server-provided final match type first, then fallback to room ID parsing
+            let isWinnersFinal = false;
+            let isLosersFinal = false;
+            
+            // Try server-provided finalMatchType first (more reliable)
+            if (gameEndData.finalMatchType) {
+                isWinnersFinal = gameEndData.finalMatchType === 'winners';
+                isLosersFinal = gameEndData.finalMatchType === 'losers';
+                console.log(`🏆 DEBUG: Using server finalMatchType: ${gameEndData.finalMatchType}`);
+            } else if (gameEndData.gameStats?.finalMatchType) {
+                isWinnersFinal = gameEndData.gameStats.finalMatchType === 'winners';
+                isLosersFinal = gameEndData.gameStats.finalMatchType === 'losers';
+                console.log(`🏆 DEBUG: Using server gameStats.finalMatchType: ${gameEndData.gameStats.finalMatchType}`);
+            } else {
+                // Fallback to room ID parsing
+                isWinnersFinal = roomId?.includes('winners') || 
+                                gameEndData.roomId?.includes('winners') ||
+                                roomId?.includes('Winners') || 
+                                gameEndData.roomId?.includes('Winners');
+                
+                isLosersFinal = roomId?.includes('losers') || 
+                               gameEndData.roomId?.includes('losers') ||
+                               roomId?.includes('Losers') || 
+                               gameEndData.roomId?.includes('Losers');
+                
+                console.log('🏆 DEBUG: Using room ID fallback detection');
+            }
+            
+            console.log('🏆 DEBUG: Final type determination - isWinnersFinal:', isWinnersFinal, 'isLosersFinal:', isLosersFinal);
+            console.log('🏆 DEBUG: Room and match data:', {
+                roomId: roomId,
+                'gameEndData.roomId': gameEndData.roomId,
+                'gameEndData.finalMatchType': gameEndData.finalMatchType,
+                'gameEndData.gameStats?.finalMatchType': gameEndData.gameStats?.finalMatchType
+            });
+            
+            if (isWinnersFinal) {
+                // Winners final: 1st place for winner, 2nd place for loser
+                finalPlacement = isWinner ? 1 : 2;
+                console.log('🏆 DEBUG: ⭐ WINNERS FINAL detected - placement:', finalPlacement, '(winner gets 1st, loser gets 2nd)');
+                console.log('🏆 DEBUG: ⭐ LOGIC: Winners final + isWinner:', isWinner, '→ placement:', finalPlacement);
+            } else if (isLosersFinal) {
+                // Losers final: 3rd place for winner, 4th place for loser
+                finalPlacement = isWinner ? 3 : 4;
+                console.log('🏆 DEBUG: ⭐ LOSERS FINAL detected - placement:', finalPlacement, '(winner gets 3rd, loser gets 4th)');
+                console.log('🏆 DEBUG: ⭐ LOGIC: Losers final + isWinner:', isWinner, '→ placement:', finalPlacement);
+            } else {
+                // Fallback - try to determine from room name or default to middle placement
+                console.warn('🏆 ⚠️ Could not determine final type, defaulting placement');
+                console.warn('🏆 DEBUG: ⚠️ No clear room type detected - this should not happen in finals!');
+                console.warn('🏆 DEBUG: ⚠️ Available data:', { 
+                    roomId, 
+                    'gameEndData.roomId': gameEndData.roomId,
+                    'gameEndData.finalMatchType': gameEndData.finalMatchType,
+                    'gameEndData.gameStats?.finalMatchType': gameEndData.gameStats?.finalMatchType
+                });
+                finalPlacement = isWinner ? 1 : 2; // Default to winners final
+                console.log('🏆 DEBUG: ⚠️ Fallback placement:', finalPlacement);
+            }
+            
+            console.log(`🏆 Final placement determined: ${finalPlacement}${TournamentClientHandler.getPlacementSuffix(finalPlacement)} place`);
+            
+            try {
+                await TournamentClientHandler.handleFinalGameEnd(gameEndData, localPlayerId, opponentName, finalPlacement);
+                console.log('🏆 DEBUG: TournamentClientHandler.handleFinalGameEnd completed successfully');
+                console.log('🏆 DEBUG: Final game completed - navigation and cleanup handled by tournament handler');
+            } catch (error) {
+                console.error('🏆 ERROR: Error showing final splash:', error);
+                // ⭐ CLEANUP ON ERROR: If final splash fails, still cleanup and try to navigate
+                console.log('🏆 DEBUG: Cleaning up after final splash error...');
+                cleanup();
+            }
+            
+            // ⭐ NOTE: No cleanup() call here for successful finals - handled by tournament handler with navigation
+        } else if (isSemiFinal) {
             // For semi-finals, show tournament-specific splash screen as overlay
             console.log('🏆 Semi-final match detected, showing tournament splash screen');
             const opponentName = gameEndData.winner.id === localPlayerId ? 
@@ -348,6 +466,13 @@ export function initializeGame(playerId: string): void {
                 // 🏆 SEMI-FINAL DETECTION: Check if this is the end of a semi-final
                 if (message.status === 'transferred_to_final') {
                     console.log('🏆 DEBUG: Semi-final ended detected in tournamentAdvancement:', message);
+                    
+                    // ⭐ SAFETY CHECK: Prevent showing semi-final splash if we're already in a final room
+                    const currentlyInFinalRoom = roomId?.includes('final') || roomId?.includes('Final');
+                    if (currentlyInFinalRoom) {
+                        console.log('🏆 ⚠️ SAFETY: Ignoring transferred_to_final message - already in final room:', roomId);
+                        return; // Don't show semi-final splash for final room activities
+                    }
                     
                     // Show semi-final splash screen FIRST, then handle tournament advancement
                     const isWinner = message.playerType === 'winner';
@@ -446,32 +571,11 @@ export function initializeGame(playerId: string): void {
                     { ball, player1, player2 }
                 );
             } else if (message.type === 'gameEnd' || message.type === 'matchEnd' || message.type === 'tournamentGameEnd') {
-                // 🏆 DEBUG: Catch different types of game end messages
-                console.log('🏆 DEBUG: Game end message detected in message listener:', message.type, message);
-                
-                // Handle semi-final game end here if not caught by onGameEnd
-                const gameEndData = message;
-                const isSemiFinal = gameEndData.matchType === 'semi-final' || 
-                                   gameEndData.gameStats?.matchType === 'semi-final' ||
-                                   roomId?.includes('semi') ||
-                                   gameEndData.roomId?.includes('semi') ||
-                                   roomId?.includes('Semi') ||
-                                   gameEndData.roomId?.includes('Semi') ||
-                                   roomId?.includes('tournament') ||
-                                   gameEndData.roomId?.includes('tournament');
-                
-                console.log('🏆 DEBUG: Semi-final detection in message listener:', isSemiFinal);
-                
-                if (isSemiFinal) {
-                    console.log('🏆 DEBUG: Handling semi-final end in message listener');
-                    const opponentName = gameEndData.winner?.id === localPlayerId ? 
-                                        gameEndData.loser?.username : 
-                                        gameEndData.winner?.username;
-                    
-                    if (opponentName) {
-                        TournamentClientHandler.handleSemiFinalGameEnd(gameEndData, localPlayerId, opponentName);
-                    }
-                }
+                // 🏆 REMOVE DUPLICATE: Game end messages should ONLY be handled by clientConnection.onGameEnd
+                // This prevents conflicts between multiple event handlers
+                console.log('🏆 DEBUG: ⚠️ Game end message received in secondary listener - IGNORING to prevent conflicts');
+                console.log('🏆 DEBUG: ⚠️ Message type:', message.type, 'will be handled by primary onGameEnd listener');
+                // DO NOT process game end here - let the primary onGameEnd handler deal with it
             }
         } catch (error) {
             console.error('Error parsing message:', error);

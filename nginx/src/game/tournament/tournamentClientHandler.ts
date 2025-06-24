@@ -1,7 +1,8 @@
 import { gameMap } from '../map/gameMap.js';
 import { Ball } from '../ball/ball.js';
 import { playerPaddle } from '../player/player.js';
-import { showSemiFinalSplashScreen } from '../utils/splashScreenUtils.js';
+import { showSemiFinalSplashScreen, showFinalSplashScreen } from '../utils/splashScreenUtils.js';
+import Router from '../../router/Router.js';
 
 /**
  * Tournament Client Handler
@@ -180,12 +181,119 @@ export class TournamentClientHandler {
     }
 
     /**
+     * Handle final game end and show appropriate placement splash screen
+     * @param gameEndData - Game result data
+     * @param localPlayerId - Current player's ID
+     * @param opponentName - Opponent's name
+     * @param finalPlacement - Player's final tournament placement (1, 2, 3, or 4)
+     * @returns Promise that resolves when splash screen is complete
+     */
+    static async handleFinalGameEnd(
+        gameEndData: any,
+        localPlayerId: string | null,
+        opponentName: string,
+        finalPlacement: 1 | 2 | 3 | 4
+    ): Promise<void> {
+        console.log('🏆 DEBUG: handleFinalGameEnd called with:', { gameEndData, localPlayerId, opponentName, finalPlacement });
+        
+        const score = `${gameEndData.winner.score}-${gameEndData.loser.score}`;
+        
+        console.log('🏆 DEBUG: Final game ended - showing placement splash screen');
+        console.log(`🏆 Final ended: ${finalPlacement}${getPlacementSuffix(finalPlacement)} PLACE vs ${opponentName}`);
+        
+        try {
+            console.log('🏆 DEBUG: About to call showFinalSplashScreen...');
+            await showFinalSplashScreen(finalPlacement, opponentName, score, 5000);
+            console.log('🏆 Final splash screen completed - preparing for navigation');
+            
+            // ⭐ CLEANUP BEFORE NAVIGATION: Ensure clean state before leaving game
+            console.log('🏆 DEBUG: Cleaning up game resources before navigation...');
+            if ((window as any).leaveGame && typeof (window as any).leaveGame === 'function') {
+                try {
+                    (window as any).leaveGame();
+                    console.log('🏆 ✅ Game cleanup completed successfully');
+                } catch (cleanupError) {
+                    console.error('🏆 ⚠️ Error during game cleanup:', cleanupError);
+                    // Continue with navigation even if cleanup fails
+                }
+            } else {
+                console.log('🏆 ⚠️ leaveGame function not available - continuing with navigation');
+            }
+            
+            // ⭐ NAVIGATE TO MAIN PAGE: After cleanup
+            console.log('🏆 DEBUG: Navigating back to main page...');
+            const router = Router.getInstance();
+            const navigationSuccess = router.navigate('/', true); // Use replaceState to replace tournament history
+            
+            if (navigationSuccess) {
+                console.log('🏆 ✅ Successfully navigated to main page after tournament completion');
+            } else {
+                console.error('🏆 ❌ Failed to navigate to main page - attempting fallback');
+                // Fallback: Force reload to home page
+                window.location.href = '/';
+            }
+        } catch (error) {
+            console.error('🏆 ERROR: Error showing final splash screen:', error);
+            
+            // ⭐ CLEANUP ON ERROR: Cleanup even if splash fails
+            console.log('🏆 DEBUG: Cleaning up after splash screen error...');
+            if ((window as any).leaveGame && typeof (window as any).leaveGame === 'function') {
+                try {
+                    (window as any).leaveGame();
+                    console.log('🏆 ✅ Error cleanup completed');
+                } catch (cleanupError) {
+                    console.error('🏆 ⚠️ Error during error cleanup:', cleanupError);
+                }
+            }
+            
+            // ⭐ SAFETY NAVIGATION: Even if splash screen fails, try to navigate to main page
+            console.log('🏆 DEBUG: Attempting navigation despite splash screen error...');
+            try {
+                const router = Router.getInstance();
+                router.navigate('/', true);
+            } catch (navError) {
+                console.error('🏆 ERROR: Navigation also failed:', navError);
+                // Ultimate fallback
+                window.location.href = '/';
+            }
+        }
+    }
+
+    /**
+     * Get placement suffix for display (1st, 2nd, 3rd, 4th)
+     * @param placement - The placement number
+     * @returns The placement suffix string
+     */
+    static getPlacementSuffix(placement: number): string {
+        switch (placement) {
+            case 1: return 'st';
+            case 2: return 'nd'; 
+            case 3: return 'rd';
+            default: return 'th';
+        }
+    }
+
+    /**
      * Log tournament client event
      * @param event - Event type
      * @param details - Event details
      */
     static logTournamentEvent(event: string, details: any): void {
         console.log(`🏆 TOURNAMENT CLIENT: ${event}`, details);
+    }
+}
+
+/**
+ * Get placement suffix for display (1st, 2nd, 3rd, 4th) - standalone function
+ * @param placement - The placement number
+ * @returns The placement suffix string
+ */
+function getPlacementSuffix(placement: number): string {
+    switch (placement) {
+        case 1: return 'st';
+        case 2: return 'nd'; 
+        case 3: return 'rd';
+        default: return 'th';
     }
 }
 
