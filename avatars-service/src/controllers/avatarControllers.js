@@ -25,7 +25,6 @@ export const uploadAvatar = async (request, reply) => {
 
     return reply.code(201).send({
       message: "Avatar uploaded successfully",
-      avatarUrl: relativePath,
     });
   } catch (err) {
     return reply.code(400).send({
