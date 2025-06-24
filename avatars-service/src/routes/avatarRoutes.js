@@ -5,6 +5,12 @@ export default async function avatarRoutes(fastify) {
     method: "POST",
     url: "/avatars/id/:id",
     // preHandler: fastify.multipart,
-    handler: avatarControllers.uploadAvatar,
+    handler: avatarControllers.createAvatar,
+  });
+
+  fastify.route({
+    method: "GET",
+    url: "/avatars/id/:id",
+    handler: avatarControllers.readAvatar,
   });
 }
