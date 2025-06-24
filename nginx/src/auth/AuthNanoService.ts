@@ -48,11 +48,11 @@ export default class AuthNanoService {
     public async logout(): Promise<void> {
         try {
             await this._usersApi.logout();
-        } catch (error) {
-            console.error("Logout API call failed, logging out on client anyway.", error);
-        } finally {
             this._user = null;
             this._isLoggedIn = false;
+        } catch (error) {
+            console.error("Logout API call failed:", error);
+            throw new Error("Logout failed. Please try again.");
         }
     }
 
