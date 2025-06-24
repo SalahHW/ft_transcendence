@@ -6,34 +6,42 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 16:41:12 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/21 16:29:24 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/24 16:46:12 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 import Router from "../router/Router.js";
 import { UI_THEME } from "../style/tailwindClasses.js";
+import AuthService from "../auth/AuthNanoService.js";
 
 interface Option {
 	label: string;
-	onClick?: () => void;
+	onClick?: () => void | Promise<void>;
 	subMenu?: Option[];
 	icon?: string;
+	condition?: () => boolean;
 }
+
+/*
+	TODO: À l'ouverture d'une page, les autres pages doivent se fermer
+*	IDEA: Avoir un point qui suit la souris.
+*	maintenir right-click, le point s'agrandit et affiche les options.
+*/
 
 export default class Wheel {
     private _element: HTMLElement;
-	private _currentOptions: Option[] = [];
 	private _optionHistory: Option[][] = []; // Pour naviguer dans les sous-menus
 	private _selectedIndex: number = 0;
 	private _isVisible: boolean = false;
+	private _userIsLoggedIn: boolean = false;
 	private _router: Router = Router.getInstance();
-	private _wheelOptions: Option[] = [
+	private _authService: AuthService = AuthService.getInstance();
+	private _baseWheelOptions: Option[] = [
 		{
 			label: "API Test page",
 			icon: "🔧",
 			onClick: () => {
 				console.log("API Test page clicked");
-				this.hideWheel();
 				this._router.navigate("/api-test");
 			},
 		},
@@ -41,20 +49,20 @@ export default class Wheel {
 			label: "Profile",
 			icon: "👤",
 			onClick: () => {
-				this.hideWheel();
 				this._router.navigate("/profile");
-			}
+			},
+			condition: () => this._userIsLoggedIn
 		},
 		{
 			label: "Login",
 			icon: "🔑",
+			condition: () => !this._userIsLoggedIn,
 			subMenu: [
 				{
 					label: "Sign In",
 					icon: "→",
 					onClick: () => {
 						console.log("Sign In clicked");
-						this.hideWheel();
 						this._router.navigate("/login");
 					}
 				},
@@ -63,13 +71,26 @@ export default class Wheel {
 					icon: "+",
 					onClick: () => {
 						console.log("Register clicked");
-						this.hideWheel();
 						this._router.navigate("/register");
 					}
 				}
 			]
+		},
+		{
+			label: "Logout",
+			icon: "🚪",
+			onClick: async () => {
+				try {
+					await this._authService.logout();
+					this._router.navigate("/");
+				} catch (error) {
+					console.error("Logout failed:", error);
+				}
+			},
+			condition: () => this._userIsLoggedIn
 		}
 	];
+	private _wheelOptions: Option[] = [];
 
 	constructor(elementId: string) {
 		this._element = document.getElementById(elementId)!;
@@ -77,46 +98,18 @@ export default class Wheel {
 			throw new Error(`Element with id ${elementId} not found`);
 		}
 
-		// Initialiser avec les options principales
-		this._currentOptions = this._wheelOptions;
 
-		// Gestion des événements clavier
 		this._setupKeyboardEvents();
 		this._setupMouseEvents();
 
-		// Initialiser le rendu
 		this.render();
 	}
 
 	private _setupKeyboardEvents(): void {
-		document.addEventListener("keydown", (event: KeyboardEvent) => {
+		document.addEventListener("keydown", async (event: KeyboardEvent) => {
 			if (event.key === "Shift") {
 				event.preventDefault();
-				this.showWheel();
-			}
-
-			if (this._isVisible) {
-				switch (event.key) {
-					case "ArrowUp":
-					case "ArrowLeft":
-						event.preventDefault();
-						this._navigateWheel(-1);
-						break;
-					case "ArrowDown":
-					case "ArrowRight":
-						event.preventDefault();
-						this._navigateWheel(1);
-						break;
-					case "Enter":
-					case " ":
-						event.preventDefault();
-						this._selectOption();
-						break;
-					case "Escape":
-						event.preventDefault();
-						this._goBack();
-						break;
-				}
+				await this.showWheel();
 			}
 		});
 
@@ -131,43 +124,28 @@ export default class Wheel {
 		this._element.addEventListener("click", (event: MouseEvent) => {
 			event.stopPropagation();
 		});
-
-		// Fermer la roue si on clique à l'extérieur
-		document.addEventListener("click", () => {
-			if (this._isVisible) {
-				this.hideWheel();
-			}
-		});
 	}
 
-	private _navigateWheel(direction: number): void {
-		const newIndex = this._selectedIndex + direction;
-		if (newIndex >= 0 && newIndex < this._currentOptions.length) {
-			this._selectedIndex = newIndex;
-			this._updateSelection();
-		}
-	}
-
-	private _selectOption(): void {
-		const selectedOption = this._currentOptions[this._selectedIndex];
+	private async _selectOption(): Promise<void> {
+		const selectedOption = this._wheelOptions[this._selectedIndex];
 		if (!selectedOption) return;
 
 		if (selectedOption.subMenu && selectedOption.subMenu.length > 0) {
 			// Naviguer vers le sous-menu
-			this._optionHistory.push(this._currentOptions);
-			this._currentOptions = selectedOption.subMenu;
+			this._optionHistory.push(this._wheelOptions);
+			this._wheelOptions = selectedOption.subMenu;
 			this._selectedIndex = 0;
 			this._renderWheel();
 		} else if (selectedOption.onClick) {
 			// Exécuter l'action
-			selectedOption.onClick();
+			await selectedOption.onClick();
 			this.hideWheel();
 		}
 	}
 
 	private _goBack(): void {
 		if (this._optionHistory.length > 0) {
-			this._currentOptions = this._optionHistory.pop()!;
+			this._wheelOptions = this._optionHistory.pop()!;
 			this._selectedIndex = 0;
 			this._renderWheel();
 		} else {
@@ -179,12 +157,14 @@ export default class Wheel {
 		this._renderWheel();
 	}
 
-	public showWheel(): void {
+	public async showWheel(): Promise<void> {
 		if (this._isVisible) return;
+
+		this._userIsLoggedIn = await this._authService.isLoggedIn();
 
 		this._isVisible = true;
 		this._selectedIndex = 0;
-		this._currentOptions = this._wheelOptions;
+		this._wheelOptions = this._baseWheelOptions.filter(option => option.condition === undefined || option.condition());
 		this._optionHistory = [];
 
 		this._element.classList.remove("hidden");
@@ -234,7 +214,7 @@ export default class Wheel {
 		const centerY = 480;
 		const radius = 360;
 		const innerRadius = 90; // Réduit de moitié (180 → 90)
-		const optionCount = this._currentOptions.length;
+		const optionCount = this._wheelOptions.length;
 
 		// Nettoyer le SVG
 		svg.innerHTML = '';
@@ -261,7 +241,7 @@ export default class Wheel {
 
 		svg.appendChild(centerCircle);
 
-		this._currentOptions.forEach((option, index) => {
+		this._wheelOptions.forEach((option, index) => {
 			const angle1 = startAngle + index * angleStep;
 			const angle2 = startAngle + (index + 1) * angleStep;
 
@@ -297,9 +277,9 @@ export default class Wheel {
 			path.setAttribute('class', 'cursor-pointer transition-all duration-200 hover:fill-gray-600/90');
 
 			// Gestionnaire de clic
-			path.addEventListener('click', () => {
+			path.addEventListener('click', async () => {
 				this._selectedIndex = index;
-				this._selectOption();
+				await this._selectOption();
 			});
 
 			// Gestionnaire de survol
