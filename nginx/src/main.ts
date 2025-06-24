@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:42:53 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/21 16:55:06 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/23 14:25:38 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,6 +17,5 @@ document.addEventListener("DOMContentLoaded", () => {
 	const router = Router.getInstance();
 	router.init();
 
-	const wheel = new Wheel("wheel-container");
-	wheel.render();
+	new Wheel("wheel-container");
 });
