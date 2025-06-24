@@ -1,13 +1,13 @@
 import { database } from "./database.js";
 import { translateSqliteError } from "./errors/translateSqliteError.js";
 
-export const createAvatar = async (userId, avatarUrl) => {
+export const createAvatar = async (userId, fileName) => {
   const query = `
-  INSERT INTO avatars (user_id, avatar_url)
+  INSERT INTO avatars (user_id, avatar_name)
   VALUES (?, ?);`;
 
   try {
-    await database.run(query, [userId, avatarUrl]);
+    await database.run(query, [userId, fileName]);
   } catch (err) {
     throw translateSqliteError(err);
   }
@@ -27,14 +27,14 @@ export const readAvatar = async (userId) => {
   }
 };
 
-export const updateAvatar = async (userId, newAvatarUrl) => {
+export const updateAvatar = async (userId, newFileName) => {
   const query = `
   UPDATE avatars
-  SET avatar_url = ?
+  SET avatar_name = ?
   WHERE user_id = ?`;
 
   try {
-    await database.run(query, [newAvatarUrl, userId]);
+    await database.run(query, [newFileName, userId]);
   } catch (err) {
     throw translateSqliteError(err);
   }

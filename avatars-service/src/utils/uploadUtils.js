@@ -51,7 +51,7 @@ export const saveUploadedAvatar = async (fileData) => {
   console.log(`Saved avatar: ${finalPath} (type: ${type.mime})`);
 
   return {
-    filePath: finalPath,
-    relativePath: `/avatar/${finalName}`,
+    finalPath,
+    fileName: finalName
   };
 };

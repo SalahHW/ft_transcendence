@@ -18,13 +18,11 @@ export const createAvatar = async (request, reply) => {
       return reply.code(400).send({ error: "No file uploaded" });
     }
 
-    const { relativePath } = await saveUploadedAvatar(fileData);
-
-    console.log(relativePath);
+    const { fileName } = await saveUploadedAvatar(fileData);
 
     const userId = request.params.id;
 
-    await avatarModels.createAvatar(userId, relativePath);
+    await avatarModels.createAvatar(userId, fileName);
 
     return reply.code(201).send({
       message: "Avatar uploaded successfully",
@@ -41,17 +39,17 @@ export const readAvatar = async (request, reply) => {
     const userId = request.params.id;
     const avatar = await avatarModels.readAvatar(userId);
 
-    if (!avatar || !avatar.avatar_url) {
+    if (!avatar || !avatar.avatar_name) {
       return reply.code(404).send({ error: "Avatar not found" });
     }
 
-    const filePath = path.join(AVATARS_PATH, avatar.avatar_url);
+    const filePath = path.join(AVATARS_PATH, avatar.avatar_name);
 
     if (!fs.existsSync(filePath)) {
       return reply.code(404).send({ error: "Avatar file not found" });
     }
 
-    return reply.sendFile(avatar.avatar_url, AVATARS_PATH);
+    return reply.sendFile(avatar.avatar_name, AVATARS_PATH);
   } catch (err) {
     return reply.code(400).send({
       error: err.message,
