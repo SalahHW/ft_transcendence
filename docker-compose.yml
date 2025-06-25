@@ -37,5 +37,24 @@ services:
     networks:
       - transcendence
 
+  game:
+    container_name: game
+    build: ./game-service
+    env_file:
+      - ./.env
+      - ./game-service/.env
+    networks:
+      - transcendence
+
+  avatars:
+    container_name: avatars
+    build: ./avatars-service
+    env_file:
+      - ./.env
+    networks:
+      - transcendence
+    volumes:
+      - ./avatars-service/database:/app/database
+
 networks:
   transcendence:
