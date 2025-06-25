@@ -52,19 +52,17 @@ export class GameClient {
         }
         console.log('Canvas found successfully:', canvas);
 
+        // FIXED: Use current domain instead of localhost for WebSocket connection
         // Initialize WebSocket connection using WSS for HTTPS or WS for HTTP
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//localhost:8081/ws`;
+        const wsUrl = `${protocol}//${window.location.host}/api/game/ws`;
         console.log('Creating WebSocket connection to:', wsUrl);
         
         this.clientConnection = new webSocketClient(wsUrl, playerId);
         console.log('WebSocket client created');
 
         this.setupWebSocketHandlers();
-        console.log('WebSocket handlers set up');
         this.setupKeyboardControls();
-        console.log('Keyboard controls set up');
-        console.log('Game initialization completed!');
     }
 
     private setupWebSocketHandlers(): void {

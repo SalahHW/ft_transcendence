@@ -95,8 +95,9 @@ function handleSoundEvent(msg: any): void {
 // Function to check available players
 async function checkAvailablePlayers(): Promise<PlayerData[]> {
     try {
-        //TODO: USE SIGNED OF JO
-        const response = await fetchWithSelfSigned(`http://localhost:8081/api/players`, {
+        // FIXED: Use current domain instead of localhost for game service API
+        const gameApiUrl = `${window.location.protocol}//${window.location.host}/api/game/players`;
+        const response = await fetchWithSelfSigned(gameApiUrl, {
             method: 'GET',
         });
         
@@ -115,8 +116,9 @@ async function checkAvailablePlayers(): Promise<PlayerData[]> {
 // Function to set player ready status
 async function setPlayerReady(playerId: string): Promise<boolean> {
     try {
-        //TODO: USE SIGNED OF JO
-        const response = await fetchWithSelfSigned(`http://localhost:8081/api/players/${playerId}/ready`, {
+        // FIXED: Use current domain instead of localhost for game service API
+        const gameApiUrl = `${window.location.protocol}//${window.location.host}/api/game/players/${playerId}/ready`;
+        const response = await fetchWithSelfSigned(gameApiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -143,8 +145,11 @@ export function initializeGame(playerId: string): void {
     isGameOver = false;
     isGameLoopRunning = false;
     localPlayerId = playerId;
-    // Use ws:// for HTTP since game service HTTP server is on port 8081 (which includes WebSocket)
-    clientConnection = new webSocketClient(`ws://localhost:8081/ws`, playerId);
+    // FIXED: Use current domain instead of localhost for WebSocket connection
+    // Dynamically determine protocol (ws:// for HTTP, wss:// for HTTPS)
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.host}/api/game/ws`;
+    clientConnection = new webSocketClient(wsUrl, playerId);
     
     // Make leaveGame function available globally for Leave Game button
     (window as any).leaveGame = leaveGame;
@@ -448,7 +453,7 @@ export function initializeGame(playerId: string): void {
             const message = JSON.parse(event.data);
             
             // 🏆 DEBUG: Log ALL messages to see what's happening during semi-finals
-            console.log('🏆 DEBUG: WebSocket message received:', message.type, message);
+            // console.log('🏆 DEBUG: WebSocket message received:', message.type, message);
             
             // 🏆 QUEUE MANAGEMENT: If showing semi-final splash, queue non-critical messages
             if (isShowingSemiFinalSplash && (message.type === 'init' || message.type === 'waitingForPlayers')) {

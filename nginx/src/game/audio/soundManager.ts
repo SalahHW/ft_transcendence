@@ -11,12 +11,14 @@ class SoundManager {
      * Preload sound files
      */
     async preloadSounds(): Promise<void> {
+        // FIXED: Use current domain instead of localhost for sound files
+        // Sound files are served through nginx, so use same domain as frontend
         const soundFiles = {
-            paddleHit: 'http://localhost:8081/sounds/matchSounds/pop.mp3',
-            wallHit: 'http://localhost:8081/sounds/matchSounds/laser_low.mp3',
-            lostPoint: 'http://localhost:8081/sounds/matchSounds/lost_point.mp3',
-            winnerSound: 'http://localhost:8081/sounds/endGameSounds/winner_sound.mp3',
-            loserSound: 'http://localhost:8081/sounds/endGameSounds/looser_sound.mp3'
+            paddleHit: `${window.location.protocol}//${window.location.host}/sounds/matchSounds/pop.mp3`,
+            wallHit: `${window.location.protocol}//${window.location.host}/sounds/matchSounds/laser_low.mp3`,
+            lostPoint: `${window.location.protocol}//${window.location.host}/sounds/matchSounds/lost_point.mp3`,
+            winnerSound: `${window.location.protocol}//${window.location.host}/sounds/endGameSounds/winner_sound.mp3`,
+            loserSound: `${window.location.protocol}//${window.location.host}/sounds/endGameSounds/looser_sound.mp3`
         };
 
         console.log('Preloading sounds...');

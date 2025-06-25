@@ -1,6 +1,8 @@
-// Utility function to make HTTPS requests that work with self-signed certificates
+// FIXED: Updated to use current domain instead of hardcoded localhost
+// This fixes CORS errors when running on real domain with HTTPS certificates
 
-const host = "http://localhost";
+// Dynamically determine the host based on current location
+const host = `${window.location.protocol}//${window.location.host}`;
 //const userPath = "/users";
 const mePath = "/me";
 
@@ -65,9 +67,10 @@ export async function getUserResponseData(key: string): Promise<any> {
 
 export async function registerCurrentUserForGame(tournament: boolean = false): Promise<{ id: string; username: string }> {
 	const username = await getUserResponseData('username');
-	const serverPort = 8081; // Game service HTTP port
+	// FIXED: Use current domain instead of localhost for game service API
+	// Game service is proxied through nginx, so use same domain as frontend
 	
-	const response = await fetch(`http://localhost:${serverPort}/api/players`, {
+	const response = await fetch(`${host}/api/game/players`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
