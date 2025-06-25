@@ -229,29 +229,49 @@ class Ball {
         if (Math.abs(this.position.x) > 20) {
             let newVelocity;
             let losingPlayerId;
+            let winningPlayerId;
             
             if (this.position.x < 0) {
                 // Ball went past left side (Player 2's side), Player 1 scores
                 this.player1.playerScore++;
                 losingPlayerId = this.player2.playerId; // Player 2 lost the point
+                winningPlayerId = this.player1.playerId;
                 // Ball goes towards the loser (Player 2 - left side)
                 newVelocity = new BABYLON.Vector3(-GAME_CONFIG.INITIAL_BALL_SPEED, 0, 0);
             } else {
                 // Ball went past right side (Player 1's side), Player 2 scores  
                 this.player2.playerScore++;
                 losingPlayerId = this.player1.playerId; // Player 1 lost the point
+                winningPlayerId = this.player2.playerId;
                 // Ball goes towards the loser (Player 1 - right side)
                 newVelocity = new BABYLON.Vector3(GAME_CONFIG.INITIAL_BALL_SPEED, 0, 0);
             }
 
             // Send lost point sound only to the player who lost
-            if (this.gameEngine && this.roomId && losingPlayerId) {
-                this.gameEngine.sendToPlayer(this.roomId, losingPlayerId, {
-                    type: 'soundEvent',
-                    sound: 'lostPoint',
-                    timestamp: Date.now()
-                });
+
+            if (this.gameEngine && this.roomId) {
+                if (losingPlayerId) {
+                    this.gameEngine.sendToPlayer(this.roomId, losingPlayerId, {
+                        type: 'soundEvent',
+                        sound: 'lostPoint',
+                        timestamp: Date.now()
+                    });
+                } if(winningPlayerId) {
+                    this.gameEngine.sendToPlayer(this.roomId, winningPlayerId, {
+                        type: 'soundEvent',
+                        sound: 'playerScored',
+                        timestamp: Date.now()
+                    });
+                }
             }
+            
+            //if (this.gameEngine && this.roomId && losingPlayerId) {
+            //    this.gameEngine.sendToPlayer(this.roomId, losingPlayerId, {
+            //        type: 'soundEvent',
+            //        sound: 'lostPoint',
+            //        timestamp: Date.now()
+            //    });
+            //}
             
             this.handleBallRespawn(newVelocity);
         }
