@@ -1,2 +1,5 @@
 public/js
 public/style
+cert.pem
+chain.pem
+key.pem
