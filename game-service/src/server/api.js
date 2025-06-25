@@ -230,7 +230,7 @@ async function notifyOtherServices(matchData) {
   const services = [
     {
       name: 'users-service',
-      url: process.env.USERS_SERVICE_URL || 'http://localhost:3001',
+      url: process.env.USERS_SERVICE_URL || 'http://users:3000',
       endpoints: ['/api/matches/completed']
     },
     {

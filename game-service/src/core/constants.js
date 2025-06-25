@@ -45,7 +45,9 @@ export const SERVER_CONFIG = {
     'http://localhost',
     'https://localhost', 
     'http://localhost:80',
-    'https://localhost:80'
+    'https://localhost:80',
+    'https://elsalmajori.games:8443',
+    'https://elsalmajori.games'
   ],
   ALLOWED_METHODS: ['GET', 'POST'],
   ALLOWED_HEADERS: ['Content-Type', 'Authorization'],
