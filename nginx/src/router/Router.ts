@@ -19,6 +19,8 @@ import HomePage from "../views/homePage.js";
 import LoginPopup from "../components/LoginPopup.js";
 import RegisterPopup from "../components/RegisterPopup.js";
 import ProfileView from "../views/ProfileView.js";
+import { handleSimpleMatch } from "../game/gameMode/1v1Handler.js";
+import { handleTournament } from "../game/gameMode/tournamentHandler.js";
 
 interface Route {
 	path: string;
@@ -85,6 +87,18 @@ export default class Router {
 				if (!this.cache)
 					this.cache = new ProfileView();
 				this.cache.show();
+			}
+		},
+		{
+			path: "/1v1",
+			handler: async function() {
+				await handleSimpleMatch(this);
+			}
+		},
+		{
+			path: "/tournament",
+			handler: async function() {
+				await handleTournament(this);
 			}
 		}
 	];
