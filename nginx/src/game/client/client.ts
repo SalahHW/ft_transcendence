@@ -77,6 +77,9 @@ function handleSoundEvent(msg: any): void {
         case 'lostPoint':
             soundManager.playSound('lostPoint', 1.0);
             break;
+        case 'playerScored':
+            soundManager.playSound('playerScored', 1.0);
+            break;
             
         default:
             console.warn('Unknown sound event:', sound);
