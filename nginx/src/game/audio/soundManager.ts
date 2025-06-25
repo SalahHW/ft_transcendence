@@ -17,6 +17,7 @@ class SoundManager {
             paddleHit: `${window.location.protocol}//${window.location.host}/sounds/matchSounds/pop.mp3`,
             wallHit: `${window.location.protocol}//${window.location.host}/sounds/matchSounds/laser_low.mp3`,
             lostPoint: `${window.location.protocol}//${window.location.host}/sounds/matchSounds/lost_point.mp3`,
+            playerScored: `${window.location.protocol}//${window.location.host}/sounds/matchSounds/player_scored.mp3`,
             winnerSound: `${window.location.protocol}//${window.location.host}/sounds/endGameSounds/winner_sound.mp3`,
             loserSound: `${window.location.protocol}//${window.location.host}/sounds/endGameSounds/looser_sound.mp3`
         };
