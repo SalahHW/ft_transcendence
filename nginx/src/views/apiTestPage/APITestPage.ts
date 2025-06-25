@@ -12,6 +12,24 @@
 
 import ModalView from "../../components/ModalView.js";
 import Tabs from "./components/tabs.js";
+// ADDED MISSING IMPORTS
+import Router from "../../router/Router.js";
+import { buttonHTML } from "../../components/button.js";
+
+// User forms
+import GetUserForm from "./userForms/GetUserForm.js";
+import CreateUserForm from "./userForms/CreateUserForm.js";
+import UpdateUserForm from "./userForms/UpdateUserForm.js";
+import DeleteUserForm from "./userForms/DeleteUserForm.js";
+
+// Match forms
+import GetMatchForm from "./matchForms/GetMatchForm.js";
+import CreateMatchForm from "./matchForms/CreateMatchForm.js";
+
+// Current user forms
+import GetCurrentUserForm from "./currentUserForms/GetCurrentUserForm.js";
+import LoginLogoutUserForm from "./currentUserForms/LoginLogoutUserForm.js";
+import RegisterUserForm from "./currentUserForms/RegisterUserForm.js";
 
 export default class APITestPage extends ModalView {
 	private _terminalInstance: any = null;
