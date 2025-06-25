@@ -49,18 +49,11 @@ let queuedMessages: any[] = [];
 
 // Function to process queued messages after semi-final splash
 async function processQueuedMessages(): Promise<void> {
-    console.log('🏆 DEBUG: Processing queued messages:', queuedMessages.length);
     while (queuedMessages.length > 0) {
         const message = queuedMessages.shift();
-        console.log('🏆 DEBUG: Processing queued message:', message.type);
-        
         if (message.type === 'waitingForPlayers') {
             handleWaitingForPlayers(message, updateGameStatus);
-        } else if (message.type === 'init') {
-            // Re-trigger init handler - this will be handled by the onInit callback already set up
-            console.log('🏆 DEBUG: Init message will be processed when connection is ready');
-        }
-        
+        }         
         // Small delay between processing messages to avoid overwhelming
         await new Promise(resolve => setTimeout(resolve, 100));
     }
@@ -265,19 +258,9 @@ export function initializeGame(playerId: string): void {
 
     // Add game end handler
     clientConnection.onGameEnd(async (msg: any) => {
-        console.log('🏆 DEBUG: ⭐ PRIMARY onGameEnd handler triggered!', msg);
         const gameEndData = msg as GameEndData;
         isGameOver = true;
         
-        // DEBUG: Log the entire game end data to understand the structure
-        console.log('🏆 DEBUG: ⭐ FULL Game end data received:', JSON.stringify(gameEndData, null, 2));
-        console.log('🏆 DEBUG: ⭐ Current roomId:', roomId);
-        console.log('🏆 DEBUG: ⭐ localPlayerId:', localPlayerId);
-        console.log('🏆 DEBUG: ⭐ CRITICAL - Check finalMatchType:', {
-            'gameEndData.finalMatchType': gameEndData.finalMatchType,
-            'gameEndData.gameStats?.finalMatchType': gameEndData.gameStats?.finalMatchType,
-            'gameEndData.matchType': gameEndData.matchType
-        });
         
         // Stop the game loop and clean up
         if (isGameLoopRunning && map?.getEngine) {
@@ -306,43 +289,14 @@ export function initializeGame(playerId: string): void {
                            roomId?.includes('Semi') ||
                            gameEndData.roomId?.includes('Semi'));
         
-        console.log('🏆 DEBUG: Match type detection results:', { isFinal, isSemiFinal });
-        console.log('🏆 DEBUG: Detection data:', {
-            'gameEndData.matchType': gameEndData.matchType,
-            'gameEndData.gameStats?.matchType': gameEndData.gameStats?.matchType,
-            'roomId': roomId,
-            'gameEndData.roomId': gameEndData.roomId,
-            'roomId?.includes("final")': roomId?.includes('final'),
-            'roomId?.includes("semi")': roomId?.includes('semi'),
-            'Full gameEndData': gameEndData
-        });
         
-        // 🏆 CRITICAL DEBUG: Log what type of match this is
-        if (isFinal) {
-            console.log('🏆 ✅ ⭐ FINAL MATCH DETECTED - Will show final placement splash screen');
-            console.log('🏆 ✅ ⭐ FINAL DETECTION DETAILS:', {
-                'gameEndData.matchType': gameEndData.matchType,
-                'gameEndData.finalMatchType': gameEndData.finalMatchType,
-                'gameEndData.gameStats?.matchType': gameEndData.gameStats?.matchType,
-                'gameEndData.gameStats?.finalMatchType': gameEndData.gameStats?.finalMatchType,
-                'roomId?.includes("final")': roomId?.includes('final'),
-                'roomId': roomId
-            });
-        } else if (isSemiFinal) {
-            console.log('🏆 ✅ SEMI-FINAL MATCH DETECTED - Will show semi-final splash screen');
-        } else {
-            console.log('🏆 ✅ REGULAR MATCH DETECTED - Will show regular splash screen');
-        }
-
         if (isFinal) {
             // For finals, show tournament final placement splash screen
-            console.log('🏆 Final match detected, showing tournament final placement splash screen');
             const isWinner = gameEndData.winner.id === localPlayerId;
             const opponentName = gameEndData.winner.id === localPlayerId ? 
                                 gameEndData.loser.username : 
                                 gameEndData.winner.username;
             
-            console.log('🏆 DEBUG: Final game - isWinner:', isWinner, 'opponentName:', opponentName);
             
             // Determine final placement based on room type and result
             let finalPlacement: 1 | 2 | 3 | 4;
@@ -355,11 +309,9 @@ export function initializeGame(playerId: string): void {
             if (gameEndData.finalMatchType) {
                 isWinnersFinal = gameEndData.finalMatchType === 'winners';
                 isLosersFinal = gameEndData.finalMatchType === 'losers';
-                console.log(`🏆 DEBUG: Using server finalMatchType: ${gameEndData.finalMatchType}`);
             } else if (gameEndData.gameStats?.finalMatchType) {
                 isWinnersFinal = gameEndData.gameStats.finalMatchType === 'winners';
                 isLosersFinal = gameEndData.gameStats.finalMatchType === 'losers';
-                console.log(`🏆 DEBUG: Using server gameStats.finalMatchType: ${gameEndData.gameStats.finalMatchType}`);
             } else {
                 // Fallback to room ID parsing
                 isWinnersFinal = roomId?.includes('winners') || 
@@ -372,27 +324,15 @@ export function initializeGame(playerId: string): void {
                                roomId?.includes('Losers') || 
                                gameEndData.roomId?.includes('Losers');
                 
-                console.log('🏆 DEBUG: Using room ID fallback detection');
             }
             
-            console.log('🏆 DEBUG: Final type determination - isWinnersFinal:', isWinnersFinal, 'isLosersFinal:', isLosersFinal);
-            console.log('🏆 DEBUG: Room and match data:', {
-                roomId: roomId,
-                'gameEndData.roomId': gameEndData.roomId,
-                'gameEndData.finalMatchType': gameEndData.finalMatchType,
-                'gameEndData.gameStats?.finalMatchType': gameEndData.gameStats?.finalMatchType
-            });
             
             if (isWinnersFinal) {
                 // Winners final: 1st place for winner, 2nd place for loser
                 finalPlacement = isWinner ? 1 : 2;
-                console.log('🏆 DEBUG: ⭐ WINNERS FINAL detected - placement:', finalPlacement, '(winner gets 1st, loser gets 2nd)');
-                console.log('🏆 DEBUG: ⭐ LOGIC: Winners final + isWinner:', isWinner, '→ placement:', finalPlacement);
             } else if (isLosersFinal) {
                 // Losers final: 3rd place for winner, 4th place for loser
                 finalPlacement = isWinner ? 3 : 4;
-                console.log('🏆 DEBUG: ⭐ LOSERS FINAL detected - placement:', finalPlacement, '(winner gets 3rd, loser gets 4th)');
-                console.log('🏆 DEBUG: ⭐ LOGIC: Losers final + isWinner:', isWinner, '→ placement:', finalPlacement);
             } else {
                 // Fallback - try to determine from room name or default to middle placement
                 console.warn('🏆 ⚠️ Could not determine final type, defaulting placement');
@@ -404,36 +344,26 @@ export function initializeGame(playerId: string): void {
                     'gameEndData.gameStats?.finalMatchType': gameEndData.gameStats?.finalMatchType
                 });
                 finalPlacement = isWinner ? 1 : 2; // Default to winners final
-                console.log('🏆 DEBUG: ⚠️ Fallback placement:', finalPlacement);
             }
-            
-            console.log(`🏆 Final placement determined: ${finalPlacement}${TournamentClientHandler.getPlacementSuffix(finalPlacement)} place`);
             
             try {
                 await TournamentClientHandler.handleFinalGameEnd(gameEndData, localPlayerId, opponentName, finalPlacement);
-                console.log('🏆 DEBUG: TournamentClientHandler.handleFinalGameEnd completed successfully');
-                console.log('🏆 DEBUG: Final game completed - navigation and cleanup handled by tournament handler');
             } catch (error) {
                 console.error('🏆 ERROR: Error showing final splash:', error);
                 // ⭐ CLEANUP ON ERROR: If final splash fails, still cleanup and try to navigate
-                console.log('🏆 DEBUG: Cleaning up after final splash error...');
                 cleanup();
             }
             
             // ⭐ NOTE: No cleanup() call here for successful finals - handled by tournament handler with navigation
         } else if (isSemiFinal) {
             // For semi-finals, show tournament-specific splash screen as overlay
-            console.log('🏆 Semi-final match detected, showing tournament splash screen');
             const opponentName = gameEndData.winner.id === localPlayerId ? 
                                 gameEndData.loser.username : 
                                 gameEndData.winner.username;
             
-            console.log('🏆 DEBUG: Opponent name:', opponentName);
-            console.log('🏆 DEBUG: About to call TournamentClientHandler.handleSemiFinalGameEnd');
             
             try {
                 await TournamentClientHandler.handleSemiFinalGameEnd(gameEndData, localPlayerId, opponentName);
-                console.log('🏆 DEBUG: TournamentClientHandler.handleSemiFinalGameEnd completed successfully');
             } catch (error) {
                 console.error('🏆 ERROR: Error showing semi-final splash:', error);
             }
@@ -441,7 +371,6 @@ export function initializeGame(playerId: string): void {
             // Don't cleanup immediately for tournament matches - let tournament system handle it
         } else {
             // Regular 1v1 match - show regular splash screen and cleanup
-            console.log('🏆 DEBUG: Regular match detected, showing normal splash screen');
             showGameEndSplashScreen(gameEndData, localPlayerId);
             cleanup();
         }
@@ -452,12 +381,9 @@ export function initializeGame(playerId: string): void {
         try {
             const message = JSON.parse(event.data);
             
-            // 🏆 DEBUG: Log ALL messages to see what's happening during semi-finals
-            // console.log('🏆 DEBUG: WebSocket message received:', message.type, message);
             
             // 🏆 QUEUE MANAGEMENT: If showing semi-final splash, queue non-critical messages
             if (isShowingSemiFinalSplash && (message.type === 'init' || message.type === 'waitingForPlayers')) {
-                console.log('🏆 DEBUG: Queueing message during semi-final splash:', message.type);
                 queuedMessages.push(message);
                 return;
             }
@@ -470,12 +396,9 @@ export function initializeGame(playerId: string): void {
                 
                 // 🏆 SEMI-FINAL DETECTION: Check if this is the end of a semi-final
                 if (message.status === 'transferred_to_final') {
-                    console.log('🏆 DEBUG: Semi-final ended detected in tournamentAdvancement:', message);
-                    
                     // ⭐ SAFETY CHECK: Prevent showing semi-final splash if we're already in a final room
                     const currentlyInFinalRoom = roomId?.includes('final') || roomId?.includes('Final');
                     if (currentlyInFinalRoom) {
-                        console.log('🏆 ⚠️ SAFETY: Ignoring transferred_to_final message - already in final room:', roomId);
                         return; // Don't show semi-final splash for final room activities
                     }
                     
@@ -484,11 +407,8 @@ export function initializeGame(playerId: string): void {
                     const opponentName = message.opponentName || 'Opponent'; // Default if not provided
                     const score = message.score || ''; // Default if not provided
                     
-                    console.log('🏆 DEBUG: Semi-final result - isWinner:', isWinner, 'opponentName:', opponentName);
-                    
                     // Show splash screen and WAIT for it to complete before tournament advancement
                     try {
-                        console.log('🏆 DEBUG: Setting semi-final splash flag and showing splash screen...');
                         isShowingSemiFinalSplash = true; // Block incoming messages
                         
                         await TournamentClientHandler.handleSemiFinalGameEnd(
@@ -512,7 +432,6 @@ export function initializeGame(playerId: string): void {
                             opponentName
                         );
                         
-                        console.log('🏆 DEBUG: Semi-final splash screen completed successfully');
                         isShowingSemiFinalSplash = false; // Allow new messages
                         
                         // Process any queued messages that arrived during splash
@@ -524,7 +443,6 @@ export function initializeGame(playerId: string): void {
                     }
                     
                     // NOW handle tournament advancement after splash screen is done
-                    console.log('🏆 DEBUG: Semi-final splash complete, now handling tournament advancement...');
                     TournamentClientHandler.handleTournamentAdvancement(
                         message,
                         updateGameStatus,
@@ -578,8 +496,6 @@ export function initializeGame(playerId: string): void {
             } else if (message.type === 'gameEnd' || message.type === 'matchEnd' || message.type === 'tournamentGameEnd') {
                 // 🏆 REMOVE DUPLICATE: Game end messages should ONLY be handled by clientConnection.onGameEnd
                 // This prevents conflicts between multiple event handlers
-                console.log('🏆 DEBUG: ⚠️ Game end message received in secondary listener - IGNORING to prevent conflicts');
-                console.log('🏆 DEBUG: ⚠️ Message type:', message.type, 'will be handled by primary onGameEnd listener');
                 // DO NOT process game end here - let the primary onGameEnd handler deal with it
             }
         } catch (error) {
@@ -663,7 +579,6 @@ export function initializeGame(playerId: string): void {
                 player1.createPaddle(map.getScene!, 19.5, 2, 20);
                 player2.createPaddle(map.getScene!, -19.5, 2, 20);
                 
-                // ⭐ TOURNAMENT FIX: Reset paddle positions for tournament games
                 TournamentClientHandler.resetTournamentPaddlePositions(player1, player2);
             } catch (e) {
                 console.error('Paddle creation failed:', e);
@@ -678,11 +593,9 @@ export function initializeGame(playerId: string): void {
                 ball.createBall(map.getScene!);
                 if (ball.ballBody) {
                     ball.ballBody.metadata = { roomId };
-                    // ⭐ CRITICAL FIX: Position ball at center (y=0) instead of y=-2 for visibility
                     ball.ballBody.position = new BABYLON.Vector3(0, 0, 0);
                     ball.ballBody.isVisible = true;
                 }
-                // ⭐ CRITICAL FIX: Set ball position to center for tournament finals
                 ball.position = new BABYLON.Vector3(0, 0, 0);
                 ball.isRespawning = true;
                 ball.respawnTime = 0;
@@ -710,11 +623,9 @@ export function initializeGame(playerId: string): void {
         // ⭐ CRITICAL FIX: Double-check paddle visibility before animation
         if (player1?.paddleBody) {
             player1.paddleBody.isVisible = true;
-            console.log('✅ Player1 paddle made visible before animation');
         }
         if (player2?.paddleBody) {
             player2.paddleBody.isVisible = true;
-            console.log('✅ Player2 paddle made visible before animation');
         }
         if (ball?.ballBody) {
             ball.ballBody.isVisible = true;
@@ -727,16 +638,12 @@ export function initializeGame(playerId: string): void {
         soundManager.preloadSounds().catch(error => {
             console.warn('Failed to initialize sound manager:', error);
         });
-        
-        // ⭐ TOURNAMENT FIX: Reset scores for clean start
         updateScoresUIVersus(0, 0, player1Name, player2Name);
-        
         // Update player names in UI from current player's perspective
         updatePlayerNamesVersus(playerName || 'Player', opponentName || 'Opponent');
         
         // Set up keyboard controls if not already set
         if (!(window as any).gameControlsInitialized) {
-            // **CRITICAL FIX**: Store event handler references for proper cleanup
             const keydownHandler = (event: KeyboardEvent) => {
                 if (isGameOver) return;
                 if (event.key === 'ArrowUp' && !isUpPressed) {
@@ -772,18 +679,14 @@ export function initializeGame(playerId: string): void {
         // Start the game loop after match animation if not already running
         if (!isGameLoopRunning) {
             try {
-                console.log('🎬 Starting match animation with visible elements...');
                 await map.launchMatchAnimation();
-                console.log('🎬 Match animation completed');
                 
                 // ⭐ CRITICAL FIX: Re-enforce visibility after animation completes
                 if (player1?.paddleBody) {
                     player1.paddleBody.isVisible = true;
-                    console.log('✅ Player1 paddle re-enforced visible after animation');
                 }
                 if (player2?.paddleBody) {
                     player2.paddleBody.isVisible = true;
-                    console.log('✅ Player2 paddle re-enforced visible after animation');
                 }
                 if (ball?.ballBody) {
                     ball.ballBody.isVisible = true;
@@ -792,7 +695,6 @@ export function initializeGame(playerId: string): void {
                         ball.ballBody.position.y = 0;
                         ball.position.y = 0;
                     }
-                    console.log('✅ Ball re-enforced visible after animation at position:', ball.ballBody.position);
                 }
                 
                 // Notify server that animation is complete
