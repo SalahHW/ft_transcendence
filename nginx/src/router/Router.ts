@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   router.ts                                          :+:      :+:    :+:   */
+/*   Router.ts                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:40:51 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/28 16:29:39 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/23 15:31:20 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,10 @@
 
 import APITestPage from "../views/apiTestPage/APITestPage.js";
 import HomePage from "../views/homePage.js";
+import LoginPopup from "../components/LoginPopup.js";
+import RegisterPopup from "../components/RegisterPopup.js";
+import ProfileView from "../views/ProfileView.js";
+
 interface Route {
 	path: string;
 	cache?: any;
@@ -36,9 +40,49 @@ export default class Router {
 		{
 			path: "/api-test",
 			handler: function() {
+				// Revenir à la page précédente dans l'historique
+				window.history.back();
+
+				// Afficher la vue API test
 				if (!this.cache)
-					this.cache = new APITestPage("app-container");
-				this.cache.render();
+					this.cache = new APITestPage();
+				this.cache.show();
+			}
+		},
+		{
+			path: "/login",
+			handler: function() {
+				// Revenir à la page précédente dans l'historique
+				window.history.back();
+
+				// Afficher la popup de login
+				if (!this.cache)
+					this.cache = new LoginPopup();
+				this.cache.show();
+			}
+		},
+		{
+			path: "/register",
+			handler: function() {
+				// Revenir à la page précédente dans l'historique
+				window.history.back();
+
+				// Afficher la popup de register
+				if (!this.cache)
+					this.cache = new RegisterPopup();
+				this.cache.show();
+			}
+		},
+		{
+			path: "/profile",
+			handler: function() {
+				// Revenir à la page précédente dans l'historique
+				window.history.back();
+
+				// Afficher la vue de profil
+				if (!this.cache)
+					this.cache = new ProfileView();
+				this.cache.show();
 			}
 		}
 	];
@@ -111,11 +155,4 @@ export default class Router {
 		 else
 			this.navigate(currentPath, true);
 	}
-
-	// public destroy(): void {
-	// 	if (this._initialized) {
-	// 		window.removeEventListener('popstate', this._handlePopState);
-	// 		this._initialized = false;
-	// 	}
-	// }
 }

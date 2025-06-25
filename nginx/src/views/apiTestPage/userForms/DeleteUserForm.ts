@@ -1,6 +1,6 @@
 import UsersApi from "../../../api/user.js";
 import { buttonHTML } from "../../../components/button.js";
-import { COMMON_CLASSES } from "../../../style/tailwindClasses.js";
+import { UI_THEME } from "../../../style/tailwindClasses.js";
 
 export default class DeleteUserForm {
 	private _container: HTMLElement;
@@ -15,10 +15,9 @@ export default class DeleteUserForm {
 
 	render(): void {
 		this._container.innerHTML = /* HTML */ `
-			<form id="delete-user-form" class="${COMMON_CLASSES.form}">
+			<form id="delete-user-form" class="${UI_THEME.components.form}">
 				<div>
-					<label class="${COMMON_CLASSES.label}">ID</label>
-					<input type="number" id="deleteform-user-id" class="${COMMON_CLASSES.input}">
+					<input type="number" id="deleteform-user-id" placeholder="User ID" class="${UI_THEME.components.input}">
 				</div>
 
 				${buttonHTML({

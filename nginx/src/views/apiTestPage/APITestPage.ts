@@ -10,35 +10,43 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+import ModalView from "../../components/ModalView.js";
 import Tabs from "./components/tabs.js";
-import { COMMON_CLASSES } from "../../style/tailwindClasses.js";
 
-export default class APITestPage {
-	private _container: HTMLElement;
+export default class APITestPage extends ModalView {
+	private _terminalInstance: any = null;
 
-	constructor(containerId: string) {
-		this._container = document.getElementById(containerId) as HTMLElement;
-		if (!this._container)
-			throw new Error(`Container ${containerId} not found`);
+	constructor() {
+		super({
+			width: '90vw',
+			height: '90vh',
+			contentContainerClasses: 'p-6'
+		});
 	}
 
-	render(): void {
-		this._container.innerHTML = /* HTML */ `
-			<div class="${COMMON_CLASSES.pageContainer}">
+	public show(): void {
+		if (this._isVisible) return;
+		this.render();
+		super.show();
+	}
+
+	public render(): void {
+		this._contentContainer.innerHTML = /* HTML */ `
+			<div class="w-full h-full flex flex-col">
 				<h1 class="text-3xl font-bold mb-4 text-center text-gradient bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent drop-shadow">API Test Page</h1>
-				<div class="flex flex-col md:flex-row gap-6 flex-1">
+				<div class="flex flex-col md:flex-row gap-6 flex-1 min-h-0">
 					<!-- First card -->
-					<div class="${COMMON_CLASSES.card}">
+					<div class="flex-1 bg-black/20 backdrop-blur-xl rounded-2xl shadow-2xl border-2 border-[#5A5A5A] p-6 min-h-0 flex flex-col overflow-hidden">
 						<div class="w-full h-full flex flex-col">
-							<div class="flex-grow">
+							<div class="flex-grow min-h-0">
 								<div id="left-card-content" class="h-full"></div>
 							</div>
 						</div>
 					</div>
 					<!-- Second card -->
-					<div class="${COMMON_CLASSES.card}">
+					<div class="flex-1 bg-black/20 backdrop-blur-xl rounded-2xl shadow-2xl border-2 border-[#5A5A5A] p-6 min-h-0 flex flex-col overflow-hidden">
 						<div class="w-full h-full flex flex-col">
-							<div class="flex-grow">
+							<div class="flex-grow min-h-0">
 								<div id="right-card-content" class="h-full"></div>
 							</div>
 						</div>
@@ -179,7 +187,18 @@ export default class APITestPage {
 
 	private _renderRightCardContent(): void {
 		import('./components/customTerminal.js').then((module) => {
-			new module.default("right-card-content");
+			this._terminalInstance = new module.default("right-card-content");
 		});
+	}
+
+	protected _onHide(): void {
+		// Clean up the terminal when the modal is hidden
+		if (this._terminalInstance) {
+			// Import and call the static cleanup method
+			import('./components/customTerminal.js').then((module) => {
+				module.default.restoreConsoleLog();
+			});
+			this._terminalInstance = null;
+		}
 	}
 }

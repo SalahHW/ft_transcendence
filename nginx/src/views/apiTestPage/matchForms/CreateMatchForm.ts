@@ -12,7 +12,7 @@
 
 import MatchServiceAPI, { Match } from "../../../api/matche.js";
 import { buttonHTML } from "../../../components/button.js";
-import { COMMON_CLASSES } from "../../../style/tailwindClasses.js";
+import { UI_THEME } from "../../../style/tailwindClasses.js";
 
 export default class CreateMatchForm {
 	private _container: HTMLElement;
@@ -27,25 +27,21 @@ export default class CreateMatchForm {
 
 	render(): void {
 		this._container.innerHTML = /* HTML */ `
-			<form id="create-match-form" class="${COMMON_CLASSES.form}">
+			<form id="create-match-form" class="${UI_THEME.components.form}">
 				<div>
-					<label class="${COMMON_CLASSES.label}">User 1 ID</label>
-					<input type="number" id="createform-user-id1" class="${COMMON_CLASSES.input}">
+					<input type="number" id="createform-user-id1" placeholder="User 1 ID" class="${UI_THEME.components.input}">
 				</div>
 
 				<div>
-					<label class="${COMMON_CLASSES.label}">User 2 ID</label>
-					<input type="number" id="createform-user-id2" class="${COMMON_CLASSES.input}">
+					<input type="number" id="createform-user-id2" placeholder="User 2 ID" class="${UI_THEME.components.input}">
 				</div>
 
 				<div>
-					<label class="${COMMON_CLASSES.label}">User 1 score</label>
-					<input type="number" id="createform-user-score1" class="${COMMON_CLASSES.input}">
+					<input type="number" id="createform-user-score1" placeholder="User 1 score" class="${UI_THEME.components.input}">
 				</div>
 
 				<div>
-					<label class="${COMMON_CLASSES.label}">User 2 score</label>
-					<input type="number" id="createform-user-score2" class="${COMMON_CLASSES.input}">
+					<input type="number" id="createform-user-score2" placeholder="User 2 score" class="${UI_THEME.components.input}">
 				</div>
 
 				${buttonHTML({
