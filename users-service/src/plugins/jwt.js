@@ -13,12 +13,20 @@ export async function signToken(payload) {
       body: JSON.stringify(payload),
     });
 
-    if (!response.ok) throw new Error("Failed to sign token");
+    const data = await response.json().catch(() => ({})); // pour les erreurs 500/HTML
 
-    const data = await response.json();
+    if (!response.ok) {
+      console.error("JWT service responded with error:", {
+        status: response.status,
+        body: data,
+      });
+      throw new Error(data?.error || "Failed to sign token");
+    }
+
     return data.token;
   } catch (err) {
-    throw new Error(err.message);
+    console.error("JWT signing failed:", err.message);
+    throw new Error(`Token signing error: ${err.message}`);
   }
 }
 
