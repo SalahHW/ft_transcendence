@@ -13,7 +13,7 @@ export async function signToken(payload) {
       body: JSON.stringify(payload),
     });
 
-    const data = await response.json().catch(() => ({})); // pour les erreurs 500/HTML
+    const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
       console.error("JWT service responded with error:", {
