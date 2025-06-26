@@ -324,10 +324,10 @@ export class GameClient {
         document.addEventListener('keydown', (event) => {
             if (this.isGameOver || !this.clientConnection) return;
             
-            if (event.key === 'ArrowUp' && !this.isUpPressed) {
+            if (event.key === 'ArrowLeft' && !this.isUpPressed) {
                 this.isUpPressed = true;
                 this.clientConnection.send({ type: 'keyDown', direction: 'up' });
-            } else if (event.key === 'ArrowDown' && !this.isDownPressed) {
+            } else if (event.key === 'ArrowRight' && !this.isDownPressed) {
                 this.isDownPressed = true;
                 this.clientConnection.send({ type: 'keyDown', direction: 'down' });
             }
@@ -336,10 +336,10 @@ export class GameClient {
         document.addEventListener('keyup', (event) => {
             if (this.isGameOver || !this.clientConnection) return;
             
-            if (event.key === 'ArrowUp' && this.isUpPressed) {
+            if (event.key === 'ArrowLeft' && this.isUpPressed) {
                 this.isUpPressed = false;
                 this.clientConnection.send({ type: 'keyUp', direction: 'up' });
-            } else if (event.key === 'ArrowDown' && this.isDownPressed) {
+            } else if (event.key === 'ArrowRight' && this.isDownPressed) {
                 this.isDownPressed = false;
                 this.clientConnection.send({ type: 'keyUp', direction: 'down' });
             }

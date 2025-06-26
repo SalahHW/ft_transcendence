@@ -11,6 +11,7 @@ import { soundManager } from '../audio/soundManager.js';
 import { TournamentClientHandler } from '../tournament/tournamentClientHandler.js';
 import { showSplashScreen } from '../ui/splashScreen.js';
 import { showGameEndSplashScreen, GameEndData } from '../utils/splashScreenUtils.js';
+import { cameraManager } from '../camera/cameraManager.js';
 
 interface PlayerData {
     id: string;
@@ -661,6 +662,12 @@ export function initializeGame(playerId: string): void {
             ball.ballBody.isVisible = true;
         }
 
+        // 🎮 Initialize camera manager with all game elements
+        if (map && player1 && player2 && localPlayerId) {
+            cameraManager.initialize(map, player1, player2, localPlayerId);
+            console.log('🎮 Camera manager initialized after game setup');
+        }
+
         updateGameStatus('Game starting...');
         
         // 🔊 Initialize sound manager
@@ -675,10 +682,10 @@ export function initializeGame(playerId: string): void {
         if (!(window as any).gameControlsInitialized) {
             const keydownHandler = (event: KeyboardEvent) => {
                 if (isGameOver) return;
-                if (event.key === 'ArrowUp' && !isUpPressed) {
+                if (event.key === 'ArrowLeft' && !isUpPressed) {
                     isUpPressed = true;
                     clientConnection!.send({ type: 'keyDown', direction: 'up' });
-                } else if (event.key === 'ArrowDown' && !isDownPressed) {
+                } else if (event.key === 'ArrowRight' && !isDownPressed) {
                     isDownPressed = true;
                     clientConnection!.send({ type: 'keyDown', direction: 'down' });
                 }
@@ -686,10 +693,10 @@ export function initializeGame(playerId: string): void {
 
             const keyupHandler = (event: KeyboardEvent) => {
                 if (isGameOver) return;
-                if (event.key === 'ArrowUp' && isUpPressed) {
+                if (event.key === 'ArrowLeft' && isUpPressed) {
                     isUpPressed = false;
                     clientConnection!.send({ type: 'keyUp', direction: 'up' });
-                } else if (event.key === 'ArrowDown' && isDownPressed) {
+                } else if (event.key === 'ArrowRight' && isDownPressed) {
                     isDownPressed = false;
                     clientConnection!.send({ type: 'keyUp', direction: 'down' });
                 }
@@ -725,6 +732,10 @@ export function initializeGame(playerId: string): void {
                         ball.position.y = 0;
                     }
                 }
+
+                // 🎮 EXPERIMENTAL: Switch to FPS perspective after animation completes
+                console.log('🎮 EXPERIMENT: Switching to FPS perspective for local player');
+                cameraManager.switchToFPSAfterAnimation();
                 
                 // Notify server that animation is complete
                 if (clientConnection) {
@@ -790,6 +801,9 @@ export function cleanup(): void {
     // Use the dedicated disconnect cleanup
     disconnectCleanup();
     
+    // 🎮 Cleanup camera manager
+    cameraManager.dispose();
+    
     // Update local variables to match cleanup
     isGameOver = true;
     isGameLoopRunning = false;
@@ -823,6 +837,9 @@ export function leaveGame(): void {
     
     // Use the dedicated disconnect leave game
     disconnectLeaveGame();
+    
+    // 🎮 Cleanup camera manager
+    cameraManager.dispose();
     
     // Update local variables to match cleanup
     isGameOver = true;
@@ -893,6 +910,9 @@ function setupGameLoop(): void {
                 }
             }
         }
+
+        // 🎮 Update camera system
+        cameraManager.update();
 
         // Update ball position and ensure it's visible
         if (ball && ball.ballBody && map && map.getScene) {

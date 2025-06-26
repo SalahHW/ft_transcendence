@@ -36,7 +36,7 @@ export default class GamePage {
 				<!-- Game Controls Overlay -->
 				<div class="absolute bottom-0 left-0 right-0 z-10 bg-black bg-opacity-75 p-4">
 					<div class="text-white text-center">
-						<div class="text-sm mb-2">Controls: Use ↑ and ↓ arrow keys to move your paddle</div>
+						<div class="text-sm mb-2">Controls: Use ← and → arrow keys to move your paddle</div>
 						<div class="flex justify-center items-center space-x-8">
 							<div id="player1Score" class="text-lg">Waiting: 0</div>
 							<div class="text-xs">vs</div>
