@@ -1,6 +1,7 @@
 import { playerPaddle } from '../player/player.js';
 import { gameMap } from '../map/gameMap.js';
 import { webSocketClient } from '../webSocketClient/webSocketClient.js';
+import { webSocketClientDisconnect, leaveGame as disconnectLeaveGame, cleanup as disconnectCleanup } from '../webSocketClient/webSocketClientDisconnect.js';
 import { Ball } from '../ball/ball.js';
 import * as BABYLON from '@babylonjs/core';
 import { fetchWithSelfSigned } from '../utils/fetch.js';
@@ -176,13 +177,22 @@ export function initializeGame(playerId: string): void {
         updateGameStatus('Connection error');
     });
 
-    clientConnection.socket.addEventListener('close', () => {
-        updateGameStatus('Connection closed');
-        // Clean up game loop if it's running
-        if (isGameLoopRunning && map && map.getEngine) {
-            map.getEngine.stopRenderLoop();
-            isGameLoopRunning = false;
-        }
+    // Setup disconnection handlers using the dedicated module
+    webSocketClientDisconnect.setupWebSocketDisconnectionHandlers(clientConnection);
+    
+    // Update the disconnect handler with current game state
+    webSocketClientDisconnect.updateGameState({
+        isGameOver,
+        isGameLoopRunning,
+        map,
+        clientConnection,
+        player1,
+        player2,
+        ball,
+        roomId,
+        localPlayerId,
+        isUpPressed,
+        isDownPressed
     });
 
     // Set up paddle movement handler
@@ -762,51 +772,27 @@ export function initializeGame(playerId: string): void {
 
 // Export cleanup function for Leave Game button
 export function cleanup(): void {
-    // Set game as over to immediately stop input and rendering
+    // Update disconnect handler with current state before cleanup
+    webSocketClientDisconnect.updateGameState({
+        isGameOver,
+        isGameLoopRunning,
+        map,
+        clientConnection,
+        player1,
+        player2,
+        ball,
+        roomId,
+        localPlayerId,
+        isUpPressed,
+        isDownPressed
+    });
+    
+    // Use the dedicated disconnect cleanup
+    disconnectCleanup();
+    
+    // Update local variables to match cleanup
     isGameOver = true;
-    
-    if (isGameLoopRunning && map?.getEngine) {
-        map.getEngine.stopRenderLoop();
-        isGameLoopRunning = false;
-    }
-
-    if (clientConnection?.socket?.readyState === WebSocket.OPEN) {
-        clientConnection.socket.close();
-    }
-
-    // Clean up join game button handler
-    if ((window as any).joinGameButtonHandler && (window as any).joinGameButtonSetup) {
-        const joinGameBtn = document.getElementById('joinGameBtn') as HTMLButtonElement;
-        if (joinGameBtn) {
-            joinGameBtn.removeEventListener('click', (window as any).joinGameButtonHandler);
-        }
-        delete (window as any).joinGameButtonHandler;
-        (window as any).joinGameButtonSetup = false;
-    }
-
-    // **CRITICAL FIX**: Clean up keyboard event listeners for proper re-initialization
-    if ((window as any).gameControlsInitialized) {
-        if ((window as any).gameKeydownHandler) {
-            document.removeEventListener('keydown', (window as any).gameKeydownHandler);
-            delete (window as any).gameKeydownHandler;
-        }
-        if ((window as any).gameKeyupHandler) {
-            document.removeEventListener('keyup', (window as any).gameKeyupHandler);
-            delete (window as any).gameKeyupHandler;
-        }
-        (window as any).gameControlsInitialized = false;
-    }
-
-    // **ADDITIONAL SAFETY**: Reset key states to prevent stuck keys
-    isUpPressed = false;
-    isDownPressed = false;
-    
-    // Remove global leaveGame function
-    if ((window as any).leaveGame) {
-        delete (window as any).leaveGame;
-    }
-
-    // Nullify game objects
+    isGameLoopRunning = false;
     clientConnection = null;
     player1 = null;
     player2 = null;
@@ -814,27 +800,42 @@ export function cleanup(): void {
     map = null;
     roomId = null;
     localPlayerId = null;
+    isUpPressed = false;
+    isDownPressed = false;
 }
 
 // Export leaveGame function for Leave Game button
 export function leaveGame(): void {
-    // Set game as over to immediately stop input and rendering
-    isGameOver = true;
+    // Update disconnect handler with current state before leaving
+    webSocketClientDisconnect.updateGameState({
+        isGameOver,
+        isGameLoopRunning,
+        map,
+        clientConnection,
+        player1,
+        player2,
+        ball,
+        roomId,
+        localPlayerId,
+        isUpPressed,
+        isDownPressed
+    });
     
-    // Send leave game message to server if connection exists
-    if (clientConnection) {
-        if (clientConnection.leaveGame) {
-            clientConnection.leaveGame();
-        } else if (clientConnection.socket?.readyState === WebSocket.OPEN) {
-            clientConnection.send({ type: 'leaveGame', playerId: localPlayerId });
-            setTimeout(() => {
-                if (clientConnection?.socket?.readyState === WebSocket.OPEN) {
-                    clientConnection.socket.close();
-                }
-            }, 100);
-        }
-    }
-    cleanup();
+    // Use the dedicated disconnect leave game
+    disconnectLeaveGame();
+    
+    // Update local variables to match cleanup
+    isGameOver = true;
+    isGameLoopRunning = false;
+    clientConnection = null;
+    player1 = null;
+    player2 = null;
+    ball = null;
+    map = null;
+    roomId = null;
+    localPlayerId = null;
+    isUpPressed = false;
+    isDownPressed = false;
 }
 
 // Function to setup game loop

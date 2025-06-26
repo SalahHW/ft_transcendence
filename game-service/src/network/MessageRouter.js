@@ -6,6 +6,7 @@ import { MESSAGE_TYPES } from '../core/constants.js';
 import { ValidationUtils, PositionUtils } from '../utils/helpers.js';
 import { playerManager } from '../player/PlayerManager.js';
 import { playerInput } from '../player/PlayerInput.js';
+import { disconnectionHandler } from '../server/disconnect.js';
 
 /**
  * Routes WebSocket messages to appropriate handlers
@@ -139,12 +140,11 @@ export class MessageRouter {
   }
 
   /**
-   * Handle player leaving game
+   * Handle player leaving game (delegated to disconnect module)
    */
   _handleLeaveGame(msg, playerId, roomId, ws, disconnectHandler) {
-    console.log(`🏃 Player ${playerId} is leaving the game in room ${roomId}`);
-    playerManager.markPlayerLeaving(playerId);
-    disconnectHandler(playerId, roomId);
+    // Delegate to the dedicated disconnect handler
+    return disconnectionHandler.handleLeaveGameMessage(playerId, roomId);
   }
 
   /**

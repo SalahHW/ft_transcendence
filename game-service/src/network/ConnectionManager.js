@@ -1,6 +1,6 @@
 import { gameStateManager } from '../game/GameStateManager.js';
 import { gameEngine } from '../game/GameEngine.js';
-import { reportMatchResultsToAPI } from '../server/api.js';
+import { disconnectionHandler } from '../server/disconnect.js';
 import { LogUtils, TimeUtils } from '../utils/helpers.js';
 import { playerManager } from '../player/PlayerManager.js';
 import { roomManager } from '../room/RoomManager.js';
@@ -31,25 +31,14 @@ export class ConnectionManager {
   }
 
   /**
-   * Handle player disconnection
+   * Handle player disconnection (delegated to disconnect module)
    */
   handlePlayerDisconnect(playerId, roomId) {
-    const player = gameStateManager.getPlayer(playerId);
-    const isExplicitLeave = player?.isLeaving === true;
+    // Set connection metadata in the disconnect handler
+    disconnectionHandler.setConnectionMetadata(playerId, roomId, this.connectionMetadata.get(playerId));
     
-    console.log(`🔥 DISCONNECT HANDLER: Player ${playerId} from room ${roomId} ${isExplicitLeave ? '(EXPLICIT LEAVE)' : '(UNEXPECTED DISCONNECT)'}`);
-    
-    this._cleanupPlayerConnection(playerId);
-    
-    const room = gameStateManager.getRoom(roomId);
-    if (!room) return;
-
-    // Check if the game was in progress and award win to remaining player
-    if (room.ready && !room.isGameOver && room.players.length === 2) {
-      this._handleGameInProgressDisconnect(playerId, roomId, isExplicitLeave);
-    } else {
-      this._handleRegularDisconnect(playerId, roomId);
-    }
+    // Delegate to the dedicated disconnect handler
+    return disconnectionHandler.handlePlayerDisconnect(playerId, roomId);
   }
 
   /**
@@ -78,128 +67,38 @@ export class ConnectionManager {
   }
 
   /**
-   * Clean up player connection
+   * Clean up player connection (delegated to disconnect module)
    */
   _cleanupPlayerConnection(playerId) {
-    const player = gameStateManager.getPlayer(playerId);
+    // Delegate to the dedicated disconnect handler
+    disconnectionHandler.cleanupPlayerConnection(playerId);
     
-    if (player && player.ws) {
-      try {
-        if (player.ws.readyState === 1) {
-          player.ws.close();
-        }
-      } catch (e) {
-        console.error(`Error closing WebSocket for player ${playerId}:`, e);
-      }
-    }
-    
-    gameStateManager.removePlayer(playerId);
+    // Also clean up local metadata
     this.connectionMetadata.delete(playerId);
   }
 
   /**
-   * Handle disconnect during active game
+   * Handle disconnect during active game (delegated to disconnect module)
    */
   _handleGameInProgressDisconnect(playerId, roomId, isExplicitLeave) {
-    const room = gameStateManager.getRoom(roomId);
-    const remainingPlayer = room.players.find(p => p.id !== playerId);
-    const disconnectedPlayer = room.players.find(p => p.id === playerId);
-    
-    if (remainingPlayer && disconnectedPlayer) {
-      const actionText = isExplicitLeave ? 'left the game' : 'disconnected during active game';
-      console.log(`Player ${playerId} ${actionText}. Awarding win to ${remainingPlayer.id}`);
-      
-      // Mark game as over
-      room.isGameOver = true;
-      
-      // Create match end data
-      const matchData = this._createForfeitMatchData(
-        room, 
-        roomId, 
-        remainingPlayer, 
-        disconnectedPlayer, 
-        actionText
-      );
-
-      // Log forfeit
-      LogUtils.logMatchCompletion(matchData);
-      
-      // Report to external services
-      reportMatchResultsToAPI(matchData).catch(err => {
-        console.error('Failed to report forfeit results:', err.message);
-      });
-      
-      // Notify remaining player
-      gameEngine.broadcastToRoom(roomId, {
-        type: 'gameEnd',
-        ...matchData,
-        reason: 'opponent_disconnect'
-      });
-      
-      // Clean up room after a delay
-      setTimeout(() => {
-        gameStateManager.removeRoom(roomId);
-        console.log(`Cleaned up room ${roomId} after forfeit`);
-      }, 5000);
-    }
+    // Delegate to the dedicated disconnect handler
+    return disconnectionHandler.handleGameInProgressDisconnect(playerId, roomId, isExplicitLeave);
   }
 
   /**
-   * Handle regular disconnect (not during game)
+   * Handle regular disconnect (delegated to disconnect module)
    */
   _handleRegularDisconnect(playerId, roomId) {
-    const room = gameStateManager.getRoom(roomId);
-    if (!room) return;
-
-    // Remove player from room
-    room.players = room.players.filter(p => p.id !== playerId);
-    
-    // Clean up empty rooms
-    if (room.players.length === 0) {
-      gameStateManager.removeRoom(roomId);
-      console.log(`Removed empty room ${roomId}`);
-    } else {
-      // Notify remaining players
-      gameEngine.broadcastToRoom(roomId, {
-        type: 'playerDisconnected',
-        playerId,
-        remainingPlayers: room.players.length
-      });
-    }
+    // Delegate to the dedicated disconnect handler
+    return disconnectionHandler.handleRegularDisconnect(playerId, roomId);
   }
 
   /**
-   * Create match data for forfeit scenarios
+   * Create match data for forfeit scenarios (delegated to disconnect module)
    */
   _createForfeitMatchData(room, roomId, winner, loser, reason) {
-    const matchEndTime = TimeUtils.getCurrentTimestamp();
-    const matchStartTime = room.startTime || matchEndTime;
-    
-    return {
-      roomId,
-      matchStartTime,
-      matchEndTime,
-      matchDuration: TimeUtils.calculateMatchDuration(matchStartTime, matchEndTime),
-      winner: {
-        id: winner.id,
-        username: winner.username || 'Anonymous',
-        score: 11 // Award full score for forfeit win
-      },
-      loser: {
-        id: loser.id,
-        username: loser.username || 'Anonymous',
-        score: room.ball?.player2?.playerScore || 0
-      },
-      gameStats: {
-        totalRebounds: room.ball?.rebounds || 0,
-        finalScore: `11-${room.ball?.player2?.playerScore || 0}`,
-        ballSpeed: room.ball?.speed || 0,
-        lastHitBy: room.ball?.wasHitByPlayer || null,
-        forfeitReason: reason
-      },
-      matchType: 'forfeit',
-      serverTime: Date.now(),
-    };
+    // Delegate to the dedicated disconnect handler
+    return disconnectionHandler.createForfeitMatchData(room, roomId, winner, loser, reason, 'disconnect');
   }
 
   /**
@@ -224,18 +123,15 @@ export class ConnectionManager {
   }
 
   /**
-   * Clean up stale connections
+   * Clean up stale connections (delegated to disconnect module)
    */
   cleanupStaleConnections() {
-    const now = Date.now();
-    const staleThreshold = 5 * 60 * 1000; // 5 minutes
-    
+    // Copy metadata to disconnect handler and delegate
     for (const [playerId, metadata] of this.connectionMetadata.entries()) {
-      if (now - metadata.lastActivity > staleThreshold) {
-        console.log(`Cleaning up stale connection for player ${playerId}`);
-        this.handlePlayerDisconnect(playerId, metadata.roomId);
-      }
+      disconnectionHandler.setConnectionMetadata(playerId, metadata.roomId, metadata);
     }
+    
+    return disconnectionHandler.cleanupStaleConnections();
   }
 
   /**
@@ -246,6 +142,9 @@ export class ConnectionManager {
     if (metadata) {
       metadata.lastActivity = Date.now();
     }
+    
+    // Also update in disconnect handler
+    disconnectionHandler.updatePlayerActivity(playerId);
   }
 }
 

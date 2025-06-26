@@ -122,6 +122,10 @@ export class webSocketClient {
     }
 
     leaveGame(): void {
+        // This method is now handled by webSocketClientDisconnect module
+        // Keeping this for backward compatibility but delegating to disconnect handler
+        console.warn('leaveGame() called on webSocketClient - should use webSocketClientDisconnect module instead');
+        
         this.send({
             type: 'leaveGame',
             playerId: this.playerId

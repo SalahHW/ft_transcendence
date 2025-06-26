@@ -1,5 +1,6 @@
 import { messageRouter } from './MessageRouter.js';
 import { connectionManager } from './ConnectionManager.js';
+import { disconnectionHandler } from '../server/disconnect.js';
 import { WebSocketUtils } from '../utils/helpers.js';
 import { gameStateManager } from '../game/GameStateManager.js';
 
@@ -40,8 +41,8 @@ export class WebSocketHandler {
     // Setup message handling
     this._setupMessageHandling(ws, playerId, roomId);
     
-    // Setup disconnect handling
-    this._setupDisconnectHandling(ws, playerId, roomId);
+    // Setup disconnect handling using dedicated module
+    disconnectionHandler.setupWebSocketDisconnectHandlers(ws, playerId, roomId);
   }
 
   /**
@@ -67,36 +68,25 @@ export class WebSocketHandler {
         playerId, 
         roomId, 
         ws, 
-        this._createDisconnectHandler(playerId, roomId)
+        disconnectionHandler.createDisconnectHandler(playerId, roomId)
       );
     });
   }
 
   /**
-   * Setup disconnect handling for WebSocket connection
+   * Setup disconnect handling for WebSocket connection (delegated to disconnect module)
    */
   _setupDisconnectHandling(ws, playerId, roomId) {
-    ws.on('close', () => {
-      console.log(`🚪 WebSocket closed for player ${playerId} in room ${roomId}`);
-      this.connectionManager.handlePlayerDisconnect(playerId, roomId);
-    });
-
-    ws.on('error', (error) => {
-      console.error(`WebSocket error for player ${playerId}:`, error);
-      this.connectionManager.handlePlayerDisconnect(playerId, roomId);
-    });
+    // Delegate to the dedicated disconnect handler
+    return disconnectionHandler.setupWebSocketDisconnectHandlers(ws, playerId, roomId);
   }
 
   /**
-   * Create disconnect handler function
+   * Create disconnect handler function (delegated to disconnect module)
    */
   _createDisconnectHandler(playerId, roomId) {
-    return (disconnectPlayerId, disconnectRoomId) => {
-      this.connectionManager.handlePlayerDisconnect(
-        disconnectPlayerId || playerId, 
-        disconnectRoomId || roomId
-      );
-    };
+    // Delegate to the dedicated disconnect handler
+    return disconnectionHandler.createDisconnectHandler(playerId, roomId);
   }
 
   /**
@@ -118,24 +108,19 @@ export class WebSocketHandler {
   }
 
   /**
-   * Clean up stale connections (can be called periodically)
+   * Clean up stale connections (delegated to disconnect module)
    */
   cleanupStaleConnections() {
-    this.connectionManager.cleanupStaleConnections();
+    // Delegate to the dedicated disconnect handler
+    return disconnectionHandler.cleanupStaleConnections();
   }
 
   /**
-   * Gracefully close all connections
+   * Gracefully close all connections (delegated to disconnect module)
    */
   closeAllConnections() {
-    const stats = this.getConnectionStats();
-    console.log(`Closing ${stats.activeConnections} active connections...`);
-    
-    stats.connectionsDetail.forEach(({ playerId, roomId }) => {
-      this.connectionManager.handlePlayerDisconnect(playerId, roomId);
-    });
-    
-    console.log('All connections closed.');
+    // Delegate to the dedicated disconnect handler
+    return disconnectionHandler.closeAllConnections();
   }
 }
 
