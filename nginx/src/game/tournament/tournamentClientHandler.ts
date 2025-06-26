@@ -44,18 +44,14 @@ export class TournamentClientHandler {
             
             // ⭐ TOURNAMENT MAP CLEANUP: Dispose of old map to prevent multiple maps being visible
             if (gameState.map) {
-                console.log('🗑️ Disposing old map for tournament advancement...');
                 gameState.map.dispose();
                 gameState.map = null;
-                console.log('🗑️ Old map disposed successfully');
             }
             
             // Clear game objects
             gameState.ball = null;
             gameState.player1 = null;
             gameState.player2 = null;
-            
-            console.log('🏆 Game elements cleaned up during tournament advancement');
         }
     }
 
@@ -147,8 +143,6 @@ export class TournamentClientHandler {
         // ⭐ TOURNAMENT FIX: Reset paddle Z positions to 0 (center) for clean start
         player1.setZ(0);
         player2.setZ(0);
-        
-        console.log('✅ Paddle positions reset to center (Z=0) for tournament game');
     }
 
     /**
@@ -163,18 +157,10 @@ export class TournamentClientHandler {
         localPlayerId: string | null,
         opponentName: string
     ): Promise<void> {
-        console.log('🏆 DEBUG: handleSemiFinalGameEnd called with:', { gameEndData, localPlayerId, opponentName });
-        
         const isWinner = gameEndData.winner.id === localPlayerId;
         const score = `${gameEndData.winner.score}-${gameEndData.loser.score}`;
-        
-        console.log('🏆 DEBUG: Calculated values:', { isWinner, score });
-        console.log(`🏆 Semi-final ended: ${isWinner ? 'WIN' : 'LOSE'} vs ${opponentName}`);
-        
         try {
-            console.log('🏆 DEBUG: About to call showSemiFinalSplashScreen...');
             await showSemiFinalSplashScreen(isWinner, opponentName, score, 5000);
-            console.log('🏆 Semi-final splash screen completed');
         } catch (error) {
             console.error('🏆 ERROR: Error showing semi-final splash screen:', error);
         }
@@ -194,34 +180,21 @@ export class TournamentClientHandler {
         opponentName: string,
         finalPlacement: 1 | 2 | 3 | 4
     ): Promise<void> {
-        console.log('🏆 DEBUG: handleFinalGameEnd called with:', { gameEndData, localPlayerId, opponentName, finalPlacement });
         
         const score = `${gameEndData.winner.score}-${gameEndData.loser.score}`;
         
-        console.log('🏆 DEBUG: Final game ended - showing placement splash screen');
-        console.log(`🏆 Final ended: ${finalPlacement}${getPlacementSuffix(finalPlacement)} PLACE vs ${opponentName}`);
-        
         try {
-            console.log('🏆 DEBUG: About to call showFinalSplashScreen...');
             await showFinalSplashScreen(finalPlacement, opponentName, score, 5000);
-            console.log('🏆 Final splash screen completed - preparing for navigation');
             
             // ⭐ CLEANUP BEFORE NAVIGATION: Ensure clean state before leaving game
-            console.log('🏆 DEBUG: Cleaning up game resources before navigation...');
             if ((window as any).leaveGame && typeof (window as any).leaveGame === 'function') {
                 try {
                     (window as any).leaveGame();
-                    console.log('🏆 ✅ Game cleanup completed successfully');
                 } catch (cleanupError) {
                     console.error('🏆 ⚠️ Error during game cleanup:', cleanupError);
                     // Continue with navigation even if cleanup fails
                 }
-            } else {
-                console.log('🏆 ⚠️ leaveGame function not available - continuing with navigation');
             }
-            
-            // ⭐ NAVIGATE TO MAIN PAGE: After cleanup
-            console.log('🏆 DEBUG: Navigating back to main page...');
             const router = Router.getInstance();
             const navigationSuccess = router.navigate('/', true); // Use replaceState to replace tournament history
             
@@ -235,19 +208,14 @@ export class TournamentClientHandler {
         } catch (error) {
             console.error('🏆 ERROR: Error showing final splash screen:', error);
             
-            // ⭐ CLEANUP ON ERROR: Cleanup even if splash fails
-            console.log('🏆 DEBUG: Cleaning up after splash screen error...');
             if ((window as any).leaveGame && typeof (window as any).leaveGame === 'function') {
                 try {
                     (window as any).leaveGame();
-                    console.log('🏆 ✅ Error cleanup completed');
                 } catch (cleanupError) {
                     console.error('🏆 ⚠️ Error during error cleanup:', cleanupError);
                 }
             }
             
-            // ⭐ SAFETY NAVIGATION: Even if splash screen fails, try to navigate to main page
-            console.log('🏆 DEBUG: Attempting navigation despite splash screen error...');
             try {
                 const router = Router.getInstance();
                 router.navigate('/', true);

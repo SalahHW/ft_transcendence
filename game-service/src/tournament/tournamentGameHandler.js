@@ -34,7 +34,27 @@ export class TournamentGameHandler {
                 type: 'gameEnd',
                 ...semiMatchData
             });
-            console.log(`🏆 Sent gameEnd message for semi-final room ${roomId}`);
+            
+            // ⭐ SEND SEMI-FINAL SOUND EVENTS: Send individual sound events to winner and loser
+            // Add a small delay to ensure gameEnd message is processed first
+            setTimeout(() => {
+                const winnerPlayer = room.players.find(p => p.id === matchData.winner.id);
+                const loserPlayer = room.players.find(p => p.id === matchData.loser.id);
+                
+                if (winnerPlayer && winnerPlayer.ws && winnerPlayer.ws.readyState === 1) {
+                    winnerPlayer.ws.send(JSON.stringify({
+                        type: 'soundEvent',
+                        sound: 'semiFinalWin'
+                    }));
+                }
+                
+                if (loserPlayer && loserPlayer.ws && loserPlayer.ws.readyState === 1) {
+                    loserPlayer.ws.send(JSON.stringify({
+                        type: 'soundEvent',
+                        sound: 'semiFinalLose'
+                    }));
+                }
+            }, 100); // 100ms delay to ensure gameEnd is processed first
             
             // ⭐ SEMI-FINAL FIX: Hide game elements immediately for clean map view
             broadcastToRoom(roomId, {
@@ -54,8 +74,6 @@ export class TournamentGameHandler {
                 console.error(`🏆 Error handling semi-final completion for room ${roomId}:`, error);
             }
         } else if (tournamentManager.isFinalRoom(room)) {
-            console.log(`🏆 Final game completed in room ${roomId}, processing tournament completion...`);
-            console.log(`🏆 DEBUG: Final room metadata.finalMatch: '${room.metadata?.finalMatch}'`);
             
             // Mark game end data as final match for client detection
             const finalMatchData = {
@@ -78,6 +96,43 @@ export class TournamentGameHandler {
                 ...finalMatchData
             });
             console.log(`🏆 Sent gameEnd message for final room ${roomId} with finalMatchType: '${finalMatchData.finalMatchType}'`);
+            
+            // ⭐ SEND FINAL PLACEMENT SOUND EVENTS: Send individual sound events based on placement
+            const winnerPlayer = room.players.find(p => p.id === matchData.winner.id);
+            const loserPlayer = room.players.find(p => p.id === matchData.loser.id);
+            const isWinnersFinal = room.metadata?.finalMatch === 'winners';
+            const isLosersFinal = room.metadata?.finalMatch === 'losers';
+            
+            let winnerSound, loserSound;
+            if (isWinnersFinal) {
+                // Winners final: 1st place winner, 2nd place loser
+                winnerSound = 'firstPlace';
+                loserSound = 'secondPlace';
+            } else if (isLosersFinal) {
+                // Losers final: 3rd place winner, 4th place loser
+                winnerSound = 'thirdPlace';
+                loserSound = 'fourthPlace';
+            } else {
+                // Fallback to winners final
+                winnerSound = 'firstPlace';
+                loserSound = 'secondPlace';
+            }
+            
+            if (winnerPlayer && winnerPlayer.ws && winnerPlayer.ws.readyState === 1) {
+                winnerPlayer.ws.send(JSON.stringify({
+                    type: 'soundEvent',
+                    sound: winnerSound
+                }));
+                console.log(`🏆 Sent ${winnerSound} sound to winner: ${matchData.winner.username}`);
+            }
+            
+            if (loserPlayer && loserPlayer.ws && loserPlayer.ws.readyState === 1) {
+                loserPlayer.ws.send(JSON.stringify({
+                    type: 'soundEvent',
+                    sound: loserSound
+                }));
+                console.log(`🏆 Sent ${loserSound} sound to loser: ${matchData.loser.username}`);
+            }
             
             // Broadcast final game end with match type
             broadcastToRoom(roomId, {

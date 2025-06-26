@@ -14,12 +14,22 @@ class SoundManager {
         // FIXED: Use current domain instead of localhost for sound files
         // Sound files are served through nginx, so use same domain as frontend
         const soundFiles = {
+            // game sounds
             paddleHit: `${window.location.protocol}//${window.location.host}/sounds/matchSounds/pop.mp3`,
             wallHit: `${window.location.protocol}//${window.location.host}/sounds/matchSounds/laser_low.mp3`,
             lostPoint: `${window.location.protocol}//${window.location.host}/sounds/matchSounds/lost_point.mp3`,
             playerScored: `${window.location.protocol}//${window.location.host}/sounds/matchSounds/player_scored.mp3`,
+            // 1v1 sounds
             winnerSound: `${window.location.protocol}//${window.location.host}/sounds/endGameSounds/winner_sound.mp3`,
-            loserSound: `${window.location.protocol}//${window.location.host}/sounds/endGameSounds/looser_sound.mp3`
+            loserSound: `${window.location.protocol}//${window.location.host}/sounds/endGameSounds/looser_sound.mp3`,
+            // semi-finals
+            semiFinalWin: `${window.location.protocol}//${window.location.host}/sounds/semiFinalSounds/semi-final-win.mp3`,
+            semiFinalLose: `${window.location.protocol}//${window.location.host}/sounds/semiFinalSounds/semi-final-lose.mp3`,
+            // finals
+            firstPlace: `${window.location.protocol}//${window.location.host}/sounds/finalSounds/first-place.mp3`,
+            secondPlace: `${window.location.protocol}//${window.location.host}/sounds/finalSounds/second-place.mp3`,
+            thirdPlace: `${window.location.protocol}//${window.location.host}/sounds/finalSounds/third-place.mp3`,
+            fourthPlace: `${window.location.protocol}//${window.location.host}/sounds/finalSounds/fourth-place.mp3`
         };
 
         console.log('Preloading sounds...');

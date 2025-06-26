@@ -80,7 +80,24 @@ function handleSoundEvent(msg: any): void {
         case 'playerScored':
             soundManager.playSound('playerScored', 1.0);
             break;
-            
+        case 'semiFinalWin':
+            soundManager.playSound('semiFinalWin', 1.0);
+            break;
+        case 'semiFinalLose':
+            soundManager.playSound('semiFinalLose', 1.0);
+            break;
+        case 'firstPlace':
+            soundManager.playSound('firstPlace', 1.0);
+            break;
+        case 'secondPlace':
+            soundManager.playSound('secondPlace', 1.0);
+            break;
+        case 'thirdPlace':
+            soundManager.playSound('thirdPlace', 1.0);
+            break;
+        case 'fourthPlace':
+            soundManager.playSound('fourthPlace', 1.0);
+            break;
         default:
             console.warn('Unknown sound event:', sound);
     }

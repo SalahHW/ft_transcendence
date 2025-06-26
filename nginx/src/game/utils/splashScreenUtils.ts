@@ -245,12 +245,12 @@ export function showSemiFinalSplashScreen(
             
             if (isWinner) {
                 console.log('🏆 DEBUG: Playing win sound...');
-                soundManager.playSound('semi-final-win', 1.0);
+                soundManager.playSound('semiFinalWin', 1.0);
                 console.log('🏆 DEBUG: Creating WinSemiFinalGamePage...');
                 splashPage = new WinSemiFinalGamePage('temp-semifinal-container', opponentName, score);
             } else {
                 console.log('🏆 DEBUG: Playing lose sound...');
-                soundManager.playSound('semi-final-lose', 1.0);
+                soundManager.playSound('semiFinalLose', 1.0);
                 console.log('🏆 DEBUG: Creating LoseSemiFinalGamePage...');
                 splashPage = new LoseSemiFinalGamePage('temp-semifinal-container', opponentName, score);
             }
@@ -367,25 +367,25 @@ export function showFinalSplashScreen(
             switch (finalPlacement) {
                 case 1:
                     console.log('🏆 DEBUG: Playing first-place sound...');
-                    soundManager.playSound('first-place', 1.0);
+                    soundManager.playSound('firstPlace', 1.0);
                     console.log('🏆 DEBUG: Creating FirstFinalGamePage...');
                     splashPage = new FirstFinalGamePage('temp-final-container', opponentName, score);
                     break;
                 case 2:
                     console.log('🏆 DEBUG: Playing second-place sound...');
-                    soundManager.playSound('second-place', 1.0);
+                    soundManager.playSound('secondPlace', 1.0);
                     console.log('🏆 DEBUG: Creating SecondFinalGamePage...');
                     splashPage = new SecondFinalGamePage('temp-final-container', opponentName, score);
                     break;
                 case 3:
                     console.log('🏆 DEBUG: Playing third-place sound...');
-                    soundManager.playSound('third-place', 1.0);
+                    soundManager.playSound('thirdPlace', 1.0);
                     console.log('🏆 DEBUG: Creating ThirdFinalGamePage...');
                     splashPage = new ThirdFinalGamePage('temp-final-container', opponentName, score);
                     break;
                 case 4:
                     console.log('🏆 DEBUG: Playing fourth-place sound...');
-                    soundManager.playSound('fourth-place', 1.0);
+                    soundManager.playSound('fourthPlace', 1.0);
                     console.log('🏆 DEBUG: Creating FourthFinalGamePage...');
                     splashPage = new FourthFinalGamePage('temp-final-container', opponentName, score);
                     break;
