@@ -256,7 +256,7 @@ class Ball {
                         sound: 'lostPoint',
                         timestamp: Date.now()
                     });
-                } if(winningPlayerId) {
+                } if (winningPlayerId) {
                     this.gameEngine.sendToPlayer(this.roomId, winningPlayerId, {
                         type: 'soundEvent',
                         sound: 'playerScored',
@@ -264,15 +264,6 @@ class Ball {
                     });
                 }
             }
-            
-            //if (this.gameEngine && this.roomId && losingPlayerId) {
-            //    this.gameEngine.sendToPlayer(this.roomId, losingPlayerId, {
-            //        type: 'soundEvent',
-            //        sound: 'lostPoint',
-            //        timestamp: Date.now()
-            //    });
-            //}
-            
             this.handleBallRespawn(newVelocity);
         }
     }

@@ -632,7 +632,6 @@ export function initializeGame(playerId: string): void {
         }
         if (ball?.ballBody) {
             ball.ballBody.isVisible = true;
-            console.log('✅ Ball made visible before animation');
         }
 
         updateGameStatus('Game starting...');

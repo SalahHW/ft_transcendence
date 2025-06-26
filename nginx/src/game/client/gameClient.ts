@@ -120,7 +120,6 @@ export class GameClient {
                         this.ball = null;
                         this.player1 = null;
                         this.player2 = null;
-                        console.log('🏆 GameClient reset for final match');
                     }
                 } else if (message.type === 'hideGameElements') {
                     TournamentClientHandler.handleHideGameElements(message, this.updateGameStatus.bind(this), {
@@ -153,13 +152,11 @@ export class GameClient {
         const opponentName = data.opponentName || 'Opponent';
         
         // 🎬 Show splash screen BEFORE creating any game elements
-        console.log('🎬 Showing splash screen before game starts...');
         this.updateGameStatus('Preparing match...');
         
         try {
             // Show splash screen for 3 seconds
             await showSplashScreen(currentPlayerName, opponentName, 3000);
-            console.log('🎬 Splash screen completed, starting game initialization...');
         } catch (error) {
             console.error('Error showing splash screen:', error);
             // Continue with game initialization even if splash screen fails
