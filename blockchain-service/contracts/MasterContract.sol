@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -9,28 +8,29 @@ import "./tokens/PongToken.sol";
 
 /**
  * @title MasterContract
- * @dev MasterContract to manage all the contracts
+ * @dev MasterContract to manage all the contracts and game logic
  */
-
 contract MasterContract is Ownable {
     /**
-     * @dev Variables to store contract addresses
+     * @dev Variables to store contract references
      */
-
     GoatNft public goatNft;
     TournamentNft public tournamentNft;
     PongToken public pongToken;
 
     /**
-     * @dev Struct to store match details
-     * player1: player1 address
-     * player2: player2 address
-     * winner: winner address
-     * player1Score: player1 score
-     * player2Score: player2 score
-     * matchId: match id
+     * @dev Struct to store player details
+     * name: player name
+     * exists: if the player is registered
      */
+    struct Player {
+        string name;
+        bool exists;
+    }
 
+    /**
+     * @dev Struct to store match details
+     */
     struct Match {
         address player1;
         address player2;
@@ -42,12 +42,7 @@ contract MasterContract is Ownable {
 
     /**
      * @dev Struct to store tournament details
-     * endTimestamp: end timestamp of the tournament
-     * matchIds: array of match ids
-     * winner: winner address
-     * tournamentId: tournament id
      */
-
     struct Tournament {
         uint32 endTimestamp;
         uint16[] matchIds;
@@ -56,39 +51,19 @@ contract MasterContract is Ownable {
     }
 
     /**
-     * @dev Array to store all matches
-     * uint16: match id
-     * Match: match details
+     * @dev Arrays to store global matches and tournaments
      */
-
     Match[] public globalMatchesArray;
-
-    /**
-     * @dev Array to store all tournaments
-     * uint256: tournament id
-     * Tournament: tournament details
-     */
-
     Tournament[] public globalTournamentsArray;
 
     /**
-     * @dev Mapping to store player
-     * string: player name to address mapping
-     * address: player address
+     * @dev Mapping to store players by address
      */
-
-    mapping(string => address) private players;
+    mapping(address => Player) public players;
 
     /**
-     * @dev Event to log match reported
-     * @param player1: player1 name
-     * @param player2: player2 name
-     * @param winner: winner address
-     * @param player1Score: player1 score
-     * @param player2Score: player2 score
-     * @param matchId: match id
+     * @dev Events to track system activity
      */
-
     event MatchReported(
         address indexed player1,
         address indexed player2,
@@ -98,12 +73,6 @@ contract MasterContract is Ownable {
         uint16 matchId
     );
 
-    /**
-     * @dev Event to log tournament reported
-     * @param tournamentId: tournament id
-     * @param winner: winner address
-     */
-
     event TournamentReported(
         uint16 indexed tournamentId,
         uint32 endTimestamp,
@@ -111,21 +80,13 @@ contract MasterContract is Ownable {
         address indexed winner
     );
 
-    /**
-     * @dev Event to log player added
-     * @param name: player name
-     * @param playerAddress: player address
-     */
-
     event PlayerAdded(string name, address playerAddress);
+    event PlayerRemoved(address playerAddress, string name);
+    event GoatReassigned(address indexed newGoat);
 
     /**
      * @dev Constructor to initialize the contract
-     * @param _goatNft: address of GoatNft contract
-     * @param _pongToken: address of PongToken contract
-     * @param _tournamentNft: address of TournamentNft contract
      */
-
     constructor(
         address _goatNft,
         address _pongToken,
@@ -141,71 +102,71 @@ contract MasterContract is Ownable {
      * @param _name: player name
      * @param _player: player address
      */
-
     function addPlayer(string memory _name, address _player) public onlyOwner {
-        require(players[_name] == address(0), "Player already exists");
-        players[_name] = _player;
+        require(!players[_player].exists, "Player already exists");
+        players[_player] = Player({name: _name, exists: true});
         pongToken.mint(_player, 100);
         emit PlayerAdded(_name, _player);
     }
 
     /**
-     * @dev Function to get player address
-     * @param _name: player name
-     * @return player address
+     * @dev Function to get player name
+     * @param _player: player address
+     * @return name of the player
      */
-
-    function getPlayerAddress(
-        string memory _name
-    ) public view onlyOwner returns (address) {
-        return players[_name];
+    function getPlayerName(
+        address _player
+    ) public view onlyOwner returns (string memory) {
+        require(players[_player].exists, "Player does not exist");
+        return players[_player].name;
     }
 
     /**
-     * @dev Function to report match
-     * @param matchId: match id
-     * @param player1: player1 name
-     * @param player2: player2 name
-     * @param player1Score: player1 score
-     * @param player2Score: player2 score
-     * @param winner: winner address
+     * @dev Function to report match result
      */
-
     function reportMatch(
-        string memory player1,
-        string memory player2,
+        address player1,
+        address player2,
         uint16 matchId,
         uint8 player1Score,
         uint8 player2Score,
         address winner
     ) public onlyOwner {
+        require(players[player1].exists, "Player1 not registered");
+        require(players[player2].exists, "Player2 not registered");
+        require(winner != address(0), "Winner address is invalid");
+
         for (uint i = 0; i < globalMatchesArray.length; i++) {
             if (globalMatchesArray[i].matchId == matchId) {
                 revert("Match ID already used");
             }
         }
-        require(
-            getPlayerAddress(player1) != address(0),
-            "Player1 not registered"
-        );
-        require(
-            getPlayerAddress(player2) != address(0),
-            "Player2 not registered"
-        );
-        require(winner != address(0), "Winner address is invalid");
+
         pongToken.mint(winner, 10);
+
         if (
             pongToken.balanceOf(goatNft.getGoatAddress()) <
             pongToken.balanceOf(winner)
         ) {
             goatNft.transferNft(goatNft.getGoatAddress(), winner);
         }
-        address loser = (getPlayerAddress(player1) != winner)
-            ? getPlayerAddress(player1)
-            : getPlayerAddress(player2);
-        uint256 amountToBurn = calculateBurnAmount(pongToken.balanceOf(loser));
-        pongToken.burn(loser, amountToBurn);
-        Match memory tempMatch = fillMatchStruct(
+
+        address loser = (player1 != winner) ? player1 : player2;
+        uint256 burnAmount = calculateBurnAmount(pongToken.balanceOf(loser));
+        pongToken.burn(loser, burnAmount);
+
+        Match memory tempMatch = Match({
+            player1: player1,
+            player2: player2,
+            winner: winner,
+            player1Score: player1Score,
+            player2Score: player2Score,
+            matchId: matchId
+        });
+
+        globalMatchesArray.push(tempMatch);
+
+        emit MatchReported(
             player1,
             player2,
             winner,
@@ -213,88 +174,42 @@ contract MasterContract is Ownable {
             player2Score,
             matchId
         );
-        globalMatchesArray.push(tempMatch);
-        emit MatchReported(
-            getPlayerAddress(player1),
-            getPlayerAddress(player2),
-            winner,
-            player1Score,
-            player2Score,
-            matchId
-        );
-    }
-
-    /**
-     * @dev Function to fill match struct
-     * @param player1: player1 name
-     * @param player2: player2 name
-     * @param winner: winner address
-     * @param player1Score: player1 score
-     * @param player2Score: player2 score
-     * @param matchId: match id
-     * @return Match struct
-     */
-
-    function fillMatchStruct(
-        string memory player1,
-        string memory player2,
-        address winner,
-        uint8 player1Score,
-        uint8 player2Score,
-        uint16 matchId
-    ) internal view returns (Match memory) {
-        Match memory tempMatch = Match({
-            player1: getPlayerAddress(player1),
-            player2: getPlayerAddress(player2),
-            winner: winner,
-            player1Score: player1Score,
-            player2Score: player2Score,
-            matchId: matchId
-        });
-        return tempMatch;
     }
 
     /**
      * @dev Function to get all matches played by a player
-     * @param player: player name
-     * @return array of matches played by the player
      */
-
     function getMatchesByPlayer(
-        string memory player
+        address player
     ) public view returns (Match[] memory) {
+        require(players[player].exists, "Player does not exist");
         uint256 size = 0;
         for (uint i = 0; i < globalMatchesArray.length; i++) {
             if (
-                globalMatchesArray[i].player1 == getPlayerAddress(player) ||
-                globalMatchesArray[i].player2 == getPlayerAddress(player)
+                globalMatchesArray[i].player1 == player ||
+                globalMatchesArray[i].player2 == player
             ) {
                 size++;
             }
         }
-        if (size == 0) {
-            revert("No matches found for the player");
-        }
-        Match[] memory playerMatches = new Match[](size);
+        if (size == 0) revert("No matches found for the player");
+
+        Match[] memory result = new Match[](size);
         uint256 index = 0;
         for (uint i = 0; i < globalMatchesArray.length; i++) {
             if (
-                globalMatchesArray[i].player1 == getPlayerAddress(player) ||
-                globalMatchesArray[i].player2 == getPlayerAddress(player)
+                globalMatchesArray[i].player1 == player ||
+                globalMatchesArray[i].player2 == player
             ) {
-                playerMatches[index] = globalMatchesArray[i];
-                index++;
+                result[index++] = globalMatchesArray[i];
             }
         }
-        return playerMatches;
+        return result;
     }
 
     /**
      * @dev Function to get all matches won by a player
-     * @param winner: winner address
-     * @return array of matches won by the player
      */
-
     function getMatchesByWinner(
         address winner
     ) public view returns (Match[] memory) {
@@ -304,26 +219,21 @@ contract MasterContract is Ownable {
                 size++;
             }
         }
-        if (size == 0) {
-            revert("No matches found for the winner");
-        }
-        Match[] memory playerMatches = new Match[](size);
+        if (size == 0) revert("No matches found for the winner");
+
+        Match[] memory result = new Match[](size);
         uint256 index = 0;
         for (uint i = 0; i < globalMatchesArray.length; i++) {
             if (globalMatchesArray[i].winner == winner) {
-                playerMatches[index] = globalMatchesArray[i];
-                index++;
+                result[index++] = globalMatchesArray[i];
             }
         }
-        return playerMatches;
+        return result;
     }
 
     /**
-     * @dev Function to get match by match id
-     * @param matchId: match id
-     * @return match details
+     * @dev Function to get match by match ID
      */
-
     function getMatchesByMatchId(
         uint16 matchId
     ) public view returns (Match memory) {
@@ -336,88 +246,48 @@ contract MasterContract is Ownable {
     }
 
     /**
-     * @dev Function to calculate amount to burn
-     * @param balance: balance of the player
-     * @return amount to burn
+     * @dev Function to calculate amount of tokens to burn based on balance
      */
-
     function calculateBurnAmount(
         uint256 balance
     ) internal pure returns (uint256) {
-        if (balance <= 10) {
-            return 0;
-        } else if (balance < 20) {
-            return balance - 10;
-        } else {
-            return 10;
-        }
+        if (balance <= 10) return 0;
+        if (balance < 20) return balance - 10;
+        return 10;
     }
 
     /**
-     * @dev Function to report tournament
-     * @param endTimestamp: end timestamp of the tournament
-     * @param matchIds: array of match ids (match have to be already
-     * reported and this function called once all the matches are ended)
-     * @param winner: winner address
+     * @dev Function to report a tournament and mint the tournament NFT
      */
-
     function reportTournament(
         uint32 endTimestamp,
         uint16[] memory matchIds,
         address winner,
-        uint16 tournamentTokenIds
+        uint16 tournamentId
     ) public onlyOwner {
         for (uint i = 0; i < globalTournamentsArray.length; i++) {
             if (globalTournamentsArray[i].endTimestamp == endTimestamp) {
                 revert("Tournament already exists");
             }
         }
-        tournamentNft.mintTnt(winner, tournamentTokenIds);
-        Tournament memory tempTournament = fillTournamentStruct(
-            endTimestamp,
-            matchIds,
-            tournamentTokenIds,
-            winner
-        );
-        globalTournamentsArray.push(tempTournament);
-        emit TournamentReported(
-            tournamentTokenIds,
-            endTimestamp,
-            matchIds,
-            winner
-        );
-    }
 
-    /**
-     * @dev Function to fill tournament struct
-     * @param endTimestamp: end timestamp of the tournament
-     * @param matchIds: array of match ids
-     * @param winner: winner address
-     * @param tournamentId: tournament id
-     * @return Tournament struct
-     */
+        tournamentNft.mintTnt(winner, tournamentId);
 
-    function fillTournamentStruct(
-        uint32 endTimestamp,
-        uint16[] memory matchIds,
-        uint16 tournamentId,
-        address winner
-    ) internal pure returns (Tournament memory) {
-        Tournament memory tempTournament = Tournament({
+        Tournament memory t = Tournament({
             endTimestamp: endTimestamp,
             matchIds: matchIds,
             tournamentId: tournamentId,
             winner: winner
         });
-        return tempTournament;
+
+        globalTournamentsArray.push(t);
+
+        emit TournamentReported(tournamentId, endTimestamp, matchIds, winner);
     }
 
     /**
-     * @dev Function to get tournament by id
-     * @param tournamentId: tournament id
-     * @return array of tournaments
+     * @dev Function to get tournament by ID
      */
-
     function getTournamentById(
         uint16 tournamentId
     ) public view returns (Tournament memory) {
@@ -430,11 +300,8 @@ contract MasterContract is Ownable {
     }
 
     /**
-     * @dev Function to get tournament by winner
-     * @param winner: winner address
-     * @return array of tournaments
+     * @dev Function to get all tournaments won by a specific address
      */
-
     function getTournamentByWinner(
         address winner
     ) public view returns (Tournament[] memory) {
@@ -444,17 +311,65 @@ contract MasterContract is Ownable {
                 size++;
             }
         }
-        if (size == 0) {
-            revert("No tournaments found for the winner");
-        }
-        Tournament[] memory playerTournaments = new Tournament[](size);
+        if (size == 0) revert("No tournaments found for the winner");
+
+        Tournament[] memory result = new Tournament[](size);
         uint256 index = 0;
         for (uint i = 0; i < globalTournamentsArray.length; i++) {
             if (globalTournamentsArray[i].winner == winner) {
-                playerTournaments[index] = globalTournamentsArray[i];
-                index++;
+                result[index++] = globalTournamentsArray[i];
             }
         }
-        return playerTournaments;
+        return result;
+    }
+
+    /**
+     * @dev Function to remove a player
+     * If the player owns the Goat NFT, it's transferred to owner,
+     * then reassigned to the player with the highest PongToken balance
+     * @param _player: player address to remove
+     */
+    function removePlayer(address _player) public onlyOwner {
+        require(players[_player].exists, "Player does not exist");
+
+        string memory name = players[_player].name;
+
+        bool wasGoat = goatNft.getGoatAddress() == _player;
+        if (wasGoat) {
+            goatNft.transferNft(_player, owner());
+        }
+
+        delete players[_player];
+        emit PlayerRemoved(_player, name);
+
+        if (wasGoat) {
+            address topPlayer = address(0);
+            uint256 highestBalance = 0;
+
+            for (uint i = 0; i < globalMatchesArray.length; i++) {
+                address[2] memory candidates = [
+                    globalMatchesArray[i].player1,
+                    globalMatchesArray[i].player2
+                ];
+
+                for (uint j = 0; j < 2; j++) {
+                    address candidate = candidates[j];
+                    if (!players[candidate].exists) continue;
+
+                    uint256 balance = pongToken.balanceOf(candidate);
+                    if (balance > highestBalance) {
+                        highestBalance = balance;
+                        topPlayer = candidate;
+                    }
+                }
+            }
+
+            if (topPlayer != address(0)) {
+                goatNft.transferNft(owner(), topPlayer);
+                emit GoatReassigned(topPlayer);
+            } else {
+                emit GoatReassigned(address(0));
+            }
+        }
     }
 }

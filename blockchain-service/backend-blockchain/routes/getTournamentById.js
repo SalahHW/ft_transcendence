@@ -1,7 +1,8 @@
-import bigIntToString from '../utils/bigIntToString.js';
+const bigIntToString = require("../utils/bigIntToString");
 
-export default async function (fastify) {
-    const contract = fastify.masterContract;
+
+module.exports = async (fastify, opts) => {
+    const contract = fastify.masterContract
 
     fastify.get('/tournament/:id', {
         schema: {
@@ -9,28 +10,21 @@ export default async function (fastify) {
                 type: 'object',
                 required: ['id'],
                 properties: {
-                    id: { type: 'integer' },
-                },
-            },
-        },
-        handler: async (request, reply) => {
-            if (!contract) {
-                return reply
-                    .status(503)
-                    .send({ error: 'Contract not initialized' });
+                    id: { type: 'integer' }
+                }
             }
+        }
+    }, async (request, reply) => {
+        if (!contract) {
+            return reply.status(503).send({ error: 'Contract not initialized' });
+        }
 
-            try {
-                const tournament = await contract.getTournamentById(
-                    request.params.id
-                );
-                reply.send(bigIntToString({ success: true, tournament }));
-            } catch (error) {
-                request.log.error(error);
-                reply
-                    .status(500)
-                    .send({ success: false, error: error.message });
-            }
-        },
-    });
+        try {
+            const tournament = await contract.getTournamentById(request.params.id)
+            reply.send(bigIntToString({ success: true, tournament }))
+        } catch (error) {
+            request.log.error(error)
+            reply.status(500).send({ success: false, error: error.message })
+        }
+    })
 }
