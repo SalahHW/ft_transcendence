@@ -2,7 +2,7 @@ module.exports = async (fastify, opts) => {
   const contract = fastify.masterContract;
 
   fastify.delete(
-    "/player/:address",
+    "/remove/:address",
     {
       schema: {
         params: {
