@@ -40,12 +40,12 @@ export class FPSCamera {
         if (this.isPlayer1) {
             // Player 1 is on the right side (X: +19.5), looking left
             // Fixed camera position (doesn't move with paddle)
-            this.fixedCameraPosition = new BABYLON.Vector3(22.5, 6, 0); // Behind paddle, stable
+            this.fixedCameraPosition = new BABYLON.Vector3(19, 3, 0); // Behind paddle, stable
             this.fixedTargetPosition = new BABYLON.Vector3(0, 2, 0); // Look at center field
         } else {
             // Player 2 is on the left side (X: -19.5), looking right  
             // Fixed camera position (doesn't move with paddle)
-            this.fixedCameraPosition = new BABYLON.Vector3(-22.5, 6, 0); // Behind paddle, stable
+            this.fixedCameraPosition = new BABYLON.Vector3(-19, 3, 0); // Behind paddle, stable
             this.fixedTargetPosition = new BABYLON.Vector3(0, 2, 0); // Look at center field
         }
         
@@ -87,7 +87,7 @@ export class FPSCamera {
         this.camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
         
         // Set field of view for good game visibility
-        this.camera.fov = Math.PI / 3; // 60 degrees
+        this.camera.fov = 110 * Math.PI / 180; // 110 degrees
         
         // Set camera limits
         this.camera.minZ = 0.1;
