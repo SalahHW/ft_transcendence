@@ -6,4 +6,16 @@ export default async function friendshipRoutes(fastify) {
     url: "/friends/:userId/:friendId",
     handler: friendshipControllers.createFriendship,
   });
+
+  fastify.route({
+    method: "GET",
+    url: "/friends/:userId",
+    handler: friendshipControllers.readFriendship,
+  });
+
+  fastify.route({
+    method: "DELETE",
+    url: "/friends/:userId/:friendId",
+    handler: friendshipControllers.deleteFriendship,
+  });
 }
