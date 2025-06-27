@@ -143,8 +143,32 @@ export async function deleteUser(request, reply) {
   if (!id) return reply.code(400).send({ error: "UserId is required" });
 
   try {
+    const user = await userModels.readUser(id);
+    if (!user) return reply.code(404).send({ error: "User not found" });
+
     const deleted = await userModels.deleteUser(id);
-    if (!deleted) return reply.code(404).send({ error: "User not found" });
+    if (!deleted)
+      return reply.code(500).send({ error: "Failed to delete user from DB" });
+
+    if (user.wallet) {
+      try {
+        const response = await axios.delete(
+          `http://blockchain:3001/player/${user.wallet}`
+        );
+
+        if (!response.data || !response.data.success) {
+          return reply.code(502).send({
+            error: "Blockchain removePlayer failed",
+          });
+        }
+      } catch (error) {
+        return reply.code(502).send({
+          error: "Blockchain service unavailable",
+          details: error.message,
+        });
+      }
+    }
+
     return reply.code(200).send({ success: true });
   } catch (error) {
     return reply
