@@ -10,6 +10,10 @@ export const DB_PATH = isDev
   ? devDatabasePath
   : process.env.FRIENDSHIPS_DB_PATH;
 
+export const USERS_SERVICE_URL = isDev
+  ? devUsersServiceUrl
+  : process.env.USERS_SERVICE_URL;
+  
 export const USERS_SERVICE_TIMEOUT = 2000;
 
 if (!PORT) {
