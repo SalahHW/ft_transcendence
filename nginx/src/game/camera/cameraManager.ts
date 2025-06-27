@@ -133,6 +133,29 @@ export class CameraManager {
     }
 
     /**
+     * Trigger FPS camera shake (FPS-only game)
+     */
+    public triggerCameraShake(): Promise<void> {
+        return new Promise((resolve) => {
+            try {
+                if (!this.povController) {
+                    console.warn('🎮 Cannot trigger camera shake: POV controller not initialized');
+                    resolve();
+                    return;
+                }
+
+                // 🎮 FPS Camera Shake - use built-in FPS camera shake
+                this.povController.triggerCameraShake().then(resolve).catch(() => resolve());
+            } catch (error) {
+                console.error('🎮 Error triggering camera shake:', error);
+                resolve(); // Always resolve to prevent hanging
+            }
+        });
+    }
+
+
+
+    /**
      * Dispose camera resources
      */
     public dispose(): void {

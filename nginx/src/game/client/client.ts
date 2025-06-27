@@ -263,7 +263,8 @@ export function initializeGame(playerId: string): void {
         }
         
         if (losingPlayerId === localPlayerId) {
-            map.triggerCameraShake().catch(error => {
+            // 🎮 Use camera manager for perspective-aware shake (FPS or top-down)
+            cameraManager.triggerCameraShake().catch(error => {
                 console.error('Camera shake failed:', error);
             });
         }

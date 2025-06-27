@@ -138,6 +138,19 @@ export class POVController {
     }
 
     /**
+     * 🎮 Trigger FPS camera shake (FPS-only game)
+     */
+    public triggerCameraShake(): Promise<void> {
+        if (this.fpsCamera) {
+            // Use FPS camera's built-in shake method
+            return this.fpsCamera.triggerShake();
+        } else {
+            // No camera available, return resolved promise
+            return Promise.resolve();
+        }
+    }
+
+    /**
      * Dispose of camera resources
      */
     public dispose(): void {

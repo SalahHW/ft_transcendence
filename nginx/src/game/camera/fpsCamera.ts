@@ -22,6 +22,14 @@ export class FPSCamera {
     private fixedCameraPosition!: BABYLON.Vector3; // Fixed X and Y position
     private fixedTargetPosition!: BABYLON.Vector3; // Fixed target position
 
+    // 🎮 Shake state
+    private isShaking: boolean = false;
+    private shakeStartTime: number = 0;
+    private shakeDuration: number = 0;
+    private shakeIntensity: number = 0;
+    private originalShakePosition!: BABYLON.Vector3;
+    private originalShakeTarget!: BABYLON.Vector3;
+
     constructor(config: FPSCameraConfig) {
         this.scene = config.scene;
         this.canvas = config.canvas;
@@ -134,9 +142,15 @@ export class FPSCamera {
             0.2 // Slightly more responsive for better paddle tracking
         );
         
-        // Keep X and Y positions stable (user's preferred positioning)
-        this.camera.position.x = this.fixedCameraPosition.x;
-        this.camera.position.y = this.fixedCameraPosition.y;
+        // 🎮 Only update X and Y if not shaking (to avoid fighting with shake effects)
+        if (!this.isShaking) {
+            // Keep X and Y positions stable (user's preferred positioning)
+            this.camera.position.x = this.fixedCameraPosition.x;
+            this.camera.position.y = this.fixedCameraPosition.y;
+        } else {
+            // Handle shake animation
+            this.updateShake();
+        }
         
         // Target remains fixed (no need to update every frame)
     }
@@ -215,6 +229,81 @@ export class FPSCamera {
      */
     public getTargetPosition(): BABYLON.Vector3 {
         return this.fixedTargetPosition.clone();
+    }
+
+    /**
+     * 🎮 Trigger camera shake for FPS view
+     */
+    public triggerShake(duration: number = 400, intensity: number = 1.5): Promise<void> {
+        return new Promise((resolve) => {
+            try {
+                console.log('🎮 Triggering FPS camera shake for losing player');
+                
+                this.isShaking = true;
+                this.shakeStartTime = Date.now();
+                this.shakeDuration = duration;
+                this.shakeIntensity = intensity;
+                
+                // Store original positions (current position, not fixed position to account for Z movement)
+                this.originalShakePosition = this.camera.position.clone();
+                this.originalShakeTarget = this.fixedTargetPosition.clone();
+                
+                // Set up completion callback
+                setTimeout(() => {
+                    this.stopShake();
+                    resolve();
+                }, duration);
+                
+            } catch (error) {
+                console.error('🎮 Error triggering FPS camera shake:', error);
+                this.stopShake();
+                resolve();
+            }
+        });
+    }
+
+    /**
+     * 🎮 Update shake animation (called from update loop)
+     */
+    private updateShake(): void {
+        if (!this.isShaking) return;
+        
+        const elapsed = Date.now() - this.shakeStartTime;
+        const progress = elapsed / this.shakeDuration;
+        
+        if (progress >= 1) {
+            this.stopShake();
+            return;
+        }
+        
+        const fadeOut = 1 - progress; // Gradually reduce shake intensity
+        const frequency = 60; // Higher frequency for more realistic feel
+        
+        // 🎮 FPS-specific shake patterns - only position shake, target stays fixed
+        const shakeX = Math.sin(elapsed * frequency * 0.001 * Math.PI * 2) * this.shakeIntensity * 0.3 * fadeOut;
+        const shakeY = Math.cos(elapsed * frequency * 0.001 * Math.PI * 2 * 0.7) * this.shakeIntensity * 0.6 * fadeOut;
+        const shakeZ = Math.sin(elapsed * frequency * 0.001 * Math.PI * 2 * 1.2) * this.shakeIntensity * 0.2 * fadeOut;
+        
+        // Apply ONLY position shake - target remains fixed for consistent focus
+        this.camera.position.x = this.originalShakePosition.x + shakeX;
+        this.camera.position.y = this.originalShakePosition.y + shakeY;
+        this.camera.position.z = this.originalShakePosition.z + shakeZ;
+        
+        // 🎯 Target stays completely fixed - no shake applied to target
+        // This creates proper "head shake" while maintaining focus on the same point
+    }
+
+    /**
+     * 🎮 Stop shake and restore camera to normal tracking
+     */
+    private stopShake(): void {
+        if (!this.isShaking) return;
+        
+        this.isShaking = false;
+        
+        // Target never changed during shake, so no need to restore it
+        // Position will be restored by the normal update loop
+        // (it will set X and Y to fixed positions, Z will continue following paddle)
     }
 
     /**
