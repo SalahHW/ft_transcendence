@@ -1,0 +1,114 @@
+import * as BABYLON from '@babylonjs/core';
+
+// Modernized createScene function
+export const createScene = (engine: BABYLON.Engine, canvas: HTMLCanvasElement): BABYLON.Scene => {
+    const scene = new BABYLON.Scene(engine);
+
+    // Set up environment
+    const hdrTexture = BABYLON.CubeTexture.CreateFromPrefilteredData(
+        "https://raw.githubusercontent.com/PatrickRyanMS/BabylonJStextures/master/DDS/Runyon_Canyon_A_2k_cube_specular.dds",
+        scene
+    );
+    hdrTexture.name = "envTex";
+    hdrTexture.gammaSpace = false;
+    scene.environmentTexture = hdrTexture;
+
+    // Camera
+    const camera = new BABYLON.ArcRotateCamera(
+        "ArcRotateCamera",
+        1,
+        1.25,
+        50,
+        new BABYLON.Vector3(0, 0, 0),
+        scene
+    );
+    camera.attachControl(canvas, true);
+
+    // Analytical Light
+    const directionalLight = new BABYLON.DirectionalLight(
+        "directional",
+        new BABYLON.Vector3(0.5, -2.0, 0.0),
+        scene
+    );
+
+    // Scene color
+    scene.clearColor = new BABYLON.Color4(0.6, 0.7, 0.6, 1);
+
+    // Ground
+    const ground = BABYLON.Mesh.CreatePlane("ground", 500.0, scene);
+    ground.position = new BABYLON.Vector3(0, 0, 0);
+    ground.rotation = new BABYLON.Vector3(Math.PI / 2, 0, 0);
+
+    const groundMat = new BABYLON.PBRMetallicRoughnessMaterial("groundMat", scene);
+    groundMat.baseTexture = new BABYLON.Texture("./textures/map_assets/rockyGround_basecolor.png", scene);
+    groundMat.normalTexture = new BABYLON.Texture("./textures/map_assets/rockyGround_normal.png", scene);
+    groundMat.metallicRoughnessTexture = new BABYLON.Texture("./textures/map_assets/rockyGround_metalRough.png", scene);
+
+    (groundMat.baseTexture as BABYLON.Texture).uScale = 40.0;
+    (groundMat.baseTexture as BABYLON.Texture).vScale = 40.0;
+    (groundMat.normalTexture as BABYLON.Texture).uScale = 40.0;
+    (groundMat.normalTexture as BABYLON.Texture).vScale = 40.0;
+    (groundMat.metallicRoughnessTexture as BABYLON.Texture).uScale = 40.0;
+    (groundMat.metallicRoughnessTexture as BABYLON.Texture).vScale = 40.0;
+
+    ground.material = groundMat;
+    ground.material.backFaceCulling = false;
+
+    // Set up new rendering pipeline
+    const pipeline = new BABYLON.DefaultRenderingPipeline("default", true, scene);
+
+    // Tone mapping
+    scene.imageProcessingConfiguration.toneMappingEnabled = true;
+    scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
+    scene.imageProcessingConfiguration.exposure = 1;
+
+    // Bloom
+    pipeline.bloomEnabled = true;
+    pipeline.bloomThreshold = 0.8;
+    pipeline.bloomWeight = 0.3;
+    pipeline.bloomKernel = 64;
+    pipeline.bloomScale = 0.5;
+
+    const explode = (event: KeyboardEvent) => {
+        // Handle explosion logic here if needed
+    };
+
+    document.addEventListener('keydown', explode);
+
+    // Remove listener when scene is disposed
+    scene.onDisposeObservable.add(() => {
+        document.removeEventListener('keydown', explode);
+    });
+
+    return scene;
+};
+
+interface ExplosionOptions {
+    [key: string]: any;
+}
+
+export const createExplosion = (scene: BABYLON.Scene, position: BABYLON.Vector3, options: ExplosionOptions = {}): void => {
+    BABYLON.ParticleHelper.CreateAsync("explosion", scene).then((particleSet: any) => {
+        particleSet.systems.forEach((system: any) => {
+            system.emitter = position.clone();
+            system.disposeOnStop = true;
+
+            // === Size Reduction ===
+            system.minSize *= 0.9;
+            system.maxSize *= 0.9;
+
+            // === Speed Increase ===
+            system.minEmitPower *= 0.2;
+            system.maxEmitPower *= 0.2;
+
+            // === Duration Shortening ===
+            system.targetStopDuration *= 0.02;
+
+            // Optional: fade particles out faster
+            system.minLifeTime *= 9.0;
+            system.maxLifeTime *= 9.0;
+        });
+
+        particleSet.start();
+    });
+}; 

@@ -1,17 +1,30 @@
 {
   "name": "transcendence-frontend",
   "version": "1.0.0",
-  "description": "Frontend SPA for ft_transcendence project",
+  "description": "Frontend SPA for ft_transcendence project with integrated game client",
+  "type": "module",
   "scripts": {
-  "build": "npx @tailwindcss/cli -i ./src/style/input.css -o ./public/style/style.css && tsc",
-  "ts-build": "tsc",
-  "ts-watch": "tsc --watch",
-  "tw-build": "npx @tailwindcss/cli -i ./src/style/input.css -o ./public/style/style.css",
-  "tw-watch": "npx @tailwindcss/cli -i ./src/style/input.css -o ./public/style/style.css --watch"
+    "build": "npm run tw-build && npm run bundle",
+    "bundle": "rollup -c",
+    "ts-build": "tsc",
+    "ts-watch": "tsc --watch",
+    "tw-build": "npx @tailwindcss/cli -i ./src/style/input.css -o ./public/style/style.css",
+    "tw-watch": "npx @tailwindcss/cli -i ./src/style/input.css -o ./public/style/style.css --watch",
+    "dev": "npm run tw-watch & npm run ts-watch"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@babylonjs/core": "^7.54.3",
+    "tailwindcss": "^4.1.8",
+    "typescript": "^5.8.3",
+    "ws": "^8.18.1"
+  },
   "devDependencies": {
-    "tailwindcss": "4.0.14",
-    "typescript": "5.8.2"
+    "@types/ws": "^8.18.1",
+    "rollup": "^4.21.0",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-commonjs": "^25.0.8",
+    "@rollup/plugin-terser": "^0.4.4",
+    "tslib": "^2.6.2"
   }
 }

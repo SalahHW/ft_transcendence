@@ -5,63 +5,12 @@
     <title>Wallet Registration Test</title>
   </head>
   <body>
-    <h1>Register with Wallet</h1>
-
-    <label>
-      Username:
-      <input type="text" id="username" placeholder="Enter username" />
-    </label>
-    <br /><br />
-
-    <button id="register">Register Wallet</button>
-
-    <pre id="output"></pre>
-
-    <script>
-      const CHALLENGE_MESSAGE =
-        "Sign this message to login to elsalmajori.games";
-
-      async function registerWithWallet() {
-        const username = document.getElementById("username").value.trim();
-        if (!window.ethereum || !username) {
-          alert("Please install MetaMask and enter a username");
-          return;
-        }
-
-        try {
-          const accounts = await window.ethereum.request({
-            method: "eth_requestAccounts",
-          });
-          const wallet = accounts[0];
-
-          const signature = await window.ethereum.request({
-            method: "personal_sign",
-            params: [CHALLENGE_MESSAGE, wallet],
-          });
-
-          const res = await fetch(
-            "https://elsalmajori.games:8443/register/wallet",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ wallet, username, signature }),
-            }
-          );
-
-          const data = await res.json();
-          document.getElementById("output").innerText = JSON.stringify(
-            data,
-            null,
-            2
-          );
-        } catch (err) {
-          document.getElementById("output").innerText = `Error: ${err.message}`;
-        }
-      }
-
-      document
-        .getElementById("register")
-        .addEventListener("click", registerWithWallet);
-    </script>
+    <div id="wheel-container"></div>
+    <div id="popup-container"></div>
+    <div id="app-container"></div>
+    <!-- Load pre-bundled app with BABYLON.js included -->
+    <script type="module" src="./js/main.bundle.js"></script>
+    <!-- Preload game client bundle for instant game start -->
+    <link rel="modulepreload" href="./js/game.bundle.js" />
   </body>
 </html>
