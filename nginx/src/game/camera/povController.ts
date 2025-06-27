@@ -1,7 +1,6 @@
 import * as BABYLON from '@babylonjs/core';
 import { FPSCamera } from './fpsCamera.js';
 import { playerPaddle } from '../player/player.js';
-import { LightingController } from './lightingController.js';
 
 export interface CameraConfig {
     scene: BABYLON.Scene;
@@ -9,7 +8,6 @@ export interface CameraConfig {
     player1: playerPaddle;
     player2: playerPaddle;
     localPlayerId: string;
-    playground: BABYLON.Mesh;
 }
 
 export enum CameraPerspective {
@@ -29,7 +27,6 @@ export class POVController {
     private topDownCamera: BABYLON.UniversalCamera | null = null;
     private fpsCamera: FPSCamera | null = null;
     private activeCamera: BABYLON.Camera | null = null;
-    private lightingController: LightingController;
 
     constructor(config: CameraConfig) {
         this.scene = config.scene;
@@ -38,28 +35,15 @@ export class POVController {
         this.player2 = config.player2;
         this.localPlayerId = config.localPlayerId;
         this.currentPerspective = CameraPerspective.TOP_DOWN;
-        
-        // Initialize lighting controller
-        this.lightingController = new LightingController({
-            scene: this.scene,
-            playground: config.playground
-        });
     }
 
     /**
-     * Initialize the POV controller with the existing top-down camera and lighting
+     * Initialize the POV controller with the existing top-down camera
      */
     public initializeWithTopDownCamera(existingCamera: BABYLON.UniversalCamera): void {
         this.topDownCamera = existingCamera;
         this.activeCamera = existingCamera;
         this.scene.activeCamera = existingCamera;
-    }
-
-    /**
-     * Capture original lighting setup from gameMap
-     */
-    public captureOriginalLighting(mainLight: BABYLON.DirectionalLight, ambientLight: BABYLON.HemisphericLight): void {
-        this.lightingController.captureOriginalLighting(mainLight, ambientLight);
     }
 
     /**
@@ -91,9 +75,6 @@ export class POVController {
         // Update perspective state
         this.currentPerspective = isPlayer1 ? CameraPerspective.FPS_PLAYER1 : CameraPerspective.FPS_PLAYER2;
         
-        // 🔆 Switch to FPS lighting
-        this.lightingController.switchToFPSLighting();
-        
         console.log('🎮 FPS camera activated for', isPlayer1 ? 'Player 1' : 'Player 2');
     }
 
@@ -105,9 +86,6 @@ export class POVController {
             this.activeCamera = this.topDownCamera;
             this.scene.activeCamera = this.topDownCamera;
             this.currentPerspective = CameraPerspective.TOP_DOWN;
-            
-            // 🔆 Switch back to top-down lighting
-            this.lightingController.switchToTopDownLighting();
             
             console.log('🎮 Switched back to top-down perspective');
         }
@@ -158,9 +136,6 @@ export class POVController {
             this.fpsCamera.dispose();
             this.fpsCamera = null;
         }
-        
-        // Dispose lighting controller
-        this.lightingController.dispose();
         
         // Don't dispose top-down camera as it's managed by gameMap
         this.activeCamera = null;

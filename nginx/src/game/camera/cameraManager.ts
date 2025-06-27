@@ -31,8 +31,7 @@ export class CameraManager {
             canvas: gameMapInstance.canvas,
             player1: player1,
             player2: player2,
-            localPlayerId: localPlayerId,
-            playground: gameMapInstance.getPlayground!
+            localPlayerId: localPlayerId
         };
 
         this.povController = new POVController(config);
@@ -40,18 +39,6 @@ export class CameraManager {
         // Initialize with the existing top-down camera
         if (gameMapInstance.globalPov) {
             this.povController.initializeWithTopDownCamera(gameMapInstance.globalPov);
-        }
-
-        // Capture original lighting from gameMap
-        if (gameMapInstance.light) {
-            // Find ambient light - it should be a HemisphericLight
-            const ambientLight = gameMapInstance.getScene.lights.find(light => 
-                light instanceof BABYLON.HemisphericLight
-            ) as BABYLON.HemisphericLight;
-
-            if (ambientLight) {
-                this.povController.captureOriginalLighting(gameMapInstance.light, ambientLight);
-            }
         }
 
         console.log('🎮 Camera Manager initialized');

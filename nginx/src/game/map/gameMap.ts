@@ -42,19 +42,25 @@ class gameMap {
     setUpLight(): void {
         if (!this.scene) return;
         
-        // Main directional light coming from above to illuminate the playing field
-        this.light = new BABYLON.DirectionalLight("mainLight",
-            new BABYLON.Vector3(0, -1, 0), // Pointing straight down
-            this.scene);
-        this.light.position = new BABYLON.Vector3(0, 100, 0); // Positioned above the field
-        this.light.intensity = 0.35; // Strong enough to see everything clearly
+        // 🔆 UNIFIED REALISTIC LIGHTING - works for both top-down animation and FPS gameplay
         
-        // Soft ambient light for overall scene visibility
-        const ambient = new BABYLON.HemisphericLight("ambientLight",
-            new BABYLON.Vector3(0, 1, 0), // From above
+        // Main directional light - realistic overhead lighting with slight angle for depth
+        this.light = new BABYLON.DirectionalLight("realisticMainLight",
+            new BABYLON.Vector3(0.1, -0.9, 0.1), // Slightly angled from above for realistic shadows
             this.scene);
-        ambient.intensity = 0.5; // Gentle fill light
-        ambient.diffuse = new BABYLON.Color3(0.9, 0.9, 1); // Slightly cool tone
+        this.light.position = new BABYLON.Vector3(10, 120, 10); // High above with slight offset
+        this.light.intensity = 0.7; // Strong enough for good visibility in both views
+        this.light.diffuse = new BABYLON.Color3(1, 0.98, 0.95); // Warm white light
+        
+        // Realistic ambient light - simulates sky/environment lighting
+        const ambient = new BABYLON.HemisphericLight("environmentLight",
+            new BABYLON.Vector3(0, 1, 0), // From above (sky)
+            this.scene);
+        ambient.intensity = 0.4; // Balanced fill light
+        ambient.diffuse = new BABYLON.Color3(0.85, 0.9, 1); // Cool sky tone
+        ambient.groundColor = new BABYLON.Color3(0.3, 0.3, 0.35); // Subtle ground reflection
+        
+        console.log('🔆 Unified realistic lighting system initialized');
     }
 
     setUpEngine(): void {
@@ -149,6 +155,11 @@ class gameMap {
             this.playgroundMaterial.diffuseTexture.uScale = 1;
             this.playgroundMaterial.diffuseTexture.vScale = 1;
         }
+        
+        // 🔆 Enhanced material properties for realistic lighting
+        this.playgroundMaterial.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1); // Subtle reflection
+        this.playgroundMaterial.specularPower = 32; // Surface smoothness
+        this.playgroundMaterial.ambientColor = new BABYLON.Color3(0.2, 0.2, 0.2); // Helps with ambient lighting
         
         this.playground.material = this.playgroundMaterial;
     }
