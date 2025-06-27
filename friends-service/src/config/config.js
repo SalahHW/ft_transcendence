@@ -2,6 +2,7 @@ export const isDev = process.env.NODE_ENV === "development";
 
 const devPort = 3003;
 const devDatabasePath = "./database/friendships.db";
+const devUsersServiceUrl = "http://localhost:3000";
 
 export const PORT = isDev ? devPort : process.env.FRIENDS_SERVICE_PORT;
 
