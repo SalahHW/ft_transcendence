@@ -119,6 +119,20 @@ export class CameraManager {
     }
 
     /**
+     * Check if the local player should have inverted controls in FPS mode
+     * Player2 (left side, looking right) needs inverted controls
+     */
+    public shouldInvertControls(): boolean {
+        if (!this.povController || !this.povController.isInFPSMode()) {
+            return false; // No inversion in top-down mode
+        }
+        
+        // In FPS mode, Player2 (left side, looking right) needs inverted controls
+        // because their left/right is opposite to the field coordinates
+        return this.povController.getCurrentPerspective() === CameraPerspective.FPS_PLAYER2;
+    }
+
+    /**
      * Dispose camera resources
      */
     public dispose(): void {

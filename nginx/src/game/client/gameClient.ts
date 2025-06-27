@@ -17,6 +17,7 @@ import { Ball } from '../ball/ball.js';
 import { handleWaitingForPlayers } from '../ui/waitingStatusHandler.js';
 import { TournamentClientHandler } from '../tournament/tournamentClientHandler.js';
 import { showSplashScreen } from '../ui/splashScreen.js';
+import { cameraManager } from '../camera/cameraManager.js';
 
 export class GameClient {
     private clientConnection: webSocketClient | null = null;
@@ -324,24 +325,75 @@ export class GameClient {
         document.addEventListener('keydown', (event) => {
             if (this.isGameOver || !this.clientConnection) return;
             
-            if (event.key === 'ArrowLeft' && !this.isUpPressed) {
-                this.isUpPressed = true;
-                this.clientConnection.send({ type: 'keyDown', direction: 'up' });
-            } else if (event.key === 'ArrowRight' && !this.isDownPressed) {
-                this.isDownPressed = true;
-                this.clientConnection.send({ type: 'keyDown', direction: 'down' });
+            // 🎮 FIX: Use perspective-aware control mapping for FPS mode
+            // In FPS mode, Player2 (left side, looking right) needs inverted controls
+            const shouldInvert = cameraManager.shouldInvertControls();
+            
+            if (event.key === 'ArrowLeft') {
+                // Determine the actual direction we'll send based on perspective
+                const direction = shouldInvert ? 'down' : 'up';
+                
+                // Set the appropriate state based on actual direction being sent
+                if (direction === 'up' && !this.isUpPressed) {
+                    this.isUpPressed = true;
+                    this.clientConnection.send({ type: 'keyDown', direction: 'up' });
+                    console.log(`🎮 ArrowLeft pressed, sending direction: up (inverted: ${shouldInvert})`);
+                } else if (direction === 'down' && !this.isDownPressed) {
+                    this.isDownPressed = true;
+                    this.clientConnection.send({ type: 'keyDown', direction: 'down' });
+                    console.log(`🎮 ArrowLeft pressed, sending direction: down (inverted: ${shouldInvert})`);
+                }
+            } else if (event.key === 'ArrowRight') {
+                // Determine the actual direction we'll send based on perspective
+                const direction = shouldInvert ? 'up' : 'down';
+                
+                // Set the appropriate state based on actual direction being sent
+                if (direction === 'up' && !this.isUpPressed) {
+                    this.isUpPressed = true;
+                    this.clientConnection.send({ type: 'keyDown', direction: 'up' });
+                    console.log(`🎮 ArrowRight pressed, sending direction: up (inverted: ${shouldInvert})`);
+                } else if (direction === 'down' && !this.isDownPressed) {
+                    this.isDownPressed = true;
+                    this.clientConnection.send({ type: 'keyDown', direction: 'down' });
+                    console.log(`🎮 ArrowRight pressed, sending direction: down (inverted: ${shouldInvert})`);
+                }
             }
         });
 
         document.addEventListener('keyup', (event) => {
             if (this.isGameOver || !this.clientConnection) return;
             
-            if (event.key === 'ArrowLeft' && this.isUpPressed) {
-                this.isUpPressed = false;
-                this.clientConnection.send({ type: 'keyUp', direction: 'up' });
-            } else if (event.key === 'ArrowRight' && this.isDownPressed) {
-                this.isDownPressed = false;
-                this.clientConnection.send({ type: 'keyUp', direction: 'down' });
+            // 🎮 FIX: Use perspective-aware control mapping for FPS mode
+            const shouldInvert = cameraManager.shouldInvertControls();
+            
+            if (event.key === 'ArrowLeft') {
+                // Determine the actual direction we were sending based on perspective
+                const direction = shouldInvert ? 'down' : 'up';
+                
+                // Release the appropriate state based on actual direction that was being sent
+                if (direction === 'up' && this.isUpPressed) {
+                    this.isUpPressed = false;
+                    this.clientConnection.send({ type: 'keyUp', direction: 'up' });
+                    console.log(`🎮 ArrowLeft released, sending direction: up (inverted: ${shouldInvert})`);
+                } else if (direction === 'down' && this.isDownPressed) {
+                    this.isDownPressed = false;
+                    this.clientConnection.send({ type: 'keyUp', direction: 'down' });
+                    console.log(`🎮 ArrowLeft released, sending direction: down (inverted: ${shouldInvert})`);
+                }
+            } else if (event.key === 'ArrowRight') {
+                // Determine the actual direction we were sending based on perspective
+                const direction = shouldInvert ? 'up' : 'down';
+                
+                // Release the appropriate state based on actual direction that was being sent
+                if (direction === 'up' && this.isUpPressed) {
+                    this.isUpPressed = false;
+                    this.clientConnection.send({ type: 'keyUp', direction: 'up' });
+                    console.log(`🎮 ArrowRight released, sending direction: up (inverted: ${shouldInvert})`);
+                } else if (direction === 'down' && this.isDownPressed) {
+                    this.isDownPressed = false;
+                    this.clientConnection.send({ type: 'keyUp', direction: 'down' });
+                    console.log(`🎮 ArrowRight released, sending direction: down (inverted: ${shouldInvert})`);
+                }
             }
         });
 
