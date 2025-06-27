@@ -9,7 +9,14 @@ export const DB_PATH = isDev
   ? devDatabasePath
   : process.env.FRIENDSHIPS_DB_PATH;
 
+export const USERS_SERVICE_TIMEOUT = 2000;
+
+if (!PORT) {
+  console.error("Unable to load port from environment variables");
+  process.exit(1);
+}
+
 if (!DB_PATH) {
-  console.error("Unable to load database path environment variables");
+  console.error("Unable to load database path from environment variables");
   process.exit(1);
 }
