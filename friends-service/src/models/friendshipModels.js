@@ -15,12 +15,12 @@ export async function createFriendship(userId, friendId) {
 
 export async function readFriendship(userId) {
   const query = `
-    SELECT *
+    SELECT friend_id, created_at
     FROM friendships
     WHERE user_id = ?`;
 
   try {
-    const friends = await database.get(query, [userId]);
+    const friends = await database.all(query, [userId]);
     return friends;
   } catch (err) {
     throw translateSqliteError(err);
