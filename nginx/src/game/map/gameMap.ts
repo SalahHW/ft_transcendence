@@ -138,7 +138,18 @@ class gameMap {
             depth: 20
         }, this.scene);
         this.playgroundMaterial = new BABYLON.StandardMaterial("groundmat", this.scene);
-        this.playgroundMaterial.diffuseColor = new BABYLON.Color3(0, 0, 0);
+        
+        // 🏓 Load the pong table texture for the floor
+        this.playgroundMaterial.diffuseTexture = new BABYLON.Texture("./textures/floor/pong-table.jpg", this.scene);
+        
+        // Ensure proper texture scaling and orientation
+        if (this.playgroundMaterial.diffuseTexture) {
+            this.playgroundMaterial.diffuseTexture.uOffset = 0;
+            this.playgroundMaterial.diffuseTexture.vOffset = 0;
+            this.playgroundMaterial.diffuseTexture.uScale = 1;
+            this.playgroundMaterial.diffuseTexture.vScale = 1;
+        }
+        
         this.playground.material = this.playgroundMaterial;
     }
 
