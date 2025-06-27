@@ -59,5 +59,15 @@ services:
     volumes:
       - ./avatars-service/database:/app/database
 
+  friends:
+    container_name: friends
+    build: ./friends-service
+    env_file:
+      - ./.env
+    networks:
+      - transcendence
+    volumes:
+      - ./friends-service/database:/app/database
+
 networks:
   transcendence:
