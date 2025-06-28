@@ -1,6 +1,7 @@
 import * as BABYLON from '@babylonjs/core';
 import { createExplosion } from './ballEffects.js';
 import { playerPaddle } from '../player/player.js';
+import { BallTrail } from './ballTrail.js';
 
 interface BallState {
     position: { x: number; y: number; z: number };
@@ -35,6 +36,7 @@ class Ball {
     public lastUpdateTime: number;
     public hasValidPosition: boolean;
     public speed: number;
+    public ballTrail: BallTrail;
 
     constructor(player1: playerPaddle, player2: playerPaddle) {
         this.position = new BABYLON.Vector3(0, -2, 0);
@@ -56,6 +58,7 @@ class Ball {
         this.lastUpdateTime = Date.now();
         this.hasValidPosition = true;
         this.speed = 25;
+        this.ballTrail = new BallTrail();
     }
 
     init(): void {
@@ -72,6 +75,11 @@ class Ball {
         if (this.ballBody) {
             this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
             this.ballBody.isVisible = false;
+        }
+        
+        // Reset trail on initialization
+        if (this.ballTrail) {
+            this.ballTrail.updateTrail(0); // Force remove trail at speed tier 0
         }
     }
 
@@ -91,6 +99,9 @@ class Ball {
         this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
         this.ballBody.material = this.ballMaterial;
         this.ballBody.isVisible = false;
+        
+        // Initialize trail system
+        this.ballTrail.initialize(scene, this.ballBody);
     }
 
     updateClient(scene: BABYLON.Scene): void {
@@ -189,6 +200,13 @@ class Ball {
             this.ballBody.position.copyFrom(this.position);
             this.ballBody.isVisible = this.isRespawning || this.position.y >= -2;
         }
+
+        // Update trail based on speed tier
+        const currentSpeedTier = this.getSpeedTier(this.rebounds);
+        const currentGlowColor = state.currentGlowColor ? 
+            new BABYLON.Color3(state.currentGlowColor.r, state.currentGlowColor.g, state.currentGlowColor.b) : 
+            undefined;
+        this.ballTrail.updateTrail(currentSpeedTier, currentGlowColor);
     }
 
     startGlowTransition(targetColor: BABYLON.Color3, duration: number): void {
@@ -279,6 +297,24 @@ class Ball {
             this.currentGlowColor = targetColor.clone();
             this.isGlowing = targetColor.r > 0 || targetColor.g > 0 || targetColor.b > 0;
         });
+    }
+
+    dispose(): void {
+        // Clean up trail resources
+        if (this.ballTrail) {
+            this.ballTrail.dispose();
+        }
+        
+        // Clean up ball mesh and material
+        if (this.ballBody) {
+            this.ballBody.dispose();
+            this.ballBody = null;
+        }
+        
+        if (this.ballMaterial) {
+            this.ballMaterial.dispose();
+            this.ballMaterial = null;
+        }
     }
 
     getSpeedTier(rebounds: number): number {
