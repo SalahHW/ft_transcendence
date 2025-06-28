@@ -2,6 +2,7 @@ import * as BABYLON from '@babylonjs/core';
 import { createExplosion } from './ballEffects.js';
 import { playerPaddle } from '../player/player.js';
 import { BallTrail } from './ballTrail.js';
+import { BALL_CONSTANTS } from '../core/ballConstants.js';
 
 interface BallState {
     position: { x: number; y: number; z: number };
@@ -39,10 +40,14 @@ class Ball {
     public ballTrail: BallTrail;
 
     constructor(player1: playerPaddle, player2: playerPaddle) {
-        this.position = new BABYLON.Vector3(0, -2, 0);
+        this.position = new BABYLON.Vector3(
+            BALL_CONSTANTS.INITIAL_POSITION.x,
+            BALL_CONSTANTS.INITIAL_POSITION.y,
+            BALL_CONSTANTS.INITIAL_POSITION.z
+        );
         this.velocity = new BABYLON.Vector3(0, 0, 0);
         this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
-        this.radius = 0.75;
+        this.radius = BALL_CONSTANTS.RADIUS;
         this.rebounds = 0;
         this.wasHitByPlayer = undefined;
         this.ballBody = null;
@@ -57,23 +62,31 @@ class Ball {
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
         this.hasValidPosition = true;
-        this.speed = 25;
+        this.speed = BALL_CONSTANTS.INITIAL_SPEED;
         this.ballTrail = new BallTrail();
     }
 
     init(): void {
-        this.position = new BABYLON.Vector3(0, -2, 0);
+        this.position = new BABYLON.Vector3(
+            BALL_CONSTANTS.INITIAL_POSITION.x,
+            BALL_CONSTANTS.INITIAL_POSITION.y,
+            BALL_CONSTANTS.INITIAL_POSITION.z
+        );
         this.velocity = new BABYLON.Vector3(0, 0, 0);
         this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
         this.rebounds = 0;
         this.isRespawning = false;
         this.respawnTime = 0;
         this.hasValidPosition = true;
-        this.speed = 25;
+        this.speed = BALL_CONSTANTS.INITIAL_SPEED;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
         if (this.ballBody) {
-            this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
+            this.ballBody.position = new BABYLON.Vector3(
+                BALL_CONSTANTS.INITIAL_POSITION.x,
+                BALL_CONSTANTS.INITIAL_POSITION.y,
+                BALL_CONSTANTS.INITIAL_POSITION.z
+            );
             this.ballBody.isVisible = false;
         }
         
@@ -84,8 +97,10 @@ class Ball {
     }
 
     createBall(scene: BABYLON.Scene): void {
-        this.ballBody = BABYLON.MeshBuilder.CreateSphere("ball", { diameter: 1.5, 
-            segments: 42 }, scene);
+        this.ballBody = BABYLON.MeshBuilder.CreateSphere("ball", { 
+            diameter: BALL_CONSTANTS.DIAMETER, 
+            segments: BALL_CONSTANTS.SEGMENTS 
+        }, scene);
         this.ballMaterial = new BABYLON.StandardMaterial("glowMat", scene);
         
         // Enhanced material setup for glowing effects

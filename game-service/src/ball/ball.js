@@ -1,13 +1,18 @@
 import * as BABYLON from '@babylonjs/core';
 import { createExplosion } from './ballEffects.js';
 import { GAME_CONFIG } from '../core/constants.js';
+import { BALL_CONSTANTS } from '../utils/ballConstants.js';
 
 class Ball {
     constructor(player1, player2, gameEngine = null, roomId = null) {
-        this.position = new BABYLON.Vector3(0, -2, 0);
+        this.position = new BABYLON.Vector3(
+            BALL_CONSTANTS.INITIAL_POSITION.x,
+            BALL_CONSTANTS.INITIAL_POSITION.y,
+            BALL_CONSTANTS.INITIAL_POSITION.z
+        );
         this.velocity = new BABYLON.Vector3(0, 0, 0);
         this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
-        this.radius = 0.75;
+        this.radius = BALL_CONSTANTS.RADIUS;
         this.rebounds = 0;
         this.wasHitByPlayer = undefined;
         this.isRespawning = false;
@@ -27,14 +32,18 @@ class Ball {
     }
 
     init() {
-        this.position = new BABYLON.Vector3(0, -2, 0);
+        this.position = new BABYLON.Vector3(
+            BALL_CONSTANTS.INITIAL_POSITION.x,
+            BALL_CONSTANTS.INITIAL_POSITION.y,
+            BALL_CONSTANTS.INITIAL_POSITION.z
+        );
         this.velocity = new BABYLON.Vector3(0, 0, 0);
         this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
         this.rebounds = 0;
         this.isRespawning = false;
         this.respawnTime = 0;
         this.hasValidPosition = true;
-        this.speed = GAME_CONFIG.INITIAL_BALL_SPEED;
+        this.speed = BALL_CONSTANTS.INITIAL_SPEED;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
         // Reset glow properties
@@ -44,19 +53,23 @@ class Ball {
     }
 
     setFirstVelocity() {
-        this.velocity = new BABYLON.Vector3(Math.random() >= 0.5 ? GAME_CONFIG.INITIAL_BALL_SPEED : -GAME_CONFIG.INITIAL_BALL_SPEED, 0, 0);
+        this.velocity = new BABYLON.Vector3(Math.random() >= 0.5 ? BALL_CONSTANTS.INITIAL_SPEED : -BALL_CONSTANTS.INITIAL_SPEED, 0, 0);
         this.previousVelocity.copyFrom(this.velocity);
-        this.speed = GAME_CONFIG.INITIAL_BALL_SPEED;
+        this.speed = BALL_CONSTANTS.INITIAL_SPEED;
     }
 
     handleBallRespawn(previousVelocity) {
-        this.position = new BABYLON.Vector3(0, -2, 0);
+        this.position = new BABYLON.Vector3(
+            BALL_CONSTANTS.INITIAL_POSITION.x,
+            BALL_CONSTANTS.INITIAL_POSITION.y,
+            BALL_CONSTANTS.INITIAL_POSITION.z
+        );
         this.velocity = BABYLON.Vector3.Zero();
         this.previousVelocity.copyFrom(previousVelocity);
         this.isRespawning = true;
         this.respawnTime = 0;
         this.hasValidPosition = true;
-        this.speed = GAME_CONFIG.INITIAL_BALL_SPEED;
+        this.speed = BALL_CONSTANTS.INITIAL_SPEED;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
     }
@@ -237,14 +250,14 @@ class Ball {
                 losingPlayerId = this.player2.playerId; // Player 2 lost the point
                 winningPlayerId = this.player1.playerId;
                 // Ball goes towards the loser (Player 2 - left side)
-                newVelocity = new BABYLON.Vector3(-GAME_CONFIG.INITIAL_BALL_SPEED, 0, 0);
+                newVelocity = new BABYLON.Vector3(-BALL_CONSTANTS.INITIAL_SPEED, 0, 0);
             } else {
                 // Ball went past right side (Player 1's side), Player 2 scores  
                 this.player2.playerScore++;
                 losingPlayerId = this.player1.playerId; // Player 1 lost the point
                 winningPlayerId = this.player2.playerId;
                 // Ball goes towards the loser (Player 1 - right side)
-                newVelocity = new BABYLON.Vector3(GAME_CONFIG.INITIAL_BALL_SPEED, 0, 0);
+                newVelocity = new BABYLON.Vector3(BALL_CONSTANTS.INITIAL_SPEED, 0, 0);
             }
 
             // Send lost point sound only to the player who lost
@@ -328,7 +341,7 @@ class Ball {
         this.respawnTime = state.respawnTime || 0;
         this.wasHitByPlayer = state.wasHitByPlayer;
         this.hasValidPosition = state.hasValidPosition;
-        this.speed = state.speed || GAME_CONFIG.INITIAL_BALL_SPEED;
+        this.speed = state.speed || BALL_CONSTANTS.INITIAL_SPEED;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
     }

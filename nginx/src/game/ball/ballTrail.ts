@@ -1,12 +1,13 @@
 import * as BABYLON from '@babylonjs/core';
+import { BALL_CONSTANTS } from '../core/ballConstants.js';
 
 export class BallTrail {
     private particleSystem: BABYLON.ParticleSystem | null = null;
     private scene: BABYLON.Scene | null = null;
     private ballMesh: BABYLON.Mesh | null = null;
     private isActive: boolean = false;
-    private maxParticles: number = 150; // Number of particles for the trail
-    private particleLifetime: number = 0.6; // How long particles live (in seconds)
+    private maxParticles: number = BALL_CONSTANTS.TRAIL.MAX_PARTICLES; // Number of particles for the trail
+    private particleLifetime: number = BALL_CONSTANTS.TRAIL.LIFETIME; // How long particles live (in seconds)
 
     constructor() {
         // Constructor kept simple
@@ -89,7 +90,7 @@ export class BallTrail {
      * @param glowColor - Current ball glow color
      */
     public updateTrail(speedTier: number, glowColor?: BABYLON.Color3): void {
-        const shouldShowTrail = speedTier >= 1; // Only show at highest speed (rebounds >= 20)
+        const shouldShowTrail = speedTier >= BALL_CONSTANTS.TRAIL.ACTIVATION_TIER; // Only show at highest speed (rebounds >= 20)
 
         if (shouldShowTrail && !this.isActive) {
             // Create trail when entering highest speed
