@@ -64,16 +64,18 @@ async function processQueuedMessages(): Promise<void> {
 // Function to handle sound events
 function handleSoundEvent(msg: any): void {
     const { sound, ballSpeed, rebounds } = msg;
+    let volumeMultiplier = 0;
     
     switch (sound) {
         case 'paddleHit':
             // Vary volume based on ball speed for more immersion
-            const volumeMultiplier = Math.min(1, (ballSpeed || 25) / 50);
+            volumeMultiplier = Math.min(1, (ballSpeed || 25) / 50);
             soundManager.playSound('paddleHit', volumeMultiplier);
             break;
             
         case 'wallHit':
-            soundManager.playSound('wallHit', 0.7);
+            volumeMultiplier = Math.min(1, (ballSpeed || 25) / 50);
+            soundManager.playSound('wallHit', volumeMultiplier);
             break;
             
         case 'lostPoint':
