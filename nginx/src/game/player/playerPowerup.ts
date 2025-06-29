@@ -39,9 +39,8 @@ export class PlayerPowerup {
         // Create UI container
         this.uiContainer = new BABYLON.Mesh(`powerup-ui-${this.playerId}`, this.scene);
         
-        // Position UI based on player role (0 = right side, 1 = left side)
-        const xPosition = this.playerRole === 0 ? 15 : -15;
-        this.uiContainer.position = new BABYLON.Vector3(xPosition, 5, 0);
+        // ⭐ HUD UI: Start at head level center (will be updated by updateCameraPosition)
+        this.uiContainer.position = new BABYLON.Vector3(0, 1, 6); // Head level, centered, close to camera
         
 
         
@@ -59,10 +58,10 @@ export class PlayerPowerup {
         indicatorMaterial.emissiveColor = new BABYLON.Color3(0.2, 0.8, 0.2); // Green when available
         this.powerupIndicator.material = indicatorMaterial;
         
-        // Create main powerup progress bar (parallel to player's side) - this is now the primary indicator
+        // ⭐ HORIZONTAL POWERUP BAR: Create main powerup progress bar (horizontal)
         this.cooldownBar = BABYLON.MeshBuilder.CreateBox(
             `powerup-bar-${this.playerId}`,
-            { width: 0.3, height: 0.4, depth: 3 }, // Make it larger since it's the main element
+            { width: 3, height: 0.2, depth: 0.1 }, // ⭐ HORIZONTAL: width=3 (long), height=0.2 (thin but visible), depth=0.1 (flat)
             this.scene
         );
         this.cooldownBar.parent = this.uiContainer;
@@ -399,6 +398,48 @@ export class PlayerPowerup {
         this.updateVisuals();
     }
 
+    /**
+     * ⭐ HUD-STYLE UI: Update powerup UI position to stay as a HUD element at head level
+     */
+    public updateCameraPosition(): void {
+        if (!this.scene.activeCamera || !this.uiContainer) return;
+        
+        const camera = this.scene.activeCamera;
+        const cameraPosition = camera.position;
+        
+        // For FPS cameras, position UI like a HUD element at head level
+        if (camera.name && camera.name.includes('fpsCamera')) {
+            // Get camera forward direction
+            const universalCamera = camera as BABYLON.UniversalCamera;
+            const cameraTarget = universalCamera.getTarget();
+            const cameraForward = cameraTarget.subtract(cameraPosition).normalize();
+            const cameraRight = BABYLON.Vector3.Cross(cameraForward, BABYLON.Vector3.Up()).normalize();
+            
+            // ⭐ HUD POSITIONING: Position like a HUD element at head level, slightly above center
+            const distanceFromCamera = 4; // Close enough to feel like HUD
+            const verticalOffset = -1; // Slightly above center (head level)
+            const horizontalOffset = 0; // Centered horizontally
+            
+            const uiPosition = cameraPosition
+                .add(cameraForward.scale(distanceFromCamera))
+                .add(BABYLON.Vector3.Up().scale(verticalOffset))
+                .add(cameraRight.scale(horizontalOffset));
+            
+            this.uiContainer.position = uiPosition;
+            
+            // Make UI face the camera for HUD effect
+            this.uiContainer.lookAt(cameraPosition);
+            
+        } else {
+            // For top-down camera, position as traditional HUD at top of screen
+            this.uiContainer.position = new BABYLON.Vector3(
+                cameraPosition.x, // Centered horizontally
+                cameraPosition.y - 8, // Top of screen
+                cameraPosition.z + 2 // Slightly forward
+            );
+        }
+    }
+
     private updateVisuals(): void {
         if (!this.cooldownBar || !this.activationRing) return;
         
@@ -407,7 +448,7 @@ export class PlayerPowerup {
         if (this.isActive) {
             // Show activation timing window - bar is full and yellow/orange (like ball glow)
             barMaterial.emissiveColor = new BABYLON.Color3(1, 0.8, 0); // Yellow-orange like ball glow
-            this.cooldownBar.scaling.z = 1; // Full bar
+            this.cooldownBar.scaling.x = 1; // Full bar (horizontal scaling)
             this.activationRing.isVisible = true;
             
             // Animate activation ring
@@ -435,20 +476,20 @@ export class PlayerPowerup {
             this.activationRing.isVisible = false;
             
             // Calculate progress: starts at 0 (empty) and grows to 1 (full)
-            const maxCooldown = 15000; // 15 seconds in ms
+            const maxCooldown = 7000; // 15 seconds in ms
             const cooldownProgress = 1 - (this.remainingCooldown / maxCooldown); // Invert so it grows
-            this.cooldownBar.scaling.z = Math.max(0.05, cooldownProgress); // Minimum 5% so it's visible
+            this.cooldownBar.scaling.x = Math.max(0.05, cooldownProgress); // Minimum 5% so it's visible (horizontal scaling)
             
         } else if (this.isAvailable) {
             // Available state - bar is full and green (like ball when ready)
             barMaterial.emissiveColor = new BABYLON.Color3(0.2, 0.8, 0.2); // Green when available
-            this.cooldownBar.scaling.z = 1; // Full bar
+            this.cooldownBar.scaling.x = 1; // Full bar (horizontal scaling)
             this.activationRing.isVisible = false;
             
         } else {
             // Unavailable (ball doesn't have enough rebounds) - bar is full but gray
             barMaterial.emissiveColor = new BABYLON.Color3(0.4, 0.4, 0.4); // Gray when unavailable
-            this.cooldownBar.scaling.z = 1; // Full bar but gray
+            this.cooldownBar.scaling.x = 1; // Full bar but gray (horizontal scaling)
             this.activationRing.isVisible = false;
         }
     }

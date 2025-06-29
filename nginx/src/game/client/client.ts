@@ -728,10 +728,18 @@ export function initializeGame(playerId: string): void {
                 
                 TournamentClientHandler.resetTournamentPaddlePositions(player1, player2);
                 
-                // ⭐ POWERUP INTEGRATION: Create powerup UI systems
+                // ⭐ POWERUP INTEGRATION: Create powerup UI system for LOCAL player only
                 if (map.getScene) {
-                    player1Powerup = new PlayerPowerup(player1.playerId, map.getScene, 0); // Role 0 = right side
-                    player2Powerup = new PlayerPowerup(player2.playerId, map.getScene, 1); // Role 1 = left side
+                    // Determine which player is the local player and create only their powerup UI
+                    const isLocalPlayer1 = player1.playerId === localPlayerId;
+                    
+                    if (isLocalPlayer1) {
+                        player1Powerup = new PlayerPowerup(player1.playerId, map.getScene, 0); // Local player's powerup
+                        player2Powerup = null; // Don't create opponent's powerup UI
+                    } else {
+                        player1Powerup = null; // Don't create opponent's powerup UI
+                        player2Powerup = new PlayerPowerup(player2.playerId, map.getScene, 1); // Local player's powerup
+                    }
                     
                     // ⭐ TOURNAMENT FIX: No callback setup needed - 'A' key handled globally
                     console.log('🎮 Powerup UI systems created for both players');
@@ -835,11 +843,9 @@ export function initializeGame(playerId: string): void {
                     if (direction === 'up' && !isUpPressed) {
                         isUpPressed = true;
                         clientConnection!.send({ type: 'keyDown', direction: 'up' });
-                        console.log(`🎮 ArrowRight pressed, sending direction: up (inverted: ${shouldInvert})`);
                     } else if (direction === 'down' && !isDownPressed) {
                         isDownPressed = true;
                         clientConnection!.send({ type: 'keyDown', direction: 'down' });
-                        console.log(`🎮 ArrowRight pressed, sending direction: down (inverted: ${shouldInvert})`);
                     }
                 } else if (event.key.toLowerCase() === 'a') {
                     // ⭐ TOURNAMENT POWERUP FIX: Handle 'A' key at same global level as directional keys
@@ -865,11 +871,9 @@ export function initializeGame(playerId: string): void {
                     if (direction === 'up' && isUpPressed) {
                         isUpPressed = false;
                         clientConnection!.send({ type: 'keyUp', direction: 'up' });
-                        console.log(`🎮 ArrowLeft released, sending direction: up (inverted: ${shouldInvert})`);
                     } else if (direction === 'down' && isDownPressed) {
                         isDownPressed = false;
                         clientConnection!.send({ type: 'keyUp', direction: 'down' });
-                        console.log(`🎮 ArrowLeft released, sending direction: down (inverted: ${shouldInvert})`);
                     }
                 } else if (event.key === 'ArrowRight') {
                     // Determine the actual direction we were sending based on perspective
@@ -879,11 +883,9 @@ export function initializeGame(playerId: string): void {
                     if (direction === 'up' && isUpPressed) {
                         isUpPressed = false;
                         clientConnection!.send({ type: 'keyUp', direction: 'up' });
-                        console.log(`🎮 ArrowRight released, sending direction: up (inverted: ${shouldInvert})`);
                     } else if (direction === 'down' && isDownPressed) {
                         isDownPressed = false;
                         clientConnection!.send({ type: 'keyUp', direction: 'down' });
-                        console.log(`🎮 ArrowRight released, sending direction: down (inverted: ${shouldInvert})`);
                     }
                 }
             };
@@ -1099,6 +1101,14 @@ function setupGameLoop(): void {
 
         // 🎮 Update camera system
         cameraManager.update();
+
+        // ⭐ HUD POWERUP UI: Update local player's powerup UI position to stay as HUD
+        if (player1Powerup) {
+            player1Powerup.updateCameraPosition();
+        }
+        if (player2Powerup) {
+            player2Powerup.updateCameraPosition();
+        }
 
         // Update ball position and ensure it's visible
         if (ball && ball.ballBody && map && map.getScene) {
