@@ -16,8 +16,8 @@ export const GAME_CONFIG = {
   MAX_SCORE_DIFFERENCE: 1,     // Minimum score difference to win
   
   // Ball Physics
-  INITIAL_BALL_SPEED: 20,      // Starting ball velocity
-  FIRST_SPEED_BOOST: 37.5,     // Speed after 10-19 rebounds
+  INITIAL_BALL_SPEED: 17,      // Starting ball velocity
+  FIRST_SPEED_BOOST: 27,     // Speed after 10-19 rebounds
   SPEED_BOOST_THRESHOLD_1: 10, // First speed boost point
   SPEED_BOOST_THRESHOLD_2: 20, // Second speed boost point
   MAX_BALL_SPEED: 45,          // Maximum ball speed

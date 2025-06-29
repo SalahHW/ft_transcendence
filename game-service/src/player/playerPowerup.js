@@ -7,9 +7,9 @@ export class PlayerPowerup {
         this.isActive = false;
         this.activationTime = 0;
         this.cooldownEndTime = 0;
-        this.windowDuration = 1000; // ⭐ TESTING: Extended to 1000ms (1 second) for easier testing
+        this.windowDuration = 500; // ⭐ TESTING: Extended to 1000ms (1 second) for easier testing
         this.successCooldown = 5000; // 5 seconds on success
-        this.failureCooldown = 15000; // 15 seconds on failure
+        this.failureCooldown = 7000; // 7 seconds on failure
     }
 
     // Check if powerup can be activated (max speed tier + not on cooldown)

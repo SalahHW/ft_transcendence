@@ -150,23 +150,16 @@ class Ball {
         let speed;
         let glowColor = null;
         
-        // New speed tiers based on rebounds with glowing effects
+        // Simplified speed tiers based on rebounds with glowing effects
         if (this.rebounds < BALL_CONSTANTS.SPEED_TIERS.TIER_1_THRESHOLD) {
-            speed = GAME_CONFIG.INITIAL_BALL_SPEED; // Base speed
+            speed = GAME_CONFIG.INITIAL_BALL_SPEED; // Base speed (17)
             glowColor = new BABYLON.Color3(0, 0, 0); // No glow
         } else {
-            // Scale speed between first boost and max based on rebounds beyond threshold
-            const extraRebounds = this.rebounds - BALL_CONSTANTS.SPEED_TIERS.TIER_1_THRESHOLD;
-            const scalingFactor = Math.min(extraRebounds / 10, 1); // Scale over 10 rebounds
-            const minSpeed = GAME_CONFIG.FIRST_SPEED_BOOST;
-            const speedRange = GAME_CONFIG.MAX_BALL_SPEED - minSpeed;
-            speed = minSpeed + (speedRange * scalingFactor);
+            // Cap at first speed boost - no more scaling beyond this point
+            speed = GAME_CONFIG.FIRST_SPEED_BOOST; // Capped speed (27)
             
-            // Transition from orange to red-white
-            const redIntensity = 1;
-            const greenIntensity = 0.2 + (0.6 * scalingFactor); // From orange to white-red
-            const blueIntensity = scalingFactor * 0.4; // Slight blue tint at max speed
-            glowColor = new BABYLON.Color3(redIntensity, greenIntensity, blueIntensity);
+            // Fixed glow color for boosted speed (orange)
+            glowColor = new BABYLON.Color3(1, 0.6, 0.2); // Orange glow
         }
 
         const currentSpeed = this.velocity.length();
