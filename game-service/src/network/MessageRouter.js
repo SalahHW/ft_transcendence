@@ -28,6 +28,7 @@ export class MessageRouter {
     this.messageHandlers.set(MESSAGE_TYPES.PADDLE_POSITION, this._handlePaddlePosition.bind(this));
     this.messageHandlers.set(MESSAGE_TYPES.LEAVE_GAME, this._handleLeaveGame.bind(this));
     this.messageHandlers.set(MESSAGE_TYPES.REQUEST_BALL_RESPAWN, this._handleBallRespawn.bind(this));
+    this.messageHandlers.set('powerupActivation', this._handlePowerupActivation.bind(this));
   }
 
   /**
@@ -40,6 +41,11 @@ export class MessageRouter {
     } catch (e) {
       console.error('Bad JSON:', e);
       return;
+    }
+
+    // ⭐ DEBUGGING: Log powerup message routing specifically
+    if (msg.type === 'powerupActivation') {
+      console.log(`🔧 MessageRouter: Routing powerup message:`, { msg, playerId, roomId });
     }
 
     const handler = this.messageHandlers.get(msg.type);
@@ -215,6 +221,65 @@ export class MessageRouter {
         type: 'error',
         message,
       }));
+    }
+  }
+
+  /**
+   * ⭐ POWERUP INTEGRATION: Handle powerup activation requests
+   */
+  _handlePowerupActivation(msg, playerId, roomId) {
+    console.log(`🔧 PowerUp activation message received:`, { msg, playerId, roomId });
+    
+    try {
+      const player = playerManager.getPlayer(playerId);
+      const room = gameStateManager.getRoom(roomId);
+      
+      if (!player || !room) {
+        console.log(`❌ Powerup activation failed: player or room not found`, { 
+          hasPlayer: !!player, 
+          hasRoom: !!room, 
+          playerId, 
+          roomId 
+        });
+        return;
+      }
+      
+      // Get current ball rebounds for speed tier check
+      const ballRebounds = room.ball ? room.ball.rebounds : 0;
+      console.log(`🔧 Current ball rebounds: ${ballRebounds}`);
+      
+      // Attempt to activate powerup
+      const success = player.activatePowerup(ballRebounds);
+      console.log(`🔧 PowerUp activation result for player ${playerId}: ${success ? 'SUCCESS' : 'FAILED'}`);
+      
+      // Broadcast powerup state update to all players in room
+      const powerupStates = {};
+      room.players.forEach(p => {
+        const playerData = playerManager.getPlayer(p.id);
+        if (playerData && playerData.powerup) {
+          powerupStates[p.id] = playerData.getPowerupState();
+        }
+      });
+      
+      console.log(`📡 Broadcasting powerup state update:`, { 
+        powerupStates, 
+        activationAttempt: { playerId, success } 
+      });
+      
+      gameEngine.broadcastToRoom(roomId, {
+        type: 'powerupStateUpdate',
+        powerupStates: powerupStates,
+        activationAttempt: {
+          playerId: playerId,
+          success: success,
+          timestamp: Date.now()
+        }
+      });
+      
+      console.log(`✅ Powerup activation processing complete for player ${playerId}: ${success ? 'SUCCESS' : 'FAILED'}`);
+      
+    } catch (error) {
+      console.error('❌ Error handling powerup activation:', error);
     }
   }
 }

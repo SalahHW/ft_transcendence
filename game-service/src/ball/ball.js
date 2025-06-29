@@ -2,6 +2,8 @@ import * as BABYLON from '@babylonjs/core';
 import { createExplosion } from './ballEffects.js';
 import { GAME_CONFIG } from '../core/constants.js';
 import { BALL_CONSTANTS } from './ballConstants.js';
+import { BallPowerup } from './ballPowerup.js';
+import { playerManager } from '../player/PlayerManager.js';
 
 class Ball {
     constructor(player1, player2, gameEngine = null, roomId = null) {
@@ -29,6 +31,9 @@ class Ball {
         this.currentGlowColor = new BABYLON.Color3(0, 0, 0);
         this.shouldGlow = false;
         this.lastSpeedTier = 0; // Track speed tier changes
+        
+        // Initialize powerup system
+        this.powerup = new BallPowerup();
     }
 
     init() {
@@ -102,7 +107,13 @@ class Ball {
             this.lastUpdateTime = now;
         }
 
-        this.handleAcceleration();
+        // ⭐ CRITICAL FIX: Only call handleAcceleration if no powerup boost is active
+        if (!this.powerup.hasSpeedBoost()) {
+            this.handleAcceleration();
+        } else {
+            console.log(`🔧 MAIN UPDATE: Skipping handleAcceleration() due to active powerup boost`);
+        }
+        
         this.handleWallCollisions();
         this.handlePaddleCollisions(paddle1Pos, paddle2Pos);
         this.position.addInPlace(this.velocity.scale(deltaTime));
@@ -190,7 +201,79 @@ class Ball {
             this.rebounds++;
             const newSpeedTier = this.getSpeedTier(this.rebounds);
             
-            this.wasHitByPlayer = isHittingPlayer2 ? this.player2.playerId : this.player1.playerId;
+            const hitPlayerId = isHittingPlayer2 ? this.player2.playerId : this.player1.playerId;
+            this.wasHitByPlayer = hitPlayerId;
+            
+            // ⭐ POWERUP INTEGRATION: Check for powerup activation
+            // Get player from playerManager to ensure we have the powerup system
+            const hitPlayer = isHittingPlayer2 ? this.player2 : this.player1;
+            let actualPlayer = null;
+            
+            // Try to get the actual player with powerup system from playerManager
+            actualPlayer = playerManager.getPlayer(hitPlayerId);
+            
+            let powerupActivated = false;
+            
+            console.log(`🔧 ===== PADDLE HIT DEBUG =====`);
+            console.log(`🔧 Ball hit paddle for player: ${hitPlayerId}`);
+            console.log(`🔧 hitPlayer.powerup exists: ${!!hitPlayer.powerup}`);
+            console.log(`🔧 actualPlayer exists: ${!!actualPlayer}`);
+            console.log(`🔧 actualPlayer.powerup exists: ${!!(actualPlayer && actualPlayer.powerup)}`);
+            
+            if (actualPlayer && actualPlayer.powerup) {
+                console.log(`🔧 actualPlayer.powerup.isActive: ${actualPlayer.powerup.isActive}`);
+                console.log(`🔧 actualPlayer.powerup.isWithinWindow(): ${actualPlayer.powerup.isWithinWindow()}`);
+            }
+            
+            console.log(`🔧 Ball rebounds: ${this.rebounds}`);
+            console.log(`🔧 ==============================`);
+            
+            // Use actualPlayer if available, fallback to hitPlayer
+            const playerToCheck = actualPlayer || hitPlayer;
+            
+            if (playerToCheck.powerup && playerToCheck.powerup.isWithinWindow()) {
+                console.log(`🚀 ATTEMPTING PowerUp activation for player ${hitPlayerId}!`);
+                
+                // Powerup successfully activated!
+                powerupActivated = this.powerup.applySpeedBoost(this, hitPlayerId);
+                if (powerupActivated) {
+                    playerToCheck.powerup.onSuccess();
+                    
+                    console.log(`🎉 PowerUp SUCCESSFULLY APPLIED! Ball speed boosted by ${this.powerup.speedMultiplier}x`);
+                    console.log(`🚀 IMMEDIATE CHECK: Ball velocity length = ${this.velocity.length()}, Ball.speed = ${this.speed}`);
+                    
+                    // Broadcast powerup activation to clients
+                    if (this.gameEngine && this.roomId) {
+                        this.gameEngine.broadcastToRoom(this.roomId, {
+                            type: 'powerupActivated',
+                            playerId: hitPlayerId,
+                            ballSpeedMultiplier: this.powerup.speedMultiplier,
+                            timestamp: Date.now()
+                        });
+                        console.log(`📡 Broadcasted powerup activation to clients`);
+                    }
+                } else {
+                    console.log(`❌ PowerUp activation FAILED in applySpeedBoost`);
+                }
+            } else if (this.powerup.hasSpeedBoost()) {
+                console.log(`🔄 Removing existing speed boost on paddle hit`);
+                
+                // Remove powerup boost after next paddle hit
+                this.powerup.removeSpeedBoost(this);
+                
+                // Broadcast powerup deactivation
+                if (this.gameEngine && this.roomId) {
+                    this.gameEngine.broadcastToRoom(this.roomId, {
+                        type: 'powerupDeactivated',
+                        timestamp: Date.now()
+                    });
+                    console.log(`📡 Broadcasted powerup deactivation to clients`);
+                }
+            } else {
+                console.log(`🔧 No powerup activation - Player has powerup: ${!!playerToCheck.powerup}, Is within window: ${playerToCheck.powerup ? playerToCheck.powerup.isWithinWindow() : 'N/A'}`);
+                console.log(`🔧 Available players - hitPlayer: ${!!hitPlayer.powerup}, actualPlayer: ${!!(actualPlayer && actualPlayer.powerup)}`);
+            }
+            
             const isSideHit = Math.abs(dz) > paddleHalfDepth;
             let speed = this.velocity.length();
             if (isSideHit) {
@@ -212,8 +295,21 @@ class Ball {
             }
             this.previousVelocity.copyFrom(this.velocity);
             
-            // Update speed and glow based on new rebounds count
-            this.handleAcceleration();
+            // Update speed and glow based on new rebounds count (only if no powerup boost active)
+            console.log(`🔧 BEFORE speed handling: Ball velocity length = ${this.velocity.length()}, Ball.speed = ${this.speed}`);
+            
+            const hasPowerupBoost = this.powerup.hasSpeedBoost();
+            console.log(`🔧 Speed handling: hasPowerupBoost=${hasPowerupBoost}, ballSpeed=${this.speed}, powerupState:`, this.powerup.getState());
+            
+            if (!hasPowerupBoost) {
+                console.log(`🔧 No powerup boost detected, calling handleAcceleration()`);
+                this.handleAcceleration();
+                console.log(`🔧 After handleAcceleration: ballSpeed=${this.speed}, velocity length=${this.velocity.length()}`);
+            } else {
+                console.log(`🔧 Powerup boost active, SKIPPING handleAcceleration to preserve boosted speed`);
+            }
+            
+            console.log(`🔧 AFTER speed handling: Ball velocity length = ${this.velocity.length()}, Ball.speed = ${this.speed}`);
             
             // Mark speed tier change for client notification
             if (newSpeedTier !== previousSpeedTier) {
@@ -225,11 +321,12 @@ class Ball {
             if (this.gameEngine && this.roomId) {
                 this.gameEngine.broadcastToRoom(this.roomId, {
                     type: 'soundEvent',
-                    sound: 'paddleHit',
+                    sound: powerupActivated ? 'powerUpHit' : 'paddleHit',
                     timestamp: Date.now(),
                     ballSpeed: this.speed,
                     rebounds: this.rebounds,
-                    hitByPlayer: this.wasHitByPlayer
+                    hitByPlayer: this.wasHitByPlayer,
+                    powerupActivated: powerupActivated
                 });
             }
         }

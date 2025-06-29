@@ -1,5 +1,6 @@
 import { GAME_CONFIG } from '../core/constants.js';
 import { PositionUtils, TimeUtils } from '../utils/helpers.js';
+import { PlayerPowerup } from './playerPowerup.js';
 
 /**
  * Represents a game player with all their properties and state
@@ -33,6 +34,9 @@ export class Player {
     // Metadata
     this.roomId = null;
     this.role = null; // 0 or 1 (left or right paddle)
+    
+    // ⭐ POWERUP INTEGRATION: Initialize powerup system
+    this.powerup = new PlayerPowerup(id);
   }
 
   /**
@@ -255,5 +259,41 @@ export class Player {
     cloned.ws = null; // Don't clone WebSocket connection
     
     return cloned;
+  }
+
+  /**
+   * Update player state each frame
+   */
+  update(deltaTime, ballRebounds = 0) {
+    // Update movement
+    const moved = this.updateMovement(deltaTime);
+    
+    // ⭐ POWERUP INTEGRATION: Update powerup system
+    this.powerup.update();
+    
+    return moved;
+  }
+
+  /**
+   * Handle powerup activation request
+   */
+  activatePowerup(ballRebounds) {
+    console.log(`🔧 Player ${this.id}: activatePowerup called with ballRebounds: ${ballRebounds}`);
+    
+    if (!this.powerup) {
+      console.log(`❌ Player ${this.id} has no powerup system`);
+      return false;
+    }
+    
+    const success = this.powerup.activate(ballRebounds);
+    console.log(`🎯 Player ${this.id} powerup activation: ${success ? 'SUCCESS' : 'FAILED'}`);
+    return success;
+  }
+
+  /**
+   * Get powerup state for client synchronization
+   */
+  getPowerupState() {
+    return this.powerup ? this.powerup.getState() : null;
   }
 } 

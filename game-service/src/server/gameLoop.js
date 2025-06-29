@@ -4,6 +4,7 @@ import { GAME_CONFIG } from '../core/constants.js';
 import { RoomUtils } from '../utils/helpers.js';
 import { gameStateManager } from '../game/GameStateManager.js';
 import { gameEngine } from '../game/GameEngine.js';
+import { playerManager } from '../player/PlayerManager.js';
 
 export function startGameLoop() {
   const FPS = GAME_CONFIG.FPS;
@@ -44,6 +45,12 @@ export function startGameLoop() {
           }
           player.positionZ = Number(player.positionZ.toFixed(3));
 
+          const playerData = playerManager.getPlayer(player.id);
+          if (playerData && playerData.powerup) {
+            const ballRebounds = room.ball ? room.ball.rebounds : 0;
+            playerData.update(deltaTime, ballRebounds);
+          }
+
           if ((player.isUpPressed || player.isDownPressed) && now - lastBroadcast >= 1000 / BROADCAST_FPS) {
             gameEngine.broadcastToRoom(roomId, {
               type: 'paddleMove',
@@ -53,6 +60,26 @@ export function startGameLoop() {
             });
           }
         });
+
+        if (now - lastBroadcast >= 1000 / BROADCAST_FPS) {
+          const powerupStates = {};
+          let hasPowerupUpdates = false;
+          
+          room.players.forEach(player => {
+            const playerData = playerManager.getPlayer(player.id);
+            if (playerData && playerData.powerup) {
+              powerupStates[player.id] = playerData.getPowerupState();
+              hasPowerupUpdates = true;
+            }
+          });
+          
+          if (hasPowerupUpdates) {
+            gameEngine.broadcastToRoom(roomId, {
+              type: 'powerupStateUpdate',
+              powerupStates: powerupStates
+            });
+          }
+        }
 
         if (room.ball) {
           // Ensure ball has sound context (for existing balls)
@@ -65,6 +92,13 @@ export function startGameLoop() {
           const paddle2Pos = new BABYLON.Vector3(-19.5, 2, room.players[1].positionZ);
           const prevScore1 = room.ball.player1.playerScore;
           const prevScore2 = room.ball.player2.playerScore;
+          
+          // ⭐ DEBUGGING: Log ball collision detection periodically (every ~60 frames = ~1 second)
+          if (Math.random() < 0.016) { // ~1/60 chance per frame
+            const velocityLength = room.ball.velocity.length();
+            const hasPowerupBoost = room.ball.powerup ? room.ball.powerup.hasSpeedBoost() : false;
+            console.log(`🔧 Game loop: Ball position: ${room.ball.position.x.toFixed(2)}, ${room.ball.position.y.toFixed(2)}, ${room.ball.position.z.toFixed(2)}, velocity: ${room.ball.velocity.x.toFixed(2)}, velocity.length: ${velocityLength.toFixed(2)}, ball.speed: ${room.ball.speed}, powerupBoost: ${hasPowerupBoost}, rebounds: ${room.ball.rebounds}`);
+          }
           
           // Handle ball state
           if (room.ball.isRespawning) {

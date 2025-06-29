@@ -57,6 +57,12 @@ export class WebSocketHandler {
       // Update player activity
       this.connectionManager.updatePlayerActivity(playerId);
       
+      // ⭐ DEBUGGING: Log powerup messages specifically
+      const messageData = data.toString();
+      if (messageData.includes('powerupActivation')) {
+        console.log(`🔧 WebSocket RECEIVED powerup message from ${playerId}:`, messageData);
+      }
+      
       // Optional: Log message frequency for debugging
       // if (messageCount % 10 === 0) {
       //   console.log('Received WebSocket message:', data.toString());
