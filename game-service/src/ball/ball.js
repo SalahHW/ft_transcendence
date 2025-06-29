@@ -1,7 +1,7 @@
 import * as BABYLON from '@babylonjs/core';
 import { createExplosion } from './ballEffects.js';
 import { GAME_CONFIG } from '../core/constants.js';
-import { BALL_CONSTANTS } from '../utils/ballConstants.js';
+import { BALL_CONSTANTS } from './ballConstants.js';
 
 class Ball {
     constructor(player1, player2, gameEngine = null, roomId = null) {

@@ -1,5 +1,5 @@
 import * as BABYLON from '@babylonjs/core';
-import { BALL_CONSTANTS } from '../core/ballConstants.js';
+import { BALL_CONSTANTS } from './ballConstants.js';
 
 export class BallTrail {
     private particleSystem: BABYLON.ParticleSystem | null = null;

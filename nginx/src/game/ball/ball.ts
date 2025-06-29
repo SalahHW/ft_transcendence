@@ -2,7 +2,7 @@ import * as BABYLON from '@babylonjs/core';
 import { createExplosion } from './ballEffects.js';
 import { playerPaddle } from '../player/player.js';
 import { BallTrail } from './ballTrail.js';
-import { BALL_CONSTANTS } from '../core/ballConstants.js';
+import { BALL_CONSTANTS } from './ballConstants.js';
 
 interface BallState {
     position: { x: number; y: number; z: number };
