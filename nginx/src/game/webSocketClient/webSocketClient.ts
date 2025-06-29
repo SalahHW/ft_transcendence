@@ -24,6 +24,9 @@ export class webSocketClient {
     private gameEndCallback: ((msg: WebSocketMessage) => void) | null;
     private soundEventCallback: ((msg: WebSocketMessage) => void) | null;
     private messageCallback: ((msg: { data: string }) => void) | null;
+    private powerupStateUpdateCallback: ((msg: WebSocketMessage) => void) | null;
+    private powerupActivatedCallback: ((msg: WebSocketMessage) => void) | null;
+    private powerupDeactivatedCallback: ((msg: WebSocketMessage) => void) | null;
     public matchEndTime: Date | null;
 
     constructor(url: string, playerId: string | null = null) {
@@ -38,6 +41,9 @@ export class webSocketClient {
         this.gameEndCallback = null;
         this.soundEventCallback = null;
         this.messageCallback = null;
+        this.powerupStateUpdateCallback = null;
+        this.powerupActivatedCallback = null;
+        this.powerupDeactivatedCallback = null;
         this.matchEndTime = null;
 
         this.socket.addEventListener('open', () => {
@@ -106,6 +112,18 @@ export class webSocketClient {
             if (msg.type === 'soundEvent' && this.soundEventCallback) {
                 this.soundEventCallback(msg);
             }
+
+            if (msg.type === 'powerupStateUpdate' && this.powerupStateUpdateCallback) {
+                this.powerupStateUpdateCallback(msg);
+            }
+
+            if (msg.type === 'powerupActivated' && this.powerupActivatedCallback) {
+                this.powerupActivatedCallback(msg);
+            }
+
+            if (msg.type === 'powerupDeactivated' && this.powerupDeactivatedCallback) {
+                this.powerupDeactivatedCallback(msg);
+            }
         });
 
         this.socket.addEventListener('error', err => console.error('WS error:', err));
@@ -173,5 +191,30 @@ export class webSocketClient {
 
     set onMessage(callback: (msg: { data: string }) => void) {
         this.messageCallback = callback;
+    }
+
+    onPowerupStateUpdate(callback: (msg: WebSocketMessage) => void): void {
+        this.powerupStateUpdateCallback = callback;
+    }
+
+    onPowerupActivated(callback: (msg: WebSocketMessage) => void): void {
+        this.powerupActivatedCallback = callback;
+    }
+
+    onPowerupDeactivated(callback: (msg: WebSocketMessage) => void): void {
+        this.powerupDeactivatedCallback = callback;
+    }
+
+    activatePowerup(): void {
+        console.log(`🔧 WebSocket CLIENT: Sending powerup activation for player ${this.playerId}`);
+        
+        const message = {
+            type: 'powerupActivation',
+            playerId: this.playerId,
+            timestamp: Date.now()
+        };
+        
+        console.log(`📡 WebSocket CLIENT: Powerup activation message:`, message);
+        this.send(message);
     }
 } 

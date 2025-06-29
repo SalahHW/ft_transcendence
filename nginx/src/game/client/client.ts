@@ -12,6 +12,7 @@ import { TournamentClientHandler } from '../tournament/tournamentClientHandler.j
 import { showSplashScreen } from '../ui/splashScreen.js';
 import { showGameEndSplashScreen, GameEndData } from '../utils/splashScreenUtils.js';
 import { cameraManager } from '../camera/cameraManager.js';
+import { PlayerPowerup } from '../player/playerPowerup.js';
 
 interface PlayerData {
     id: string;
@@ -49,6 +50,10 @@ let isGameLoopRunning: boolean = false;
 let isShowingSemiFinalSplash: boolean = false;
 let queuedMessages: any[] = [];
 
+// ⭐ POWERUP INTEGRATION: Add powerup UI instances
+let player1Powerup: PlayerPowerup | null = null;
+let player2Powerup: PlayerPowerup | null = null;
+
 // Function to process queued messages after semi-final splash
 async function processQueuedMessages(): Promise<void> {
     while (queuedMessages.length > 0) {
@@ -71,6 +76,13 @@ function handleSoundEvent(msg: any): void {
             // Vary volume based on ball speed for more immersion
             volumeMultiplier = Math.min(1, (ballSpeed || 25) / 50);
             soundManager.playSound('paddleHit', volumeMultiplier);
+            break;
+            
+        // ⭐ POWERUP INTEGRATION: Add powerup success sound
+        case 'powerUpHit':
+            // Play at full volume for dramatic effect
+            soundManager.playSound('powerUpHit', 1.0);
+            console.log('🎵 Playing powerup success sound!');
             break;
             
         case 'wallHit':
@@ -537,6 +549,70 @@ export function initializeGame(playerId: string): void {
         }
     });
 
+    // ⭐ POWERUP INTEGRATION: Add powerup message handlers
+    clientConnection.onPowerupStateUpdate((msg) => {
+        // console.log('Powerup state update received:', msg.powerupStates);
+        
+        // Update player powerup UIs
+        if (msg.powerupStates && player1 && player2) {
+            Object.entries(msg.powerupStates).forEach(([pid, state]: [string, any]) => {
+                if (pid === player1!.playerId && player1Powerup) {
+                    player1Powerup.updateState(state);
+                } else if (pid === player2!.playerId && player2Powerup) {
+                    player2Powerup.updateState(state);
+                }
+            });
+        }
+    });
+
+    clientConnection.onPowerupActivated((msg) => {
+        console.log('Powerup activated:', msg);
+        
+        // ⭐ ENHANCED SUCCESS FEEDBACK: Show success animation for the activating player
+        if (msg.playerId && player1 && player2) {
+            if (msg.playerId === player1.playerId && player1Powerup) {
+                player1Powerup.showSuccessFeedback();
+                console.log('✨ Player 1 powerup success feedback triggered!');
+            } else if (msg.playerId === player2.playerId && player2Powerup) {
+                player2Powerup.showSuccessFeedback();
+                console.log('✨ Player 2 powerup success feedback triggered!');
+            }
+            
+            // ⭐ NEW: Add screen shake effect for extra impact using built-in camera shake
+            if (map && map.getScene) {
+                cameraManager.triggerCameraShake().then(() => {
+                    console.log('📳 Screen shake effect completed for powerup success!');
+                }).catch(() => {
+                    console.log('📳 Screen shake effect failed, but that\'s okay!');
+                });
+            }
+        }
+        
+        // Update ball powerup visual effects
+        if (ball && ball.ballPowerup) {
+            ball.ballPowerup.updateState({
+                isSpeedBoosted: true,
+                speedMultiplier: msg.ballSpeedMultiplier || 2.0,
+                activatedByPlayer: msg.playerId || null,
+                originalSpeed: 0
+            });
+        }
+    });
+
+    clientConnection.onPowerupDeactivated((msg) => {
+        console.log('Powerup deactivated:', msg);
+        
+        // Remove ball powerup visual effects
+        if (ball && ball.ballPowerup) {
+            ball.ballPowerup.updateState({
+                isSpeedBoosted: false,
+                speedMultiplier: 1.0,
+                activatedByPlayer: null,
+                originalSpeed: 0
+            });
+        }
+    });
+
     clientConnection.onInit(async ({ playerId, roomId: rId, role, opponentId, playerName, opponentName }) => {
 
         initTime = Date.now();
@@ -614,6 +690,28 @@ export function initializeGame(playerId: string): void {
                 player2.createPaddle(map.getScene!, -19.5, 2, 20);
                 
                 TournamentClientHandler.resetTournamentPaddlePositions(player1, player2);
+                
+                // ⭐ POWERUP INTEGRATION: Create powerup UI systems
+                if (map.getScene) {
+                    player1Powerup = new PlayerPowerup(player1.playerId, map.getScene, 0); // Role 0 = right side
+                    player2Powerup = new PlayerPowerup(player2.playerId, map.getScene, 1); // Role 1 = left side
+                    
+                    // Set up powerup activation callbacks
+                    player1Powerup.setActivationCallback((pid) => {
+                        if (pid === player1!.playerId && clientConnection) {
+                            clientConnection.activatePowerup();
+                        }
+                    });
+                    
+                    player2Powerup.setActivationCallback((pid) => {
+                        if (pid === player2!.playerId && clientConnection) {
+                            clientConnection.activatePowerup();
+                        }
+                    });
+                    
+                    console.log('✅ Powerup UI systems initialized');
+                }
+                
             } catch (e) {
                 console.error('Paddle creation failed:', e);
                 return;

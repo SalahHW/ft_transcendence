@@ -3,6 +3,7 @@ import { createExplosion } from './ballEffects.js';
 import { playerPaddle } from '../player/player.js';
 import { BallTrail } from './ballTrail.js';
 import { BALL_CONSTANTS } from './ballConstants.js';
+import { BallPowerup } from './ballPowerup.js';
 
 interface BallState {
     position: { x: number; y: number; z: number };
@@ -38,6 +39,7 @@ class Ball {
     public hasValidPosition: boolean;
     public speed: number;
     public ballTrail: BallTrail;
+    public ballPowerup: BallPowerup;
 
     constructor(player1: playerPaddle, player2: playerPaddle) {
         this.position = new BABYLON.Vector3(
@@ -64,6 +66,7 @@ class Ball {
         this.hasValidPosition = true;
         this.speed = BALL_CONSTANTS.INITIAL_SPEED;
         this.ballTrail = new BallTrail();
+        this.ballPowerup = new BallPowerup(null as any);
     }
 
     init(): void {
@@ -117,6 +120,10 @@ class Ball {
         
         // Initialize trail system
         this.ballTrail.initialize(scene, this.ballBody);
+        
+        // Initialize powerup system
+        this.ballPowerup = new BallPowerup(scene);
+        this.ballPowerup.initialize(this.ballBody, this.ballMaterial);
     }
 
     updateClient(scene: BABYLON.Scene): void {
@@ -322,10 +329,21 @@ class Ball {
         });
     }
 
+    updatePowerupState(powerupState: any): void {
+        if (this.ballPowerup) {
+            this.ballPowerup.updateState(powerupState);
+        }
+    }
+
     dispose(): void {
         // Clean up trail resources
         if (this.ballTrail) {
             this.ballTrail.dispose();
+        }
+        
+        // Clean up powerup resources
+        if (this.ballPowerup) {
+            this.ballPowerup.dispose();
         }
         
         // Clean up ball mesh and material
