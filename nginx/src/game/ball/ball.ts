@@ -137,14 +137,22 @@ class Ball {
 
     setState(state: BallState): void {
         if (state.isInitialSpawn) {
-            this.position = new BABYLON.Vector3(0, -2, 0);
+            this.position = new BABYLON.Vector3(
+                BALL_CONSTANTS.INITIAL_POSITION.x,
+                BALL_CONSTANTS.INITIAL_POSITION.y,
+                BALL_CONSTANTS.INITIAL_POSITION.z
+            );
             this.velocity = new BABYLON.Vector3(0, 0, 0);
             this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
             this.isRespawning = true;
             this.respawnTime = 0;
             this.hasValidPosition = true;
             if (this.ballBody) {
-                this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
+                this.ballBody.position = new BABYLON.Vector3(
+                    BALL_CONSTANTS.INITIAL_POSITION.x,
+                    BALL_CONSTANTS.INITIAL_POSITION.y,
+                    BALL_CONSTANTS.INITIAL_POSITION.z
+                );
                 this.ballBody.isVisible = true;
             }
             return;
@@ -174,7 +182,7 @@ class Ball {
         this.respawnTime = state.respawnTime || 0;
         this.wasHitByPlayer = state.wasHitByPlayer;
         this.hasValidPosition = true;
-        this.speed = state.speed || 25;
+        this.speed = state.speed || BALL_CONSTANTS.INITIAL_SPEED;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
 
@@ -333,8 +341,8 @@ class Ball {
     }
 
     getSpeedTier(rebounds: number): number {
-        if (rebounds < 10) return 0;
-        else if (rebounds < 20) return 1;
+        if (rebounds < BALL_CONSTANTS.SPEED_TIERS.TIER_1_THRESHOLD) return 0;
+        else if (rebounds < BALL_CONSTANTS.SPEED_TIERS.TIER_2_THRESHOLD) return 1;
         else return 2;
     }
 }

@@ -142,15 +142,15 @@ class Ball {
         let glowColor = null;
         
         // New speed tiers based on rebounds with glowing effects
-        if (this.rebounds < GAME_CONFIG.SPEED_BOOST_THRESHOLD_1) {
+        if (this.rebounds < BALL_CONSTANTS.SPEED_TIERS.TIER_1_THRESHOLD) {
             speed = GAME_CONFIG.INITIAL_BALL_SPEED; // Base speed
             glowColor = new BABYLON.Color3(0, 0, 0); // No glow
-        } else if (this.rebounds >= GAME_CONFIG.SPEED_BOOST_THRESHOLD_1 && this.rebounds < GAME_CONFIG.SPEED_BOOST_THRESHOLD_2) {
+        } else if (this.rebounds >= BALL_CONSTANTS.SPEED_TIERS.TIER_1_THRESHOLD && this.rebounds < BALL_CONSTANTS.SPEED_TIERS.TIER_2_THRESHOLD) {
             speed = GAME_CONFIG.FIRST_SPEED_BOOST; // First speed boost
             glowColor = new BABYLON.Color3(0.8, 0.4, 0); // Orange glow
-        } else if (this.rebounds >= GAME_CONFIG.SPEED_BOOST_THRESHOLD_2) {
+        } else if (this.rebounds >= BALL_CONSTANTS.SPEED_TIERS.TIER_2_THRESHOLD) {
             // Scale speed between 40-45 based on rebounds beyond threshold
-            const extraRebounds = this.rebounds - GAME_CONFIG.SPEED_BOOST_THRESHOLD_2;
+            const extraRebounds = this.rebounds - BALL_CONSTANTS.SPEED_TIERS.TIER_2_THRESHOLD;
             const scalingFactor = Math.min(extraRebounds / 10, 1); // Scale over 10 rebounds
             const minSpeed = 40;
             const speedRange = GAME_CONFIG.MAX_BALL_SPEED - minSpeed;
@@ -174,7 +174,7 @@ class Ball {
         
         // Store glow information for client synchronization
         this.currentGlowColor = glowColor;
-        this.shouldGlow = this.rebounds >= GAME_CONFIG.SPEED_BOOST_THRESHOLD_1;
+        this.shouldGlow = this.rebounds >= BALL_CONSTANTS.SPEED_TIERS.TIER_1_THRESHOLD;
     }
 
     handlePaddleCollisions(paddle1Pos, paddle2Pos) {
@@ -304,8 +304,8 @@ class Ball {
     }
 
     getSpeedTier(rebounds) {
-        if (rebounds < GAME_CONFIG.SPEED_BOOST_THRESHOLD_1) return 0;
-        else if (rebounds < GAME_CONFIG.SPEED_BOOST_THRESHOLD_2) return 1;
+        if (rebounds < BALL_CONSTANTS.SPEED_TIERS.TIER_1_THRESHOLD) return 0;
+        else if (rebounds < BALL_CONSTANTS.SPEED_TIERS.TIER_2_THRESHOLD) return 1;
         else return 2;
     }
 
@@ -320,7 +320,11 @@ class Ball {
 
     setState(state) {
         if (state.isInitialSpawn) {
-            this.position = new BABYLON.Vector3(0, -2, 0);
+            this.position = new BABYLON.Vector3(
+                BALL_CONSTANTS.INITIAL_POSITION.x,
+                BALL_CONSTANTS.INITIAL_POSITION.y,
+                BALL_CONSTANTS.INITIAL_POSITION.z
+            );
             this.velocity = new BABYLON.Vector3(0, 0, 0);
             this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
             this.isRespawning = true;
