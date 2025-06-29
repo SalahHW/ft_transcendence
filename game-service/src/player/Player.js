@@ -278,15 +278,11 @@ export class Player {
    * Handle powerup activation request
    */
   activatePowerup(ballRebounds) {
-    console.log(`🔧 Player ${this.id}: activatePowerup called with ballRebounds: ${ballRebounds}`);
-    
-    if (!this.powerup) {
-      console.log(`❌ Player ${this.id} has no powerup system`);
-      return false;
-    }
-    
-    const success = this.powerup.activate(ballRebounds);
-    console.log(`🎯 Player ${this.id} powerup activation: ${success ? 'SUCCESS' : 'FAILED'}`);
+            if (!this.powerup) {
+            return false;
+        }
+        
+        const success = this.powerup.activate(ballRebounds);
     return success;
   }
 

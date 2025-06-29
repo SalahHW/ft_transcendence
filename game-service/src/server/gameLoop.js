@@ -93,12 +93,7 @@ export function startGameLoop() {
           const prevScore1 = room.ball.player1.playerScore;
           const prevScore2 = room.ball.player2.playerScore;
           
-          // ⭐ DEBUGGING: Log ball collision detection periodically (every ~60 frames = ~1 second)
-          if (Math.random() < 0.016) { // ~1/60 chance per frame
-            const velocityLength = room.ball.velocity.length();
-            const hasPowerupBoost = room.ball.powerup ? room.ball.powerup.hasSpeedBoost() : false;
-            console.log(`🔧 Game loop: Ball position: ${room.ball.position.x.toFixed(2)}, ${room.ball.position.y.toFixed(2)}, ${room.ball.position.z.toFixed(2)}, velocity: ${room.ball.velocity.x.toFixed(2)}, velocity.length: ${velocityLength.toFixed(2)}, ball.speed: ${room.ball.speed}, powerupBoost: ${hasPowerupBoost}, rebounds: ${room.ball.rebounds}`);
-          }
+
           
           // Handle ball state
           if (room.ball.isRespawning) {

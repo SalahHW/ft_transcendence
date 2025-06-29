@@ -110,8 +110,6 @@ class Ball {
         // ⭐ CRITICAL FIX: Only call handleAcceleration if no powerup boost is active
         if (!this.powerup.hasSpeedBoost()) {
             this.handleAcceleration();
-        } else {
-            console.log(`🔧 MAIN UPDATE: Skipping handleAcceleration() due to active powerup boost`);
         }
         
         this.handleWallCollisions();
@@ -197,81 +195,143 @@ class Ball {
         const overlapZ = Math.abs(dz) <= paddleHalfDepth + this.radius;
 
         if (overlapX && overlapZ) {
-            const previousSpeedTier = this.getSpeedTier(this.rebounds);
-            this.rebounds++;
-            const newSpeedTier = this.getSpeedTier(this.rebounds);
-            
             const hitPlayerId = isHittingPlayer2 ? this.player2.playerId : this.player1.playerId;
-            this.wasHitByPlayer = hitPlayerId;
-            
-            // ⭐ POWERUP INTEGRATION: Check for powerup activation
-            // Get player from playerManager to ensure we have the powerup system
             const hitPlayer = isHittingPlayer2 ? this.player2 : this.player1;
-            let actualPlayer = null;
-            
-            // Try to get the actual player with powerup system from playerManager
-            actualPlayer = playerManager.getPlayer(hitPlayerId);
-            
-            let powerupActivated = false;
-            
-            console.log(`🔧 ===== PADDLE HIT DEBUG =====`);
-            console.log(`🔧 Ball hit paddle for player: ${hitPlayerId}`);
-            console.log(`🔧 hitPlayer.powerup exists: ${!!hitPlayer.powerup}`);
-            console.log(`🔧 actualPlayer exists: ${!!actualPlayer}`);
-            console.log(`🔧 actualPlayer.powerup exists: ${!!(actualPlayer && actualPlayer.powerup)}`);
-            
-            if (actualPlayer && actualPlayer.powerup) {
-                console.log(`🔧 actualPlayer.powerup.isActive: ${actualPlayer.powerup.isActive}`);
-                console.log(`🔧 actualPlayer.powerup.isWithinWindow(): ${actualPlayer.powerup.isWithinWindow()}`);
-            }
-            
-            console.log(`🔧 Ball rebounds: ${this.rebounds}`);
-            console.log(`🔧 ==============================`);
-            
-            // Use actualPlayer if available, fallback to hitPlayer
+            const actualPlayer = playerManager.getPlayer(hitPlayerId);
             const playerToCheck = actualPlayer || hitPlayer;
             
-            if (playerToCheck.powerup && playerToCheck.powerup.isWithinWindow()) {
-                console.log(`🚀 ATTEMPTING PowerUp activation for player ${hitPlayerId}!`);
+            // ⭐ NEW: Check if ball has speed boost (should traverse through paddle)
+            const ballHasSpeedBoost = this.powerup.hasSpeedBoost();
+            const playerHasDefensivePowerup = playerToCheck.powerup && playerToCheck.powerup.isWithinWindow();
+            
+            // Initialize speed tier variables for use throughout the method
+            const previousSpeedTier = this.getSpeedTier(this.rebounds);
+            let newSpeedTier = previousSpeedTier;
+            
+
+            
+            // ⭐ DEFENSIVE COUNTER: If ball has speed boost but player counters with powerup
+            if (ballHasSpeedBoost && playerHasDefensivePowerup) {
+
                 
-                // Powerup successfully activated!
+                // Apply defensive counter logic (normal collision + speed stack)
+                this.rebounds++;
+                newSpeedTier = this.getSpeedTier(this.rebounds);
+                this.wasHitByPlayer = hitPlayerId;
+                
+                // Stack speed boost (defensive counter adds another multiplier)
+                const currentSpeed = this.speed;
+                const stackedSpeed = currentSpeed * 2.0; // Stack another 2x on top
+                
+                // Update ball speed with stacked boost
+                const currentVelocityLength = this.velocity.length();
+                if (currentVelocityLength > 0) {
+                    this.velocity = this.velocity.scale(stackedSpeed / currentVelocityLength);
+                }
+                this.speed = stackedSpeed;
+                
+                // Update powerup state with new stacked speed
+                this.powerup.originalSpeed = currentSpeed; // Update reference
+                
+
+                
+                // Trigger defensive powerup success
+                playerToCheck.powerup.onSuccess();
+                
+                // Broadcast defensive powerup activation to clients
+                if (this.gameEngine && this.roomId) {
+                    this.gameEngine.broadcastToRoom(this.roomId, {
+                        type: 'powerupActivated',
+                        playerId: hitPlayerId,
+                        ballSpeedMultiplier: 2.0, // The stacking multiplier
+                        powerupType: 'defensive',
+                        originalSpeed: currentSpeed,
+                        stackedSpeed: stackedSpeed,
+                        timestamp: Date.now()
+                    });
+
+                }
+                
+                // ⭐ DEFENSIVE COUNTER SOUND: Play defensive sound immediately for defensive counters
+                if (this.gameEngine && this.roomId) {
+                    this.gameEngine.broadcastToRoom(this.roomId, {
+                        type: 'soundEvent',
+                        sound: 'defensivePowerUp',
+                        timestamp: Date.now(),
+                        ballSpeed: stackedSpeed,
+                        rebounds: this.rebounds,
+                        hitByPlayer: hitPlayerId,
+                        powerupActivated: true,
+                        powerupType: 'defensive'
+                    });
+
+                }
+                
+                // Continue with normal collision physics but with stacked speed
+                
+            } else if (ballHasSpeedBoost && !playerHasDefensivePowerup) {
+
+                
+                // ⭐ TRAVERSAL LOGIC: Ball keeps its speed boost and continues through paddle
+                // The speed boost will be removed when the point is scored, not here
+                // Don't increment rebounds, don't change direction - ball passes through
+                
+                // Broadcast traversal event (but keep powerup active)
+                if (this.gameEngine && this.roomId) {
+                    this.gameEngine.broadcastToRoom(this.roomId, {
+                        type: 'ballTraversal',
+                        playerId: hitPlayerId,
+                        ballSpeed: this.speed,
+                        timestamp: Date.now()
+                    });
+
+                }
+                
+                // Ball traverses through - no collision, continue to score zone
+                // Don't increment rebounds, don't change direction, KEEP speed boost
+                return; // Skip normal collision handling
+                
+            } else {
+
+                
+                // Normal collision logic
+                this.rebounds++;
+                newSpeedTier = this.getSpeedTier(this.rebounds);
+                this.wasHitByPlayer = hitPlayerId;
+            }
+            
+            // ⭐ POWERUP INTEGRATION: Check for powerup activation (reuse variables from above)
+            let powerupActivated = false;
+            
+
+            
+            // Check for OFFENSIVE powerup (normal speed boost when ball isn't already boosted)
+            if (!ballHasSpeedBoost && playerToCheck.powerup && playerToCheck.powerup.isWithinWindow()) {
+
+                
+                // Apply offensive powerup (normal speed boost)
                 powerupActivated = this.powerup.applySpeedBoost(this, hitPlayerId);
                 if (powerupActivated) {
                     playerToCheck.powerup.onSuccess();
                     
-                    console.log(`🎉 PowerUp SUCCESSFULLY APPLIED! Ball speed boosted by ${this.powerup.speedMultiplier}x`);
-                    console.log(`🚀 IMMEDIATE CHECK: Ball velocity length = ${this.velocity.length()}, Ball.speed = ${this.speed}`);
+
                     
-                    // Broadcast powerup activation to clients
+                    // Broadcast offensive powerup activation to clients
                     if (this.gameEngine && this.roomId) {
                         this.gameEngine.broadcastToRoom(this.roomId, {
                             type: 'powerupActivated',
                             playerId: hitPlayerId,
                             ballSpeedMultiplier: this.powerup.speedMultiplier,
+                            powerupType: 'offensive',
                             timestamp: Date.now()
                         });
-                        console.log(`📡 Broadcasted powerup activation to clients`);
+
                     }
                 } else {
-                    console.log(`❌ PowerUp activation FAILED in applySpeedBoost`);
-                }
-            } else if (this.powerup.hasSpeedBoost()) {
-                console.log(`🔄 Removing existing speed boost on paddle hit`);
-                
-                // Remove powerup boost after next paddle hit
-                this.powerup.removeSpeedBoost(this);
-                
-                // Broadcast powerup deactivation
-                if (this.gameEngine && this.roomId) {
-                    this.gameEngine.broadcastToRoom(this.roomId, {
-                        type: 'powerupDeactivated',
-                        timestamp: Date.now()
-                    });
-                    console.log(`📡 Broadcasted powerup deactivation to clients`);
+
                 }
             } else {
-                console.log(`🔧 No powerup activation - Player has powerup: ${!!playerToCheck.powerup}, Is within window: ${playerToCheck.powerup ? playerToCheck.powerup.isWithinWindow() : 'N/A'}`);
-                console.log(`🔧 Available players - hitPlayer: ${!!hitPlayer.powerup}, actualPlayer: ${!!(actualPlayer && actualPlayer.powerup)}`);
+
             }
             
             const isSideHit = Math.abs(dz) > paddleHalfDepth;
@@ -296,20 +356,11 @@ class Ball {
             this.previousVelocity.copyFrom(this.velocity);
             
             // Update speed and glow based on new rebounds count (only if no powerup boost active)
-            console.log(`🔧 BEFORE speed handling: Ball velocity length = ${this.velocity.length()}, Ball.speed = ${this.speed}`);
-            
             const hasPowerupBoost = this.powerup.hasSpeedBoost();
-            console.log(`🔧 Speed handling: hasPowerupBoost=${hasPowerupBoost}, ballSpeed=${this.speed}, powerupState:`, this.powerup.getState());
             
             if (!hasPowerupBoost) {
-                console.log(`🔧 No powerup boost detected, calling handleAcceleration()`);
                 this.handleAcceleration();
-                console.log(`🔧 After handleAcceleration: ballSpeed=${this.speed}, velocity length=${this.velocity.length()}`);
-            } else {
-                console.log(`🔧 Powerup boost active, SKIPPING handleAcceleration to preserve boosted speed`);
             }
-            
-            console.log(`🔧 AFTER speed handling: Ball velocity length = ${this.velocity.length()}, Ball.speed = ${this.speed}`);
             
             // Mark speed tier change for client notification
             if (newSpeedTier !== previousSpeedTier) {
@@ -317,17 +368,38 @@ class Ball {
                 this.lastSpeedTier = newSpeedTier;
             }
 
-            // Broadcast paddle hit sound event
+            // Broadcast paddle hit sound event with different sounds for powerup types
             if (this.gameEngine && this.roomId) {
-                this.gameEngine.broadcastToRoom(this.roomId, {
-                    type: 'soundEvent',
-                    sound: powerupActivated ? 'powerUpHit' : 'paddleHit',
-                    timestamp: Date.now(),
-                    ballSpeed: this.speed,
-                    rebounds: this.rebounds,
-                    hitByPlayer: this.wasHitByPlayer,
-                    powerupActivated: powerupActivated
-                });
+                // Check if this was a defensive counter (ball had speed boost + player had defensive powerup)
+                const wasDefensiveCounter = ballHasSpeedBoost && playerHasDefensivePowerup;
+                
+                if (wasDefensiveCounter) {
+                    // ⭐ SKIP: Defensive counter sound already sent above
+                } else {
+                    // Send sound for non-defensive cases (offensive powerup or normal hit)
+                    let soundToPlay = 'paddleHit'; // Default sound (pop.mp3)
+                    let powerupType = 'none';
+                    
+                    if (powerupActivated) {
+                        // Offensive powerup sound  
+                        soundToPlay = 'powerUpHit';
+                        powerupType = 'offensive';
+                    }
+                    // else: keep default 'paddleHit' for normal hits
+                    
+                    this.gameEngine.broadcastToRoom(this.roomId, {
+                        type: 'soundEvent',
+                        sound: soundToPlay,
+                        timestamp: Date.now(),
+                        ballSpeed: this.speed,
+                        rebounds: this.rebounds,
+                        hitByPlayer: this.wasHitByPlayer,
+                        powerupActivated: powerupActivated,
+                        powerupType: powerupType
+                    });
+                    
+
+                }
             }
         }
     }
@@ -354,8 +426,32 @@ class Ball {
                 newVelocity = new BABYLON.Vector3(BALL_CONSTANTS.INITIAL_SPEED, 0, 0);
             }
 
-            // Send lost point sound only to the player who lost
+            // ⭐ RESET POWERUP STATE: Remove any speed boost when point is scored
+            const hadPowerup = this.powerup.hasSpeedBoost();
+            if (hadPowerup) {
+                this.powerup.removeSpeedBoost(this);
+                
+                // Broadcast powerup deactivation
+                if (this.gameEngine && this.roomId) {
+                    this.gameEngine.broadcastToRoom(this.roomId, {
+                        type: 'powerupDeactivated',
+                        reason: 'pointScored',
+                        timestamp: Date.now()
+                    });
+                }
+            }
 
+            // ⭐ RESET PLAYER STATES: Both players become SOLID again for next rally
+            if (this.gameEngine && this.roomId) {
+                this.gameEngine.broadcastToRoom(this.roomId, {
+                    type: 'resetPlayerStates',
+                    reason: 'pointScored',
+                    timestamp: Date.now()
+                });
+
+            }
+
+            // Send lost point sound only to the player who lost
             if (this.gameEngine && this.roomId) {
                 if (losingPlayerId) {
                     this.gameEngine.sendToPlayer(this.roomId, losingPlayerId, {

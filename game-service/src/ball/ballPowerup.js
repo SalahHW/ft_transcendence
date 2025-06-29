@@ -1,7 +1,7 @@
 export class BallPowerup {
     constructor() {
         this.isSpeedBoosted = false;
-        this.speedMultiplier = 4.0; // ⚡ TESTING: 4x speed for obvious difference
+        this.speedMultiplier = 2.0; // ⚡ TESTING: 4x speed for obvious difference
         this.originalSpeed = 0;
         this.boostDuration = 0; // No duration limit, lasts until next paddle hit
         this.activatedByPlayer = null;

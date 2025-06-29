@@ -22,32 +22,19 @@ export class PlayerPowerup {
         if (this.isActive) {
             const windowExpired = (currentTime - this.activationTime) > this.windowDuration;
             if (windowExpired) {
-                console.log(`🔧 FORCED CLEANUP: PowerUp window expired for player ${this.playerId}, forcing cleanup`);
+
                 this.onFailure();
             }
         }
         
-        console.log(`🔧 PowerUp canActivate check for player ${this.playerId}:`, {
-            ballRebounds,
-            threshold: BALL_CONSTANTS.SPEED_TIERS.TIER_1_THRESHOLD,
-            isMaxSpeedTier,
-            notOnCooldown,
-            isAvailable: this.isAvailable,
-            isActive: this.isActive,
-            cooldownEndTime: this.cooldownEndTime,
-            currentTime,
-            windowExpired: this.isActive ? (currentTime - this.activationTime) > this.windowDuration : false
-        });
+
         
         return isMaxSpeedTier && notOnCooldown && this.isAvailable && !this.isActive;
     }
 
     // Activate the powerup (player pressed 'a')
     activate(ballRebounds) {
-        console.log(`🔧 PowerUp activation attempt for player ${this.playerId} with ballRebounds: ${ballRebounds}`);
-        
         if (!this.canActivate(ballRebounds)) {
-            console.log(`❌ PowerUp activation FAILED for player ${this.playerId}`);
             return false;
         }
 
@@ -55,33 +42,20 @@ export class PlayerPowerup {
         this.isAvailable = false;
         this.activationTime = Date.now();
         
-        console.log(`✅ PowerUp ACTIVATED for player ${this.playerId} at ${this.activationTime} - Window: ${this.windowDuration}ms`);
         return true;
     }
 
     // Check if ball hit is within the activation window
     isWithinWindow(hitTime = Date.now()) {
         if (!this.isActive) {
-            console.log(`🔧 PowerUp isWithinWindow check: NOT ACTIVE for player ${this.playerId} (isActive: ${this.isActive})`);
             return false;
         }
         
         const timeSinceActivation = hitTime - this.activationTime;
         const withinWindow = timeSinceActivation >= 0 && timeSinceActivation <= this.windowDuration;
         
-        console.log(`🔧 PowerUp isWithinWindow check for player ${this.playerId}:`, {
-            isActive: this.isActive,
-            timeSinceActivation,
-            windowDuration: this.windowDuration,
-            withinWindow,
-            hitTime,
-            activationTime: this.activationTime,
-            windowExpired: timeSinceActivation > this.windowDuration
-        });
-        
         // Auto-cleanup if window expired
         if (timeSinceActivation > this.windowDuration) {
-            console.log(`🔧 AUTO-CLEANUP: PowerUp window expired during isWithinWindow check for player ${this.playerId}`);
             this.onFailure();
             return false;
         }
@@ -96,12 +70,9 @@ export class PlayerPowerup {
         this.isActive = false;
         this.cooldownEndTime = Date.now() + this.successCooldown;
         
-        console.log(`🎉 PowerUp SUCCESS for player ${this.playerId}, cooldown until ${this.cooldownEndTime}`);
-        
         // Schedule availability return
         setTimeout(() => {
             this.isAvailable = true;
-            console.log(`🔄 PowerUp available again for player ${this.playerId}`);
         }, this.successCooldown);
         
         return true;
@@ -114,12 +85,9 @@ export class PlayerPowerup {
         this.isActive = false;
         this.cooldownEndTime = Date.now() + this.failureCooldown;
         
-        console.log(`💥 PowerUp FAILED for player ${this.playerId}, cooldown until ${this.cooldownEndTime}`);
-        
         // Schedule availability return
         setTimeout(() => {
             this.isAvailable = true;
-            console.log(`🔄 PowerUp available again for player ${this.playerId} after failure cooldown`);
         }, this.failureCooldown);
         
         return true;

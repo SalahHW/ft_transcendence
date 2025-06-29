@@ -60,7 +60,7 @@ export class WebSocketHandler {
       // ⭐ DEBUGGING: Log powerup messages specifically
       const messageData = data.toString();
       if (messageData.includes('powerupActivation')) {
-        console.log(`🔧 WebSocket RECEIVED powerup message from ${playerId}:`, messageData);
+        
       }
       
       // Optional: Log message frequency for debugging
