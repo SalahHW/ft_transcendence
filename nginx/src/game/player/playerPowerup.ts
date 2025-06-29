@@ -45,7 +45,6 @@ export class PlayerPowerup {
             BABYLON.ActionManager.OnKeyDownTrigger,
             (evt) => {
                 if (evt.sourceEvent.key.toLowerCase() === 'a' && !this.keyPressed) {
-                    console.log(`🔧 KEY PRESSED: 'A' key detected for player ${this.playerId}`);
                     this.keyPressed = true;
                     this.tryActivatePowerup();
                 }
@@ -56,7 +55,6 @@ export class PlayerPowerup {
             BABYLON.ActionManager.OnKeyUpTrigger,
             (evt) => {
                 if (evt.sourceEvent.key.toLowerCase() === 'a') {
-                    console.log(`🔧 KEY RELEASED: 'A' key released for player ${this.playerId}`);
                     this.keyPressed = false;
                 }
             }
@@ -71,7 +69,7 @@ export class PlayerPowerup {
         const xPosition = this.playerRole === 0 ? 15 : -15;
         this.uiContainer.position = new BABYLON.Vector3(xPosition, 5, 0);
         
-        console.log(`🎮 PowerUp UI created for player ${this.playerId} (role ${this.playerRole}) at position ${xPosition}`);
+
         
         // Create powerup availability indicator
         this.powerupIndicator = BABYLON.MeshBuilder.CreateSphere(
@@ -116,29 +114,12 @@ export class PlayerPowerup {
     }
 
     private tryActivatePowerup(): void {
-        console.log(`🔧 CLIENT: PowerUp activation attempt for player ${this.playerId}:`, {
-            isAvailable: this.isAvailable,
-            isActive: this.isActive,
-            remainingCooldown: this.remainingCooldown,
-            hasCallback: !!this.onActivationCallback
-        });
-        
         if (this.isAvailable && !this.isActive && this.remainingCooldown <= 0) {
-            console.log(`✅ CLIENT: Sending powerup activation request for player ${this.playerId}`);
-            
             // Call activation callback (will communicate with server)
             if (this.onActivationCallback) {
                 this.onActivationCallback(this.playerId);
-                console.log(`📡 CLIENT: PowerUp activation callback executed for player ${this.playerId}`);
-            } else {
-                console.log(`❌ CLIENT: No activation callback set for player ${this.playerId}`);
             }
         } else {
-            console.log(`❌ CLIENT: PowerUp not available for player ${this.playerId}:`, {
-                isAvailable: this.isAvailable,
-                isActive: this.isActive,
-                remainingCooldown: this.remainingCooldown
-            });
             this.showFailureFeedback();
         }
     }
@@ -157,7 +138,7 @@ export class PlayerPowerup {
         }
     }
 
-    // ⭐ NEW: Show success feedback when powerup is successfully activated
+    // ⭐ NEW: Show success feedback when offensive powerup is successfully activated
     public showSuccessFeedback(): void {
         if (!this.powerupIndicator || !this.powerupIndicator.material) return;
         
@@ -194,6 +175,43 @@ export class PlayerPowerup {
         this.showSuccessText();
     }
 
+    // ⭐ NEW: Show defensive success feedback when defensive counter-powerup is activated
+    public showDefensiveSuccessFeedback(): void {
+        if (!this.powerupIndicator || !this.powerupIndicator.material) return;
+        
+        const material = this.powerupIndicator.material as BABYLON.StandardMaterial;
+        const originalColor = material.emissiveColor.clone();
+        
+        // Different flash sequence for defensive: Blue -> Shield colors
+        const flashSequence = [
+            { color: new BABYLON.Color3(0, 2, 2), duration: 100 },    // Bright cyan flash
+            { color: new BABYLON.Color3(0, 0, 2), duration: 200 },    // Bright blue
+            { color: new BABYLON.Color3(0.3, 0.3, 1.5), duration: 200 },  // Shield blue
+            { color: originalColor, duration: 100 }                    // Back to original
+        ];
+        
+        let currentStep = 0;
+        const executeFlash = () => {
+            if (currentStep >= flashSequence.length) return;
+            
+            const step = flashSequence[currentStep];
+            material.emissiveColor = step.color;
+            
+            setTimeout(() => {
+                currentStep++;
+                executeFlash();
+            }, step.duration);
+        };
+        
+        executeFlash();
+        
+        // Create defensive burst effect (blue/shield colors)
+        this.createDefensiveBurst();
+        
+        // Show defensive success text
+        this.showDefensiveSuccessText();
+    }
+
     // ⭐ NEW: Show "POWER UP!" text notification
     private showSuccessText(): void {
         if (!this.scene) return;
@@ -225,6 +243,66 @@ export class PlayerPowerup {
         
         const alphaAnimation = new BABYLON.Animation(
             "textAlpha",
+            "visibility",
+            60,
+            BABYLON.Animation.ANIMATIONTYPE_FLOAT,
+            BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+        );
+        
+        const scaleKeys = [
+            { frame: 0, value: new BABYLON.Vector3(0.1, 0.1, 0.1) },
+            { frame: 15, value: new BABYLON.Vector3(1.5, 1.5, 1.5) },
+            { frame: 45, value: new BABYLON.Vector3(1.2, 1.2, 1.2) },
+            { frame: 90, value: new BABYLON.Vector3(0.8, 0.8, 0.8) }
+        ];
+        
+        const alphaKeys = [
+            { frame: 0, value: 1 },
+            { frame: 30, value: 1 },
+            { frame: 90, value: 0 }
+        ];
+        
+        scaleAnimation.setKeys(scaleKeys);
+        alphaAnimation.setKeys(alphaKeys);
+        
+        textMesh.animations = [scaleAnimation, alphaAnimation];
+        
+        this.scene.beginAnimation(textMesh, 0, 90, false, 1, () => {
+            textMesh.dispose();
+        });
+    }
+
+    // ⭐ NEW: Show "DEFENSIVE COUNTER!" text notification
+    private showDefensiveSuccessText(): void {
+        if (!this.scene) return;
+        
+        // Create text mesh for defensive success notification
+        const textMesh = BABYLON.MeshBuilder.CreateGround("defensiveText", {width: 4, height: 1}, this.scene);
+        if (this.uiContainer) {
+            textMesh.parent = this.uiContainer;
+        }
+        textMesh.position = new BABYLON.Vector3(0, 2, 0);
+        
+        // Create material for defensive text (blue/cyan)
+        const textMaterial = new BABYLON.StandardMaterial("defensiveTextMat", this.scene);
+        textMaterial.emissiveColor = new BABYLON.Color3(0, 1, 1); // Bright cyan
+        textMaterial.disableLighting = true;
+        textMesh.material = textMaterial;
+        
+        // Add text texture (simplified)
+        
+        
+        // Animate the text (scale up then fade out)
+        const scaleAnimation = new BABYLON.Animation(
+            "defensiveTextScale",
+            "scaling",
+            60,
+            BABYLON.Animation.ANIMATIONTYPE_VECTOR3,
+            BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+        );
+        
+        const alphaAnimation = new BABYLON.Animation(
+            "defensiveTextAlpha",
             "visibility",
             60,
             BABYLON.Animation.ANIMATIONTYPE_FLOAT,
@@ -297,6 +375,51 @@ export class PlayerPowerup {
             burstSystem.stop();
             burstSystem.dispose();
         }, 1000);
+    }
+
+    // ⭐ NEW: Create defensive particle burst effect (blue/cyan colors)
+    private createDefensiveBurst(): void {
+        if (!this.uiContainer) return;
+        
+        const burstSystem = new BABYLON.ParticleSystem("defensivePowerupSuccess", 40, this.scene);
+        burstSystem.emitter = this.uiContainer;
+        
+        // Create a simple white texture for particles
+        burstSystem.particleTexture = new BABYLON.Texture("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==", this.scene);
+        
+        // Defensive burst properties
+        burstSystem.minSize = 0.15;
+        burstSystem.maxSize = 0.4;
+        burstSystem.minLifeTime = 0.4;
+        burstSystem.maxLifeTime = 1.0;
+        
+        // Defensive colors - blue/cyan burst
+        burstSystem.color1 = new BABYLON.Color4(0, 1, 1, 1);    // Bright cyan
+        burstSystem.color2 = new BABYLON.Color4(0, 0.5, 1, 1);  // Blue
+        burstSystem.colorDead = new BABYLON.Color4(0, 0.3, 0.8, 0); // Fade to transparent blue
+        
+        // Defensive burst emission - shield-like pattern
+        burstSystem.minEmitBox = new BABYLON.Vector3(-0.2, -0.2, -0.2);
+        burstSystem.maxEmitBox = new BABYLON.Vector3(0.2, 0.2, 0.2);
+        
+        // High power for defensive impact effect
+        burstSystem.minEmitPower = 4;
+        burstSystem.maxEmitPower = 8;
+        burstSystem.updateSpeed = 0.02;
+        
+        // Additive blending for bright effect
+        burstSystem.blendMode = BABYLON.ParticleSystem.BLENDMODE_ONEONE;
+        
+        // Longer burst duration for defensive effect
+        burstSystem.targetStopDuration = 0.3;
+        
+        burstSystem.start();
+        
+        // Auto-dispose after animation
+        setTimeout(() => {
+            burstSystem.stop();
+            burstSystem.dispose();
+        }, 1200);
     }
 
     public setActivationCallback(callback: (playerId: string) => void): void {

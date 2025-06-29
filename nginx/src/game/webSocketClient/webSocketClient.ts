@@ -27,6 +27,8 @@ export class webSocketClient {
     private powerupStateUpdateCallback: ((msg: WebSocketMessage) => void) | null;
     private powerupActivatedCallback: ((msg: WebSocketMessage) => void) | null;
     private powerupDeactivatedCallback: ((msg: WebSocketMessage) => void) | null;
+    private ballTraversalCallback: ((msg: WebSocketMessage) => void) | null;
+    private resetPlayerStatesCallback: ((msg: WebSocketMessage) => void) | null;
     public matchEndTime: Date | null;
 
     constructor(url: string, playerId: string | null = null) {
@@ -44,6 +46,8 @@ export class webSocketClient {
         this.powerupStateUpdateCallback = null;
         this.powerupActivatedCallback = null;
         this.powerupDeactivatedCallback = null;
+        this.ballTraversalCallback = null;
+        this.resetPlayerStatesCallback = null;
         this.matchEndTime = null;
 
         this.socket.addEventListener('open', () => {
@@ -123,6 +127,14 @@ export class webSocketClient {
 
             if (msg.type === 'powerupDeactivated' && this.powerupDeactivatedCallback) {
                 this.powerupDeactivatedCallback(msg);
+            }
+
+            if (msg.type === 'ballTraversal' && this.ballTraversalCallback) {
+                this.ballTraversalCallback(msg);
+            }
+
+            if (msg.type === 'resetPlayerStates' && this.resetPlayerStatesCallback) {
+                this.resetPlayerStatesCallback(msg);
             }
         });
 
@@ -205,16 +217,21 @@ export class webSocketClient {
         this.powerupDeactivatedCallback = callback;
     }
 
+    onBallTraversal(callback: (msg: WebSocketMessage) => void): void {
+        this.ballTraversalCallback = callback;
+    }
+
+    onResetPlayerStates(callback: (msg: WebSocketMessage) => void): void {
+        this.resetPlayerStatesCallback = callback;
+    }
+
     activatePowerup(): void {
-        console.log(`🔧 WebSocket CLIENT: Sending powerup activation for player ${this.playerId}`);
-        
         const message = {
             type: 'powerupActivation',
             playerId: this.playerId,
             timestamp: Date.now()
         };
         
-        console.log(`📡 WebSocket CLIENT: Powerup activation message:`, message);
         this.send(message);
     }
 } 

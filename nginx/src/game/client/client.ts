@@ -82,7 +82,14 @@ function handleSoundEvent(msg: any): void {
         case 'powerUpHit':
             // Play at full volume for dramatic effect
             soundManager.playSound('powerUpHit', 1.0);
-            console.log('🎵 Playing powerup success sound!');
+
+            break;
+            
+        // ⭐ DEFENSIVE POWERUP: Add defensive counter sound
+        case 'defensivePowerUp':
+            // Play at full volume for dramatic effect
+            soundManager.playSound('defensivePowerUp', 1.0);
+
             break;
             
         case 'wallHit':
@@ -568,33 +575,46 @@ export function initializeGame(playerId: string): void {
     clientConnection.onPowerupActivated((msg) => {
         console.log('Powerup activated:', msg);
         
-        // ⭐ ENHANCED SUCCESS FEEDBACK: Show success animation for the activating player
+        const isDefensive = msg.powerupType === 'defensive';
+        const isOffensive = msg.powerupType === 'offensive';
+        
+
+        
+        // ⭐ ENHANCED SUCCESS FEEDBACK: Show different animations for offensive vs defensive
         if (msg.playerId && player1 && player2) {
             if (msg.playerId === player1.playerId && player1Powerup) {
-                player1Powerup.showSuccessFeedback();
-                console.log('✨ Player 1 powerup success feedback triggered!');
+                if (isDefensive) {
+                    player1Powerup.showDefensiveSuccessFeedback();
+                } else {
+                    player1Powerup.showSuccessFeedback();
+                }
             } else if (msg.playerId === player2.playerId && player2Powerup) {
-                player2Powerup.showSuccessFeedback();
-                console.log('✨ Player 2 powerup success feedback triggered!');
+                if (isDefensive) {
+                    player2Powerup.showDefensiveSuccessFeedback();
+                } else {
+                    player2Powerup.showSuccessFeedback();
+                }
             }
             
-            // ⭐ NEW: Add screen shake effect for extra impact using built-in camera shake
+            // ⭐ ENHANCED: Screen shake for both types (camera shake doesn't take intensity parameter)
             if (map && map.getScene) {
                 cameraManager.triggerCameraShake().then(() => {
-                    console.log('📳 Screen shake effect completed for powerup success!');
+                    // Screen shake completed
                 }).catch(() => {
-                    console.log('📳 Screen shake effect failed, but that\'s okay!');
+                    // Screen shake failed, but that's okay
                 });
             }
         }
         
-        // Update ball powerup visual effects
+        // Update ball powerup visual effects with different styles for defensive
         if (ball && ball.ballPowerup) {
             ball.ballPowerup.updateState({
                 isSpeedBoosted: true,
                 speedMultiplier: msg.ballSpeedMultiplier || 2.0,
                 activatedByPlayer: msg.playerId || null,
-                originalSpeed: 0
+                originalSpeed: msg.originalSpeed || 0,
+                isDefensive: isDefensive,
+                stackedSpeed: msg.stackedSpeed
             });
         }
     });
@@ -611,6 +631,23 @@ export function initializeGame(playerId: string): void {
                 originalSpeed: 0
             });
         }
+    });
+
+    clientConnection.onBallTraversal((msg) => {
+        // Handle visual feedback for ball traversal
+        // The ball will continue moving through the paddle toward score zone
+        // No special client-side handling needed since server maintains ball state
+        
+        // Could add visual effects here like screen shake or particles
+        // to indicate the traversal occurred
+    });
+
+    clientConnection.onResetPlayerStates((msg) => {
+        // Reset any client-side player state tracking
+        // Both players are now SOLID again after point scored
+        
+        // Powerup states will be updated via regular updateState() calls from server
+        // No need to manually reset since server controls the state
     });
 
     clientConnection.onInit(async ({ playerId, roomId: rId, role, opponentId, playerName, opponentName }) => {
@@ -709,7 +746,7 @@ export function initializeGame(playerId: string): void {
                         }
                     });
                     
-                    console.log('✅ Powerup UI systems initialized');
+
                 }
                 
             } catch (e) {

@@ -5,6 +5,8 @@ interface BallPowerupState {
     speedMultiplier: number;
     activatedByPlayer: string | null;
     originalSpeed: number;
+    isDefensive?: boolean;
+    stackedSpeed?: number;
 }
 
 export class BallPowerup {
