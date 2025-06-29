@@ -733,20 +733,8 @@ export function initializeGame(playerId: string): void {
                     player1Powerup = new PlayerPowerup(player1.playerId, map.getScene, 0); // Role 0 = right side
                     player2Powerup = new PlayerPowerup(player2.playerId, map.getScene, 1); // Role 1 = left side
                     
-                    // Set up powerup activation callbacks
-                    player1Powerup.setActivationCallback((pid) => {
-                        if (pid === player1!.playerId && clientConnection) {
-                            clientConnection.activatePowerup();
-                        }
-                    });
-                    
-                    player2Powerup.setActivationCallback((pid) => {
-                        if (pid === player2!.playerId && clientConnection) {
-                            clientConnection.activatePowerup();
-                        }
-                    });
-                    
-
+                    // ⭐ TOURNAMENT FIX: No callback setup needed - 'A' key handled globally
+                    console.log('🎮 Powerup UI systems created for both players');
                 }
                 
             } catch (e) {
@@ -852,6 +840,13 @@ export function initializeGame(playerId: string): void {
                         isDownPressed = true;
                         clientConnection!.send({ type: 'keyDown', direction: 'down' });
                         console.log(`🎮 ArrowRight pressed, sending direction: down (inverted: ${shouldInvert})`);
+                    }
+                } else if (event.key.toLowerCase() === 'a') {
+                    // ⭐ TOURNAMENT POWERUP FIX: Handle 'A' key at same global level as directional keys
+                    // This ensures single handler per client, preventing tournament conflicts
+                    if (clientConnection) {
+                        clientConnection.activatePowerup();
+                        console.log('🎮 A key pressed, sending powerup activation to server');
                     }
                 }
             };

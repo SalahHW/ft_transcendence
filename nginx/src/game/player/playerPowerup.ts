@@ -13,8 +13,6 @@ interface PowerupState {
 export class PlayerPowerup {
     private playerId: string;
     private scene: BABYLON.Scene;
-    private keyPressed: boolean = false;
-    private onActivationCallback?: (playerId: string) => void;
     private playerRole: number = 0; // 0 = right side, 1 = left side
     
     // Visual feedback elements
@@ -29,37 +27,12 @@ export class PlayerPowerup {
     public remainingCooldown: number = 0;
     public windowTimeLeft: number = 0;
 
-    constructor(playerId: string, scene: BABYLON.Scene, playerRole: number = 0) {
+        constructor(playerId: string, scene: BABYLON.Scene, playerRole: number = 0) {
         this.playerId = playerId;
         this.scene = scene;
         this.playerRole = playerRole;
-        this.setupInputHandling();
         this.createVisualElements();
         this.updateVisuals(); // Ensure initial state is reflected visually
-    }
-
-    private setupInputHandling(): void {
-        // Listen for 'A' key press
-        this.scene.actionManager = this.scene.actionManager || new BABYLON.ActionManager(this.scene);
-        
-        this.scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
-            BABYLON.ActionManager.OnKeyDownTrigger,
-            (evt) => {
-                if (evt.sourceEvent.key.toLowerCase() === 'a' && !this.keyPressed) {
-                    this.keyPressed = true;
-                    this.tryActivatePowerup();
-                }
-            }
-        ));
-
-        this.scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
-            BABYLON.ActionManager.OnKeyUpTrigger,
-            (evt) => {
-                if (evt.sourceEvent.key.toLowerCase() === 'a') {
-                    this.keyPressed = false;
-                }
-            }
-        ));
     }
 
     private createVisualElements(): void {
@@ -115,16 +88,7 @@ export class PlayerPowerup {
         this.activationRing.material = ringMaterial;
     }
 
-    private tryActivatePowerup(): void {
-        if (this.isAvailable && !this.isActive && this.remainingCooldown <= 0) {
-            // Call activation callback (will communicate with server)
-            if (this.onActivationCallback) {
-                this.onActivationCallback(this.playerId);
-            }
-        } else {
-            this.showFailureFeedback();
-        }
-    }
+
 
     private showFailureFeedback(): void {
         // Flash the indicator red briefly to show failed activation
@@ -424,9 +388,7 @@ export class PlayerPowerup {
         }, 1200);
     }
 
-    public setActivationCallback(callback: (playerId: string) => void): void {
-        this.onActivationCallback = callback;
-    }
+
 
     public updateState(state: PowerupState): void {
         this.isAvailable = state.isAvailable;

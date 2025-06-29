@@ -57,10 +57,14 @@ export class WebSocketHandler {
       // Update player activity
       this.connectionManager.updatePlayerActivity(playerId);
       
+      // ⭐ TOURNAMENT POWERUP FIX: Get current roomId dynamically instead of using captured closure value
+      // This ensures tournament players use their current room (semi-final/final) not original waiting room
+      const currentRoomId = ws.roomId || roomId;
+      
       // ⭐ DEBUGGING: Log powerup messages specifically
       const messageData = data.toString();
       if (messageData.includes('powerupActivation')) {
-        
+        console.log(`🏆 Powerup activation from player ${playerId} in room ${currentRoomId} (original: ${roomId})`);
       }
       
       // Optional: Log message frequency for debugging
@@ -72,9 +76,9 @@ export class WebSocketHandler {
       this.messageRouter.routeMessage(
         data, 
         playerId, 
-        roomId, 
+        currentRoomId,  // ⭐ Use current room instead of captured closure room
         ws, 
-        disconnectionHandler.createDisconnectHandler(playerId, roomId)
+        disconnectionHandler.createDisconnectHandler(playerId, currentRoomId)
       );
     });
   }

@@ -286,6 +286,11 @@ export class TournamentManager {
       if (player.ws) {
         player.ws.roomId = roomAId;
         player.roomId = roomAId;
+        
+        // ⭐ TOURNAMENT POWERUP FIX: Update ConnectionManager metadata to keep it in sync
+        // Note: ConnectionManager metadata will be updated when the player sends their next message
+        // The WebSocketHandler now uses ws.roomId dynamically, so this should work automatically
+        
         console.log(`🏆 Player ${player.id} (${player.username}) moved to Semi-Final A: ${roomAId}`);
       }
     });
@@ -295,6 +300,11 @@ export class TournamentManager {
       if (player.ws) {
         player.ws.roomId = roomBId;
         player.roomId = roomBId;
+        
+        // ⭐ TOURNAMENT POWERUP FIX: Update ConnectionManager metadata to keep it in sync
+        // Note: ConnectionManager metadata will be updated when the player sends their next message
+        // The WebSocketHandler now uses ws.roomId dynamically, so this should work automatically
+        
         console.log(`🏆 Player ${player.id} (${player.username}) moved to Semi-Final B: ${roomBId}`);
       }
     });
