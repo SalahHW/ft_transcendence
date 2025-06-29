@@ -145,14 +145,11 @@ class Ball {
         if (this.rebounds < BALL_CONSTANTS.SPEED_TIERS.TIER_1_THRESHOLD) {
             speed = GAME_CONFIG.INITIAL_BALL_SPEED; // Base speed
             glowColor = new BABYLON.Color3(0, 0, 0); // No glow
-        } else if (this.rebounds >= BALL_CONSTANTS.SPEED_TIERS.TIER_1_THRESHOLD && this.rebounds < BALL_CONSTANTS.SPEED_TIERS.TIER_2_THRESHOLD) {
-            speed = GAME_CONFIG.FIRST_SPEED_BOOST; // First speed boost
-            glowColor = new BABYLON.Color3(0.8, 0.4, 0); // Orange glow
-        } else if (this.rebounds >= BALL_CONSTANTS.SPEED_TIERS.TIER_2_THRESHOLD) {
-            // Scale speed between 40-45 based on rebounds beyond threshold
-            const extraRebounds = this.rebounds - BALL_CONSTANTS.SPEED_TIERS.TIER_2_THRESHOLD;
+        } else {
+            // Scale speed between first boost and max based on rebounds beyond threshold
+            const extraRebounds = this.rebounds - BALL_CONSTANTS.SPEED_TIERS.TIER_1_THRESHOLD;
             const scalingFactor = Math.min(extraRebounds / 10, 1); // Scale over 10 rebounds
-            const minSpeed = 40;
+            const minSpeed = GAME_CONFIG.FIRST_SPEED_BOOST;
             const speedRange = GAME_CONFIG.MAX_BALL_SPEED - minSpeed;
             speed = minSpeed + (speedRange * scalingFactor);
             
@@ -305,8 +302,7 @@ class Ball {
 
     getSpeedTier(rebounds) {
         if (rebounds < BALL_CONSTANTS.SPEED_TIERS.TIER_1_THRESHOLD) return 0;
-        else if (rebounds < BALL_CONSTANTS.SPEED_TIERS.TIER_2_THRESHOLD) return 1;
-        else return 2;
+        else return 1;
     }
 
     updateClient(scene) {

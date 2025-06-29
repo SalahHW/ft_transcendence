@@ -17,14 +17,12 @@ const BALL_CONSTANTS = {
     
     // Speed tiers for glow effects (must match client)
     SPEED_TIERS: {
-        TIER_0_THRESHOLD: 0,    // No glow (rebounds < 10)
-        TIER_1_THRESHOLD: 10,   // First glow (rebounds 10-19)
-        TIER_2_THRESHOLD: 20    // Max glow + trail (rebounds >= 20)
+        TIER_1_THRESHOLD: 10   // Glow + trail (rebounds >= 10)
     },
     
     // Trail properties
     TRAIL: {
-        ACTIVATION_TIER: 2,     // Speed tier when trail appears
+        ACTIVATION_TIER: 1,     // Speed tier when trail appears
         MAX_PARTICLES: 150,     // Number of trail particles
         LIFETIME: 0.6          // Particle lifetime in seconds
     }

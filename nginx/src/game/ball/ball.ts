@@ -342,8 +342,7 @@ class Ball {
 
     getSpeedTier(rebounds: number): number {
         if (rebounds < BALL_CONSTANTS.SPEED_TIERS.TIER_1_THRESHOLD) return 0;
-        else if (rebounds < BALL_CONSTANTS.SPEED_TIERS.TIER_2_THRESHOLD) return 1;
-        else return 2;
+        else return 1;
     }
 }
 
