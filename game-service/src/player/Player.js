@@ -268,8 +268,8 @@ export class Player {
     // Update movement
     const moved = this.updateMovement(deltaTime);
     
-    // ⭐ POWERUP INTEGRATION: Update powerup system
-    this.powerup.update();
+    // ⭐ POWERUP INTEGRATION: Update powerup system with current ball state
+    this.powerup.update(ballRebounds);
     
     return moved;
   }

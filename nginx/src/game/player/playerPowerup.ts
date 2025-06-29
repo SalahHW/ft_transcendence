@@ -24,7 +24,7 @@ export class PlayerPowerup {
     private uiContainer: BABYLON.Mesh | null = null;
     
     // State tracking
-    public isAvailable: boolean = true;
+    public isAvailable: boolean = false; // Start false until speed tier is met
     public isActive: boolean = false;
     public remainingCooldown: number = 0;
     public windowTimeLeft: number = 0;
@@ -35,6 +35,7 @@ export class PlayerPowerup {
         this.playerRole = playerRole;
         this.setupInputHandling();
         this.createVisualElements();
+        this.updateVisuals(); // Ensure initial state is reflected visually
     }
 
     private setupInputHandling(): void {
@@ -71,31 +72,32 @@ export class PlayerPowerup {
         
 
         
-        // Create powerup availability indicator
+        // Create powerup availability indicator (keeping reference for compatibility but making it invisible)
         this.powerupIndicator = BABYLON.MeshBuilder.CreateSphere(
             `powerup-indicator-${this.playerId}`,
-            { diameter: 1 },
+            { diameter: 0.01 }, // Make it tiny
             this.scene
         );
         this.powerupIndicator.parent = this.uiContainer;
         this.powerupIndicator.position = new BABYLON.Vector3(0, 0, 0);
+        this.powerupIndicator.isVisible = false; // Hide the sphere - we'll use only the progress bar
         
         const indicatorMaterial = new BABYLON.StandardMaterial(`indicator-mat-${this.playerId}`, this.scene);
         indicatorMaterial.emissiveColor = new BABYLON.Color3(0.2, 0.8, 0.2); // Green when available
         this.powerupIndicator.material = indicatorMaterial;
         
-        // Create cooldown bar
+        // Create main powerup progress bar (parallel to player's side) - this is now the primary indicator
         this.cooldownBar = BABYLON.MeshBuilder.CreateBox(
-            `cooldown-bar-${this.playerId}`,
-            { width: 2, height: 0.2, depth: 0.1 },
+            `powerup-bar-${this.playerId}`,
+            { width: 0.3, height: 0.4, depth: 3 }, // Make it larger since it's the main element
             this.scene
         );
         this.cooldownBar.parent = this.uiContainer;
-        this.cooldownBar.position = new BABYLON.Vector3(0, -1, 0);
-        this.cooldownBar.isVisible = false;
+        this.cooldownBar.position = new BABYLON.Vector3(0, 0, 0); // Center it since no sphere
+        this.cooldownBar.isVisible = true; // Always visible now
         
-        const cooldownMaterial = new BABYLON.StandardMaterial(`cooldown-mat-${this.playerId}`, this.scene);
-        cooldownMaterial.emissiveColor = new BABYLON.Color3(0.8, 0.2, 0.2); // Red for cooldown
+        const cooldownMaterial = new BABYLON.StandardMaterial(`powerup-bar-mat-${this.playerId}`, this.scene);
+        cooldownMaterial.emissiveColor = new BABYLON.Color3(0.4, 0.4, 0.4); // Start grey (unavailable)
         this.cooldownBar.material = cooldownMaterial;
         
         // Create activation ring (visible during activation window)
@@ -436,16 +438,15 @@ export class PlayerPowerup {
     }
 
     private updateVisuals(): void {
-        if (!this.powerupIndicator || !this.cooldownBar || !this.activationRing) return;
+        if (!this.cooldownBar || !this.activationRing) return;
         
-        const indicatorMaterial = this.powerupIndicator.material as BABYLON.StandardMaterial;
-        const cooldownMaterial = this.cooldownBar.material as BABYLON.StandardMaterial;
+        const barMaterial = this.cooldownBar.material as BABYLON.StandardMaterial;
         
         if (this.isActive) {
-            // Show activation window
-            indicatorMaterial.emissiveColor = new BABYLON.Color3(1, 1, 0); // Yellow during activation
+            // Show activation timing window - bar is full and yellow/orange (like ball glow)
+            barMaterial.emissiveColor = new BABYLON.Color3(1, 0.8, 0); // Yellow-orange like ball glow
+            this.cooldownBar.scaling.z = 1; // Full bar
             this.activationRing.isVisible = true;
-            this.cooldownBar.isVisible = false;
             
             // Animate activation ring
             const animation = new BABYLON.Animation(
@@ -467,28 +468,26 @@ export class PlayerPowerup {
             this.scene.beginAnimation(this.activationRing, 0, 60, true);
             
         } else if (this.remainingCooldown > 0) {
-            // Show cooldown
-            indicatorMaterial.emissiveColor = new BABYLON.Color3(0.8, 0.2, 0.2); // Red during cooldown
+            // Show cooldown progress - bar grows from empty to full and stays red
+            barMaterial.emissiveColor = new BABYLON.Color3(0.8, 0.2, 0.2); // Red during cooldown
             this.activationRing.isVisible = false;
-            this.cooldownBar.isVisible = true;
             
-            // Update cooldown bar scale (assuming max cooldown of 15 seconds)
+            // Calculate progress: starts at 0 (empty) and grows to 1 (full)
             const maxCooldown = 15000; // 15 seconds in ms
-            const cooldownProgress = this.remainingCooldown / maxCooldown;
-            this.cooldownBar.scaling.x = cooldownProgress;
+            const cooldownProgress = 1 - (this.remainingCooldown / maxCooldown); // Invert so it grows
+            this.cooldownBar.scaling.z = Math.max(0.05, cooldownProgress); // Minimum 5% so it's visible
             
         } else if (this.isAvailable) {
-            // Available state
-            indicatorMaterial.emissiveColor = new BABYLON.Color3(0.2, 0.8, 0.2); // Green when available
+            // Available state - bar is full and green (like ball when ready)
+            barMaterial.emissiveColor = new BABYLON.Color3(0.2, 0.8, 0.2); // Green when available
+            this.cooldownBar.scaling.z = 1; // Full bar
             this.activationRing.isVisible = false;
-            this.cooldownBar.isVisible = false;
-            this.cooldownBar.scaling.x = 1;
             
         } else {
-            // Unavailable (but not on cooldown - maybe wrong speed tier)
-            indicatorMaterial.emissiveColor = new BABYLON.Color3(0.4, 0.4, 0.4); // Gray when unavailable
+            // Unavailable (ball doesn't have enough rebounds) - bar is full but gray
+            barMaterial.emissiveColor = new BABYLON.Color3(0.4, 0.4, 0.4); // Gray when unavailable
+            this.cooldownBar.scaling.z = 1; // Full bar but gray
             this.activationRing.isVisible = false;
-            this.cooldownBar.isVisible = false;
         }
     }
 

@@ -3,7 +3,7 @@ import { BALL_CONSTANTS } from '../ball/ballConstants.js';
 export class PlayerPowerup {
     constructor(playerId) {
         this.playerId = playerId;
-        this.isAvailable = true;
+        this.isAvailable = false; // Start false until speed tier is met
         this.isActive = false;
         this.activationTime = 0;
         this.cooldownEndTime = 0;
@@ -18,16 +18,17 @@ export class PlayerPowerup {
         const isMaxSpeedTier = ballRebounds >= BALL_CONSTANTS.SPEED_TIERS.TIER_1_THRESHOLD;
         const notOnCooldown = currentTime >= this.cooldownEndTime;
         
+        // ⭐ UPDATE AVAILABILITY: Set availability based on speed tier and cooldown status
+        // Only available if speed tier is met AND not on cooldown
+        this.isAvailable = isMaxSpeedTier && notOnCooldown;
+        
         // ⭐ FORCED CLEANUP: If active but window expired, force cleanup
         if (this.isActive) {
             const windowExpired = (currentTime - this.activationTime) > this.windowDuration;
             if (windowExpired) {
-
                 this.onFailure();
             }
         }
-        
-
         
         return isMaxSpeedTier && notOnCooldown && this.isAvailable && !this.isActive;
     }
@@ -69,11 +70,7 @@ export class PlayerPowerup {
         
         this.isActive = false;
         this.cooldownEndTime = Date.now() + this.successCooldown;
-        
-        // Schedule availability return
-        setTimeout(() => {
-            this.isAvailable = true;
-        }, this.successCooldown);
+        // Note: availability will be updated by canActivate() based on speed tier + cooldown
         
         return true;
     }
@@ -84,17 +81,17 @@ export class PlayerPowerup {
         
         this.isActive = false;
         this.cooldownEndTime = Date.now() + this.failureCooldown;
-        
-        // Schedule availability return
-        setTimeout(() => {
-            this.isAvailable = true;
-        }, this.failureCooldown);
+        // Note: availability will be updated by canActivate() based on speed tier + cooldown
         
         return true;
     }
 
-    // Update method to check for window expiration
-    update() {
+    // Update method to check for window expiration and update availability
+    update(ballRebounds = 0) {
+        // Update availability based on current ball state
+        this.canActivate(ballRebounds);
+        
+        // Check for window expiration
         if (this.isActive) {
             const currentTime = Date.now();
             const windowExpired = (currentTime - this.activationTime) > this.windowDuration;
@@ -120,7 +117,7 @@ export class PlayerPowerup {
 
     // Reset powerup state (useful for game resets)
     reset() {
-        this.isAvailable = true;
+        this.isAvailable = false; // Start false until speed tier is met
         this.isActive = false;
         this.activationTime = 0;
         this.cooldownEndTime = 0;
