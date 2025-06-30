@@ -3,10 +3,10 @@ import * as BABYLON from '@babylonjs/core';
 import { gameStateManager } from '../game/GameStateManager.js';
 import { gameEngine } from '../game/GameEngine.js';
 import { MESSAGE_TYPES } from '../core/constants.js';
-import { ValidationUtils, PositionUtils } from '../utils/helpers.js';
 import { playerManager } from '../player/PlayerManager.js';
 import { playerInput } from '../player/PlayerInput.js';
 import { disconnectionHandler } from '../server/disconnect.js';
+import { schemas, messageTypeSchema } from './schemas.js';
 
 /**
  * Routes WebSocket messages to appropriate handlers
@@ -43,7 +43,31 @@ export class MessageRouter {
       return;
     }
 
+    // Validate the message type and get the corresponding schema
+    const typeValidation = messageTypeSchema.safeParse(msg);
 
+    if (!typeValidation.success) {
+      // Also check for 'powerupActivation' which might not be in MESSAGE_TYPES
+      if (msg.type !== 'powerupActivation') {
+        console.warn(`Unknown or invalid message type: ${msg.type}`, typeValidation.error.flatten());
+        return;
+      }
+    }
+
+    const schema = schemas[msg.type];
+
+    if (!schema) {
+      console.warn(`No validation schema found for message type: ${msg.type}. Blocking message.`);
+      return;
+    } else {
+      const validation = schema.safeParse(msg);
+      if (!validation.success) {
+        console.error(`Invalid message structure for type ${msg.type}:`, validation.error.flatten());
+        return; // Stop processing invalid message
+      }
+      // Use the validated data from now on
+      msg = validation.data;
+    }
 
     const handler = this.messageHandlers.get(msg.type);
     if (handler) {
