@@ -71,44 +71,80 @@ export default class CustomTerminal {
         CustomTerminal._originalConsoleError = console.error;
         CustomTerminal._originalConsoleWarn = console.warn;
 
-        // Override console methods
+        // Override console methods with recursion prevention
         console.log = (...data: any[]) => {
-            // Call the original console.log
-            CustomTerminal._originalConsoleLog.apply(console, data);
+            // **CRITICAL**: Prevent infinite recursion
+            if (CustomTerminal._loggingInProgress) {
+                CustomTerminal._originalConsoleLog.apply(console, data);
+                return;
+            }
 
-            // Log to our terminal
-            if (CustomTerminal._instance) {
-                const message = data.map(item =>
-                    typeof item === 'object' ? JSON.stringify(item, null, 2) : String(item)
-                ).join(' ');
+            CustomTerminal._loggingInProgress = true;
+            try {
+                // Call the original console.log
+                CustomTerminal._originalConsoleLog.apply(console, data);
 
-                CustomTerminal._instance.log(message);
+                // Log to our terminal
+                if (CustomTerminal._instance) {
+                    const message = data.map(item =>
+                        typeof item === 'object' ? JSON.stringify(item, null, 2) : String(item)
+                    ).join(' ');
+
+                    CustomTerminal._instance.log(message);
+                }
+            } catch (error) {
+                // Fallback to original console in case of error
+                CustomTerminal._originalConsoleLog.apply(console, data);
+            } finally {
+                CustomTerminal._loggingInProgress = false;
             }
         };
 
         console.error = (...data: any[]) => {
-            // Call the original console.error
-            CustomTerminal._originalConsoleError.apply(console, data);
+            // **CRITICAL**: Prevent infinite recursion
+            if (CustomTerminal._loggingInProgress) {
+                CustomTerminal._originalConsoleError.apply(console, data);
+                return;
+            }
 
-            // Log to our terminal with error styling
-            if (CustomTerminal._instance) {
-                const message = data.map(item =>
-                    typeof item === 'object' ? JSON.stringify(item, null, 2) : String(item)
-                ).join(' ');
+            CustomTerminal._loggingInProgress = true;
+            try {
+                // Call the original console.error
+                CustomTerminal._originalConsoleError.apply(console, data);
 
-                CustomTerminal._instance.logError(message);
+                // Log to our terminal with error styling
+                if (CustomTerminal._instance) {
+                    const message = data.map(item =>
+                        typeof item === 'object' ? JSON.stringify(item, null, 2) : String(item)
+                    ).join(' ');
+
+                    CustomTerminal._instance.logError(message);
+                }
+            } catch (error) {
+                // Fallback to original console in case of error
+                CustomTerminal._originalConsoleError.apply(console, data);
+            } finally {
+                CustomTerminal._loggingInProgress = false;
             }
         };
 
         console.warn = (...data: any[]) => {
-            // Call the original console.warn
-            CustomTerminal._originalConsoleWarn.apply(console, data);
+            // **CRITICAL**: Prevent infinite recursion
+            if (CustomTerminal._loggingInProgress) {
+                CustomTerminal._originalConsoleWarn.apply(console, data);
+                return;
+            }
 
-            // Log to our terminal with warning styling
-            if (CustomTerminal._instance) {
-                const message = data.map(item =>
-                    typeof item === 'object' ? JSON.stringify(item, null, 2) : String(item)
-                ).join(' ');
+            CustomTerminal._loggingInProgress = true;
+            try {
+                // Call the original console.warn
+                CustomTerminal._originalConsoleWarn.apply(console, data);
+
+                // Log to our terminal with warning styling
+                if (CustomTerminal._instance) {
+                    const message = data.map(item =>
+                        typeof item === 'object' ? JSON.stringify(item, null, 2) : String(item)
+                    ).join(' ');
 
                 CustomTerminal._instance.logWarn(message);
             }
@@ -135,6 +171,7 @@ export default class CustomTerminal {
         // Remove keyboard event listener if instance exists
         if (CustomTerminal._instance) {
             document.removeEventListener('keydown', CustomTerminal._instance._keydownHandler);
+            CustomTerminal._instance = null;
             CustomTerminal._instance = null;
         }
     }
@@ -178,7 +215,7 @@ export default class CustomTerminal {
     logError(message: string): void {
         const line = document.createElement('p');
         line.className = 'm-0 py-0.5 whitespace-pre-wrap break-words text-red-400';
-        line.textContent = `❌ ${message}`;
+        line.textContent = `{message}`;
         this._outputElement.appendChild(line);
 
         // Auto-scroll to bottom
@@ -188,7 +225,7 @@ export default class CustomTerminal {
     logWarn(message: string): void {
         const line = document.createElement('p');
         line.className = 'm-0 py-0.5 whitespace-pre-wrap break-words text-yellow-400';
-        line.textContent = `⚠️ ${message}`;
+        line.textContent = `${message}`;
         this._outputElement.appendChild(line);
 
         // Auto-scroll to bottom

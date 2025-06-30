@@ -6,12 +6,30 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/27 19:14:29 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/28 16:14:51 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/10 16:39:02 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 import ModalView from "../../components/ModalView.js";
 import Tabs from "./components/tabs.js";
+// ADDED MISSING IMPORTS
+import Router from "../../router/Router.js";
+import { buttonHTML } from "../../components/button.js";
+
+// User forms
+import GetUserForm from "./userForms/GetUserForm.js";
+import CreateUserForm from "./userForms/CreateUserForm.js";
+import UpdateUserForm from "./userForms/UpdateUserForm.js";
+import DeleteUserForm from "./userForms/DeleteUserForm.js";
+
+// Match forms
+import GetMatchForm from "./matchForms/GetMatchForm.js";
+import CreateMatchForm from "./matchForms/CreateMatchForm.js";
+
+// Current user forms
+import GetCurrentUserForm from "./currentUserForms/GetCurrentUserForm.js";
+import LoginLogoutUserForm from "./currentUserForms/LoginLogoutUserForm.js";
+import RegisterUserForm from "./currentUserForms/RegisterUserForm.js";
 
 export default class APITestPage extends ModalView {
 	private _terminalInstance: any = null;
@@ -60,7 +78,7 @@ export default class APITestPage extends ModalView {
 
 	private _renderLeftCardContent(): void {
 		const tabs = new Tabs(
-			"left-card-content", ["User API", "Match API", "Current User API"]
+			"left-card-content", ["User API", "Match API", "Current User API", "Game API"]
 		);
 
 		const userContainer = document.createElement('div');
@@ -80,6 +98,12 @@ export default class APITestPage extends ModalView {
 		tabs.setTabContent(2, currentUserContainer);
 
 		this._renderCurrentUserForms();
+
+		const gameContainer = document.createElement('div');
+		gameContainer.id = "game-forms-container";
+		tabs.setTabContent(3, gameContainer);
+
+		this._renderGameForms();
 	}
 
 	private _renderUserForms(): void {
@@ -92,40 +116,32 @@ export default class APITestPage extends ModalView {
 		getUserContainer.id = "get-user-form-container";
 		tabs.setTabContent(0, getUserContainer);
 
-		import('./userForms/GetUserForm.js').then((module) => {
-			const getUserForm = new module.default("get-user-form-container");
-			getUserForm.render();
-		});
+		const getUserForm = new GetUserForm("get-user-form-container");
+		getUserForm.render();
 
 		/* Create User */
 		const createUserContainer = document.createElement('div');
 		createUserContainer.id = "create-user-form-container";
 		tabs.setTabContent(1, createUserContainer);
 
-		import('./userForms/CreateUserForm.js').then((module) => {
-			const userForm = new module.default("create-user-form-container");
-			userForm.render();
-		});
+		const userForm = new CreateUserForm("create-user-form-container");
+		userForm.render();
 
 		/* Update User */
 		const updateUserContainer = document.createElement('div');
 		updateUserContainer.id = "update-user-form-container";
 		tabs.setTabContent(2, updateUserContainer);
 
-		import('./userForms/UpdateUserForm.js').then((module) => {
-			const updateUserForm = new module.default("update-user-form-container");
-			updateUserForm.render();
-		});
+		const updateUserForm = new UpdateUserForm("update-user-form-container");
+		updateUserForm.render();
 
 		/* Delete User */
 		const deleteUserContainer = document.createElement('div');
 		deleteUserContainer.id = "delete-user-form-container";
 		tabs.setTabContent(3, deleteUserContainer);
 
-		import('./userForms/DeleteUserForm.js').then((module) => {
-			const deleteUserForm = new module.default("delete-user-form-container");
-			deleteUserForm.render();
-		});
+		const deleteUserForm = new DeleteUserForm("delete-user-form-container");
+		deleteUserForm.render();
 	}
 
 	private _renderMatchForms(): void {
@@ -137,19 +153,15 @@ export default class APITestPage extends ModalView {
 		getMatchContainer.id = "get-match-form-container";
 		tabs.setTabContent(0, getMatchContainer);
 
-		import('./matchForms/GetMatchForm.js').then((module) => {
-			const getMatchForm = new module.default("get-match-form-container");
-			getMatchForm.render();
-		});
+		const getMatchForm = new GetMatchForm("get-match-form-container");
+		getMatchForm.render();
 
 		const createMatchContainer = document.createElement('div');
 		createMatchContainer.id = "create-match-form-container";
 		tabs.setTabContent(1, createMatchContainer);
 
-		import('./matchForms/CreateMatchForm.js').then((module) => {
-			const createMatchForm = new module.default("create-match-form-container");
-			createMatchForm.render();
-		});
+		const createMatchForm = new CreateMatchForm("create-match-form-container");
+		createMatchForm.render();
 	}
 
 	private _renderCurrentUserForms(): void {
@@ -161,27 +173,55 @@ export default class APITestPage extends ModalView {
 		getMeContainer.id = "get-current-user-form-container";
 		tabs.setTabContent(0, getMeContainer);
 
-		import('./currentUserForms/GetCurrentUserForm.js').then((module) => {
-			const getMeUserForm = new module.default("get-current-user-form-container");
-			getMeUserForm.render();
-		});
+		const getMeUserForm = new GetCurrentUserForm("get-current-user-form-container");
+		getMeUserForm.render();
 
 		const loginLogoutContainer = document.createElement('div');
 		loginLogoutContainer.id = "login-logout-form-container";
 		tabs.setTabContent(1, loginLogoutContainer);
 
-		import('./currentUserForms/LoginLogoutUserForm.js').then((module) => {
-			const loginLogoutUserForm = new module.default("login-logout-form-container");
-			loginLogoutUserForm.render();
-		});
+		const loginLogoutUserForm = new LoginLogoutUserForm("login-logout-form-container");
+		loginLogoutUserForm.render();
 
 		const registerContainer = document.createElement('div');
 		registerContainer.id = "register-form-container";
 		tabs.setTabContent(2, registerContainer);
 
-		import('./currentUserForms/RegisterUserForm.js').then((module) => {
-			const registerUserForm = new module.default("register-form-container");
-			registerUserForm.render();
+		const registerUserForm = new RegisterUserForm("register-form-container");
+		registerUserForm.render();
+	}
+
+	private _renderGameForms(): void {
+		const router = Router.getInstance();
+		const tabs = new Tabs("game-forms-container", ["1v1", "Tournament",]);
+		const oneVsOneContainer = document.createElement('div');
+		oneVsOneContainer.id = "one-vs-one-form-container";
+		tabs.setTabContent(0, oneVsOneContainer);
+
+		oneVsOneContainer.innerHTML = /* HTML */ `
+			<div class="flex flex-col items-center justify-center h-full">
+				${buttonHTML({id: "one-vs-one-button", label: "Start 1v1 Game", type: "button",})}
+			</div>
+		`;
+
+		document.getElementById("one-vs-one-button")?.addEventListener("click", (event) => {
+			event.preventDefault();
+			router.navigate("/1v1");
+		});
+
+		const tournamentContainer = document.createElement('div');
+		tournamentContainer.id = "tournament-form-container";
+		tabs.setTabContent(1, tournamentContainer);
+
+		tournamentContainer.innerHTML = /* HTML */ `
+			<div class="flex flex-col items-center justify-center h-full">
+				${buttonHTML({id: "tournament-button", label: "Start Tournament", type: "button",})}
+			</div>
+		`;
+
+		document.getElementById("tournament-button")?.addEventListener("click", (event) => {
+			event.preventDefault();
+			router.navigate("/tournament");
 		});
 	}
 

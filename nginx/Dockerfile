@@ -6,10 +6,11 @@ RUN apk update && apk add --no-cache nginx npm
 RUN mkdir -p /var/log/nginx
 RUN rm -rf /etc/nginx/http.d/*
 COPY ./nginx-config/default.conf /etc/nginx/http.d/
+COPY ./ssl/* /etc/ssl/elsalmajori/
 
 WORKDIR /app
 COPY package.json .
-RUN npm install
+RUN npm cache clean --force && npm install
 COPY . .
 RUN npm run build
 

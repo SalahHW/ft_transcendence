@@ -42,7 +42,7 @@ export interface User {
  * User service API.
  */
 export default class UsersApi {
-	private _host: string = "http://localhost";
+	private _host: string = "https://elsalmajori.games:8443";
 	private _userPath: string = "/users";
 	private _mePath: string = "/me";
 	private _loginPath: string = "/login";
@@ -215,7 +215,7 @@ export default class UsersApi {
 	 * @param email - The email of the user to register
 	 * @returns A promise that resolves to the registered user
 	 */
-	async register(username: string, password: string, email: string): Promise<User> {
+	async register(username: string, email: string, password: string): Promise<User> {
 		const response = await fetch(`${this._host}${this._registerPath}`, {
 			method: "POST",
 			headers: {

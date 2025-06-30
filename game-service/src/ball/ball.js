@@ -1,27 +1,29 @@
 import * as BABYLON from '@babylonjs/core';
 import { createExplosion } from './ballEffects.js';
+import { GAME_CONFIG } from '../core/constants.js';
 
 class Ball {
-    constructor(player1, player2) {
+    constructor(player1, player2, gameEngine = null, roomId = null) {
         this.position = new BABYLON.Vector3(0, -2, 0);
         this.velocity = new BABYLON.Vector3(0, 0, 0);
         this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
-        this.radius = 1;
+        this.radius = 0.75;
         this.rebounds = 0;
         this.wasHitByPlayer = undefined;
-        this.ballBody = null;
-        this.ballMaterial = null;
-        this.isGlowing = false;
-        this.currentGlowColor = new BABYLON.Color3(0, 0, 0);
         this.isRespawning = false;
         this.respawnTime = 0;
         this.respawnDuration = 2;
         this.player1 = player1;
         this.player2 = player2;
+        this.gameEngine = gameEngine;
+        this.roomId = roomId;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
         this.hasValidPosition = true;
-        this.speed = 25;
+        this.speed = GAME_CONFIG.INITIAL_BALL_SPEED;
+        this.currentGlowColor = new BABYLON.Color3(0, 0, 0);
+        this.shouldGlow = false;
+        this.lastSpeedTier = 0; // Track speed tier changes
     }
 
     init() {
@@ -32,29 +34,19 @@ class Ball {
         this.isRespawning = false;
         this.respawnTime = 0;
         this.hasValidPosition = true;
-        this.speed = 25;
+        this.speed = GAME_CONFIG.INITIAL_BALL_SPEED;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
-        if (this.ballBody) {
-            this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
-            this.ballBody.isVisible = false;
-        }
+        // Reset glow properties
+        this.currentGlowColor = new BABYLON.Color3(0, 0, 0);
+        this.shouldGlow = false;
+        this.lastSpeedTier = 0;
     }
 
     setFirstVelocity() {
-        this.velocity = new BABYLON.Vector3(Math.random() >= 0.5 ? 20 : -20, 0, 0);
+        this.velocity = new BABYLON.Vector3(Math.random() >= 0.5 ? GAME_CONFIG.INITIAL_BALL_SPEED : -GAME_CONFIG.INITIAL_BALL_SPEED, 0, 0);
         this.previousVelocity.copyFrom(this.velocity);
-        this.speed = 25;
-    }
-
-    createBall(scene) {
-        this.ballBody = BABYLON.MeshBuilder.CreateSphere("ball", { diameter: 2 }, scene);
-        this.ballMaterial = new BABYLON.StandardMaterial("glowMat", scene);
-        this.position = new BABYLON.Vector3(0, -2, 0);
-        this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
-        this.ballBody.material = this.ballMaterial;
-        this.ballBody.isVisible = false;
-        console.log('createBall: ballBody created, position:', this.ballBody.position, 'isVisible:', this.ballBody.isVisible);
+        this.speed = GAME_CONFIG.INITIAL_BALL_SPEED;
     }
 
     handleBallRespawn(previousVelocity) {
@@ -64,14 +56,9 @@ class Ball {
         this.isRespawning = true;
         this.respawnTime = 0;
         this.hasValidPosition = true;
-        this.speed = 25;
+        this.speed = GAME_CONFIG.INITIAL_BALL_SPEED;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
-        if (this.ballBody) {
-            this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
-            this.ballBody.isVisible = true;
-        }
-        console.log('handleBallRespawn called:', { position: this.position, isRespawning: this.isRespawning, respawnTime: this.respawnTime });
     }
 
     update(deltaTime, paddle1Pos, paddle2Pos) {
@@ -81,22 +68,16 @@ class Ball {
             this.position.y = -2 + 3 * t;
             this.position.z = 0;
             this.position.x = 0;
-            if (this.ballBody) {
-                this.ballBody.position.copyFrom(this.position);
-            }
             if (t >= 1) {
                 this.isRespawning = false;
                 this.position.y = 1;
-                if (this.ballBody) {
-                    this.ballBody.position.y = 1;
-                }
                 this.velocity.copyFrom(this.previousVelocity);
                 if (this.velocity.length() === 0) {
                     this.setFirstVelocity();
                 }
                 this.hasValidPosition = true;
-                this.speed = this.rebounds < 5 ? 25 : 37.5;
-                console.log('Respawn complete:', { position: this.position, velocity: this.velocity });
+                this.handleAcceleration();
+                console.log('Respawn complete:', { position: this.position, velocity: this.velocity, speed: this.speed, rebounds: this.rebounds });
             }
             return;
         }
@@ -120,19 +101,54 @@ class Ball {
 
     handleWallCollisions() {
         const mapHalfDepth = 10;
+        let wallHit = false;
+        
         if (this.position.z >= mapHalfDepth - this.radius) {
             this.velocity.z *= -1;
             this.position.z = mapHalfDepth - this.radius;
+            wallHit = true;
         } else if (this.position.z <= -mapHalfDepth + this.radius) {
             this.velocity.z *= -1;
             this.position.z = -mapHalfDepth + this.radius;
+            wallHit = true;
+        }
+
+        // Broadcast wall hit sound event
+        if (wallHit && this.gameEngine && this.roomId) {
+            this.gameEngine.broadcastToRoom(this.roomId, {
+                type: 'soundEvent',
+                sound: 'wallHit',
+                timestamp: Date.now(),
+                ballSpeed: this.speed
+            });
         }
     }
 
     handleAcceleration() {
         let speed;
-        if (this.rebounds < 5) speed = 25;
-        else speed = 37.5;
+        let glowColor = null;
+        
+        // New speed tiers based on rebounds with glowing effects
+        if (this.rebounds < GAME_CONFIG.SPEED_BOOST_THRESHOLD_1) {
+            speed = GAME_CONFIG.INITIAL_BALL_SPEED; // Base speed
+            glowColor = new BABYLON.Color3(0, 0, 0); // No glow
+        } else if (this.rebounds >= GAME_CONFIG.SPEED_BOOST_THRESHOLD_1 && this.rebounds < GAME_CONFIG.SPEED_BOOST_THRESHOLD_2) {
+            speed = GAME_CONFIG.FIRST_SPEED_BOOST; // First speed boost
+            glowColor = new BABYLON.Color3(0.8, 0.4, 0); // Orange glow
+        } else if (this.rebounds >= GAME_CONFIG.SPEED_BOOST_THRESHOLD_2) {
+            // Scale speed between 40-45 based on rebounds beyond threshold
+            const extraRebounds = this.rebounds - GAME_CONFIG.SPEED_BOOST_THRESHOLD_2;
+            const scalingFactor = Math.min(extraRebounds / 10, 1); // Scale over 10 rebounds
+            const minSpeed = 40;
+            const speedRange = GAME_CONFIG.MAX_BALL_SPEED - minSpeed;
+            speed = minSpeed + (speedRange * scalingFactor);
+            
+            // Transition from orange to red-white
+            const redIntensity = 1;
+            const greenIntensity = 0.2 + (0.6 * scalingFactor); // From orange to white-red
+            const blueIntensity = scalingFactor * 0.4; // Slight blue tint at max speed
+            glowColor = new BABYLON.Color3(redIntensity, greenIntensity, blueIntensity);
+        }
 
         const currentSpeed = this.velocity.length();
         if (currentSpeed > 0) {
@@ -142,11 +158,15 @@ class Ball {
         }
         this.previousVelocity.copyFrom(this.velocity);
         this.speed = speed;
+        
+        // Store glow information for client synchronization
+        this.currentGlowColor = glowColor;
+        this.shouldGlow = this.rebounds >= GAME_CONFIG.SPEED_BOOST_THRESHOLD_1;
     }
 
     handlePaddleCollisions(paddle1Pos, paddle2Pos) {
-        const isPaddle2 = this.velocity.x < 0;
-        const paddle = isPaddle2 ? paddle2Pos : paddle1Pos;
+        const isHittingPlayer2 = this.velocity.x < 0; // Ball going left hits player2 (left side)
+        const paddle = isHittingPlayer2 ? paddle2Pos : paddle1Pos;
         const dx = this.position.x - paddle.x;
         const dz = this.position.z - paddle.z;
         const paddleHalfWidth = 0.5;
@@ -156,8 +176,11 @@ class Ball {
         const overlapZ = Math.abs(dz) <= paddleHalfDepth + this.radius;
 
         if (overlapX && overlapZ) {
+            const previousSpeedTier = this.getSpeedTier(this.rebounds);
             this.rebounds++;
-            this.wasHitByPlayer = isPaddle2 ? this.player2.playerId : this.player1.playerId;
+            const newSpeedTier = this.getSpeedTier(this.rebounds);
+            
+            this.wasHitByPlayer = isHittingPlayer2 ? this.player2.playerId : this.player1.playerId;
             const isSideHit = Math.abs(dz) > paddleHalfDepth;
             let speed = this.velocity.length();
             if (isSideHit) {
@@ -173,24 +196,74 @@ class Ball {
                     0,
                     Math.sin(angle)
                 ).normalize().scale(speed);
-                this.velocity.x = isPaddle2 ? Math.abs(this.velocity.x) : -Math.abs(this.velocity.x);
+                this.velocity.x = isHittingPlayer2 ? Math.abs(this.velocity.x) : -Math.abs(this.velocity.x);
                 const sign = dx > 0 ? 1 : -1;
                 this.position.x += sign * ((paddleHalfWidth + this.radius) - Math.abs(dx) + 0.01);
             }
             this.previousVelocity.copyFrom(this.velocity);
-            this.speed = this.rebounds < 5 ? 25 : 37.5;
+            
+            // Update speed and glow based on new rebounds count
+            this.handleAcceleration();
+            
+            // Mark speed tier change for client notification
+            if (newSpeedTier !== previousSpeedTier) {
+                this.speedTierChanged = true;
+                this.lastSpeedTier = newSpeedTier;
+            }
+
+            // Broadcast paddle hit sound event
+            if (this.gameEngine && this.roomId) {
+                this.gameEngine.broadcastToRoom(this.roomId, {
+                    type: 'soundEvent',
+                    sound: 'paddleHit',
+                    timestamp: Date.now(),
+                    ballSpeed: this.speed,
+                    rebounds: this.rebounds,
+                    hitByPlayer: this.wasHitByPlayer
+                });
+            }
         }
     }
 
     handleScoreZone() {
         if (Math.abs(this.position.x) > 20) {
-            const wasGoingLeft = this.velocity.x < 0;
+            let newVelocity;
+            let losingPlayerId;
+            let winningPlayerId;
+            
             if (this.position.x < 0) {
-                this.player2.playerScore++;
-            } else {
+                // Ball went past left side (Player 2's side), Player 1 scores
                 this.player1.playerScore++;
+                losingPlayerId = this.player2.playerId; // Player 2 lost the point
+                winningPlayerId = this.player1.playerId;
+                // Ball goes towards the loser (Player 2 - left side)
+                newVelocity = new BABYLON.Vector3(-GAME_CONFIG.INITIAL_BALL_SPEED, 0, 0);
+            } else {
+                // Ball went past right side (Player 1's side), Player 2 scores  
+                this.player2.playerScore++;
+                losingPlayerId = this.player1.playerId; // Player 1 lost the point
+                winningPlayerId = this.player2.playerId;
+                // Ball goes towards the loser (Player 1 - right side)
+                newVelocity = new BABYLON.Vector3(GAME_CONFIG.INITIAL_BALL_SPEED, 0, 0);
             }
-            const newVelocity = new BABYLON.Vector3(wasGoingLeft ? -25 : 25, 0, 0);
+
+            // Send lost point sound only to the player who lost
+
+            if (this.gameEngine && this.roomId) {
+                if (losingPlayerId) {
+                    this.gameEngine.sendToPlayer(this.roomId, losingPlayerId, {
+                        type: 'soundEvent',
+                        sound: 'lostPoint',
+                        timestamp: Date.now()
+                    });
+                } if (winningPlayerId) {
+                    this.gameEngine.sendToPlayer(this.roomId, winningPlayerId, {
+                        type: 'soundEvent',
+                        sound: 'playerScored',
+                        timestamp: Date.now()
+                    });
+                }
+            }
             this.handleBallRespawn(newVelocity);
         }
     }
@@ -217,6 +290,12 @@ class Ball {
         });
     }
 
+    getSpeedTier(rebounds) {
+        if (rebounds < GAME_CONFIG.SPEED_BOOST_THRESHOLD_1) return 0;
+        else if (rebounds < GAME_CONFIG.SPEED_BOOST_THRESHOLD_2) return 1;
+        else return 2;
+    }
+
     updateClient(scene) {
         if (this.ballBody && this.hasValidPosition) {
             this.ballBody.position.copyFrom(this.position);
@@ -234,10 +313,6 @@ class Ball {
             this.isRespawning = true;
             this.respawnTime = 0;
             this.hasValidPosition = true;
-            if (this.ballBody) {
-                this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
-                this.ballBody.isVisible = true;
-            }
             return;
         }
 
@@ -253,7 +328,7 @@ class Ball {
         this.respawnTime = state.respawnTime || 0;
         this.wasHitByPlayer = state.wasHitByPlayer;
         this.hasValidPosition = state.hasValidPosition;
-        this.speed = state.speed || 25;
+        this.speed = state.speed || GAME_CONFIG.INITIAL_BALL_SPEED;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
     }

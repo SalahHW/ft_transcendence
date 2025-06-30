@@ -19,7 +19,7 @@ export const loginUser = async (request, reply) => {
     if (!user) {
       return reply.code(401).send({ error: "Invalid username" });
     }
-    
+
     const isValidPass = await comparePassword(password, user.password);
     if (!isValidPass) {
       return reply.code(401).send({ error: "Invalid password" });
@@ -30,7 +30,18 @@ export const loginUser = async (request, reply) => {
       username: user.username,
       aud: "users-service",
     });
-    reply.code(200).send({ token });
+
+    reply
+      .setCookie("token", token, {
+        httpOnly: true,
+        // secure: process.env.NODE_ENV === "production",
+        secure: false, // TODO: Update .env to set production mode
+        sameSite: "strict",
+        path: "/",
+        maxAge: 60 * 60 * 24, // 1 day
+      })
+      .code(200)
+      .send({ message: "Login successful" });
   } catch (error) {
     return reply
       .code(500)

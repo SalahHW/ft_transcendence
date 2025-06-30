@@ -108,8 +108,8 @@ export default class RegisterPopup extends ModalView {
 		try {
 			await this._authService.register(
 				usernameInput.value,
+				emailInput.value,
 				passwordInput.value,
-				emailInput.value
 			);
 
 			// Fermer la popup après un délai

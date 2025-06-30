@@ -2,6 +2,7 @@
 *.vscode
 .images
 *.env
+*.pem
 *package-lock.json
 *node_modules
 

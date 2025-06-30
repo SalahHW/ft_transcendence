@@ -43,6 +43,7 @@ export default class Wheel {
 			onClick: () => {
 				console.log("API Test page clicked");
 				this._router.navigate("/api-test");
+				this._router.navigate("/api-test");
 			},
 		},
 		{
