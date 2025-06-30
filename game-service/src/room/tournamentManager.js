@@ -355,6 +355,44 @@ export class TournamentManager {
     
     const winner = matchData.winner;
     const loser = matchData.loser;
+    const tournamentId = semiFinalRoom.metadata.tournamentId;
+
+    // Check if other semi-final is empty
+    const otherSemiFinalEmpty = this._isOtherSemiFinalEmpty(semiFinalRoomId, tournamentId);
+    
+    if (otherSemiFinalEmpty) {
+        console.log(`🏆 Other semi-final is empty! Awarding 1st and 2nd place directly`);
+        
+        // Find the actual player objects
+        const winnerPlayer = semiFinalRoom.players.find(p => p.id === winner.id);
+        const loserPlayer = semiFinalRoom.players.find(p => p.id === loser.id);
+        
+        if (!winnerPlayer || !loserPlayer) {
+            console.error(`🏆 Cannot find winner or loser player objects in room ${semiFinalRoomId}`);
+            return;
+        }
+
+        // Send direct final placement messages
+        this._sendDirectFinalPlacement(winnerPlayer, loserPlayer, matchData, semiFinalRoomId);
+        
+        // Clean up the semi-final room
+        semiFinalRoom.players = [];
+        semiFinalRoom.metadata.status = 'completed_with_direct_placement';
+        
+        // Clean up final rooms since they won't be used
+        const finalRoomAId = semiFinalRoom.metadata.finalRoomA;
+        const finalRoomBId = semiFinalRoom.metadata.finalRoomB;
+        if (finalRoomAId) this.roomManager.removeRoom(finalRoomAId);
+        if (finalRoomBId) this.roomManager.removeRoom(finalRoomBId);
+        
+        // Clean up the players' connections
+        if (winnerPlayer.ws) winnerPlayer.ws.close();
+        if (loserPlayer.ws) loserPlayer.ws.close();
+        
+        console.log(`🏆 Tournament completed with direct placement: Winner ${winner.username} (1st), Loser ${loser.username} (2nd)`);
+        return;
+    }
+
     const finalRoomAId = semiFinalRoom.metadata.finalRoomA;
     const finalRoomBId = semiFinalRoom.metadata.finalRoomB;
     
@@ -420,8 +458,6 @@ export class TournamentManager {
       
       // ⭐ TIMING COORDINATION: Wait for semi-final splash screens to complete
       // Semi-final splash duration is 5000ms, so wait 6000ms (5000ms + 1000ms buffer)
-      const tournamentId = finalRoomA.metadata.tournamentId;
-      
       setTimeout(() => {
         // Safety check: Ensure rooms still exist and haven't been corrupted
         const roomACheck = this.roomManager.getRoom(finalRoomAId);
@@ -719,6 +755,113 @@ export class TournamentManager {
       case 2: return 'nd'; 
       case 3: return 'rd';
       default: return 'th';
+    }
+  }
+
+  /**
+   * Mark a semi-final room as empty (both players disconnected)
+   */
+  _markSemiFinalAsEmpty(semiFinalRoomId) {
+    const semiFinalRoom = this.roomManager.getRoom(semiFinalRoomId);
+    if (!semiFinalRoom || !this.isSemiFinalRoom(semiFinalRoom)) {
+        console.error(`🏆 Cannot mark non-semi-final room ${semiFinalRoomId} as empty`);
+        return;
+    }
+
+    console.log(`🏆 Marking semi-final room ${semiFinalRoomId} as empty (both players disconnected)`);
+    semiFinalRoom.metadata.isEmptySemiFinal = true;
+    semiFinalRoom.metadata.status = 'empty';
+  }
+
+  /**
+   * Get the other semi-final room in the tournament
+   * @param {string} currentSemiFinalRoomId - The current semi-final room ID
+   * @param {string} tournamentId - The tournament ID
+   * @returns {Object|null} - The other semi-final room, or null if not found
+   */
+  _getOtherSemiFinalRoom(currentSemiFinalRoomId, tournamentId) {
+    // Get all rooms through the room manager's getAllRooms method
+    const allRooms = this.roomManager.getAllRooms();
+    
+    // Filter to find semi-final rooms for this tournament
+    const semiFinalRooms = allRooms.filter(room => 
+      room.metadata?.tournamentId === tournamentId && 
+      this.isSemiFinalRoom(room) &&
+      room.id !== currentSemiFinalRoomId
+    );
+
+    // There should be exactly one other semi-final room
+    if (semiFinalRooms.length === 1) {
+      return semiFinalRooms[0];
+    }
+
+    console.log(`🏆 Could not find other semi-final room for ${currentSemiFinalRoomId} in tournament ${tournamentId}`);
+    console.log(`🏆 Found ${semiFinalRooms.length} other semi-final rooms`);
+    return null;
+  }
+
+  /**
+   * Check if the other semi-final room is empty
+   * @param {string} currentSemiFinalRoomId - The current semi-final room ID
+   * @param {string} tournamentId - The tournament ID
+   * @returns {boolean} - True if the other semi-final is empty or marked as empty
+   */
+  _isOtherSemiFinalEmpty(currentSemiFinalRoomId, tournamentId) {
+    const otherSemiFinal = this._getOtherSemiFinalRoom(currentSemiFinalRoomId, tournamentId);
+    
+    if (!otherSemiFinal) {
+      // If we can't find the other semi-final, it might have been cleaned up after being empty
+      return true;
+    }
+
+    // Check if the room is marked as empty or has no players
+    const isEmpty = otherSemiFinal.metadata?.isEmptySemiFinal === true || 
+                   otherSemiFinal.metadata?.status === 'empty' ||
+                   otherSemiFinal.players.length === 0;
+
+    if (isEmpty) {
+      console.log(`🏆 Other semi-final ${otherSemiFinal.id} is empty`);
+    }
+
+    return isEmpty;
+  }
+
+  /**
+   * Send direct final placement messages to players
+   */
+  _sendDirectFinalPlacement(winnerPlayer, loserPlayer, matchData, semiFinalRoomId) {
+    try {
+        // Send to winner (1st place)
+        if (winnerPlayer.ws && winnerPlayer.ws.readyState === 1) {
+            winnerPlayer.ws.send(JSON.stringify({
+                type: 'gameEnd',
+                ...matchData,
+                tournamentAdvancement: {
+                    stage: 'final',
+                    result: 'direct_first_place',
+                    message: 'Congratulations! You win the tournament!',
+                    finalPlacement: 1
+                }
+            }));
+        }
+
+        // Send to loser (2nd place)
+        if (loserPlayer.ws && loserPlayer.ws.readyState === 1) {
+            loserPlayer.ws.send(JSON.stringify({
+                type: 'gameEnd',
+                ...matchData,
+                tournamentAdvancement: {
+                    stage: 'final',
+                    result: 'direct_second_place',
+                    message: 'Well played! You finish in second place!',
+                    finalPlacement: 2
+                }
+            }));
+        }
+
+        console.log(`🏆 Sent direct final placement messages to players in room ${semiFinalRoomId}`);
+    } catch (error) {
+        console.error(`🏆 Error sending direct final placement messages:`, error);
     }
   }
 }

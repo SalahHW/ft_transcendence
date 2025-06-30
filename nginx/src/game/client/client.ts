@@ -314,11 +314,35 @@ export function initializeGame(playerId: string): void {
         const gameEndData = msg as GameEndData;
         isGameOver = true;
         
-        
         // Stop the game loop and clean up
         if (isGameLoopRunning && map?.getEngine) {
             map.getEngine.stopRenderLoop();
             isGameLoopRunning = false;
+        }
+        
+        // Check for direct final placement from semi-finals
+        if (gameEndData.tournamentAdvancement?.result === 'direct_first_place' || 
+            gameEndData.tournamentAdvancement?.result === 'direct_second_place') {
+            
+            console.log('🏆 Handling direct final placement from semi-finals');
+            const opponentName = gameEndData.winner.id === localPlayerId ? 
+                                gameEndData.loser.username : 
+                                gameEndData.winner.username;
+            
+            const finalPlacement = gameEndData.tournamentAdvancement.result === 'direct_first_place' ? 1 : 2;
+            
+            try {
+                await TournamentClientHandler.handleDirectFinalPlacement(
+                    gameEndData,
+                    localPlayerId,
+                    opponentName,
+                    finalPlacement as 1 | 2
+                );
+            } catch (error) {
+                console.error('🏆 ERROR: Error showing direct final placement splash:', error);
+                cleanup();
+            }
+            return;
         }
         
         // ⭐ ENHANCED FINAL DETECTION: Check multiple indicators for finals

@@ -94,8 +94,6 @@ export class TournamentDisconnectionHandler {
 
   /**
    * Handle disconnection during semi-final match
-   * NEW LOGIC: Disconnected player = 4th place, remaining player wins and waits
-   * When other semi completes, its loser gets 3rd place and is disconnected
    */
   handleSemiFinalDisconnect(playerId, roomId, isExplicitLeave) {
     console.log(`🏆 Handling semi-final disconnect for player ${playerId} in room ${roomId}`);
@@ -105,19 +103,19 @@ export class TournamentDisconnectionHandler {
     const disconnectedPlayer = room.players.find(p => p.id === playerId);
     
     if (!remainingPlayer || !disconnectedPlayer) {
-      console.error(`🏆 Could not find players in semi-final room ${roomId} for disconnect handling`);
-      return;
+        console.error(`🏆 Could not find players in semi-final room ${roomId} for disconnect handling`);
+        return;
     }
 
     // Check if game is in progress
     if (!this.baseDisconnectHandler.isGameInProgress(room)) {
-      // Game not in progress, handle as regular disconnect
-      return this.baseDisconnectHandler.handleRegularDisconnect(playerId, roomId);
+        // Game not in progress, handle as regular disconnect
+        return this.baseDisconnectHandler.handleRegularDisconnect(playerId, roomId);
     }
 
     const disconnectionReason = isExplicitLeave ? 
-      this.tournamentDisconnectionReasons.SEMI_FINAL_DISCONNECT : 
-      this.tournamentDisconnectionReasons.SEMI_FINAL_DISCONNECT;
+        this.tournamentDisconnectionReasons.SEMI_FINAL_DISCONNECT : 
+        this.tournamentDisconnectionReasons.SEMI_FINAL_DISCONNECT;
     
     const actionText = isExplicitLeave ? 'left the semi-final' : 'disconnected during semi-final';
     console.log(`🏆 Semi-final: Player ${playerId} ${actionText}. Awarding win to ${remainingPlayer.id}`);
@@ -125,44 +123,29 @@ export class TournamentDisconnectionHandler {
     // Mark game as over immediately
     room.isGameOver = true;
     
-    // NEW LOGIC: Mark tournament as having a disconnect forfeit
-    const tournamentId = room.metadata.tournamentId;
-    const otherSemiRoomId = this._getOtherSemiFinalRoom(roomId, tournamentId);
-    
-    // Set tournament metadata to track the forfeit
-    if (otherSemiRoomId) {
-      const otherSemiRoom = gameStateManager.getRoom(otherSemiRoomId);
-      if (otherSemiRoom) {
-        otherSemiRoom.metadata.otherSemiHadForfeit = true;
-        otherSemiRoom.metadata.forfeitedPlayerId = disconnectedPlayer.id;
-        otherSemiRoom.metadata.forfeitWinnerId = remainingPlayer.id;
-        console.log(`🏆 Marked other semi-final room ${otherSemiRoomId} - forfeit in ${roomId}`);
-      }
-    }
-    
     // Create tournament-specific forfeit match data
     const matchData = this.createTournamentForfeitMatchData(
-      room, 
-      roomId, 
-      remainingPlayer, 
-      disconnectedPlayer, 
-      actionText,
-      disconnectionReason,
-      'semifinal'
+        room, 
+        roomId, 
+        remainingPlayer, 
+        disconnectedPlayer, 
+        actionText,
+        disconnectionReason,
+        'semifinal'
     );
 
     // Add tournament placement information
     matchData.tournamentPlacements = {
-      fourthPlace: {
-        id: disconnectedPlayer.id,
-        username: disconnectedPlayer.username,
-        reason: 'disconnected_in_semifinal'
-      },
-      remainingWinner: {
-        id: remainingPlayer.id,
-        username: remainingPlayer.username,
-        status: 'advancing_to_final'
-      }
+        fourthPlace: {
+            id: disconnectedPlayer.id,
+            username: disconnectedPlayer.username,
+            reason: 'disconnected_in_semifinal'
+        },
+        remainingWinner: {
+            id: remainingPlayer.id,
+            username: remainingPlayer.username,
+            status: 'advancing_to_final'
+        }
     };
 
     // Log the tournament forfeit
@@ -177,8 +160,20 @@ export class TournamentDisconnectionHandler {
     // NEW: Disconnect the forfeiting player (4th place)
     this.baseDisconnectHandler.cleanupPlayerConnection(disconnectedPlayer.id);
     console.log(`🏆 Disconnected 4th place player: ${disconnectedPlayer.username}`);
+
+    // Check if this was the last player in the room
+    const isLastPlayer = room.players.length <= 1;
+    if (isLastPlayer) {
+        console.log(`🏆 Semi-final room ${roomId} is now empty (both players disconnected)`);
+        tournamentManager._markSemiFinalAsEmpty(roomId);
+        
+        // Clean up the room immediately since it's empty
+        gameStateManager.removeRoom(roomId);
+        console.log(`🏆 Removed empty semi-final room ${roomId}`);
+        return;
+    }
     
-    // NEW: Progress tournament with forfeit logic
+    // If not empty, progress tournament with forfeit logic
     this.progressTournamentAfterSemiFinalForfeit(room, matchData, disconnectedPlayer, remainingPlayer);
     
     // Schedule room cleanup

@@ -41,8 +41,15 @@ export interface GameEndData {
         reason?: 'player_left' | 'disconnect';
         matchType?: 'regular' | 'semi-final' | 'final';
         finalMatchType?: 'winners' | 'losers'; // ⭐ ADD: Also in gameStats
+        [key: string]: any;
     };
     matchEndTime: Date;
+    tournamentAdvancement?: {
+        stage: string;
+        result: string;
+        message: string;
+        finalPlacement?: number;
+    };
 }
 
 /**
