@@ -2,10 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Wallet Registration Test</title>
+    <title>Register With Wallet</title>
   </head>
   <body>
-    <h1>Register with Wallet</h1>
+    <h1>Register With Wallet</h1>
 
     <label>
       Username:
@@ -18,44 +18,49 @@
     <pre id="output"></pre>
 
     <script>
-      const CHALLENGE_MESSAGE =
-        "Sign this message to login to elsalmajori.games";
+      const API_BASE = "https://elsalmajori.games:8443"; // change if needed
 
       async function registerWithWallet() {
         const username = document.getElementById("username").value.trim();
-        if (!window.ethereum || !username) {
-          alert("Please install MetaMask and enter a username");
-          return;
+        const output = document.getElementById("output");
+        output.innerText = "";
+
+        if (!username) {
+          return alert("Enter a username.");
+        }
+
+        if (!window.ethereum) {
+          return alert("MetaMask not detected.");
         }
 
         try {
-          const accounts = await window.ethereum.request({
+          const [wallet] = await window.ethereum.request({
             method: "eth_requestAccounts",
           });
-          const wallet = accounts[0];
 
+          // Step 1: Get challenge with timestamp
+          const challengeRes = await fetch(
+            `${API_BASE}/wallet/challenge?wallet=${wallet}`
+          );
+          const { challenge, timestamp } = await challengeRes.json();
+
+          // Step 2: Sign the challenge
           const signature = await window.ethereum.request({
             method: "personal_sign",
-            params: [CHALLENGE_MESSAGE, wallet],
+            params: [challenge, wallet],
           });
 
-          const res = await fetch(
-            "https://elsalmajori.games:8443/register/wallet",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ wallet, username, signature }),
-            }
-          );
+          // Step 3: Register using the signed challenge
+          const registerRes = await fetch(`${API_BASE}/register/wallet`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ wallet, username, signature, timestamp }), // ✅ timestamp added
+          });
 
-          const data = await res.json();
-          document.getElementById("output").innerText = JSON.stringify(
-            data,
-            null,
-            2
-          );
+          const result = await registerRes.json();
+          output.innerText = JSON.stringify(result, null, 2);
         } catch (err) {
-          document.getElementById("output").innerText = `Error: ${err.message}`;
+          output.innerText = `Error: ${err.message}`;
         }
       }
 

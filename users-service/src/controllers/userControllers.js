@@ -146,19 +146,16 @@ export async function deleteUser(request, reply) {
     const user = await userModels.readUser(id);
     if (!user) return reply.code(404).send({ error: "User not found" });
 
-    const deleted = await userModels.deleteUser(id);
-    if (!deleted)
-      return reply.code(500).send({ error: "Failed to delete user from DB" });
-
     if (user.wallet) {
       try {
         const response = await axios.delete(
-          `http://blockchain:3001/player/${user.wallet}`
+          `http://blockchain:3001/remove/${user.wallet}`
         );
 
         if (!response.data || !response.data.success) {
           return reply.code(502).send({
             error: "Blockchain removePlayer failed",
+            details: response.data,
           });
         }
       } catch (error) {
@@ -168,6 +165,10 @@ export async function deleteUser(request, reply) {
         });
       }
     }
+
+    const deleted = await userModels.deleteUser(id);
+    if (!deleted)
+      return reply.code(500).send({ error: "Failed to delete user from DB" });
 
     return reply.code(200).send({ success: true });
   } catch (error) {

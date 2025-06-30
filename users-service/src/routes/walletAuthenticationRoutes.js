@@ -8,20 +8,21 @@ export default async function walletAuthenticationRoutes(fastify) {
       summary: "Register with wallet",
       body: {
         type: "object",
-        required: ["wallet", "username", "signature"],
+        required: ["wallet", "username", "signature", "timestamp"],
         properties: {
           wallet: {
             type: "string",
             pattern: "^0x[a-fA-F0-9]{40}$",
-            description: "Ethereum wallet address",
           },
           username: {
             type: "string",
-            description: "Unique username for the user",
           },
           signature: {
             type: "string",
-            description: "Signature of the challenge message",
+          },
+          timestamp: {
+            type: "string",
+            description: "ISO timestamp of the challenge",
           },
         },
       },
@@ -41,15 +42,62 @@ export default async function walletAuthenticationRoutes(fastify) {
           wallet: {
             type: "string",
             pattern: "^0x[a-fA-F0-9]{40}$",
-            description: "Ethereum wallet address",
           },
           signature: {
             type: "string",
-            description: "Signature of the challenge message",
           },
         },
       },
     },
     handler: walletAuthenticationControllers.loginWithWallet,
+  });
+
+  fastify.route({
+    method: "GET",
+    url: "/wallet/challenge",
+    schema: {
+      summary: "Get challenge message for wallet",
+      querystring: {
+        type: "object",
+        required: ["wallet"],
+        properties: {
+          wallet: {
+            type: "string",
+            pattern: "^0x[a-fA-F0-9]{40}$",
+          },
+        },
+      },
+    },
+    handler: async (req, reply) => {
+      const { wallet } = req.query;
+      const timestamp = new Date().toISOString();
+      const challenge = `Sign this message to login to elsalmajori.games:\n${timestamp}`;
+      return { challenge, timestamp };
+    },
+  });
+
+  fastify.route({
+    method: "POST",
+    url: "/wallet/verify",
+    schema: {
+      summary: "Verify wallet signature",
+      body: {
+        type: "object",
+        required: ["wallet", "signature", "timestamp"],
+        properties: {
+          wallet: {
+            type: "string",
+            pattern: "^0x[a-fA-F0-9]{40}$",
+          },
+          signature: {
+            type: "string",
+          },
+          timestamp: {
+            type: "string",
+          },
+        },
+      },
+    },
+    handler: walletAuthenticationControllers.verifyWalletSignature,
   });
 }
