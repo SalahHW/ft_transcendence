@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:42:23 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/22 12:00:00 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/06/30 23:50:26 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,7 @@ export default class CustomTerminal {
     private static _originalConsoleError: (...data: any[]) => void;
     private static _originalConsoleWarn: (...data: any[]) => void;
     private static _isConsoleOverridden: boolean = false;
+    private static _loggingInProgress: boolean = false;
     private _keydownHandler!: (event: KeyboardEvent) => void;
 
     constructor(containerId: string) {
@@ -60,7 +61,7 @@ export default class CustomTerminal {
         if (!newContainer) {
             throw new Error(`Container with id ${containerId} not found`);
         }
-        
+
         this._container = newContainer;
         this._createTerminal();
     }
@@ -146,7 +147,13 @@ export default class CustomTerminal {
                         typeof item === 'object' ? JSON.stringify(item, null, 2) : String(item)
                     ).join(' ');
 
-                CustomTerminal._instance.logWarn(message);
+                    CustomTerminal._instance.logWarn(message);
+                }
+            } catch (error) {
+                // Fallback to original console.warn in case of error
+                CustomTerminal._originalConsoleWarn.apply(console, data);
+            } finally {
+                CustomTerminal._loggingInProgress = false;
             }
         };
 
