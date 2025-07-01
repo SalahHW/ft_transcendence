@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:42:23 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/30 23:50:26 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/01 15:57:02 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -214,6 +214,24 @@ export default class CustomTerminal {
         line.className = 'm-0 py-0.5 whitespace-pre-wrap break-words';
         line.textContent = message;
         this._outputElement.appendChild(line);
+
+        // Auto-scroll to bottom
+        this._outputElement.scrollTop = this._outputElement.scrollHeight;
+    }
+
+    /**
+     * Affiche une image dans le terminal custom.
+     * Bonne pratique : méthode dédiée, pas de mélange avec log().
+     */
+    logImage(url: string, alt: string = "image"): void {
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = alt;
+        img.style.maxWidth = "100%";
+        img.style.maxHeight = "200px";
+        img.style.display = "block";
+        img.style.margin = "8px 0";
+        this._outputElement.appendChild(img);
 
         // Auto-scroll to bottom
         this._outputElement.scrollTop = this._outputElement.scrollHeight;

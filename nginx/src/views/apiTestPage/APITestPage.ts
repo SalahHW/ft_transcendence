@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/27 19:14:29 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/10 16:39:02 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/01 15:56:49 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,6 +30,12 @@ import CreateMatchForm from "./matchForms/CreateMatchForm.js";
 import GetCurrentUserForm from "./currentUserForms/GetCurrentUserForm.js";
 import LoginLogoutUserForm from "./currentUserForms/LoginLogoutUserForm.js";
 import RegisterUserForm from "./currentUserForms/RegisterUserForm.js";
+
+// Avatar forms
+import GetAvatarForm from "./avatarForms/GetAvatarForm.js";
+import CreateAvatarForm from "./avatarForms/CreateAvatarForm.js";
+import UpdateAvatarForm from "./avatarForms/UpdateAvatarForm.js";
+import DeleteAvatarForm from "./avatarForms/DeleteAvatarForm.js";
 
 export default class APITestPage extends ModalView {
 	private _terminalInstance: any = null;
@@ -78,7 +84,7 @@ export default class APITestPage extends ModalView {
 
 	private _renderLeftCardContent(): void {
 		const tabs = new Tabs(
-			"left-card-content", ["User API", "Match API", "Current User API", "Game API"]
+			"left-card-content", ["User API", "Match API", "Current User API", "Game API", "Avatar API"]
 		);
 
 		const userContainer = document.createElement('div');
@@ -104,6 +110,12 @@ export default class APITestPage extends ModalView {
 		tabs.setTabContent(3, gameContainer);
 
 		this._renderGameForms();
+
+		const avatarContainer = document.createElement('div');
+		avatarContainer.id = "avatar-forms-container";
+		tabs.setTabContent(4, avatarContainer);
+
+		this._renderAvatarForms();
 	}
 
 	private _renderUserForms(): void {
@@ -223,6 +235,44 @@ export default class APITestPage extends ModalView {
 			event.preventDefault();
 			router.navigate("/tournament");
 		});
+	}
+
+	private _renderAvatarForms(): void {
+		const tabs = new Tabs(
+			"avatar-forms-container", ["Get Avatar", "Create Avatar", "Update Avatar", "Delete Avatar"]
+		);
+
+		/* Get Avatar */
+		const getAvatarContainer = document.createElement('div');
+		getAvatarContainer.id = "get-avatar-form-container";
+		tabs.setTabContent(0, getAvatarContainer);
+
+		const getAvatarForm = new GetAvatarForm("get-avatar-form-container");
+		getAvatarForm.render();
+
+		/* Create Avatar */
+		const createAvatarContainer = document.createElement('div');
+		createAvatarContainer.id = "create-avatar-form-container";
+		tabs.setTabContent(1, createAvatarContainer);
+
+		const createAvatarForm = new CreateAvatarForm("create-avatar-form-container");
+		createAvatarForm.render();
+
+		/* Update Avatar */
+		const updateAvatarContainer = document.createElement('div');
+		updateAvatarContainer.id = "update-avatar-form-container";
+		tabs.setTabContent(2, updateAvatarContainer);
+
+		const updateAvatarForm = new UpdateAvatarForm("update-avatar-form-container");
+		updateAvatarForm.render();
+
+		/* Delete Avatar */
+		const deleteAvatarContainer = document.createElement('div');
+		deleteAvatarContainer.id = "delete-avatar-form-container";
+		tabs.setTabContent(3, deleteAvatarContainer);
+
+		const deleteAvatarForm = new DeleteAvatarForm("delete-avatar-form-container");
+		deleteAvatarForm.render();
 	}
 
 	private _renderRightCardContent(): void {
