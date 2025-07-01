@@ -356,6 +356,7 @@ export class TournamentManager {
     const winner = matchData.winner;
     const loser = matchData.loser;
     const tournamentId = semiFinalRoom.metadata.tournamentId;
+    const isForfeitVictory = matchData.gameStats?.forfeitReason || matchData.disconnectionReason;
 
     // Get final room IDs first
     const finalRoomAId = semiFinalRoom.metadata.finalRoomA;
@@ -421,70 +422,41 @@ export class TournamentManager {
     // Transfer players to final rooms
     // Winners always go to finalRoomA (AFS), Losers always go to finalRoomB (BTF)
     this._transferPlayerToFinalRoom(winnerPlayer, finalRoomA, semiFinalRoomId, 'winner');
-    this._transferPlayerToFinalRoom(loserPlayer, finalRoomB, semiFinalRoomId, 'loser');
+    
+    // ⭐ FORFEIT FIX: Only transfer loser if they're still connected (not a forfeit victim)
+    if (!isForfeitVictory) {
+      // Normal game completion - transfer loser to losers final
+      this._transferPlayerToFinalRoom(loserPlayer, finalRoomB, semiFinalRoomId, 'loser');
+    } else {
+      // Forfeit victory - loser already disconnected, mark final room as having forfeit
+      console.log(`🏆 FORFEIT DETECTED: Loser ${loser.username} from forfeit will not be transferred (already disconnected)`);
+      this._markLosersFinalWithForfeit(finalRoomB, loser, 'disconnected_in_semifinal');
+    }
     
     // Clean up the semi-final room
     semiFinalRoom.players = [];
     semiFinalRoom.metadata.status = 'completed';
     semiFinalRoom.metadata.playersTransferred = true;
     
-    console.log(`🏆 Semi-final ${semiFinalRoomId} completed: Winner ${winner.username} → ${finalRoomAId}, Loser ${loser.username} → ${finalRoomBId}`);
+    console.log(`🏆 Semi-final ${semiFinalRoomId} completed: Winner ${winner.username} → ${finalRoomAId}, Loser ${loser.username} → ${isForfeitVictory ? 'FORFEIT (already disconnected)' : finalRoomBId}`);
 
-    // ⭐ RACE CONDITION FIX: Check if this was the last semi-final to complete
-    // If both final rooms are now full (2 players each), this was the last semi-final
-    const bothFinalRoomsFull = finalRoomA.players.length === 2 && finalRoomB.players.length === 2;
-    
-    if (bothFinalRoomsFull) {
-      console.log('🏆 LAST semi-final completed - coordinating with splash screen timing');
-      console.log(`🏆 Both final rooms are full: ${finalRoomAId} (${finalRoomA.players.length}/2), ${finalRoomBId} (${finalRoomB.players.length}/2)`);
-      
-      // Update players in both final rooms with opponent information
-      this._updateFinalRoomPlayersWithOpponent(finalRoomA);
-      this._updateFinalRoomPlayersWithOpponent(finalRoomB);
-      
-      // Mark all players as ready for finals
-      finalRoomA.players.forEach(p => { p.readyToPlay = true; });
-      finalRoomB.players.forEach(p => { p.readyToPlay = true; });
-      
-      // Reset final room states for clean start
-      [finalRoomA, finalRoomB].forEach(room => {
-        room.ready = false;
-        room.gameStarted = false;
-        room.isGameOver = false;
-        room.ball = null;
-      });
-      
-      console.log(`🏆 Final rooms ${finalRoomAId} and ${finalRoomBId} reset for clean start`);
-      
-      // ⭐ TIMING COORDINATION: Wait for semi-final splash screens to complete
-      // Semi-final splash duration is 5000ms, so wait 6000ms (5000ms + 1000ms buffer)
-      setTimeout(() => {
-        // Safety check: Ensure rooms still exist and haven't been corrupted
-        const roomACheck = this.roomManager.getRoom(finalRoomAId);
-        const roomBCheck = this.roomManager.getRoom(finalRoomBId);
-        
-        if (roomACheck && roomBCheck && 
-            roomACheck.metadata.tournamentId === tournamentId && 
-            roomBCheck.metadata.tournamentId === tournamentId) {
-          
-          console.log(`🏆 Initializing final games for tournament ${tournamentId} after splash screen coordination`);
-          console.log(`🏆 Starting Winners Final: ${finalRoomAId}`);
-          console.log(`🏆 Starting Losers Final (3rd place): ${finalRoomBId}`);
-          
-          // Start both final games simultaneously
-          gameEngine.checkRoomReady(finalRoomAId);
-          gameEngine.checkRoomReady(finalRoomBId);
-          
-        } else {
-          console.error(`🏆 Cannot initialize final games: rooms ${finalRoomAId} or ${finalRoomBId} (tournament ${tournamentId}) no longer exist or have been corrupted`);
-        }
-      }, 6000); // 5000ms semi-final splash + 1000ms buffer
-      
-    } else {
-      console.log('🏆 FIRST semi-final completed - waiting for second semi-final to complete');
-      console.log(`🏆 Final room states: ${finalRoomAId} (${finalRoomA.players.length}/2), ${finalRoomBId} (${finalRoomB.players.length}/2)`);
-      // Don't start final games yet - wait for the second semi-final to complete
-    }
+         // ⭐ ENHANCED COMPLETION CHECK: Check if this was the last semi-final to complete
+     // and handle incomplete final rooms due to forfeits
+     console.log(`🏆 Checking if both semi-finals completed for tournament ${tournamentId}...`);
+     const bothSemiFinalsCompleted = this._areBothSemiFinalsCompleted(tournamentId);
+     
+     if (bothSemiFinalsCompleted) {
+       console.log('🏆 ⭐ BOTH semi-finals completed - checking final room states and starting finals...');
+       
+       // Check for incomplete final rooms and handle them
+       this._handleIncompleteFinalRooms(finalRoomA, finalRoomB, tournamentId);
+       
+     } else {
+       console.log('🏆 Waiting for other semi-final to complete...');
+       console.log(`🏆 Current final room states: ${finalRoomAId} (${finalRoomA.players.length}/2), ${finalRoomBId} (${finalRoomB.players.length}/2)`);
+       console.log(`🏆 Losers final forfeit flag: ${finalRoomB.metadata?.hasForfeitMissingPlayer}`);
+       // Don't start final games yet - wait for the second semi-final to complete
+     }
   }
 
   /**
@@ -864,6 +836,244 @@ export class TournamentManager {
     } catch (error) {
         console.error(`🏆 Error sending direct final placement messages:`, error);
     }
+  }
+
+  /**
+   * Check if both semi-finals are completed by looking at final room states
+   * @param {string} tournamentId - The tournament ID
+   * @returns {boolean} - True if both semi-finals are completed
+   */
+  _areBothSemiFinalsCompleted(tournamentId) {
+    // Get final rooms to check their states instead of looking for cleaned-up semi-final rooms
+    const allRooms = this.roomManager.getAllRooms();
+    const finalRooms = allRooms.filter(room => 
+      room.metadata?.tournamentId === tournamentId && 
+      this.isFinalRoom(room)
+    );
+    
+    if (finalRooms.length !== 2) {
+      console.log(`🏆 Tournament ${tournamentId}: Found ${finalRooms.length}/2 final rooms`);
+      return false;
+    }
+    
+    const finalRoomA = finalRooms.find(r => r.metadata?.finalMatch === 'winners');
+    const finalRoomB = finalRooms.find(r => r.metadata?.finalMatch === 'losers');
+    
+    if (!finalRoomA || !finalRoomB) {
+      console.log(`🏆 Tournament ${tournamentId}: Could not identify winners/losers final rooms`);
+      return false;
+    }
+    
+    // Check if winners final has players (indicates at least one semi-final completed)
+    const winnersHasPlayers = finalRoomA.players.length > 0;
+    
+    // Check if losers final has players OR is marked as having a forfeit
+    const losersHasPlayers = finalRoomB.players.length > 0;
+    const losersHasForfeit = finalRoomB.metadata?.hasForfeitMissingPlayer === true;
+    
+    // Both semi-finals are completed if:
+    // 1. Winners final has at least 1 player, AND
+    // 2. Either losers final has players OR has a forfeit marker
+    const bothCompleted = winnersHasPlayers && (losersHasPlayers || losersHasForfeit);
+    
+    console.log(`🏆 Tournament ${tournamentId} completion check:`);
+    console.log(`🏆   Winners final: ${finalRoomA.players.length} players`);
+    console.log(`🏆   Losers final: ${finalRoomB.players.length} players, forfeit: ${losersHasForfeit}`);
+    console.log(`🏆   Both completed: ${bothCompleted}`);
+    
+    return bothCompleted;
+  }
+
+  /**
+   * Handle incomplete final rooms due to forfeits
+   * @param {Object} finalRoomA - The winners final room
+   * @param {Object} finalRoomB - The losers final room
+   * @param {string} tournamentId - The tournament ID
+   */
+  _handleIncompleteFinalRooms(finalRoomA, finalRoomB, tournamentId) {
+    console.log(`🏆 Checking final room completeness for tournament ${tournamentId}:`);
+    console.log(`🏆 Winners Final (${finalRoomA.id}): ${finalRoomA.players.length}/2 players`);
+    console.log(`🏆 Losers Final (${finalRoomB.id}): ${finalRoomB.players.length}/2 players`);
+    
+    const winnersComplete = finalRoomA.players.length === 2;
+    const losersComplete = finalRoomB.players.length === 2;
+    
+         // ⭐ FORFEIT SCENARIO DETECTION: Handle incomplete losers final
+     if (winnersComplete && !losersComplete) {
+       console.log(`🏆 FORFEIT SCENARIO DETECTED: Winners final complete, but losers final incomplete`);
+       
+       if (finalRoomB.players.length === 1 && finalRoomB.metadata?.hasForfeitMissingPlayer) {
+         // Award 3rd place to the only remaining player in losers final
+         const remainingPlayer = finalRoomB.players[0];
+         const forfeitPlayer = finalRoomB.metadata.forfeitMissingPlayer;
+         
+         console.log(`🏆 Awarding automatic 3rd place to ${remainingPlayer.username} (only player in losers final)`);
+         console.log(`🏆 ${forfeitPlayer?.username || 'Disconnected player'} gets 4th place by forfeit`);
+         
+         // Send 3rd place message to remaining player
+         if (remainingPlayer.ws && remainingPlayer.ws.readyState === 1) {
+           remainingPlayer.ws.send(JSON.stringify({
+             type: 'gameEnd',
+             roomId: finalRoomB.id,
+             winner: {
+               id: remainingPlayer.id,
+               username: remainingPlayer.username,
+               score: 11
+             },
+             loser: {
+               id: forfeitPlayer?.id || 'unknown',
+               username: forfeitPlayer?.username || 'Disconnected Player',
+               score: 0
+             },
+             tournamentAdvancement: {
+               stage: 'final',
+               result: 'automatic_third_place',
+               message: 'You get 3rd place! Your opponent for the final was unavailable.',
+               finalPlacement: 3
+             }
+           }));
+           console.log(`🏆 Sent automatic 3rd place message to ${remainingPlayer.username}`);
+         }
+         
+         // Clean up losers final room
+         finalRoomB.players = [];
+         finalRoomB.metadata.status = 'completed_by_forfeit';
+         
+         // Start winners final normally
+         this._startWinnersFinalWithTiming(finalRoomA, tournamentId);
+         
+       } else if (finalRoomB.players.length === 0 && finalRoomB.metadata?.hasForfeitMissingPlayer) {
+         // Edge case: No one in losers final, only forfeit player
+         const forfeitPlayer = finalRoomB.metadata.forfeitMissingPlayer;
+         console.log(`🏆 Losers final empty except for forfeit player ${forfeitPlayer?.username || 'Unknown'} (4th place)`);
+         
+         // Clean up losers final room
+         finalRoomB.metadata.status = 'completed_by_forfeit';
+         
+         // Start winners final normally  
+         this._startWinnersFinalWithTiming(finalRoomA, tournamentId);
+         
+       } else {
+         console.error(`🏆 Unexpected losers final state: ${finalRoomB.players.length} players, forfeit: ${finalRoomB.metadata?.hasForfeitMissingPlayer}`);
+         console.error(`🏆 Forfeit player:`, finalRoomB.metadata?.forfeitMissingPlayer);
+         // Fallback: start winners final anyway
+         this._startWinnersFinalWithTiming(finalRoomA, tournamentId);
+       }
+       
+     } else if (!winnersComplete && losersComplete) {
+      // This shouldn't happen in normal tournament flow, but handle it
+      console.warn(`🏆 UNUSUAL SCENARIO: Losers final complete, but winners final incomplete`);
+      this._startLosersFinalWithTiming(finalRoomB, tournamentId);
+      
+    } else if (winnersComplete && losersComplete) {
+      // Normal scenario - both finals have 2 players each
+      console.log(`🏆 NORMAL SCENARIO: Both finals complete, starting both games`);
+      this._startBothFinalsWithTiming(finalRoomA, finalRoomB, tournamentId);
+      
+    } else {
+      // Both finals incomplete - this indicates a serious error
+      console.error(`🏆 CRITICAL ERROR: Both final rooms incomplete - winners: ${finalRoomA.players.length}, losers: ${finalRoomB.players.length}`);
+    }
+  }
+
+  /**
+   * Start both final games with proper timing coordination
+   */
+  _startBothFinalsWithTiming(finalRoomA, finalRoomB, tournamentId) {
+    // Update players in both final rooms with opponent information
+    this._updateFinalRoomPlayersWithOpponent(finalRoomA);
+    this._updateFinalRoomPlayersWithOpponent(finalRoomB);
+    
+    // Mark all players as ready for finals
+    finalRoomA.players.forEach(p => { p.readyToPlay = true; });
+    finalRoomB.players.forEach(p => { p.readyToPlay = true; });
+    
+    // Reset final room states for clean start
+    [finalRoomA, finalRoomB].forEach(room => {
+      room.ready = false;
+      room.gameStarted = false;
+      room.isGameOver = false;
+      room.ball = null;
+    });
+    
+    console.log(`🏆 Final rooms ${finalRoomA.id} and ${finalRoomB.id} reset for clean start`);
+    
+    // ⭐ TIMING COORDINATION: Wait for semi-final splash screens to complete
+    setTimeout(() => {
+      const roomACheck = this.roomManager.getRoom(finalRoomA.id);
+      const roomBCheck = this.roomManager.getRoom(finalRoomB.id);
+      
+      if (roomACheck && roomBCheck && 
+          roomACheck.metadata.tournamentId === tournamentId && 
+          roomBCheck.metadata.tournamentId === tournamentId) {
+        
+        console.log(`🏆 Starting both final games for tournament ${tournamentId}`);
+        gameEngine.checkRoomReady(finalRoomA.id);
+        gameEngine.checkRoomReady(finalRoomB.id);
+        
+      } else {
+        console.error(`🏆 Cannot start final games: rooms corrupted or missing`);
+      }
+    }, 6000); // 5000ms semi-final splash + 1000ms buffer
+  }
+
+  /**
+   * Start winners final only (when losers final was forfeited)
+   */
+  _startWinnersFinalWithTiming(finalRoomA, tournamentId) {
+    this._updateFinalRoomPlayersWithOpponent(finalRoomA);
+    finalRoomA.players.forEach(p => { p.readyToPlay = true; });
+    
+    finalRoomA.ready = false;
+    finalRoomA.gameStarted = false;
+    finalRoomA.isGameOver = false;
+    finalRoomA.ball = null;
+    
+    setTimeout(() => {
+      const roomCheck = this.roomManager.getRoom(finalRoomA.id);
+      if (roomCheck && roomCheck.metadata.tournamentId === tournamentId) {
+        console.log(`🏆 Starting winners final for tournament ${tournamentId} (losers final forfeited)`);
+        gameEngine.checkRoomReady(finalRoomA.id);
+      }
+    }, 6000);
+  }
+
+  /**
+   * Start losers final only (edge case)
+   */
+  _startLosersFinalWithTiming(finalRoomB, tournamentId) {
+    this._updateFinalRoomPlayersWithOpponent(finalRoomB);
+    finalRoomB.players.forEach(p => { p.readyToPlay = true; });
+    
+    finalRoomB.ready = false;
+    finalRoomB.gameStarted = false;
+    finalRoomB.isGameOver = false;
+    finalRoomB.ball = null;
+    
+    setTimeout(() => {
+      const roomCheck = this.roomManager.getRoom(finalRoomB.id);
+      if (roomCheck && roomCheck.metadata.tournamentId === tournamentId) {
+        console.log(`🏆 Starting losers final for tournament ${tournamentId}`);
+        gameEngine.checkRoomReady(finalRoomB.id);
+      }
+    }, 6000);
+  }
+
+  /**
+   * Mark the losers final room with forfeit information
+   * @param {Object} losersFinalRoom - The losers final room
+   * @param {Object} forfeitPlayer - The player who forfeited
+   * @param {string} reason - The reason for forfeit
+   */
+  _markLosersFinalWithForfeit(losersFinalRoom, forfeitPlayer, reason) {
+    losersFinalRoom.metadata.hasForfeitMissingPlayer = true;
+    losersFinalRoom.metadata.forfeitMissingPlayer = {
+      id: forfeitPlayer.id,
+      username: forfeitPlayer.username,
+      placement: 4, // 4th place by forfeit
+      reason: reason
+    };
+    console.log(`🏆 Marked losers final room ${losersFinalRoom.id} with forfeit player: ${forfeitPlayer.username} (4th place)`);
   }
 }
 

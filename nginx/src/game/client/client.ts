@@ -352,6 +352,26 @@ export function initializeGame(playerId: string): void {
             }
             return;
         }
+
+        // ⭐ NEW: Check for automatic third place (when opponent forfeited from losers final)
+        if (gameEndData.tournamentAdvancement?.result === 'automatic_third_place') {
+            console.log('🏆 Handling automatic 3rd place due to forfeit in losers final');
+            const opponentName = gameEndData.loser.username || 'Disconnected Player';
+            const score = `${gameEndData.winner.score}-${gameEndData.loser.score}`;
+            
+            try {
+                await TournamentClientHandler.handleFinalGameEnd(
+                    gameEndData,
+                    localPlayerId,
+                    opponentName,
+                    3 // Third place
+                );
+            } catch (error) {
+                console.error('🏆 ERROR: Error showing automatic 3rd place splash:', error);
+                cleanup();
+            }
+            return;
+        }
         
         // ⭐ ENHANCED FINAL DETECTION: Check multiple indicators for finals
         const isFinal = gameEndData.matchType === 'final' || 
