@@ -357,11 +357,29 @@ export class TournamentManager {
     const loser = matchData.loser;
     const tournamentId = semiFinalRoom.metadata.tournamentId;
 
-    // Check if other semi-final is empty
-    const otherSemiFinalEmpty = this._isOtherSemiFinalEmpty(semiFinalRoomId, tournamentId);
+    // Get final room IDs first
+    const finalRoomAId = semiFinalRoom.metadata.finalRoomA;
+    const finalRoomBId = semiFinalRoom.metadata.finalRoomB;
     
-    if (otherSemiFinalEmpty) {
-        console.log(`🏆 Other semi-final is empty! Awarding 1st and 2nd place directly`);
+    if (!finalRoomAId || !finalRoomBId) {
+      console.error(`🏆 Final rooms not found for semi-final ${semiFinalRoomId}`);
+      return;
+    }
+
+    const finalRoomA = this.roomManager.getRoom(finalRoomAId);
+    const finalRoomB = this.roomManager.getRoom(finalRoomBId);
+    
+    if (!finalRoomA || !finalRoomB) {
+      console.error(`🏆 Cannot find final rooms: ${finalRoomAId} or ${finalRoomBId}`);
+      return;
+    }
+
+    // Check if other semi-final is empty AND there are no players in final rooms
+    const otherSemiFinalEmpty = this._isOtherSemiFinalEmpty(semiFinalRoomId, tournamentId);
+    const noPlayersInFinals = finalRoomA.players.length === 0 && finalRoomB.players.length === 0;
+    
+    if (otherSemiFinalEmpty && noPlayersInFinals) {
+        console.log(`🏆 Other semi-final is empty and no players in finals! Awarding 1st and 2nd place directly`);
         
         // Find the actual player objects
         const winnerPlayer = semiFinalRoom.players.find(p => p.id === winner.id);
@@ -380,8 +398,6 @@ export class TournamentManager {
         semiFinalRoom.metadata.status = 'completed_with_direct_placement';
         
         // Clean up final rooms since they won't be used
-        const finalRoomAId = semiFinalRoom.metadata.finalRoomA;
-        const finalRoomBId = semiFinalRoom.metadata.finalRoomB;
         if (finalRoomAId) this.roomManager.removeRoom(finalRoomAId);
         if (finalRoomBId) this.roomManager.removeRoom(finalRoomBId);
         
@@ -391,22 +407,6 @@ export class TournamentManager {
         
         console.log(`🏆 Tournament completed with direct placement: Winner ${winner.username} (1st), Loser ${loser.username} (2nd)`);
         return;
-    }
-
-    const finalRoomAId = semiFinalRoom.metadata.finalRoomA;
-    const finalRoomBId = semiFinalRoom.metadata.finalRoomB;
-    
-    if (!finalRoomAId || !finalRoomBId) {
-      console.error(`🏆 Final rooms not found for semi-final ${semiFinalRoomId}`);
-      return;
-    }
-
-    const finalRoomA = this.roomManager.getRoom(finalRoomAId);
-    const finalRoomB = this.roomManager.getRoom(finalRoomBId);
-    
-    if (!finalRoomA || !finalRoomB) {
-      console.error(`🏆 Cannot find final rooms: ${finalRoomAId} or ${finalRoomBId}`);
-      return;
     }
 
     // Find the actual player objects
@@ -810,17 +810,18 @@ export class TournamentManager {
     const otherSemiFinal = this._getOtherSemiFinalRoom(currentSemiFinalRoomId, tournamentId);
     
     if (!otherSemiFinal) {
-      // If we can't find the other semi-final, it might have been cleaned up after being empty
-      return true;
+      console.log(`🏆 Could not find other semi-final for ${currentSemiFinalRoomId} - assuming it's not empty for safety`);
+      return false; // Changed to false for safety - don't assume empty if we can't find it
     }
 
-    // Check if the room is marked as empty or has no players
+    // Only consider it empty if explicitly marked as empty or has no players
     const isEmpty = otherSemiFinal.metadata?.isEmptySemiFinal === true || 
-                   otherSemiFinal.metadata?.status === 'empty' ||
                    otherSemiFinal.players.length === 0;
 
     if (isEmpty) {
-      console.log(`🏆 Other semi-final ${otherSemiFinal.id} is empty`);
+      console.log(`🏆 Other semi-final ${otherSemiFinal.id} is empty (players: ${otherSemiFinal.players.length})`);
+    } else {
+      console.log(`🏆 Other semi-final ${otherSemiFinal.id} is NOT empty (players: ${otherSemiFinal.players.length})`);
     }
 
     return isEmpty;

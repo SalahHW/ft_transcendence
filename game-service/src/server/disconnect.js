@@ -3,6 +3,7 @@ import { gameEngine } from '../game/GameEngine.js';
 import { reportMatchResultsToAPI } from './api.js';
 import { LogUtils, TimeUtils } from '../utils/helpers.js';
 import { playerManager } from '../player/PlayerManager.js';
+import { handleTournamentPlayerDisconnect } from './tournamentDisconnect.js';
 
 /**
  * Server-side disconnection handling for 1v1 games
@@ -22,21 +23,45 @@ export class DisconnectionHandler {
 
   /**
    * Main entry point for handling player disconnection
+   * Routes to appropriate handler based on room type
    */
   handlePlayerDisconnect(playerId, roomId) {
-    const player = gameStateManager.getPlayer(playerId);
-    const isExplicitLeave = player?.isLeaving === true;
-    
-    console.log(`🔥 DISCONNECT HANDLER: Player ${playerId} from room ${roomId} ${isExplicitLeave ? '(EXPLICIT LEAVE)' : '(UNEXPECTED DISCONNECT)'}`);
-    
-    // Clean up player connection first
-    this.cleanupPlayerConnection(playerId);
-    
     const room = gameStateManager.getRoom(roomId);
     if (!room) {
       console.log(`Room ${roomId} not found during disconnect`);
       return;
     }
+
+    // Check if this is a tournament room
+    const isTournamentRoom = room.metadata?.isTournament === true || 
+                           roomId.includes('tournament') || 
+                           roomId.includes('semi') || 
+                           roomId.includes('final');
+
+    if (isTournamentRoom) {
+      console.log(`🏆 Routing disconnect to tournament handler for player ${playerId} in room ${roomId}`);
+      return handleTournamentPlayerDisconnect(playerId, roomId);
+    }
+
+    // Handle as regular 1v1 game
+    console.log(`🎮 Handling 1v1 disconnect for player ${playerId} in room ${roomId}`);
+    this.handle1v1PlayerDisconnect(playerId, roomId);
+  }
+
+  /**
+   * Handle 1v1 game disconnection
+   */
+  handle1v1PlayerDisconnect(playerId, roomId) {
+    const player = gameStateManager.getPlayer(playerId);
+    const isExplicitLeave = player?.isLeaving === true;
+    
+    console.log(`🔥 1V1 DISCONNECT: Player ${playerId} from room ${roomId} ${isExplicitLeave ? '(EXPLICIT LEAVE)' : '(UNEXPECTED DISCONNECT)'}`);
+    
+    // Clean up player connection first
+    this.cleanupPlayerConnection(playerId);
+    
+    const room = gameStateManager.getRoom(roomId);
+    if (!room) return;
 
     // Determine how to handle the disconnection based on game state
     if (this.isGameInProgress(room)) {

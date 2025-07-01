@@ -1,23 +1,17 @@
 import { gameStateManager } from '../game/GameStateManager.js';
 import { gameEngine } from '../game/GameEngine.js';
-import { reportMatchResultsToAPI } from './api.js';
-import { LogUtils, TimeUtils } from '../utils/helpers.js';
+import { LogUtils } from '../utils/helpers.js';
 import { playerManager } from '../player/PlayerManager.js';
+import { BaseDisconnectHandler, BaseDisconnectUtils, DisconnectReasons } from './disconnectHandler.js';
 
 /**
  * Server-side disconnection handling for 1v1 games
  * Handles player disconnections, cleanup, and forfeit logic
  */
-export class DisconnectionHandler {
+export class DisconnectionHandler extends BaseDisconnectHandler {
   constructor() {
-    // Track connection metadata
-    this.connectionMetadata = new Map();
-    this.disconnectionReasons = {
-      PLAYER_LEFT: 'player_left',
-      DISCONNECT: 'disconnect',
-      FORFEIT: 'forfeit',
-      TIMEOUT: 'timeout'
-    };
+    super();
+    this.disconnectionReasons = DisconnectReasons;
   }
 
   /**
@@ -77,26 +71,35 @@ export class DisconnectionHandler {
     room.isGameOver = true;
     
     // Create comprehensive match data for forfeit
-    const matchData = this.createForfeitMatchData(
+    const baseMatchData = BaseDisconnectUtils.createBaseForfeitMatchData(
       room, 
       roomId, 
       remainingPlayer, 
       disconnectedPlayer, 
-      actionText,
-      disconnectionReason
+      actionText
     );
+
+    const matchData = {
+      ...baseMatchData,
+      matchType: 'forfeit',
+      disconnectionReason,
+      gameStats: {
+        ...baseMatchData.gameStats,
+        disconnectionType: disconnectionReason
+      }
+    };
 
     // Log the forfeit for analytics
     LogUtils.logMatchCompletion(matchData);
     
     // Report results to external APIs
-    this.reportForfeitResults(matchData);
+    BaseDisconnectUtils.reportResults(matchData);
     
     // Notify remaining player of the victory
     this.notifyRemainingPlayer(roomId, matchData);
     
     // Schedule room cleanup
-    this.scheduleRoomCleanup(roomId, 5000);
+    BaseDisconnectUtils.scheduleRoomCleanup(roomId, gameStateManager, 5000);
   }
 
   /**
@@ -122,55 +125,13 @@ export class DisconnectionHandler {
   }
 
   /**
-   * Create comprehensive match data for forfeit scenarios
-   */
-  createForfeitMatchData(room, roomId, winner, loser, reason, disconnectionReason) {
-    const matchEndTime = TimeUtils.getCurrentTimestamp();
-    const matchStartTime = room.startTime || matchEndTime;
-    
-    return {
-      roomId,
-      matchStartTime,
-      matchEndTime,
-      matchDuration: TimeUtils.calculateMatchDuration(matchStartTime, matchEndTime),
-      winner: {
-        id: winner.id,
-        username: winner.username || 'Anonymous',
-        score: 11 // Award full score for forfeit win
-      },
-      loser: {
-        id: loser.id,
-        username: loser.username || 'Anonymous',
-        score: room.ball?.player2?.playerScore || 0
-      },
-      gameStats: {
-        totalRebounds: room.ball?.rebounds || 0,
-        finalScore: `11-${room.ball?.player2?.playerScore || 0}`,
-        ballSpeed: room.ball?.speed || 0,
-        lastHitBy: room.ball?.wasHitByPlayer || null,
-        forfeitReason: reason,
-        disconnectionType: disconnectionReason
-      },
-      matchType: 'forfeit',
-      serverTime: Date.now(),
-      disconnectionReason
-    };
-  }
-
-  /**
    * Clean up player connection and associated data
    */
   cleanupPlayerConnection(playerId) {
     const player = gameStateManager.getPlayer(playerId);
     
     if (player && player.ws) {
-      try {
-        if (player.ws.readyState === 1) {
-          player.ws.close();
-        }
-      } catch (e) {
-        console.error(`Error closing WebSocket for player ${playerId}:`, e);
-      }
+      BaseDisconnectUtils.cleanupWebSocket(player.ws);
     }
     
     // Remove player from game state
@@ -183,28 +144,16 @@ export class DisconnectionHandler {
   }
 
   /**
-   * Report forfeit results to external APIs
-   */
-  async reportForfeitResults(matchData) {
-    try {
-      await reportMatchResultsToAPI(matchData);
-      console.log(`✅ Forfeit results reported for room ${matchData.roomId}`);
-    } catch (err) {
-      console.error('❌ Failed to report forfeit results:', err.message);
-    }
-  }
-
-  /**
    * Notify remaining player of opponent disconnection
    */
   notifyRemainingPlayer(roomId, matchData) {
-    gameEngine.broadcastToRoom(roomId, {
+    const message = {
       type: 'gameEnd',
       ...matchData,
       reason: 'opponent_disconnect'
-    });
-    
-    console.log(`📢 Notified remaining player in room ${roomId} of opponent disconnect`);
+    };
+
+    gameEngine.broadcastToRoom(roomId, message);
   }
 
   /**
@@ -218,19 +167,6 @@ export class DisconnectionHandler {
     });
     
     console.log(`📢 Notified ${remainingPlayerCount} remaining players in room ${roomId}`);
-  }
-
-  /**
-   * Schedule room cleanup with delay
-   */
-  scheduleRoomCleanup(roomId, delayMs = 5000) {
-    setTimeout(() => {
-      const room = gameStateManager.getRoom(roomId);
-      if (room) {
-        gameStateManager.removeRoom(roomId);
-        console.log(`🗑️ Cleaned up room ${roomId} after disconnect delay`);
-      }
-    }, delayMs);
   }
 
   /**
@@ -274,85 +210,6 @@ export class DisconnectionHandler {
   }
 
   /**
-   * Set connection metadata for tracking
-   */
-  setConnectionMetadata(playerId, roomId, additionalData = {}) {
-    this.connectionMetadata.set(playerId, {
-      connectedAt: new Date().toISOString(),
-      roomId: roomId,
-      lastActivity: Date.now(),
-      ...additionalData
-    });
-  }
-
-  /**
-   * Update player activity timestamp
-   */
-  updatePlayerActivity(playerId) {
-    const metadata = this.connectionMetadata.get(playerId);
-    if (metadata) {
-      metadata.lastActivity = Date.now();
-    }
-  }
-
-  /**
-   * Clean up stale connections based on inactivity
-   */
-  cleanupStaleConnections(staleThresholdMs = 5 * 60 * 1000) {
-    const now = Date.now();
-    let cleanedCount = 0;
-    
-    for (const [playerId, metadata] of this.connectionMetadata.entries()) {
-      if (now - metadata.lastActivity > staleThresholdMs) {
-        console.log(`🕒 Cleaning up stale connection for player ${playerId}`);
-        this.handlePlayerDisconnect(playerId, metadata.roomId);
-        cleanedCount++;
-      }
-    }
-    
-    if (cleanedCount > 0) {
-      console.log(`🧹 Cleaned up ${cleanedCount} stale connections`);
-    }
-    
-    return cleanedCount;
-  }
-
-  /**
-   * Get connection statistics for monitoring
-   */
-  getConnectionStats() {
-    const players = gameStateManager.getPlayers();
-    const rooms = gameStateManager.getGameRooms();
-    
-    return {
-      totalPlayers: players.size,
-      totalRooms: rooms.size,
-      activeConnections: this.connectionMetadata.size,
-      connectionsDetail: Array.from(this.connectionMetadata.entries()).map(([playerId, metadata]) => ({
-        playerId,
-        roomId: metadata.roomId,
-        connectedAt: metadata.connectedAt,
-        lastActivity: metadata.lastActivity,
-        duration: Date.now() - new Date(metadata.connectedAt).getTime()
-      }))
-    };
-  }
-
-  /**
-   * Force disconnect all connections (for shutdown scenarios)
-   */
-  closeAllConnections() {
-    const stats = this.getConnectionStats();
-    console.log(`🔌 Closing ${stats.activeConnections} active connections...`);
-    
-    stats.connectionsDetail.forEach(({ playerId, roomId }) => {
-      this.handlePlayerDisconnect(playerId, roomId);
-    });
-    
-    console.log('✅ All connections closed.');
-  }
-
-  /**
    * Handle timeout-based disconnections
    */
   handleTimeoutDisconnect(playerId, roomId) {
@@ -365,18 +222,6 @@ export class DisconnectionHandler {
     }
     
     this.handlePlayerDisconnect(playerId, roomId);
-  }
-
-  /**
-   * Get disconnection statistics for analytics
-   */
-  getDisconnectionStats() {
-    // This could be enhanced to track disconnection patterns
-    return {
-      connectionMetadataSize: this.connectionMetadata.size,
-      totalRooms: gameStateManager.getGameRooms().size,
-      totalPlayers: gameStateManager.getPlayers().size
-    };
   }
 }
 
