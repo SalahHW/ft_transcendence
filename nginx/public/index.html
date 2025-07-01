@@ -2,10 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Register With Wallet</title>
+    <title>Wallet Auth Test</title>
   </head>
   <body>
-    <h1>Register With Wallet</h1>
+    <h1>Wallet Authentication</h1>
 
     <label>
       Username:
@@ -14,51 +14,79 @@
     <br /><br />
 
     <button id="register">Register Wallet</button>
+    <button id="login">Login Wallet</button>
 
     <pre id="output"></pre>
 
     <script>
-      const API_BASE = "https://elsalmajori.games:8443"; // change if needed
+      const API_BASE = "https://elsalmajori.games:8443";
+
+      async function getChallenge(wallet) {
+        const res = await fetch(
+          `${API_BASE}/wallet/challenge?wallet=${wallet}`
+        );
+        if (!res.ok) throw new Error("Failed to get challenge");
+        return await res.json();
+      }
+
+      async function signMessage(message, wallet) {
+        return await window.ethereum.request({
+          method: "personal_sign",
+          params: [message, wallet],
+        });
+      }
 
       async function registerWithWallet() {
         const username = document.getElementById("username").value.trim();
         const output = document.getElementById("output");
         output.innerText = "";
 
-        if (!username) {
-          return alert("Enter a username.");
-        }
-
-        if (!window.ethereum) {
-          return alert("MetaMask not detected.");
-        }
+        if (!username) return alert("Enter a username.");
+        if (!window.ethereum) return alert("MetaMask not detected.");
 
         try {
           const [wallet] = await window.ethereum.request({
             method: "eth_requestAccounts",
           });
 
-          // Step 1: Get challenge with timestamp
-          const challengeRes = await fetch(
-            `${API_BASE}/wallet/challenge?wallet=${wallet}`
-          );
-          const { challenge, timestamp } = await challengeRes.json();
+          const { challenge, timestamp } = await getChallenge(wallet);
+          const signature = await signMessage(challenge, wallet);
 
-          // Step 2: Sign the challenge
-          const signature = await window.ethereum.request({
-            method: "personal_sign",
-            params: [challenge, wallet],
-          });
-
-          // Step 3: Register using the signed challenge
-          const registerRes = await fetch(`${API_BASE}/register/wallet`, {
+          const res = await fetch(`${API_BASE}/register/wallet`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ wallet, username, signature, timestamp }), // ✅ timestamp added
+            body: JSON.stringify({ wallet, username, signature, timestamp }),
           });
 
-          const result = await registerRes.json();
-          output.innerText = JSON.stringify(result, null, 2);
+          const data = await res.json();
+          output.innerText = JSON.stringify(data, null, 2);
+        } catch (err) {
+          output.innerText = `Error: ${err.message}`;
+        }
+      }
+
+      async function loginWithWallet() {
+        const output = document.getElementById("output");
+        output.innerText = "";
+
+        if (!window.ethereum) return alert("MetaMask not detected.");
+
+        try {
+          const [wallet] = await window.ethereum.request({
+            method: "eth_requestAccounts",
+          });
+
+          const { challenge, timestamp } = await getChallenge(wallet);
+          const signature = await signMessage(challenge, wallet);
+
+          const res = await fetch(`${API_BASE}/login/wallet`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ wallet, signature, timestamp }),
+          });
+
+          const data = await res.json();
+          output.innerText = JSON.stringify(data, null, 2);
         } catch (err) {
           output.innerText = `Error: ${err.message}`;
         }
@@ -67,6 +95,9 @@
       document
         .getElementById("register")
         .addEventListener("click", registerWithWallet);
+      document
+        .getElementById("login")
+        .addEventListener("click", loginWithWallet);
     </script>
   </body>
 </html>
