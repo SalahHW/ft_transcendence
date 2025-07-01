@@ -48,3 +48,16 @@ export const loginUser = async (request, reply) => {
       .send({ error: "Login failed", cause: error.message });
   }
 };
+
+export const logoutUser = async (request, reply) => {
+  reply
+    .clearCookie("token", {
+      httpOnly: true,
+      // secure: process.env.NODE_ENV === "production",
+      secure: false, // TODO: Update .env to set production mode
+      sameSite: "strict",
+      path: "/",
+    })
+    .code(200)
+    .send({ message: "Logout successful" });
+};
