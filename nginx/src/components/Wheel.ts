@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 16:41:12 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/01 01:00:34 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/01 17:45:48 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -63,6 +63,14 @@ export default class Wheel {
 					onClick: () => {
 						console.log("Register clicked");
 						this._router.navigate("/register");
+					}
+				},
+				{
+					label: "Register (Wallet)",
+					icon: "🦊",
+					onClick: () => {
+						console.log("Register with WalletConnect clicked");
+						this._router.navigate("/register-wallet");
 					}
 				},
 				{

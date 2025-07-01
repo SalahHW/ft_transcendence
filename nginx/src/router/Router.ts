@@ -2,14 +2,14 @@
 /*                                                                            */
 /*                                                        :::      ::::::::   */
 /*   Router.ts                                          :+:      :+:    :+:   */
-/*   Router.ts                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/26 20:40:51 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/23 15:31:20 by edelarbr         ###   ########.fr       */
+/*   Created: Invalid Date        by              +#+  #+#    #+#             */
+/*   Updated: 2025/07/01 17:45:41 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
 
 // TODO: Mettre cette classe ça au propre
 // TODO: (opt) Mettre des views pour les differents forms de APITestPage
@@ -19,6 +19,7 @@ import HomePage from "../views/homePage.js";
 import LoginPopup from "../components/LoginPopup.js";
 import RegisterPopup from "../components/RegisterPopup.js";
 import ProfileView from "../views/ProfileView.js";
+import WalletConnectRegisterPopup from "../components/WalletConnectRegisterPopup.js";
 import { handleSimpleMatch } from "../game/gameMode/1v1Handler.js";
 import { handleTournament } from "../game/gameMode/tournamentHandler.js";
 
@@ -78,6 +79,18 @@ export default class Router {
 			}
 		},
 		{
+			path: "/register-wallet",
+			handler: function() {
+				// Revenir à la page précédente dans l'historique
+				window.history.back();
+
+				// Afficher la popup WalletConnect register
+				if (!this.cache)
+					this.cache = new WalletConnectRegisterPopup();
+				this.cache.show();
+			}
+		},
+		{
 			path: "/profile",
 			handler: function() {
 				// Revenir à la page précédente dans l'historique
@@ -116,11 +129,11 @@ export default class Router {
 		const currentPath = this.getCurrentPath();
 		const isLeavingRoute = path !== currentPath;
 		const isPopstateNavigation = (window as any).popstateInProgress;
-		
+
 		if (isLeavingRoute && !isPopstateNavigation) {
 			this._cleanupCurrentRoute();
 		}
-		
+
 		var route = this._routes.find(route => route.path === path);
 		if (route?.handler) {
 			route.handler();
@@ -135,7 +148,7 @@ export default class Router {
 		if (!(window as any).routeCleanupInProgress) {
 			// Set flag to prevent double cleanup
 			(window as any).routeCleanupInProgress = true;
-			
+
 			// **CRITICAL**: Clean up current route's cached component if it has cleanup method
 			const currentRoute = this._routes.find(route => route.path === currentPath);
 			if (currentRoute?.cache?.cleanup) {
@@ -145,7 +158,7 @@ export default class Router {
 					console.error(`Error during ${currentPath} route cleanup:`, error);
 				}
 			}
-			
+
 			// **CRITICAL**: Special cleanup for game routes
 			if (currentPath === '/1v1' || currentPath === '/tournament') {
 				// Call cleanup if available globally
@@ -163,7 +176,7 @@ export default class Router {
 					(window as any).joinGameButtonSetup = false;
 				}
 			}
-			
+
 			// Clear the cleanup flag after a short delay
 			setTimeout(() => {
 				(window as any).routeCleanupInProgress = false;
@@ -180,9 +193,9 @@ export default class Router {
 		if ((window as any).redirectingToHome) {
 			return;
 		}
-		
+
 		(window as any).redirectingToHome = true;
-		
+
 		try {
 			window.history.replaceState({ path: '/' }, '', '/');
 			this._executeHandler('/');
@@ -202,9 +215,9 @@ export default class Router {
 		if ((window as any).navigationInProgress) {
 			return false;
 		}
-		
+
 		(window as any).navigationInProgress = true;
-		
+
 		try {
 			if (this._isValidRoute(path)) {
 				if (replaceState)
@@ -240,9 +253,9 @@ export default class Router {
 		if ((window as any).popstateInProgress) {
 			return;
 		}
-		
+
 		(window as any).popstateInProgress = true;
-		
+
 		try {
 			const path = this.getCurrentPath();
 
