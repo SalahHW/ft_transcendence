@@ -3,6 +3,23 @@
  */
 
 /**
+ * Helper function to create styled score HTML
+ * @param playerName - Player's name
+ * @param score - Player's score
+ * @param isPlayer1 - Whether this is player 1 (left side, cyan) or player 2 (right side, red)
+ */
+function createStyledScoreHTML(playerName: string, score: number | string, isPlayer1: boolean): string {
+    const nameColor = isPlayer1 ? 'text-cyan-400' : 'text-red-400';
+    const scoreColor = isPlayer1 ? 'text-cyan-300' : 'text-red-300';
+    
+    return `
+        <span class="${nameColor}">${playerName}</span>
+        <span class="text-white mx-3">:</span>
+        <span class="${scoreColor}">${score}</span>
+    `;
+}
+
+/**
  * Update player names display in "vs" format from current player's perspective
  * @param currentPlayerName - Current player's name (will be shown first)
  * @param opponentName - Opponent's name (will be shown second)
@@ -18,10 +35,10 @@ export function updatePlayerNamesVersus(currentPlayerName: string, opponentName:
         player2Element.textContent.match(/\d+$/)![0] : '0';
     
     if (player1Element) {
-        player1Element.textContent = `${currentPlayerName}: ${currentPlayer1Score}`;
+        player1Element.innerHTML = createStyledScoreHTML(currentPlayerName, currentPlayer1Score, true);
     }
     if (player2Element) {
-        player2Element.textContent = `${opponentName}: ${currentPlayer2Score}`;
+        player2Element.innerHTML = createStyledScoreHTML(opponentName, currentPlayer2Score, false);
     }
 }
 
@@ -42,11 +59,11 @@ export function updatePlayerNamesByPosition(leftPaddleName: string, rightPaddleN
     
     // Left paddle name goes to left side of UI (player1Score)
     if (player1Element) {
-        player1Element.textContent = `${leftPaddleName}: ${currentPlayer1Score}`;
+        player1Element.innerHTML = createStyledScoreHTML(leftPaddleName, currentPlayer1Score, true);
     }
     // Right paddle name goes to right side of UI (player2Score)
     if (player2Element) {
-        player2Element.textContent = `${rightPaddleName}: ${currentPlayer2Score}`;
+        player2Element.innerHTML = createStyledScoreHTML(rightPaddleName, currentPlayer2Score, false);
     }
 }
 
@@ -61,11 +78,11 @@ export function updatePlayerNames(player1Name: string, player2Name: string): voi
     
     if (player1Element) {
         const currentScore = player1Element.textContent?.split(':')[1]?.trim() || '0';
-        player1Element.textContent = `${player1Name}: ${currentScore}`;
+        player1Element.innerHTML = createStyledScoreHTML(player1Name, currentScore, true);
     }
     if (player2Element) {
         const currentScore = player2Element.textContent?.split(':')[1]?.trim() || '0';
-        player2Element.textContent = `${player2Name}: ${currentScore}`;
+        player2Element.innerHTML = createStyledScoreHTML(player2Name, currentScore, false);
     }
 }
 
@@ -82,11 +99,11 @@ export function updateScoresByPosition(leftPaddleScore: number, rightPaddleScore
     
     // Left paddle info goes to left side of UI (player1Score)
     if (player1Element) {
-        player1Element.textContent = `${leftPaddleName}: ${leftPaddleScore}`;
+        player1Element.innerHTML = createStyledScoreHTML(leftPaddleName, leftPaddleScore, true);
     }
     // Right paddle info goes to right side of UI (player2Score)
     if (player2Element) {
-        player2Element.textContent = `${rightPaddleName}: ${rightPaddleScore}`;
+        player2Element.innerHTML = createStyledScoreHTML(rightPaddleName, rightPaddleScore, false);
     }
 }
 
@@ -102,10 +119,10 @@ export function updateScoresUIVersus(currentPlayerScore: number, opponentScore: 
     const player2Element = document.getElementById('player2Score');
     
     if (player1Element) {
-        player1Element.textContent = `${currentPlayerName}: ${currentPlayerScore}`;
+        player1Element.innerHTML = createStyledScoreHTML(currentPlayerName, currentPlayerScore, true);
     }
     if (player2Element) {
-        player2Element.textContent = `${opponentName}: ${opponentScore}`;
+        player2Element.innerHTML = createStyledScoreHTML(opponentName, opponentScore, false);
     }
 }
 
@@ -121,10 +138,10 @@ export function updateScoresUI(player1Score: number, player2Score: number, playe
     const player2Element = document.getElementById('player2Score');
     
     if (player1Element) {
-        player1Element.textContent = `${player1Name}: ${player1Score}`;
+        player1Element.innerHTML = createStyledScoreHTML(player1Name, player1Score, true);
     }
     if (player2Element) {
-        player2Element.textContent = `${player2Name}: ${player2Score}`;
+        player2Element.innerHTML = createStyledScoreHTML(player2Name, player2Score, false);
     }
 }
 
