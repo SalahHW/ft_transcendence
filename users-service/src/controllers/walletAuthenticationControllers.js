@@ -91,18 +91,26 @@ export async function registerWithWallet(request, reply) {
 }
 
 export async function loginWithWallet(request, reply) {
-  const { wallet, signature } = request.body;
+  const { wallet, signature, timestamp } = request.body;
 
-  if (!wallet || !signature) {
-    return reply.code(400).send({ error: "Missing wallet or signature" });
+  if (!wallet || !signature || !timestamp) {
+    return reply.code(400).send({ error: "Missing fields" });
   }
+
+  const MAX_AGE_MS = 5 * 60 * 1000;
+  const now = Date.now();
+  const sentTime = new Date(timestamp).getTime();
+
+  if (isNaN(sentTime) || now - sentTime > MAX_AGE_MS) {
+    return reply.code(400).send({ error: "Challenge expired" });
+  }
+
+  const challenge = `${CHALLENGE_PREFIX}:\n${timestamp}`;
 
   const user = await userModels.findUserByWallet(wallet);
   if (!user) {
     return reply.code(404).send({ error: "Wallet not registered" });
   }
-
-  const challenge = `${CHALLENGE_PREFIX}`;
 
   try {
     const recoveredAddress = recoverPersonalSignature({
@@ -114,7 +122,11 @@ export async function loginWithWallet(request, reply) {
       return reply.code(401).send({ error: "Invalid signature" });
     }
 
-    const token = await signToken({ id: user.id, username: user.username });
+    const token = await signToken({
+      sub: user.id,
+      username: user.username,
+      aud: "users-service",
+    });
 
     reply.setCookie("token", token, {
       path: "/",
