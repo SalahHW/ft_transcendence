@@ -46,7 +46,6 @@ services:
     networks:
       - transcendence
     ports:
-      - "8080:8080"
       - "8081:8081"
 
   avatars:
