@@ -225,7 +225,7 @@ export class DisconnectionHandler extends BaseDisconnectHandler {
   }
 }
 
-// Export singleton instance
+// Export the handler class
 export const disconnectionHandler = new DisconnectionHandler();
 
 // Export utility functions for backward compatibility

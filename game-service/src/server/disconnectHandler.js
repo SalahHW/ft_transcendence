@@ -89,11 +89,7 @@ export const DisconnectReasons = {
   PLAYER_LEFT: 'player_left',
   DISCONNECT: 'disconnect',
   FORFEIT: 'forfeit',
-  TIMEOUT: 'timeout',
-  // Tournament specific reasons
-  SEMI_FINAL_DISCONNECT: 'semi_final_disconnect',
-  FINAL_DISCONNECT: 'final_disconnect',
-  WAITING_ROOM_DISCONNECT: 'waiting_room_disconnect'
+  TIMEOUT: 'timeout'
 };
 
 /**

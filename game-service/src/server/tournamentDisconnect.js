@@ -16,7 +16,8 @@ export class TournamentDisconnectionHandler extends BaseDisconnectHandler {
       ...DisconnectReasons,  // Include base reasons
       SEMI_FINAL_DISCONNECT: 'semi_final_disconnect',
       FINAL_DISCONNECT: 'final_disconnect',
-      WAITING_ROOM_DISCONNECT: 'waiting_room_disconnect'
+      WAITING_ROOM_DISCONNECT: 'waiting_room_disconnect',
+      PLAYER_LEFT: 'player_left'
     };
   }
 
@@ -101,7 +102,7 @@ export class TournamentDisconnectionHandler extends BaseDisconnectHandler {
     }
 
     const disconnectionReason = isExplicitLeave ? 
-        this.tournamentDisconnectionReasons.SEMI_FINAL_DISCONNECT : 
+        this.tournamentDisconnectionReasons.PLAYER_LEFT : 
         this.tournamentDisconnectionReasons.SEMI_FINAL_DISCONNECT;
     
     const actionText = isExplicitLeave ? 'left the semi-final' : 'disconnected during semi-final';
@@ -127,7 +128,6 @@ export class TournamentDisconnectionHandler extends BaseDisconnectHandler {
         tournamentStage: 'semifinal',
         gameStats: {
             ...baseMatchData.gameStats,
-            matchType: 'semi-final',  // Redundant for robustness
             totalRebounds: room.gameStats?.totalRebounds || 0
         },
         disconnectionReason,
@@ -385,26 +385,11 @@ export class TournamentDisconnectionHandler extends BaseDisconnectHandler {
    * Handle explicit leave game message for tournaments
    */
   handleTournamentLeaveGameMessage(playerId, roomId) {
-    console.log(`🏆 Player ${playerId} is explicitly leaving tournament game in room ${roomId}`);
-    
-    // Mark player as leaving to distinguish from unexpected disconnect
+    console.log(`🏆 Player ${playerId} is explicitly leaving the tournament in room ${roomId}`);
     playerManager.markPlayerLeaving(playerId);
-    
-    // Handle the tournament disconnection
     this.handleTournamentPlayerDisconnect(playerId, roomId);
   }
 }
 
-// Create singleton instance
-const tournamentDisconnectionHandler = new TournamentDisconnectionHandler();
-
-/**
- * Export function for handling tournament player disconnects
- */
-export function handleTournamentPlayerDisconnect(playerId, roomId) {
-  return tournamentDisconnectionHandler.handleTournamentPlayerDisconnect(playerId, roomId);
-}
-
-export function handleTournamentLeaveGameMessage(playerId, roomId) {
-  return tournamentDisconnectionHandler.handleTournamentLeaveGameMessage(playerId, roomId);
-}
+// Export the handler class
+export const tournamentDisconnectionHandler = new TournamentDisconnectionHandler();

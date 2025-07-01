@@ -3,7 +3,7 @@ import { gameEngine } from '../game/GameEngine.js';
 import { reportMatchResultsToAPI } from './api.js';
 import { LogUtils, TimeUtils } from '../utils/helpers.js';
 import { playerManager } from '../player/PlayerManager.js';
-import { handleTournamentPlayerDisconnect } from './tournamentDisconnect.js';
+import { tournamentDisconnectionHandler } from './tournamentDisconnect.js';
 
 /**
  * Server-side disconnection handling for 1v1 games
@@ -40,7 +40,7 @@ export class DisconnectionHandler {
 
     if (isTournamentRoom) {
       console.log(`🏆 Routing disconnect to tournament handler for player ${playerId} in room ${roomId}`);
-      return handleTournamentPlayerDisconnect(playerId, roomId);
+      return tournamentDisconnectionHandler.handleTournamentPlayerDisconnect(playerId, roomId);
     }
 
     // Handle as regular 1v1 game
