@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 16:41:12 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/24 16:46:12 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/01 01:00:34 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,7 +43,6 @@ export default class Wheel {
 			onClick: () => {
 				console.log("API Test page clicked");
 				this._router.navigate("/api-test");
-				this._router.navigate("/api-test");
 			},
 		},
 		{
@@ -52,7 +51,6 @@ export default class Wheel {
 			onClick: () => {
 				this._router.navigate("/profile");
 			},
-			condition: () => this._userIsLoggedIn
 		},
 		{
 			label: "Login",
@@ -60,19 +58,19 @@ export default class Wheel {
 			condition: () => !this._userIsLoggedIn,
 			subMenu: [
 				{
-					label: "Sign In",
-					icon: "→",
-					onClick: () => {
-						console.log("Sign In clicked");
-						this._router.navigate("/login");
-					}
-				},
-				{
 					label: "Register",
 					icon: "+",
 					onClick: () => {
 						console.log("Register clicked");
 						this._router.navigate("/register");
+					}
+				},
+				{
+					label: "Sign In",
+					icon: "→",
+					onClick: () => {
+						console.log("Sign In clicked");
+						this._router.navigate("/login");
 					}
 				}
 			]
@@ -104,28 +102,34 @@ export default class Wheel {
 		this._setupMouseEvents();
 
 		this.render();
-	}
+    }
 
-	private _setupKeyboardEvents(): void {
-		document.addEventListener("keydown", async (event: KeyboardEvent) => {
-			if (event.key === "Shift") {
-				event.preventDefault();
-				await this.showWheel();
-			}
-		});
+    private _setupKeyboardEvents(): void {
+        document.addEventListener("keydown", async (event: KeyboardEvent) => {
+            const target = event.target as HTMLElement;
+            if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+                return;
+            }
 
-		document.addEventListener("keyup", (event: KeyboardEvent) => {
-			if (event.key === "Shift") {
-				this.hideWheel();
-			}
-		});
-	}
+            if (event.key === 'Shift') {
+                if (this._isVisible) return;
+                event.preventDefault();
+                await this.showWheel();
+            }
+        });
 
-	private _setupMouseEvents(): void {
-		this._element.addEventListener("click", (event: MouseEvent) => {
+        document.addEventListener("keyup", (event: KeyboardEvent) => {
+            if (event.key === 'Shift') {
+                this.hideWheel();
+            }
+        });
+    }
+
+    private _setupMouseEvents(): void {
+        this._element.addEventListener("click", (event: MouseEvent) => {
 			event.stopPropagation();
 		});
-	}
+    }
 
 	private async _selectOption(): Promise<void> {
 		const selectedOption = this._wheelOptions[this._selectedIndex];
