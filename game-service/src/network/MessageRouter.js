@@ -21,7 +21,6 @@ export class MessageRouter {
    * Setup message type handlers
    */
   _setupMessageHandlers() {
-    this.messageHandlers.set(MESSAGE_TYPES.ANIMATION_COMPLETE, this._handleAnimationComplete.bind(this));
     this.messageHandlers.set(MESSAGE_TYPES.SET_USERNAME, this._handleSetUsername.bind(this));
     this.messageHandlers.set(MESSAGE_TYPES.KEY_DOWN, this._handleKeyDown.bind(this));
     this.messageHandlers.set(MESSAGE_TYPES.KEY_UP, this._handleKeyUp.bind(this));
@@ -74,31 +73,6 @@ export class MessageRouter {
       handler(msg, playerId, roomId, ws, disconnectHandler);
     } else {
       console.warn(`Unknown message type: ${msg.type}`);
-    }
-  }
-
-  /**
-   * Handle animation completion
-   */
-  _handleAnimationComplete(msg, playerId, roomId) {
-    const statusSize = gameStateManager.addPlayerToAnimationStatus(roomId, playerId);
-    const room = gameStateManager.getRoom(roomId);
-    
-    if (statusSize === 2 && room?.ready) {
-      console.log(`Both players completed animations in room ${roomId}, scheduling ballUpdate after splash screen delay`);
-      
-      // 🎬 Add delay to ensure splash screen completes on both clients
-      // The splash screen shows for 3000ms, so we add a small buffer
-      setTimeout(() => {
-        // Double-check that room still exists and is valid
-        const roomCheck = gameStateManager.getRoom(roomId);
-        if (roomCheck && roomCheck.ready && !roomCheck.ballUpdateSent) {
-          console.log(`Sending ballUpdate for room ${roomId} after splash screen delay`);
-          gameEngine.sendBallUpdateForced(roomId);
-        } else {
-          console.log(`Skipping ballUpdate for room ${roomId} - room state changed or ball already sent`);
-        }
-      }, 3500); // 3000ms splash screen + 500ms buffer
     }
   }
 
@@ -180,6 +154,16 @@ export class MessageRouter {
   _handleBallRespawn(msg, playerId, roomId) {
     const room = gameStateManager.getRoom(roomId);
     if (!room) return;
+
+    // For initial spawn, wait for both players to be ready
+    if (msg.isInitial) {
+      const statusSize = gameStateManager.addPlayerToAnimationStatus(roomId, playerId);
+      if (statusSize < 2) {
+        console.log(`Player ${playerId} is ready for ball spawn. Waiting for opponent.`);
+        return; // Wait for the other player
+      }
+      console.log(`Both players are ready in room ${roomId}. Spawning initial ball.`);
+    }
 
     if (!room.ball) {
       room.ball = new Ball(

@@ -165,6 +165,7 @@ class Ball {
             return;
         }
 
+        const previousRebounds = this.rebounds;
         this.position = new BABYLON.Vector3(
             state.position.x,
             state.position.y,
@@ -183,7 +184,6 @@ class Ball {
             state.previousVelocity.z
         );
 
-        const previousRebounds = this.rebounds;
         this.rebounds = state.rebounds || 0;
         this.isRespawning = state.isRespawning || false;
         this.respawnTime = state.respawnTime || 0;
@@ -359,8 +359,10 @@ class Ball {
     }
 
     getSpeedTier(rebounds: number): number {
-        if (rebounds < BALL_CONSTANTS.SPEED_TIERS.TIER_1_THRESHOLD) return 0;
-        else return 1;
+        if (rebounds >= BALL_CONSTANTS.SPEED_TIERS.TIER_1_THRESHOLD) {
+            return 1;
+        }
+        return 0;
     }
 }
 

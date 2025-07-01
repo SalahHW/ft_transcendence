@@ -30,7 +30,11 @@ class gameMap {
     }
 
     createMap(): void {
-        this.canvas = document.getElementById('renderCanvas') as HTMLCanvasElement;
+        const canvasElement = document.getElementById('renderCanvas');
+        if (!(canvasElement instanceof HTMLCanvasElement)) {
+            throw new Error('renderCanvas element not found or is not a canvas');
+        }
+        this.canvas = canvasElement;
         this.setUpEngine();
         this.setUpScene();
         this.setUpPov();
@@ -149,7 +153,7 @@ class gameMap {
         this.playgroundMaterial.diffuseTexture = new BABYLON.Texture("./textures/floor/pong-table.jpg", this.scene);
         
         // Ensure proper texture scaling and orientation
-        if (this.playgroundMaterial.diffuseTexture) {
+        if (this.playgroundMaterial.diffuseTexture instanceof BABYLON.Texture) {
             this.playgroundMaterial.diffuseTexture.uOffset = 0;
             this.playgroundMaterial.diffuseTexture.vOffset = 0;
             this.playgroundMaterial.diffuseTexture.uScale = 1;
@@ -281,8 +285,6 @@ class gameMap {
             }
         });
     }
-
-
 
     get getEngine(): BABYLON.Engine | undefined {
         return this.engine;

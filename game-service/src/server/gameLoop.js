@@ -15,6 +15,9 @@ export function startGameLoop() {
   let frameCount = 0;
   let lastFrameTime = Date.now();
 
+  // Track previous states for delta compression
+  const previousStates = new Map();
+
   const { gameRooms } = gameStateManager.getGameState();
 
   const update = () => {
@@ -198,10 +201,12 @@ export function startGameLoop() {
         }
 
         if (now - lastSync >= SYNC_INTERVAL) {
+          // Create current state objects
           const playerPositions = {};
           room.players.forEach(player => {
             playerPositions[player.id] = player.positionZ;
           });
+
           const ballState = room.ball ? {
             position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
             velocity: { x: room.ball.velocity.x, y: room.ball.velocity.y, z: room.ball.velocity.z },
@@ -214,13 +219,89 @@ export function startGameLoop() {
             currentGlowColor: { r: room.ball.currentGlowColor.r, g: room.ball.currentGlowColor.g, b: room.ball.currentGlowColor.b },
             shouldGlow: room.ball.shouldGlow
           } : null;
+
+          // Get previous state or initialize
+          const prevState = previousStates.get(roomId) || { playerPositions: {}, ballState: null };
+          
+          // Calculate delta for player positions
+          const changedPlayerPositions = {};
+          let hasPlayerChanges = false;
+          
+          Object.entries(playerPositions).forEach(([playerId, position]) => {
+            const prevPosition = prevState.playerPositions[playerId];
+            if (prevPosition === undefined || Math.abs(position - prevPosition) >= 0.01) {
+              changedPlayerPositions[playerId] = position;
+              hasPlayerChanges = true;
+            }
+          });
+          
+          // Check if ball state has meaningful changes
+          let hasBallChanges = false;
+          let deltaballState = null;
+          
+          if (ballState && prevState.ballState) {
+            // Check position changes (most important for visual smoothness)
+            const posChanged = 
+              Math.abs(ballState.position.x - prevState.ballState.position.x) >= 0.01 ||
+              Math.abs(ballState.position.y - prevState.ballState.position.y) >= 0.01 ||
+              Math.abs(ballState.position.z - prevState.ballState.position.z) >= 0.01;
+              
+            // Check velocity changes (important for prediction)
+            const velChanged = 
+              Math.abs(ballState.velocity.x - prevState.ballState.velocity.x) >= 0.01 ||
+              Math.abs(ballState.velocity.y - prevState.ballState.velocity.y) >= 0.01 ||
+              Math.abs(ballState.velocity.z - prevState.ballState.velocity.z) >= 0.01;
+              
+            // Check other critical state changes
+            const stateChanged = 
+              ballState.rebounds !== prevState.ballState.rebounds ||
+              ballState.isRespawning !== prevState.ballState.isRespawning ||
+              ballState.speed !== prevState.ballState.speed ||
+              ballState.shouldGlow !== prevState.ballState.shouldGlow;
+              
+            // Check glow color changes (important for visual effects)
+            const glowChanged = 
+              ballState.shouldGlow && (
+                Math.abs(ballState.currentGlowColor.r - prevState.ballState.currentGlowColor.r) >= 0.01 ||
+                Math.abs(ballState.currentGlowColor.g - prevState.ballState.currentGlowColor.g) >= 0.01 ||
+                Math.abs(ballState.currentGlowColor.b - prevState.ballState.currentGlowColor.b) >= 0.01
+              );
+              
+            hasBallChanges = posChanged || velChanged || stateChanged || glowChanged;
+            
+            // During respawn, always send updates to ensure smooth animation
+            if (ballState.isRespawning) {
+              hasBallChanges = true;
+            }
+            
+            if (hasBallChanges) {
+              deltaballState = ballState;
+            }
+          } else if (ballState !== prevState.ballState) {
+            // One is null and the other isn't, or first update
+            hasBallChanges = true;
+            deltaballState = ballState;
+          }
+          
+          // Only send sync if we have changes to report
+          if (hasPlayerChanges || hasBallChanges) {
           gameEngine.broadcastToRoom(roomId, {
             type: 'sync',
-            playerPositions,
-            ballState,
+              playerPositions: changedPlayerPositions,
+              ballState: deltaballState,
             serverTime: now,
-            roomId: roomId
-          });
+              roomId: roomId,
+              // Flag to indicate this is a delta update
+              isDelta: true
+            });
+            
+            // Update previous state
+            previousStates.set(roomId, {
+              playerPositions: {...playerPositions},
+              ballState: ballState ? {...ballState} : null
+            });
+          }
+          
           lastSync = now;
         }
       });

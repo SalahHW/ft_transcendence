@@ -248,17 +248,25 @@ export function initializeGame(playerId: string): void {
     // Add sync handler to ensure positions are correct
     clientConnection.onSync((msg) => {
         if (!player1 || !player2) return;
+        
+        // Handle player position updates
         if (msg.playerPositions) {
+            // If this is a delta update, only update the changed positions
             Object.entries(msg.playerPositions).forEach(([playerId, positionZ]) => {
                 const syncPlayer = playerId === player1!.getPlayerId() ? player1 : player2;
-                if (syncPlayer) {
-                    // Always sync paddle positions from server (important for HTTP commands)
+                if (syncPlayer && syncPlayer.getPlayerId() !== localPlayerId) {
+                    // Always sync non-local paddle positions from server
                     syncPlayer.setZ(positionZ);
                 }
             });
         }
+        
+        // Handle ball state updates
         if (msg.ballState && ball) {
             ball.setState(msg.ballState);
+            
+            // Update last sync time for client-side prediction
+            lastSyncTime = typeof msg.serverTime === 'number' ? msg.serverTime : Date.now();
         }
     });
 
@@ -782,10 +790,10 @@ export function initializeGame(playerId: string): void {
                 ball.createBall(map.getScene!);
                 if (ball.ballBody) {
                     ball.ballBody.metadata = { roomId };
-                    ball.ballBody.position = new BABYLON.Vector3(0, 0, 0);
+                    ball.ballBody.position = new BABYLON.Vector3(0, -2, 0);
                     ball.ballBody.isVisible = true;
                 }
-                ball.position = new BABYLON.Vector3(0, 0, 0);
+                ball.position = new BABYLON.Vector3(0, -2, 0);
                 ball.isRespawning = true;
                 ball.respawnTime = 0;
                 ball.hasValidPosition = true;
@@ -938,24 +946,19 @@ export function initializeGame(playerId: string): void {
                 }
                 if (ball?.ballBody) {
                     ball.ballBody.isVisible = true;
-                    // ⭐ CRITICAL FIX: Ensure ball is positioned for visibility
-                    if (ball.ballBody.position.y < -1) {
-                        ball.ballBody.position.y = 0;
-                        ball.position.y = 0;
-                    }
                 }
 
                 // 🎮 EXPERIMENTAL: Switch to FPS perspective after animation completes
-                console.log('🎮 EXPERIMENT: Switching to FPS perspective for local player');
+                console.log('🎮 EXPERIMENT: Switching to FPS after animation');
                 cameraManager.switchToFPSAfterAnimation();
                 
-                // Notify server that animation is complete
+                // Notify server that animation is complete and request ball
                 if (clientConnection) {
                     clientConnection.send({
-                        type: 'animationComplete',
-                        playerId: localPlayerId
+                        type: 'requestBallRespawn',
+                        isInitial: true
                     });
-                    console.log('Sent animationComplete to server');
+                    console.log('Sent initial ball respawn request to server after animation');
                 }
                 
                 setupGameLoop();
@@ -971,23 +974,17 @@ export function initializeGame(playerId: string): void {
                 }
                 if (ball?.ballBody) {
                     ball.ballBody.isVisible = true;
-                    // ⭐ CRITICAL FIX: Ensure ball is positioned for visibility even on error
-                    if (ball.ballBody.position.y < -1) {
-                        ball.ballBody.position.y = 0;
-                        ball.position.y = 0;
-                    }
                 }
                 
-                // Send animation complete anyway to prevent server hanging
+                // Send request anyway to prevent server from hanging
                 if (clientConnection) {
                     clientConnection.send({
-                        type: 'animationComplete',
-                        playerId: localPlayerId
+                        type: 'requestBallRespawn',
+                        isInitial: true
                     });
-                    console.log('Sent animationComplete to server (after error)');
+                    console.log('Sent initial ball respawn request to server (after error)');
                 }
-                // Start game loop anyway if animation fails
-                setupGameLoop();
+                setupGameLoop(); // Start anyway
             }
         }
     });

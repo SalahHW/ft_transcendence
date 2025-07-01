@@ -31,6 +31,8 @@ export class GameClient {
     private isDownPressed: boolean = false;
     private isGameOver: boolean = false;
     private isGameLoopRunning: boolean = false;
+    private isIntroAnimationRunning: boolean = false;
+    private isGameStarted: boolean = false;
     constructor() {
         // Initialize the game client
         console.log('Game client constructor started');
@@ -46,11 +48,12 @@ export class GameClient {
         
         // Check if canvas exists
         console.log('Checking for canvas element...');
-        const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement;
-        if (!canvas) {
+        const canvasElement = document.getElementById('renderCanvas');
+        if (!canvasElement || !(canvasElement instanceof HTMLCanvasElement)) {
             console.error('Canvas element not found in DOM');
             throw new Error('Game canvas not found! Make sure the game page is rendered first.');
         }
+        const canvas = canvasElement;
         console.log('Canvas found successfully:', canvas);
 
         // FIXED: Use current domain instead of localhost for WebSocket connection
@@ -185,37 +188,40 @@ export class GameClient {
         this.updateScores(0, 0);
         console.log('✅ Score display reset to 0-0 for new game');
 
-        // Create paddles and ensure they're visible
-        if (this.map.getScene) {
-            this.player1.createPaddle(this.map.getScene, 19.5, 2, 20);
-            this.player2.createPaddle(this.map.getScene, -19.5, 2, 20);
-            
-            // ⭐ TOURNAMENT FIX: Reset paddle positions and ensure visibility
-            TournamentClientHandler.resetTournamentPaddlePositions(this.player1, this.player2);
-            TournamentClientHandler.ensureTournamentElementsVisible({ 
-                ball: null, 
-                player1: this.player1, 
-                player2: this.player2 
-            });
-        }
-
-        // Always recreate ball for clean start
-        this.ball = new Ball(this.player1, this.player2);
-        if (this.map.getScene) {
-            this.ball.createBall(this.map.getScene);
+        // Create fresh ball (important for tournament final matches)
+        if (!this.ball) {
+            this.ball = new Ball(this.player1, this.player2);
+            this.ball.createBall(this.map.getScene!);
             if (this.ball.ballBody) {
                 this.ball.ballBody.metadata = { roomId: this.roomId };
-                this.ball.ballBody.isVisible = true;
+                this.ball.ballBody.position.set(0, -2, 0);
+                this.ball.ballBody.isVisible = true; 
             }
-            console.log('✅ GameClient: Ball and paddles created and made visible for new game');
+            this.ball.position.set(0, -2, 0);
+            this.ball.isRespawning = true;
+            this.ball.hasValidPosition = true;
         }
 
-        this.updateGameStatus('Game starting...');
+        // ⭐ TOURNAMENT FIX: Ensure all game elements are visible for new game
+        TournamentClientHandler.ensureTournamentElementsVisible({
+            ball: null,
+            player1: this.player1,
+            player2: this.player2
+        });
+        
+        console.log('✅ GameClient: All tournament game elements configured');
 
         // ⭐ TOURNAMENT FIX: Launch match animation and start fresh game loop
         try {
             if (this.map) {
+                // Ensure ball is not visible during the animation
+                if (this.ball?.ballBody) {
+                    this.ball.ballBody.isVisible = false;
+                }
+
+                this.isIntroAnimationRunning = true;
                 await this.map.launchMatchAnimation();
+                this.isIntroAnimationRunning = false;
                 
                 // Notify server that animation is complete
                 if (this.clientConnection) {
@@ -229,7 +235,7 @@ export class GameClient {
             
             // ⭐ TOURNAMENT FIX: Ensure all game elements are visible and ready
             TournamentClientHandler.ensureTournamentElementsVisible({
-                ball: this.ball,
+                ball: null,
                 player1: this.player1,
                 player2: this.player2
             });
@@ -255,22 +261,45 @@ export class GameClient {
         
         const movingPlayer = msg.playerId === this.player1.getPlayerId() ? this.player1 : this.player2;
         
-        if (movingPlayer && movingPlayer.getPlayerId() !== this.localPlayerId) {
+        // Only apply if the paddle belongs to the other player to avoid jitter
+        if (movingPlayer.getPlayerId() !== this.localPlayerId) {
             movingPlayer.setZ(msg.positionZ || 0);
         }
     }
 
     private handleBallUpdate(msg: any): void {
-        if (!this.ball) return;
+        if (!this.ball || !msg.ballState) {
+            console.warn('Ball not initialized or no ball state in message');
+            return;
+        }
+
+        const ballState = msg.ballState;
         
-        if (msg.ballState?.isRespawning || msg.isInitialSpawn || msg.isScoreRespawn) {
-            if (this.ball.ballBody) {
+        // Ensure ball is not visible if it's supposed to be "out of bounds"
+        if (this.ball.ballBody) {
+            if (ballState.position.y < -1 && !ballState.isRespawning) {
+                this.ball.ballBody.isVisible = false;
+            } else {
                 this.ball.ballBody.isVisible = true;
             }
         }
-        
-        if (msg.ballState) {
-            this.ball.setState(msg.ballState);
+
+        this.ball.setState(ballState);
+
+        // For initial spawn, ensure ball is visible and starts its own animation
+        if (msg.isInitialSpawn) {
+            console.log('Received initial ball spawn from server:', ballState);
+            this.isGameStarted = true; // OFFICIALLY START THE GAME
+            if (this.ball.ballBody) {
+                this.ball.ballBody.isVisible = true;
+                this.ball.ballBody.position.copyFrom(ballState.position);
+            }
+        } else if (msg.isScoreRespawn) {
+            console.log('Received score respawn from server:', ballState);
+            if (this.ball.ballBody) {
+                this.ball.ballBody.isVisible = true;
+                this.ball.ballBody.position.copyFrom(ballState.position);
+            }
         }
     }
 
@@ -308,6 +337,8 @@ export class GameClient {
 
     private handleGameEnd(gameEndData: any): void {
         this.isGameOver = true;
+        this.isGameLoopRunning = false;
+        this.isGameStarted = false; // Reset for next game
         
         console.log('Game Over!', gameEndData);
         

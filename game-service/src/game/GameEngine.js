@@ -187,8 +187,10 @@ export class GameEngine {
     // Initialize animation status
     this.stateManager.initializeAnimationStatus(roomId);
     
-    // Retry ball update with shorter delays
-    this._attemptBallUpdate(roomId);
+    // ⭐ ANIMATION FIX: Do NOT send the ball update here.
+    // The ball update will be triggered by MessageRouter._handleAnimationComplete
+    // after both clients have confirmed their intro animations are done.
+    console.log(`Game started for room ${roomId}. Waiting for clients to complete animations.`);
   }
 
   _notifyWaitingStatus(room) {

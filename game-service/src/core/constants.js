@@ -3,7 +3,7 @@ export const GAME_CONFIG = {
   // Performance Settings
   FPS: 240,                    // Server game loop FPS
   BROADCAST_FPS: 60,           // Network broadcast FPS
-  SYNC_INTERVAL: 5,            // Milliseconds between sync messages
+  SYNC_INTERVAL: 16,           // Milliseconds between sync messages (60Hz)
   
   // Player Settings
   PADDLE_SPEED: 20,            // Units per second
