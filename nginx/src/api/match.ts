@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   matche.ts                                          :+:      :+:    :+:   */
+/*   match.ts                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:41:07 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/26 20:41:10 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/01 17:51:50 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,6 +32,9 @@ export interface Match {
  * Match service API.
  */
 export default class MatchServiceAPI {
+	/*
+		TODO : passer sur elsalmajori.games:8443 (comme les autres API)
+	*/
 	private _baseUrl: string = "http://localhost:3000/api/matches";
 
 	/**
