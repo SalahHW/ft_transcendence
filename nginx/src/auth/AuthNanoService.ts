@@ -59,17 +59,9 @@ export default class AuthNanoService {
   public async register(
     username: string,
     password: string,
-    email: string,
-    authenticationMethod: string,
-    wallet: string
+    email: string
   ): Promise<User> {
-    await this._usersApi.register(
-      username,
-      password,
-      email,
-      authenticationMethod,
-      wallet
-    );
+    await this._usersApi.register(username, password, email);
     // After successful registration, log the user in.
     return this.login(username, password);
   }

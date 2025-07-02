@@ -227,9 +227,7 @@ export default class UsersApi {
   async register(
     username: string,
     email: string,
-    password: string,
-    authenticationMethod: string,
-    wallet: string
+    password: string
   ): Promise<User> {
     const response = await fetch(`${this._host}${this._registerPath}`, {
       method: "POST",
@@ -240,8 +238,6 @@ export default class UsersApi {
         username,
         email,
         password,
-        authenticationMethod,
-        wallet,
       }),
     });
     const responseData = await response.json();
