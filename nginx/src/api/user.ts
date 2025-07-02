@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:41:03 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/23 15:11:16 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/01 18:42:05 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -207,13 +207,10 @@ export default class UsersApi {
   async logout(): Promise<void> {
     const response = await fetch(`${this._host}${this._logoutPath}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
     });
-    if (response.status === 200) return;
+    const responseData = await response.json();
+    if (response.status === 200) return responseData;
     else {
-      const responseData = await response.json();
       throw new Error(
         `failed to logout:\n${JSON.stringify(responseData, null, 2)}`
       );
