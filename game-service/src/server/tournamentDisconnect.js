@@ -186,6 +186,19 @@ export class TournamentDisconnectionHandler extends BaseDisconnectHandler {
     
     // Schedule room cleanup
     BaseDisconnectUtils.scheduleRoomCleanup(roomId, gameStateManager, 5000);
+    
+    // ⭐ LONE PLAYER CHECK: Check if remaining player is now alone in tournament AFTER cleanup
+    const tournamentId = room.metadata?.tournamentId;
+    if (tournamentId) {
+      // Wait for room cleanup to complete before checking
+      setTimeout(() => {
+        const lonePlayer = tournamentManager._checkForLonePlayerInTournament(tournamentId);
+        if (lonePlayer) {
+          console.log('🏆 🏆 LONE PLAYER SCENARIO DETECTED after semi-final disconnect and cleanup - awarding automatic tournament victory!');
+          tournamentManager._awardAutomaticTournamentVictory(lonePlayer, tournamentId);
+        }
+      }, 6000); // Wait 6 seconds to ensure room cleanup is complete
+    }
   }
 
   /**
@@ -248,6 +261,19 @@ export class TournamentDisconnectionHandler extends BaseDisconnectHandler {
     
     // Schedule room cleanup
     BaseDisconnectUtils.scheduleRoomCleanup(roomId, gameStateManager, 5000);
+    
+    // ⭐ LONE PLAYER CHECK: Check if remaining player is now alone in tournament AFTER cleanup
+    const tournamentId = room.metadata?.tournamentId;
+    if (tournamentId) {
+      // Wait for room cleanup to complete before checking
+      setTimeout(() => {
+        const lonePlayer = tournamentManager._checkForLonePlayerInTournament(tournamentId);
+        if (lonePlayer) {
+          console.log('🏆 🏆 LONE PLAYER SCENARIO DETECTED after final disconnect and cleanup - awarding automatic tournament victory!');
+          tournamentManager._awardAutomaticTournamentVictory(lonePlayer, tournamentId);
+        }
+      }, 6000); // Wait 6 seconds to ensure room cleanup is complete
+    }
   }
 
   /**

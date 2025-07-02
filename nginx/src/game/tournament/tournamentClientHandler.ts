@@ -228,6 +228,51 @@ export class TournamentClientHandler {
     }
 
     /**
+     * Handle automatic tournament victory when player is alone in tournament
+     * This happens when all other players disconnect, leaving only one player
+     */
+    static async handleAutomaticTournamentVictory(
+        gameEndData: any,
+        localPlayerId: string | null
+    ): Promise<void> {
+        console.log('🏆 🏆 Handling automatic tournament victory!');
+        
+        try {
+            // Show 1st place splash screen for automatic victory
+            await showFinalSplashScreen(1, 'All Opponents Disconnected', '11-0', 5000);
+            
+            // ⭐ CLEANUP BEFORE NAVIGATION: Ensure clean state before leaving game
+            if ((window as any).leaveGame && typeof (window as any).leaveGame === 'function') {
+                try {
+                    (window as any).leaveGame();
+                } catch (cleanupError) {
+                    console.error('🏆 ⚠️ Error during game cleanup:', cleanupError);
+                }
+            }
+            
+            // Clean up WebSocket connection
+            if ((window as any).clientConnection?.socket) {
+                (window as any).clientConnection.socket.close();
+            }
+            
+            // Navigate back to home
+            const router = Router.getInstance();
+            const navigationSuccess = router.navigate('/', true);
+            
+            if (navigationSuccess) {
+                console.log('🏆 ✅ Successfully navigated to main page after automatic tournament victory');
+            } else {
+                console.error('🏆 ❌ Failed to navigate to main page - attempting fallback');
+                window.location.href = '/';
+            }
+        } catch (error) {
+            console.error('🏆 Error handling automatic tournament victory:', error);
+            // Ensure navigation even on error
+            window.location.href = '/';
+        }
+    }
+
+    /**
      * Handle direct final placement from semi-finals
      * This happens when one semi-final becomes empty and the other completes normally
      */

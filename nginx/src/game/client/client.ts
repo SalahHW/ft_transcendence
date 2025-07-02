@@ -375,6 +375,23 @@ export function initializeGame(playerId: string): void {
             }
             return;
         }
+
+        // 🏆 🏆 NEW: Check for automatic tournament victory (when player is alone in tournament)
+        if (gameEndData.tournamentAdvancement?.result === 'tournament_winner' ||
+            gameEndData.tournamentAdvancement?.stage === 'automatic_victory') {
+            console.log('🏆 🏆 Handling automatic tournament victory!');
+            
+            try {
+                await TournamentClientHandler.handleAutomaticTournamentVictory(
+                    gameEndData,
+                    localPlayerId
+                );
+            } catch (error) {
+                console.error('🏆 ERROR: Error showing automatic tournament victory splash:', error);
+                cleanup();
+            }
+            return;
+        }
         
         // ⭐ ENHANCED FINAL DETECTION: Check multiple indicators for finals
         const isFinal = gameEndData.matchType === 'final' || 

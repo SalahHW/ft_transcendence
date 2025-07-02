@@ -1,5 +1,7 @@
 import { roomManager } from './RoomManager.js';
 import { gameEngine } from '../game/GameEngine.js';
+import { LogUtils } from '../utils/helpers.js';
+import { BaseDisconnectUtils } from '../server/disconnectHandler.js';
 
 /**
  * Handles tournament-specific room management and matchmaking
@@ -440,7 +442,7 @@ export class TournamentManager {
     
     console.log(`🏆 Semi-final ${semiFinalRoomId} completed: Winner ${winner.username} → ${finalRoomAId}, Loser ${loser.username} → ${isForfeitVictory ? 'FORFEIT (already disconnected)' : finalRoomBId}`);
 
-         // ⭐ ENHANCED COMPLETION CHECK: Check if this was the last semi-final to complete
+    // ⭐ ENHANCED COMPLETION CHECK: Check if this was the last semi-final to complete
      // and handle incomplete final rooms due to forfeits
      console.log(`🏆 Checking if both semi-finals completed for tournament ${tournamentId}...`);
      const bothSemiFinalsCompleted = this._areBothSemiFinalsCompleted(tournamentId);
@@ -456,6 +458,14 @@ export class TournamentManager {
        console.log(`🏆 Current final room states: ${finalRoomAId} (${finalRoomA.players.length}/2), ${finalRoomBId} (${finalRoomB.players.length}/2)`);
        console.log(`🏆 Losers final forfeit flag: ${finalRoomB.metadata?.hasForfeitMissingPlayer}`);
        // Don't start final games yet - wait for the second semi-final to complete
+     }
+     
+     // ⭐ LONE PLAYER CHECK: Check if this player is now alone in the tournament AFTER all progression logic
+     const lonePlayer = this._checkForLonePlayerInTournament(tournamentId);
+     if (lonePlayer) {
+       console.log('🏆 🏆 LONE PLAYER SCENARIO DETECTED - awarding automatic tournament victory!');
+       this._awardAutomaticTournamentVictory(lonePlayer, tournamentId);
+       return;
      }
   }
 
@@ -895,6 +905,14 @@ export class TournamentManager {
     console.log(`🏆 Winners Final (${finalRoomA.id}): ${finalRoomA.players.length}/2 players`);
     console.log(`🏆 Losers Final (${finalRoomB.id}): ${finalRoomB.players.length}/2 players`);
     
+    // ⭐ LONE PLAYER CHECK: Check if any player is now alone in the tournament
+    const lonePlayer = this._checkForLonePlayerInTournament(tournamentId);
+    if (lonePlayer) {
+      console.log('🏆 🏆 LONE PLAYER SCENARIO DETECTED in final rooms - awarding automatic tournament victory!');
+      this._awardAutomaticTournamentVictory(lonePlayer, tournamentId);
+      return;
+    }
+    
     const winnersComplete = finalRoomA.players.length === 2;
     const losersComplete = finalRoomB.players.length === 2;
     
@@ -980,6 +998,14 @@ export class TournamentManager {
    * Start both final games with proper timing coordination
    */
   _startBothFinalsWithTiming(finalRoomA, finalRoomB, tournamentId) {
+    // ⭐ LONE PLAYER CHECK: Check if player is alone before starting both finals
+    const lonePlayer = this._checkForLonePlayerInTournament(tournamentId);
+    if (lonePlayer) {
+      console.log('🏆 🏆 LONE PLAYER SCENARIO DETECTED before starting both finals - awarding automatic tournament victory!');
+      this._awardAutomaticTournamentVictory(lonePlayer, tournamentId);
+      return;
+    }
+    
     // Update players in both final rooms with opponent information
     this._updateFinalRoomPlayersWithOpponent(finalRoomA);
     this._updateFinalRoomPlayersWithOpponent(finalRoomB);
@@ -1021,6 +1047,14 @@ export class TournamentManager {
    * Start winners final only (when losers final was forfeited)
    */
   _startWinnersFinalWithTiming(finalRoomA, tournamentId) {
+    // ⭐ LONE PLAYER CHECK: Check if player is alone before starting winners final
+    const lonePlayer = this._checkForLonePlayerInTournament(tournamentId);
+    if (lonePlayer) {
+      console.log('🏆 🏆 LONE PLAYER SCENARIO DETECTED before starting winners final - awarding automatic tournament victory!');
+      this._awardAutomaticTournamentVictory(lonePlayer, tournamentId);
+      return;
+    }
+    
     this._updateFinalRoomPlayersWithOpponent(finalRoomA);
     finalRoomA.players.forEach(p => { p.readyToPlay = true; });
     
@@ -1074,6 +1108,139 @@ export class TournamentManager {
       reason: reason
     };
     console.log(`🏆 Marked losers final room ${losersFinalRoom.id} with forfeit player: ${forfeitPlayer.username} (4th place)`);
+  }
+
+  /**
+   * Check if a player is alone in the entire tournament and award automatic victory
+   * @param {string} tournamentId - The tournament ID to check
+   * @returns {Object|null} - Player object if alone, null otherwise
+   */
+  _checkForLonePlayerInTournament(tournamentId) {
+    console.log(`🏆 Checking for lone player in tournament ${tournamentId}...`);
+    
+    // Get all rooms for this tournament
+    const allRooms = this.roomManager.getAllRooms();
+    const tournamentRooms = allRooms.filter(room => 
+      room.metadata?.tournamentId === tournamentId
+    );
+    
+    console.log(`🏆 Found ${tournamentRooms.length} tournament rooms for ${tournamentId}:`);
+    tournamentRooms.forEach(room => {
+      console.log(`🏆   Room ${room.id}: ${room.players.length} players, type: ${room.metadata?.tournamentType}`);
+      room.players.forEach(player => {
+        console.log(`🏆     Player: ${player.username} (${player.id})`);
+      });
+    });
+    
+    // Count all active players across all tournament rooms
+    let allPlayers = [];
+    tournamentRooms.forEach(room => {
+      if (room.players && room.players.length > 0) {
+        allPlayers = allPlayers.concat(room.players);
+      }
+    });
+    
+    console.log(`🏆 Tournament ${tournamentId} has ${allPlayers.length} total active players`);
+    
+    // If only one player remains, they're the lone player
+    if (allPlayers.length === 1) {
+      const lonePlayer = allPlayers[0];
+      console.log(`🏆 LONE PLAYER DETECTED: ${lonePlayer.username} is the only remaining player in tournament ${tournamentId}`);
+      return lonePlayer;
+    }
+    
+    console.log(`🏆 No lone player detected - ${allPlayers.length} players remain`);
+    return null;
+  }
+
+  /**
+   * Award automatic tournament victory to a lone player
+   * @param {Object} lonePlayer - The player who is alone in the tournament
+   * @param {string} tournamentId - The tournament ID
+   */
+  _awardAutomaticTournamentVictory(lonePlayer, tournamentId) {
+    console.log(`🏆 🏆 AWARDING AUTOMATIC TOURNAMENT VICTORY to ${lonePlayer.username}!`);
+    
+    // Create victory match data
+    const victoryMatchData = {
+      roomId: lonePlayer.roomId || 'tournament_victory',
+      winner: {
+        id: lonePlayer.id,
+        username: lonePlayer.username,
+        score: 11
+      },
+      loser: {
+        id: 'tournament_opponents',
+        username: 'All Opponents Disconnected',
+        score: 0
+      },
+      gameStats: {
+        totalRebounds: 0,
+        finalScore: '11-0',
+        ballSpeed: 0,
+        lastHitBy: null,
+        forfeitReason: 'all_opponents_disconnected',
+        automaticVictory: true
+      },
+      matchType: 'tournament_victory',
+      tournamentStage: 'automatic_victory',
+      serverTime: Date.now()
+    };
+    
+    // Send automatic victory message to the player
+    if (lonePlayer.ws && lonePlayer.ws.readyState === 1) {
+      const victoryMessage = {
+        type: 'gameEnd',
+        ...victoryMatchData,
+        tournamentAdvancement: {
+          stage: 'automatic_victory',
+          result: 'tournament_winner',
+          message: 'Congratulations! You win the tournament! All other players disconnected.',
+          finalPlacement: 1
+        },
+        tournamentPlacements: {
+          firstPlace: {
+            id: lonePlayer.id,
+            username: lonePlayer.username,
+            reason: 'automatic_victory'
+          }
+        }
+      };
+      
+      lonePlayer.ws.send(JSON.stringify(victoryMessage));
+      console.log(`🏆 Sent automatic tournament victory message to ${lonePlayer.username}`);
+    }
+    
+    // Log the automatic victory
+    if (LogUtils && LogUtils.logMatchCompletion) {
+      LogUtils.logMatchCompletion(victoryMatchData);
+    }
+    
+    // Report results to external APIs
+    if (BaseDisconnectUtils && BaseDisconnectUtils.reportResults) {
+      BaseDisconnectUtils.reportResults(victoryMatchData);
+    }
+    
+    // Clean up all tournament rooms
+    const allRooms = this.roomManager.getAllRooms();
+    const tournamentRooms = allRooms.filter(room => 
+      room.metadata?.tournamentId === tournamentId
+    );
+    
+    tournamentRooms.forEach(room => {
+      console.log(`🏆 Cleaning up tournament room ${room.id}`);
+      this.roomManager.removeRoom(room.id);
+    });
+    
+    // Disconnect the victorious player after a short delay to allow message processing
+    setTimeout(() => {
+      if (lonePlayer.ws && lonePlayer.ws.readyState === 1) {
+        console.log(`🏆 Disconnecting tournament winner ${lonePlayer.username} after victory`);
+        lonePlayer.ws.close();
+      }
+    }, 2000);
+    
+    console.log(`🏆 🏆 Tournament ${tournamentId} completed with automatic victory for ${lonePlayer.username}`);
   }
 }
 
