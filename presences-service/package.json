@@ -1,0 +1,12 @@
+{
+  "name": "presences-service",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "NODE_ENV=development node src/app.js"
+  },
+  "dependencies": {
+
+  }
+}
