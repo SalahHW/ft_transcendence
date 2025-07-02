@@ -489,6 +489,14 @@ export class TournamentManager {
     
     console.log(`🏆 Player ${player.username} scores reset: score=${player.score}, playerScore=${player.playerScore}`);
     
+    // ⭐ FORFEIT MARKER FIX: Only clear forfeit marker if it's from a different scenario
+    // Don't clear if this is the first loser arriving (which would be the normal case)
+    if (playerType === 'loser' && finalRoom.metadata?.hasForfeitMissingPlayer && finalRoom.players.length > 0) {
+      console.log(`🏆 Clearing old forfeit marker from ${finalRoom.id} when second loser ${player.username} arrives`);
+      delete finalRoom.metadata.hasForfeitMissingPlayer;
+      delete finalRoom.metadata.forfeitMissingPlayer;
+    }
+    
     // Update WebSocket room association
     if (player.ws) {
       player.ws.roomId = finalRoom.id;
@@ -911,6 +919,105 @@ export class TournamentManager {
       console.log('🏆 🏆 LONE PLAYER SCENARIO DETECTED in final rooms - awarding automatic tournament victory!');
       this._awardAutomaticTournamentVictory(lonePlayer, tournamentId);
       return;
+    }
+    
+    // ⭐ AUTOMATIC FINAL PLACEMENT CHECK: Check if winners final is effectively empty
+    const winnersFinalHasDisconnectedPlayers = finalRoomA.players.some(player => 
+      !player.ws || player.ws.readyState !== 1
+    );
+    
+    // Count only connected players in winners final
+    const connectedWinnersFinalPlayers = finalRoomA.players.filter(player => 
+      player.ws && player.ws.readyState === 1
+    ).length;
+    
+    if (finalRoomA.players.length === 0 || winnersFinalHasDisconnectedPlayers || connectedWinnersFinalPlayers < 2) {
+      console.log(`🏆 AUTOMATIC FINAL PLACEMENT DETECTED: Winners final is empty or has disconnected players`);
+      
+      // Find the Semi-B players (they should be the only active players in final rooms)
+      const semiBPlayers = [];
+      if (finalRoomA.players.length > 0) {
+        semiBPlayers.push(...finalRoomA.players.filter(p => p.ws && p.ws.readyState === 1));
+      }
+      if (finalRoomB.players.length > 0) {
+        semiBPlayers.push(...finalRoomB.players.filter(p => p.ws && p.ws.readyState === 1));
+      }
+      
+      if (semiBPlayers.length === 2) {
+        const [winner, loser] = semiBPlayers;
+        console.log(`🏆 Awarding automatic final placement: ${winner.username} (1st), ${loser.username} (2nd)`);
+        
+        // Send 1st place to winner
+        if (winner.ws && winner.ws.readyState === 1) {
+          winner.ws.send(JSON.stringify({
+            type: 'gameEnd',
+            roomId: winner.roomId || 'tournament_automatic_final',
+            winner: {
+              id: winner.id,
+              username: winner.username,
+              score: 11
+            },
+            loser: {
+              id: loser.id,
+              username: loser.username,
+              score: 0
+            },
+            tournamentAdvancement: {
+              stage: 'final',
+              result: 'automatic_first_place',
+              message: 'Congratulations! You win the tournament!',
+              finalPlacement: 1
+            }
+          }));
+        }
+        
+        // Send 2nd place to loser
+        if (loser.ws && loser.ws.readyState === 1) {
+          loser.ws.send(JSON.stringify({
+            type: 'gameEnd',
+            roomId: loser.roomId || 'tournament_automatic_final',
+            winner: {
+              id: winner.id,
+              username: winner.username,
+              score: 11
+            },
+            loser: {
+              id: loser.id,
+              username: loser.username,
+              score: 0
+            },
+            tournamentAdvancement: {
+              stage: 'final',
+              result: 'automatic_second_place',
+              message: 'Well played! You finish in second place!',
+              finalPlacement: 2
+            }
+          }));
+        }
+        
+        // Clean up all tournament rooms
+        const allRooms = this.roomManager.getAllRooms();
+        const tournamentRooms = allRooms.filter(room => 
+          room.metadata?.tournamentId === tournamentId
+        );
+        
+        tournamentRooms.forEach(room => {
+          console.log(`🏆 Cleaning up tournament room ${room.id}`);
+          this.roomManager.removeRoom(room.id);
+        });
+        
+        // Disconnect players after a short delay
+        setTimeout(() => {
+          [winner, loser].forEach(player => {
+            if (player.ws && player.ws.readyState === 1) {
+              console.log(`🏆 Disconnecting player ${player.username} after automatic final placement`);
+              player.ws.close();
+            }
+          });
+        }, 2000);
+        
+        return;
+      }
     }
     
     const winnersComplete = finalRoomA.players.length === 2;

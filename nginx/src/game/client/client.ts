@@ -356,6 +356,31 @@ export function initializeGame(playerId: string): void {
             return;
         }
 
+        // ⭐ NEW: Check for automatic first/second place (when other semi-final winner disconnected)
+        if (gameEndData.tournamentAdvancement?.result === 'automatic_first_place' || 
+            gameEndData.tournamentAdvancement?.result === 'automatic_second_place') {
+            
+            console.log('🏆 Handling automatic first/second place due to other semi-final winner disconnect');
+            const opponentName = gameEndData.winner.id === localPlayerId ? 
+                                gameEndData.loser.username : 
+                                gameEndData.winner.username;
+            
+            const finalPlacement = gameEndData.tournamentAdvancement.result === 'automatic_first_place' ? 1 : 2;
+            
+            try {
+                await TournamentClientHandler.handleFinalGameEnd(
+                    gameEndData,
+                    localPlayerId,
+                    opponentName,
+                    finalPlacement as 1 | 2
+                );
+            } catch (error) {
+                console.error('🏆 ERROR: Error showing automatic first/second place splash:', error);
+                cleanup();
+            }
+            return;
+        }
+
         // ⭐ NEW: Check for automatic third place (when opponent forfeited from losers final)
         if (gameEndData.tournamentAdvancement?.result === 'automatic_third_place') {
             console.log('🏆 Handling automatic 3rd place due to forfeit in losers final');
