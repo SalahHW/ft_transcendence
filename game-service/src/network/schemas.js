@@ -31,6 +31,11 @@ export const schemas = {
     type: z.literal(MESSAGE_TYPES.REQUEST_BALL_RESPAWN),
     isInitial: z.boolean().optional(),
   }),
+  [MESSAGE_TYPES.KEEP_ALIVE]: z.object({
+    type: z.literal(MESSAGE_TYPES.KEEP_ALIVE),
+    reason: z.string().optional(),
+    timestamp: z.number().optional(),
+  }),
   powerupActivation: z.object({
     type: z.literal('powerupActivation'),
   }),

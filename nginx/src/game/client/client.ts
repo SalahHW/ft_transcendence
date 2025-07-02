@@ -6,7 +6,7 @@ import { Ball } from '../ball/ball.js';
 import * as BABYLON from '@babylonjs/core';
 import { fetchWithSelfSigned } from '../utils/fetch.js';
 import { updatePlayerNames, updateScoresUI, updateScoresUIVersus, updatePlayerNamesVersus, updateGameStatus } from '../playerUi/playerUi.js';
-import { handleWaitingForPlayers } from '../ui/waitingStatusHandler.js';
+import { handleWaitingForPlayers, stopForfeitWinnerPing } from '../ui/waitingStatusHandler.js';
 import { soundManager } from '../audio/soundManager.js';
 import { TournamentClientHandler } from '../tournament/tournamentClientHandler.js';
 import { showSplashScreen } from '../ui/splashScreen.js';
@@ -189,6 +189,9 @@ export function initializeGame(playerId: string): void {
     
     // Make leaveGame function available globally for Leave Game button
     (window as any).leaveGame = leaveGame;
+    
+    // 🏆 FORFEIT WINNER PING: Make clientConnection available globally for ping function
+    (window as any).clientConnection = clientConnection;
 
     clientConnection.socket.addEventListener('open', () => {
         updateGameStatus('Connected to game server');
@@ -494,6 +497,7 @@ export function initializeGame(playerId: string): void {
             }
             
             if (message.type === 'waitingForPlayers') {
+                console.log('🏆 CLIENT: Received waitingForPlayers message:', message);
                 handleWaitingForPlayers(message, updateGameStatus);
             } else if (message.type === 'tournamentAdvancement') {
 
@@ -598,6 +602,9 @@ export function initializeGame(playerId: string): void {
                     updateGameStatus,
                     { ball, player1, player2 }
                 );
+            } else if (message.type === 'keepAliveAck') {
+                // 🏆 FORFEIT WINNER PING: Handle keep-alive acknowledgment from server
+                console.log('🏆 Received keep-alive acknowledgment from server:', message.reason);
             } else if (message.type === 'gameEnd' || message.type === 'matchEnd' || message.type === 'tournamentGameEnd') {
                 // 🏆 REMOVE DUPLICATE: Game end messages should ONLY be handled by clientConnection.onGameEnd
                 // This prevents conflicts between multiple event handlers
@@ -707,6 +714,9 @@ export function initializeGame(playerId: string): void {
         initTime = Date.now();
         roomId = rId || null;
         localPlayerId = playerId || null;
+
+        // 🏆 FORFEIT WINNER PING: Stop keep-alive pinging when game starts
+        stopForfeitWinnerPing();
 
         // ⭐ TOURNAMENT FIX: Reset game state for clean start (important for finals)
         TournamentClientHandler.resetTournamentGameState({
@@ -1012,6 +1022,12 @@ export function initializeGame(playerId: string): void {
 
 // Export cleanup function for Leave Game button
 export function cleanup(): void {
+    // 🏆 FORFEIT WINNER PING: Stop keep-alive pinging during cleanup
+    stopForfeitWinnerPing();
+    
+    // 🏆 FORFEIT WINNER PING: Clear global clientConnection reference
+    (window as any).clientConnection = null;
+
     // Update disconnect handler with current state before cleanup
     webSocketClientDisconnect.updateGameState({
         isGameOver,
@@ -1049,6 +1065,12 @@ export function cleanup(): void {
 
 // Export leaveGame function for Leave Game button
 export function leaveGame(): void {
+    // 🏆 FORFEIT WINNER PING: Stop keep-alive pinging when leaving game
+    stopForfeitWinnerPing();
+    
+    // 🏆 FORFEIT WINNER PING: Clear global clientConnection reference
+    (window as any).clientConnection = null;
+
     // Update disconnect handler with current state before leaving
     webSocketClientDisconnect.updateGameState({
         isGameOver,

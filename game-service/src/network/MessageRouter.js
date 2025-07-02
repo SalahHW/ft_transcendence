@@ -27,6 +27,7 @@ export class MessageRouter {
     this.messageHandlers.set(MESSAGE_TYPES.PADDLE_POSITION, this._handlePaddlePosition.bind(this));
     this.messageHandlers.set(MESSAGE_TYPES.LEAVE_GAME, this._handleLeaveGame.bind(this));
     this.messageHandlers.set(MESSAGE_TYPES.REQUEST_BALL_RESPAWN, this._handleBallRespawn.bind(this));
+    this.messageHandlers.set(MESSAGE_TYPES.KEEP_ALIVE, this._handleKeepAlive.bind(this));
     this.messageHandlers.set('powerupActivation', this._handlePowerupActivation.bind(this));
   }
 
@@ -268,6 +269,26 @@ export class MessageRouter {
       
     } catch (error) {
       console.error('❌ Error handling powerup activation:', error);
+    }
+  }
+
+  /**
+   * Handle keep-alive ping messages (for forfeit winners)
+   */
+  _handleKeepAlive(msg, playerId, roomId, ws) {
+    console.log(`🏆 Received keep-alive ping from ${playerId}: ${msg.reason || 'no reason specified'}`);
+    
+    // Update player activity to prevent stale connection cleanup
+    disconnectionHandler.updatePlayerActivity(playerId);
+    
+    // Send acknowledgment back to client
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({
+        type: MESSAGE_TYPES.KEEP_ALIVE_ACK,
+        timestamp: Date.now(),
+        serverTime: new Date().toISOString(),
+        reason: msg.reason || 'keep_alive_ack'
+      }));
     }
   }
 }

@@ -154,6 +154,9 @@ export class TournamentDisconnectionHandler extends BaseDisconnectHandler {
     // Send directly to remaining player's WebSocket
     if (remainingPlayer.ws && remainingPlayer.ws.readyState === 1) {
         remainingPlayer.ws.send(JSON.stringify(gameEndMessage));
+        
+        // 🏆 FORFEIT WINNER PING: Send waiting message to trigger ping functionality
+        this.notifyTournamentForfeitWinner(roomId, remainingPlayer, gameEndMessage);
     }
     
     // Log the tournament forfeit
@@ -281,6 +284,8 @@ export class TournamentDisconnectionHandler extends BaseDisconnectHandler {
    * Notify tournament forfeit winner
    */
   notifyTournamentForfeitWinner(roomId, remainingPlayer, matchData) {
+    console.log(`🏆 notifyTournamentForfeitWinner called for player ${remainingPlayer.id} in room ${roomId}`);
+    
     if (!remainingPlayer.ws || remainingPlayer.ws.readyState !== 1) {
       console.error(`🏆 Cannot notify forfeit winner ${remainingPlayer.id} - no valid WebSocket`);
       return;
@@ -323,6 +328,7 @@ export class TournamentDisconnectionHandler extends BaseDisconnectHandler {
               }
             };
             
+            console.log('🏆 Sending waiting message to forfeit winner:', waitingMessage);
             remainingPlayer.ws.send(JSON.stringify(waitingMessage));
           }
         }, 1000);

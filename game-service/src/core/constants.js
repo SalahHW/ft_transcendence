@@ -72,6 +72,7 @@ export const MESSAGE_TYPES = {
   LEAVE_GAME: 'leaveGame',
   REQUEST_BALL_RESPAWN: 'requestBallRespawn',
   ANIMATION_COMPLETE: 'animationComplete',
+  KEEP_ALIVE: 'keepAlive',
   
   // Server to Client  
   INIT: 'init',
@@ -83,6 +84,7 @@ export const MESSAGE_TYPES = {
   SYNC: 'sync',
   SOUND_EVENT: 'soundEvent',
   ERROR: 'error',
+  KEEP_ALIVE_ACK: 'keepAliveAck',
 };
 
 // Game States
