@@ -3,7 +3,16 @@
  * Exports all tournament-related client functionality
  */
 
-import { TournamentClientHandler } from './tournamentClientHandler.js';
+// Main tournament client handler
+export { TournamentClientHandler } from './tournamentClientHandlerNew.js';
+export { default } from './tournamentClientHandlerNew.js';
 
-export { TournamentClientHandler };
-export default TournamentClientHandler; 
+// Handlers
+export { TournamentAdvancementHandler } from './handlers/TournamentAdvancementHandler.js';
+export { TournamentPlacementHandler } from './handlers/TournamentPlacementHandler.js';
+
+// Managers
+export { TournamentGameStateManager } from './managers/TournamentGameStateManager.js';
+
+// Utils
+export { TournamentUtils } from './utils/TournamentUtils.js'; 
