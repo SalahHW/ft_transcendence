@@ -128,14 +128,16 @@ export async function loginWithWallet(request, reply) {
       aud: "users-service",
     });
 
-    reply.setCookie("token", token, {
-      path: "/",
-      httpOnly: true,
-      sameSite: "Strict",
-      secure: false,
-    });
-
-    return reply.code(200).send({ id: user.id, username: user.username });
+    reply
+      .setCookie("token", token, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "Strict",
+        path: "/",
+        maxAge: 60 * 60 * 24, // 1 day
+      })
+      .code(200)
+      .send({ message: "Login successful" });
   } catch (err) {
     return reply.code(500).send({ error: "Login failed", cause: err.message });
   }
