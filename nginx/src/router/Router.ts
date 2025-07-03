@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: Invalid Date        by              +#+  #+#    #+#             */
-/*   Updated: 2025/07/01 17:45:41 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/03 23:55:52 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,12 +14,6 @@
 // TODO: Mettre cette classe ça au propre
 // TODO: (opt) Mettre des views pour les differents forms de APITestPage
 
-import APITestPage from "../views/apiTestPage/APITestPage.js";
-import HomePage from "../views/homePage.js";
-import LoginPopup from "../components/LoginPopup.js";
-import RegisterPopup from "../components/RegisterPopup.js";
-import ProfileView from "../views/ProfileView.js";
-import WalletConnectRegisterPopup from "../components/WalletConnectRegisterPopup.js";
 import { handleSimpleMatch } from "../game/gameMode/1v1Handler.js";
 import { handleTournament } from "../game/gameMode/tournamentHandler.js";
 
@@ -37,9 +31,15 @@ export default class Router {
 		{
 			path: "/",
 			handler: function() {
-				if (!this.cache)
-					this.cache = new HomePage("app-container");
-				this.cache.render();
+				if (!this.cache) {
+					import('../views/homePage.js').then(module => {
+						const HomePage = module.default;
+						this.cache = new HomePage("app-container");
+						this.cache.render();
+					});
+				} else {
+					this.cache.render();
+				}
 			}
 		},
 		{
@@ -49,9 +49,15 @@ export default class Router {
 				window.history.back();
 
 				// Afficher la vue API test
-				if (!this.cache)
-					this.cache = new APITestPage();
-				this.cache.show();
+				if (!this.cache) {
+					import('../views/apiTestPage/APITestPage.js').then(module => {
+						const APITestPage = module.default;
+						this.cache = new APITestPage();
+						this.cache.show();
+					});
+				} else {
+					this.cache.show();
+				}
 			}
 		},
 		{
@@ -61,9 +67,15 @@ export default class Router {
 				window.history.back();
 
 				// Afficher la popup de login
-				if (!this.cache)
-					this.cache = new LoginPopup();
-				this.cache.show();
+				if (!this.cache) {
+					import('../components/LoginPopup.js').then(module => {
+						const LoginPopup = module.default;
+						this.cache = new LoginPopup();
+						this.cache.show();
+					});
+				} else {
+					this.cache.show();
+				}
 			}
 		},
 		{
@@ -73,9 +85,15 @@ export default class Router {
 				window.history.back();
 
 				// Afficher la popup de register
-				if (!this.cache)
-					this.cache = new RegisterPopup();
-				this.cache.show();
+				if (!this.cache) {
+					import('../components/RegisterPopup.js').then(module => {
+						const RegisterPopup = module.default;
+						this.cache = new RegisterPopup();
+						this.cache.show();
+					});
+				} else {
+					this.cache.show();
+				}
 			}
 		},
 		{
@@ -85,9 +103,15 @@ export default class Router {
 				window.history.back();
 
 				// Afficher la popup WalletConnect register
-				if (!this.cache)
-					this.cache = new WalletConnectRegisterPopup();
-				this.cache.show();
+				if (!this.cache) {
+					import('../components/WalletConnectRegisterPopup.js').then(module => {
+						const WalletConnectRegisterPopup = module.default;
+						this.cache = new WalletConnectRegisterPopup();
+						this.cache.show();
+					});
+				} else {
+					this.cache.show();
+				}
 			}
 		},
 		{
@@ -97,9 +121,15 @@ export default class Router {
 				window.history.back();
 
 				// Afficher la vue de profil
-				if (!this.cache)
-					this.cache = new ProfileView();
-				this.cache.show();
+				if (!this.cache) {
+					import('../views/ProfileView.js').then(module => {
+						const ProfileView = module.default;
+						this.cache = new ProfileView();
+						this.cache.show();
+					});
+				} else {
+					this.cache.show();
+				}
 			}
 		},
 		{
