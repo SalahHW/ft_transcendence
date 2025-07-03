@@ -18,7 +18,7 @@ export default class GetAvatarForm {
 		this._container.innerHTML = /* HTML */ `
 			<form id="get-avatar-form" class="${UI_THEME.components.form}">
 				<div>
-					<input type="number" id="getform-avatar-id" placeholder="Avatar ID (required)" class="${UI_THEME.components.input}">
+					<input type="number" id="getform-avatar-id" placeholder="User ID (required)" class="${UI_THEME.components.input}">
 				</div>
 				${buttonHTML({label: "Get Avatar", type: "submit"})}
 			</form>
@@ -32,16 +32,16 @@ export default class GetAvatarForm {
 			event.preventDefault();
 			const idInput = document.getElementById("getform-avatar-id") as HTMLInputElement;
 			if (!idInput.value) {
-				console.warn("Please provide an avatar ID");
+				console.warn("Please provide a user ID");
 				return;
 			}
 			const userId = parseInt(idInput.value);
 			try {
-				const response = await this._avatarService.retrieveUserAvatar(userId);
-				console.log(`Avatar:\n${JSON.stringify(response, null, 2)}`);
+				const url = await this._avatarService.getUserAvatarUrl(userId);
+				console.log(`Avatar URL: ${url}`);
 				const terminal = CustomTerminal["_instance"];
-				if (terminal && typeof terminal.logImage === "function" && response.url) {
-					terminal.logImage(response.url, "Avatar image");
+				if (terminal && typeof terminal.logImage === "function") {
+					terminal.logImage(url, "Avatar image");
 				}
 			} catch (error) {
 				if (error instanceof Error)

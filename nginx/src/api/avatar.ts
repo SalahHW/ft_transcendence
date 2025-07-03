@@ -2,76 +2,76 @@
  * Avatar object.
  * @property `id` - The avatar's ID
  * @property `userId` - The ID of the user associated with the avatar
- * @property `url` - The URL of the avatar image
- * @property `createdAt` - The date the avatar was created
+ * @property `avatarName` - The filename of the avatar image
  */
 export interface Avatar {
 	id?: number;
 	userId?: number;
-	url?: string;
-	createdAt?: Date;
+	avatarName?: string;
 }
 
 /**
  * Avatar service API.
  */
 export default class AvatarServiceAPI {
-	private _host: string = "https://elsalmajori.games";
-	private _port: number = 8443;
+	private _host: string = "https://elsalmajori.games:8443";
+	private _avatarsBaseUrl: string = `${this._host}/avatars`;
 
 	/**
 	 * Retrieve a user avatar by user ID
 	 * @param userId - The ID of the user
-	 * @returns A promise that resolves to the avatar
+	 * @returns A promise that resolves to the avatar URL
 	 */
-	async retrieveUserAvatar(userId: number): Promise<Avatar> {
-		const response = await fetch(`${this._host}:${this._port}/avatars/retrieve/${userId}`, {
+	async getUserAvatarUrl(userId: number): Promise<string> {
+		const response = await fetch(`${this._avatarsBaseUrl}/id/${userId}`, {
 			method: "GET"
 		});
 		if (response.status !== 200) {
-			throw new Error(`Failed to retrieve avatar: ${response.statusText}`);
+			const responseData = await response.json();
+			throw new Error(`Failed to retrieve avatar:\n${JSON.stringify(responseData, null, 2)}`);
 		}
-		return response.json();
+		// The avatar is served as a file, so return the URL
+		return `${this._avatarsBaseUrl}/id/${userId}`;
 	}
 
 	/**
-	 * Upload a new avatar for a user
+	 * Upload a new avatar for a user (multipart/form-data)
 	 * @param userId - The ID of the user
-	 * @param avatar - The avatar object to upload
-	 * @returns A promise that resolves to the uploaded avatar
+	 * @param file - The File or Blob to upload
+	 * @returns A promise that resolves when the upload is successful
 	 */
-	async uploadUserAvatar(userId: number, avatar: Avatar): Promise<Avatar> {
-		const response = await fetch(`${this._host}:${this._port}/avatars/upload/${userId}`, {
+	async uploadUserAvatar(userId: number, file: File | Blob): Promise<void> {
+		const formData = new FormData();
+		formData.append("file", file);
+
+		const response = await fetch(`${this._avatarsBaseUrl}/id/${userId}`, {
 			method: "POST",
-			headers: {
-				"Content-Type": "application/json"
-			},
-			body: JSON.stringify(avatar)
+			body: formData
 		});
 		if (response.status !== 201) {
-			throw new Error(`Failed to upload avatar: ${response.statusText}`);
+			const responseData = await response.json();
+			throw new Error(`Failed to upload avatar:\n${JSON.stringify(responseData, null, 2)}`);
 		}
-		return response.json();
 	}
 
 	/**
-	 * Update a user avatar by user ID
+	 * Update a user avatar by user ID (multipart/form-data)
 	 * @param userId - The ID of the user
-	 * @param avatar - The updated avatar object
-	 * @returns A promise that resolves to the updated avatar
+	 * @param file - The new File or Blob to upload
+	 * @returns A promise that resolves when the update is successful
 	 */
-	async updateUserAvatar(userId: number, avatar: Avatar): Promise<Avatar> {
-		const response = await fetch(`${this._host}:${this._port}/avatars/update/${userId}`, {
+	async updateUserAvatar(userId: number, file: File | Blob): Promise<void> {
+		const formData = new FormData();
+		formData.append("file", file);
+
+		const response = await fetch(`${this._avatarsBaseUrl}/id/${userId}`, {
 			method: "PUT",
-			headers: {
-				"Content-Type": "application/json"
-			},
-			body: JSON.stringify(avatar)
+			body: formData
 		});
 		if (response.status !== 200) {
-			throw new Error(`Failed to update avatar: ${response.statusText}`);
+			const responseData = await response.json();
+			throw new Error(`Failed to update avatar:\n${JSON.stringify(responseData, null, 2)}`);
 		}
-		return response.json();
 	}
 
 	/**
@@ -80,10 +80,10 @@ export default class AvatarServiceAPI {
 	 * @returns A promise that resolves when the avatar is deleted
 	 */
 	async deleteUserAvatar(userId: number): Promise<void> {
-		const response = await fetch(`${this._host}:${this._port}/avatars/delete/${userId}`, {
+		const response = await fetch(`${this._avatarsBaseUrl}/id/${userId}`, {
 			method: "DELETE"
 		});
-		if (response.status !== 204) {
+		if (response.status !== 200) {
 			const responseData = await response.json();
 			throw new Error(`Failed to delete avatar:\n${JSON.stringify(responseData, null, 2)}`);
 		}
