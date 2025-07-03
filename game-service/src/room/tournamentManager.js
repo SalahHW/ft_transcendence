@@ -508,6 +508,26 @@ export class TournamentManager {
     
     console.log(`🏆 Player ${player.username} added to ${finalRoom.id} with role ${role} (${finalRoom.players.length}/2 players)`);
     
+    // ⭐ RACE CONDITION FIX: Add small delay to ensure WebSocket connection is stable
+    setTimeout(() => {
+      this._sendTransferMessagesToPlayer(player, finalRoom, playerType, role);
+    }, 500); // 500ms delay to ensure connection stability
+    
+    // ⭐ RACE CONDITION FIX: Removed immediate final game start logic
+    // Final game initialization is now handled in handleSemiFinalCompletion()
+    // to coordinate timing with semi-final splash screens
+    console.log(`🏆 Player ${player.username} transferred to ${finalRoom.id} (${finalRoom.players.length}/2 players)`);
+    console.log(`🏆 Final game initialization will be handled by handleSemiFinalCompletion() when both semi-finals complete`);
+  }
+
+  /**
+   * Send transfer messages to player after delay to ensure connection stability
+   * @param {Object} player - The player to send messages to
+   * @param {Object} finalRoom - The final room the player was transferred to
+   * @param {string} playerType - 'winner' or 'loser'
+   * @param {number} role - The player's role in the final room
+   */
+  _sendTransferMessagesToPlayer(player, finalRoom, playerType, role) {
     // ⭐ TOURNAMENT FIX: Send immediate position sync to ensure client/server alignment
     if (player.ws && player.ws.readyState === 1) {
       try {
@@ -572,14 +592,9 @@ export class TournamentManager {
       } catch (e) {
         console.error(`🏆 Failed to send advancement message to ${player.username}:`, e);
       }
+    } else {
+      console.warn(`🏆 Player ${player.username} WebSocket not ready for transfer messages (readyState: ${player.ws?.readyState})`);
     }
-    
-    // ⭐ RACE CONDITION FIX: Removed immediate final game start logic
-    // Final game initialization is now handled in handleSemiFinalCompletion()
-    // to coordinate timing with semi-final splash screens
-    console.log(`🏆 Player ${player.username} transferred to ${finalRoom.id} (${finalRoom.players.length}/2 players)`);
-    console.log(`🏆 Final game initialization will be handled by handleSemiFinalCompletion() when both semi-finals complete`);
-    
   }
 
   /**
@@ -889,6 +904,7 @@ export class TournamentManager {
     const losersHasPlayers = finalRoomB.players.length > 0;
     const losersHasForfeit = finalRoomB.metadata?.hasForfeitMissingPlayer === true;
     
+    // ⭐ ENHANCED COMPLETION LOGIC: More robust detection
     // Both semi-finals are completed if:
     // 1. Winners final has at least 1 player, AND
     // 2. Either losers final has players OR has a forfeit marker
@@ -897,7 +913,15 @@ export class TournamentManager {
     console.log(`🏆 Tournament ${tournamentId} completion check:`);
     console.log(`🏆   Winners final: ${finalRoomA.players.length} players`);
     console.log(`🏆   Losers final: ${finalRoomB.players.length} players, forfeit: ${losersHasForfeit}`);
+    console.log(`🏆   Winners has players: ${winnersHasPlayers}`);
+    console.log(`🏆   Losers has players or forfeit: ${losersHasPlayers || losersHasForfeit}`);
     console.log(`🏆   Both completed: ${bothCompleted}`);
+    
+    // ⭐ ADDITIONAL SAFETY CHECK: If both finals have players, we're definitely complete
+    if (finalRoomA.players.length > 0 && finalRoomB.players.length > 0) {
+      console.log(`🏆 Tournament ${tournamentId}: Both finals have players - definitely complete`);
+      return true;
+    }
     
     return bothCompleted;
   }
@@ -921,26 +945,83 @@ export class TournamentManager {
       return;
     }
     
-    // ⭐ AUTOMATIC FINAL PLACEMENT CHECK: Check if winners final is effectively empty
-    const winnersFinalHasDisconnectedPlayers = finalRoomA.players.some(player => 
+    // ⭐ RACE CONDITION FIX: Add delay to allow WebSocket connections to stabilize
+    // This prevents false detection of disconnected players immediately after transfer
+    setTimeout(() => {
+      this._handleIncompleteFinalRoomsAfterDelay(finalRoomA, finalRoomB, tournamentId);
+    }, 2000); // 2 second delay to allow connections to stabilize
+  }
+
+  /**
+   * Handle incomplete final rooms after delay to avoid race conditions
+   * @param {Object} finalRoomA - The winners final room
+   * @param {Object} finalRoomB - The losers final room
+   * @param {string} tournamentId - The tournament ID
+   */
+  _handleIncompleteFinalRoomsAfterDelay(finalRoomA, finalRoomB, tournamentId) {
+    // Re-check room existence after delay (rooms might have been cleaned up)
+    const currentFinalRoomA = this.roomManager.getRoom(finalRoomA.id);
+    const currentFinalRoomB = this.roomManager.getRoom(finalRoomB.id);
+    
+    if (!currentFinalRoomA || !currentFinalRoomB) {
+      console.log(`🏆 Final rooms no longer exist after delay - tournament may have been cleaned up`);
+      return;
+    }
+    
+    console.log(`🏆 Re-checking final room completeness after delay for tournament ${tournamentId}:`);
+    console.log(`🏆 Winners Final (${currentFinalRoomA.id}): ${currentFinalRoomA.players.length}/2 players`);
+    console.log(`🏆 Losers Final (${currentFinalRoomB.id}): ${currentFinalRoomB.players.length}/2 players`);
+    
+    // ⭐ ENHANCED CONNECTIVITY CHECK: More robust detection of disconnected players
+    const winnersFinalHasDisconnectedPlayers = currentFinalRoomA.players.some(player => 
       !player.ws || player.ws.readyState !== 1
     );
     
     // Count only connected players in winners final
-    const connectedWinnersFinalPlayers = finalRoomA.players.filter(player => 
+    const connectedWinnersFinalPlayers = currentFinalRoomA.players.filter(player => 
       player.ws && player.ws.readyState === 1
     ).length;
     
-    if (finalRoomA.players.length === 0 || winnersFinalHasDisconnectedPlayers || connectedWinnersFinalPlayers < 2) {
-      console.log(`🏆 AUTOMATIC FINAL PLACEMENT DETECTED: Winners final is empty or has disconnected players`);
+    // ⭐ RACE CONDITION FIX: Only trigger automatic placement if we have clear evidence of disconnections
+    // AND both finals should have players but don't
+    const shouldHaveWinnersFinalPlayers = currentFinalRoomA.players.length > 0;
+    const shouldHaveLosersFinalPlayers = currentFinalRoomB.players.length > 0 || currentFinalRoomB.metadata?.hasForfeitMissingPlayer;
+    
+    // Check if we have a clear case for automatic placement
+    const clearDisconnectionCase = (
+      // Winners final is completely empty
+      (currentFinalRoomA.players.length === 0) ||
+      // OR winners final has players but they're all disconnected
+      (shouldHaveWinnersFinalPlayers && connectedWinnersFinalPlayers === 0) ||
+      // OR winners final has only 1 connected player when it should have 2
+      (shouldHaveWinnersFinalPlayers && connectedWinnersFinalPlayers === 1 && currentFinalRoomA.players.length === 2)
+    );
+    
+    // ⭐ FORFEIT SCENARIO FIX: Check if we have exactly 2 players from the same semi-final
+    // This happens when one semi-final was forfeited and its winner left, leaving only the other semi-final's players
+    const totalPlayersInFinals = currentFinalRoomA.players.length + currentFinalRoomB.players.length;
+    const hasExactlyTwoPlayers = totalPlayersInFinals === 2;
+    
+    // Check if all players in the final rooms are from the same semi-final
+    const playersFromSameSemiFinal = this._arePlayersFromSameSemiFinal(
+      currentFinalRoomA.players, 
+      currentFinalRoomB.players, 
+      tournamentId
+    );
+    
+    const forfeitScenario = hasExactlyTwoPlayers && playersFromSameSemiFinal;
+    
+    if (clearDisconnectionCase) {
+      console.log(`🏆 AUTOMATIC FINAL PLACEMENT DETECTED: Clear evidence of disconnections in winners final`);
+      console.log(`🏆 Winners final: ${currentFinalRoomA.players.length} total, ${connectedWinnersFinalPlayers} connected`);
       
       // Find the Semi-B players (they should be the only active players in final rooms)
       const semiBPlayers = [];
-      if (finalRoomA.players.length > 0) {
-        semiBPlayers.push(...finalRoomA.players.filter(p => p.ws && p.ws.readyState === 1));
+      if (currentFinalRoomA.players.length > 0) {
+        semiBPlayers.push(...currentFinalRoomA.players.filter(p => p.ws && p.ws.readyState === 1));
       }
-      if (finalRoomB.players.length > 0) {
-        semiBPlayers.push(...finalRoomB.players.filter(p => p.ws && p.ws.readyState === 1));
+      if (currentFinalRoomB.players.length > 0) {
+        semiBPlayers.push(...currentFinalRoomB.players.filter(p => p.ws && p.ws.readyState === 1));
       }
       
       if (semiBPlayers.length === 2) {
@@ -1018,86 +1099,180 @@ export class TournamentManager {
         
         return;
       }
+    } else if (forfeitScenario) {
+      // ⭐ FORFEIT SCENARIO: One semi-final was forfeited and its winner left
+      // The remaining 2 players from the other semi-final should get 1st/2nd place
+      console.log(`🏆 FORFEIT SCENARIO DETECTED: Exactly 2 players from same semi-final - awarding 1st/2nd place`);
+      console.log(`🏆 Total players in finals: ${totalPlayersInFinals}, From same semi-final: ${playersFromSameSemiFinal}`);
+      
+      // Collect the 2 remaining players
+      const remainingPlayers = [];
+      if (currentFinalRoomA.players.length > 0) {
+        remainingPlayers.push(...currentFinalRoomA.players.filter(p => p.ws && p.ws.readyState === 1));
+      }
+      if (currentFinalRoomB.players.length > 0) {
+        remainingPlayers.push(...currentFinalRoomB.players.filter(p => p.ws && p.ws.readyState === 1));
+      }
+      
+      if (remainingPlayers.length === 2) {
+        const [winner, loser] = remainingPlayers;
+        console.log(`🏆 Awarding forfeit scenario placement: ${winner.username} (1st), ${loser.username} (2nd)`);
+        
+        // Send 1st place to winner (player in winners final)
+        if (winner.ws && winner.ws.readyState === 1) {
+          winner.ws.send(JSON.stringify({
+            type: 'gameEnd',
+            roomId: winner.roomId || 'tournament_forfeit_final',
+            winner: {
+              id: winner.id,
+              username: winner.username,
+              score: 11
+            },
+            loser: {
+              id: loser.id,
+              username: loser.username,
+              score: 0
+            },
+            tournamentAdvancement: {
+              stage: 'final',
+              result: 'forfeit_scenario_first_place',
+              message: 'Congratulations! You win the tournament! (Other semi-final was forfeited)',
+              finalPlacement: 1
+            }
+          }));
+        }
+        
+        // Send 2nd place to loser (player in losers final)
+        if (loser.ws && loser.ws.readyState === 1) {
+          loser.ws.send(JSON.stringify({
+            type: 'gameEnd',
+            roomId: loser.roomId || 'tournament_forfeit_final',
+            winner: {
+              id: winner.id,
+              username: winner.username,
+              score: 11
+            },
+            loser: {
+              id: loser.id,
+              username: loser.username,
+              score: 0
+            },
+            tournamentAdvancement: {
+              stage: 'final',
+              result: 'forfeit_scenario_second_place',
+              message: 'Well played! You finish in second place! (Other semi-final was forfeited)',
+              finalPlacement: 2
+            }
+          }));
+        }
+        
+        // Clean up all tournament rooms
+        const allRooms = this.roomManager.getAllRooms();
+        const tournamentRooms = allRooms.filter(room => 
+          room.metadata?.tournamentId === tournamentId
+        );
+        
+        tournamentRooms.forEach(room => {
+          console.log(`🏆 Cleaning up tournament room ${room.id}`);
+          this.roomManager.removeRoom(room.id);
+        });
+        
+        // Disconnect players after a short delay
+        setTimeout(() => {
+          [winner, loser].forEach(player => {
+            if (player.ws && player.ws.readyState === 1) {
+              console.log(`🏆 Disconnecting player ${player.username} after forfeit scenario placement`);
+              player.ws.close();
+            }
+          });
+        }, 2000);
+        
+        return;
+      }
     }
     
-    const winnersComplete = finalRoomA.players.length === 2;
-    const losersComplete = finalRoomB.players.length === 2;
+    // ⭐ NORMAL FLOW: If no clear disconnection case, proceed with normal final game starts
+    const winnersComplete = currentFinalRoomA.players.length === 2;
+    const losersComplete = currentFinalRoomB.players.length === 2;
     
-         // ⭐ FORFEIT SCENARIO DETECTION: Handle incomplete losers final
-     if (winnersComplete && !losersComplete) {
-       console.log(`🏆 FORFEIT SCENARIO DETECTED: Winners final complete, but losers final incomplete`);
-       
-       if (finalRoomB.players.length === 1 && finalRoomB.metadata?.hasForfeitMissingPlayer) {
-         // Award 3rd place to the only remaining player in losers final
-         const remainingPlayer = finalRoomB.players[0];
-         const forfeitPlayer = finalRoomB.metadata.forfeitMissingPlayer;
-         
-         console.log(`🏆 Awarding automatic 3rd place to ${remainingPlayer.username} (only player in losers final)`);
-         console.log(`🏆 ${forfeitPlayer?.username || 'Disconnected player'} gets 4th place by forfeit`);
-         
-         // Send 3rd place message to remaining player
-         if (remainingPlayer.ws && remainingPlayer.ws.readyState === 1) {
-           remainingPlayer.ws.send(JSON.stringify({
-             type: 'gameEnd',
-             roomId: finalRoomB.id,
-             winner: {
-               id: remainingPlayer.id,
-               username: remainingPlayer.username,
-               score: 11
-             },
-             loser: {
-               id: forfeitPlayer?.id || 'unknown',
-               username: forfeitPlayer?.username || 'Disconnected Player',
-               score: 0
-             },
-             tournamentAdvancement: {
-               stage: 'final',
-               result: 'automatic_third_place',
-               message: 'You get 3rd place! Your opponent for the final was unavailable.',
-               finalPlacement: 3
-             }
-           }));
-           console.log(`🏆 Sent automatic 3rd place message to ${remainingPlayer.username}`);
-         }
-         
-         // Clean up losers final room
-         finalRoomB.players = [];
-         finalRoomB.metadata.status = 'completed_by_forfeit';
-         
-         // Start winners final normally
-         this._startWinnersFinalWithTiming(finalRoomA, tournamentId);
-         
-       } else if (finalRoomB.players.length === 0 && finalRoomB.metadata?.hasForfeitMissingPlayer) {
-         // Edge case: No one in losers final, only forfeit player
-         const forfeitPlayer = finalRoomB.metadata.forfeitMissingPlayer;
-         console.log(`🏆 Losers final empty except for forfeit player ${forfeitPlayer?.username || 'Unknown'} (4th place)`);
-         
-         // Clean up losers final room
-         finalRoomB.metadata.status = 'completed_by_forfeit';
-         
-         // Start winners final normally  
-         this._startWinnersFinalWithTiming(finalRoomA, tournamentId);
-         
-       } else {
-         console.error(`🏆 Unexpected losers final state: ${finalRoomB.players.length} players, forfeit: ${finalRoomB.metadata?.hasForfeitMissingPlayer}`);
-         console.error(`🏆 Forfeit player:`, finalRoomB.metadata?.forfeitMissingPlayer);
-         // Fallback: start winners final anyway
-         this._startWinnersFinalWithTiming(finalRoomA, tournamentId);
-       }
-       
-     } else if (!winnersComplete && losersComplete) {
+    console.log(`🏆 No clear disconnection case detected - proceeding with normal final flow`);
+    console.log(`🏆 Winners final complete: ${winnersComplete}, Losers final complete: ${losersComplete}`);
+    
+    // ⭐ FORFEIT SCENARIO DETECTION: Handle incomplete losers final
+    if (winnersComplete && !losersComplete) {
+      console.log(`🏆 FORFEIT SCENARIO DETECTED: Winners final complete, but losers final incomplete`);
+      
+      if (currentFinalRoomB.players.length === 1 && currentFinalRoomB.metadata?.hasForfeitMissingPlayer) {
+        // Award 3rd place to the only remaining player in losers final
+        const remainingPlayer = currentFinalRoomB.players[0];
+        const forfeitPlayer = currentFinalRoomB.metadata.forfeitMissingPlayer;
+        
+        console.log(`🏆 Awarding automatic 3rd place to ${remainingPlayer.username} (only player in losers final)`);
+        console.log(`🏆 ${forfeitPlayer?.username || 'Disconnected player'} gets 4th place by forfeit`);
+        
+        // Send 3rd place message to remaining player
+        if (remainingPlayer.ws && remainingPlayer.ws.readyState === 1) {
+          remainingPlayer.ws.send(JSON.stringify({
+            type: 'gameEnd',
+            roomId: currentFinalRoomB.id,
+            winner: {
+              id: remainingPlayer.id,
+              username: remainingPlayer.username,
+              score: 11
+            },
+            loser: {
+              id: forfeitPlayer?.id || 'unknown',
+              username: forfeitPlayer?.username || 'Disconnected Player',
+              score: 0
+            },
+            tournamentAdvancement: {
+              stage: 'final',
+              result: 'automatic_third_place',
+              message: 'You get 3rd place! Your opponent for the final was unavailable.',
+              finalPlacement: 3
+            }
+          }));
+          console.log(`🏆 Sent automatic 3rd place message to ${remainingPlayer.username}`);
+        }
+        
+        // Clean up losers final room
+        currentFinalRoomB.players = [];
+        currentFinalRoomB.metadata.status = 'completed_by_forfeit';
+        
+        // Start winners final normally
+        this._startWinnersFinalWithTiming(currentFinalRoomA, tournamentId);
+        
+      } else if (currentFinalRoomB.players.length === 0 && currentFinalRoomB.metadata?.hasForfeitMissingPlayer) {
+        // Edge case: No one in losers final, only forfeit player
+        const forfeitPlayer = currentFinalRoomB.metadata.forfeitMissingPlayer;
+        console.log(`🏆 Losers final empty except for forfeit player ${forfeitPlayer?.username || 'Unknown'} (4th place)`);
+        
+        // Clean up losers final room
+        currentFinalRoomB.metadata.status = 'completed_by_forfeit';
+        
+        // Start winners final normally  
+        this._startWinnersFinalWithTiming(currentFinalRoomA, tournamentId);
+        
+      } else {
+        console.error(`🏆 Unexpected losers final state: ${currentFinalRoomB.players.length} players, forfeit: ${currentFinalRoomB.metadata?.hasForfeitMissingPlayer}`);
+        console.error(`🏆 Forfeit player:`, currentFinalRoomB.metadata?.forfeitMissingPlayer);
+        // Fallback: start winners final anyway
+        this._startWinnersFinalWithTiming(currentFinalRoomA, tournamentId);
+      }
+      
+    } else if (!winnersComplete && losersComplete) {
       // This shouldn't happen in normal tournament flow, but handle it
       console.warn(`🏆 UNUSUAL SCENARIO: Losers final complete, but winners final incomplete`);
-      this._startLosersFinalWithTiming(finalRoomB, tournamentId);
+      this._startLosersFinalWithTiming(currentFinalRoomB, tournamentId);
       
     } else if (winnersComplete && losersComplete) {
       // Normal scenario - both finals have 2 players each
       console.log(`🏆 NORMAL SCENARIO: Both finals complete, starting both games`);
-      this._startBothFinalsWithTiming(finalRoomA, finalRoomB, tournamentId);
+      this._startBothFinalsWithTiming(currentFinalRoomA, currentFinalRoomB, tournamentId);
       
     } else {
       // Both finals incomplete - this indicates a serious error
-      console.error(`🏆 CRITICAL ERROR: Both final rooms incomplete - winners: ${finalRoomA.players.length}, losers: ${finalRoomB.players.length}`);
+      console.error(`🏆 CRITICAL ERROR: Both final rooms incomplete - winners: ${currentFinalRoomA.players.length}, losers: ${currentFinalRoomB.players.length}`);
     }
   }
 
@@ -1348,6 +1523,52 @@ export class TournamentManager {
     }, 2000);
     
     console.log(`🏆 🏆 Tournament ${tournamentId} completed with automatic victory for ${lonePlayer.username}`);
+  }
+
+  /**
+   * Check if all players in the final rooms are from the same semi-final
+   * @param {Array} winnersFinalPlayers - Array of players in winners final
+   * @param {Array} losersFinalPlayers - Array of players in losers final
+   * @param {string} tournamentId - The tournament ID
+   * @returns {boolean} - True if all players are from the same semi-final
+   */
+  _arePlayersFromSameSemiFinal(winnersFinalPlayers, losersFinalPlayers, tournamentId) {
+    // Get all players from both finals
+    const allFinalPlayers = [...winnersFinalPlayers, ...losersFinalPlayers];
+    
+    if (allFinalPlayers.length !== 2) {
+      console.log(`🏆 Cannot determine same semi-final: Expected 2 players, got ${allFinalPlayers.length}`);
+      return false;
+    }
+    
+    // ⭐ SIMPLIFIED LOGIC: If we have exactly 2 players and one is in winners final and one is in losers final,
+    // AND there are no other active semi-final rooms, then they must be from the same semi-final
+    // (because the other semi-final was forfeited and cleaned up)
+    
+    // Get all semi-final rooms for this tournament
+    const allRooms = this.roomManager.getAllRooms();
+    const activeSemiFinalRooms = allRooms.filter(room => 
+      room.metadata?.tournamentId === tournamentId && 
+      this.isSemiFinalRoom(room) &&
+      room.metadata?.status !== 'completed' &&
+      room.metadata?.status !== 'empty'
+    );
+    
+    console.log(`🏆 Found ${activeSemiFinalRooms.length} active semi-final rooms for tournament ${tournamentId}`);
+    
+    // If there are no active semi-final rooms, and we have exactly 2 players in finals,
+    // then they must be from the same semi-final (the other was forfeited)
+    const noActiveSemiFinals = activeSemiFinalRooms.length === 0;
+    const hasOneInWinners = winnersFinalPlayers.length === 1;
+    const hasOneInLosers = losersFinalPlayers.length === 1;
+    
+    const fromSameSemiFinal = noActiveSemiFinals && hasOneInWinners && hasOneInLosers;
+    
+    console.log(`🏆 No active semi-finals: ${noActiveSemiFinals}`);
+    console.log(`🏆 One in winners: ${hasOneInWinners}, One in losers: ${hasOneInLosers}`);
+    console.log(`🏆 From same semi-final: ${fromSameSemiFinal}`);
+    
+    return fromSameSemiFinal;
   }
 }
 

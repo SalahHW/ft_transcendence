@@ -381,6 +381,31 @@ export function initializeGame(playerId: string): void {
             return;
         }
 
+        // ⭐ NEW: Check for forfeit scenario first/second place (when one semi-final was forfeited and its winner left)
+        if (gameEndData.tournamentAdvancement?.result === 'forfeit_scenario_first_place' || 
+            gameEndData.tournamentAdvancement?.result === 'forfeit_scenario_second_place') {
+            
+            console.log('🏆 Handling forfeit scenario first/second place (other semi-final was forfeited)');
+            const opponentName = gameEndData.winner.id === localPlayerId ? 
+                                gameEndData.loser.username : 
+                                gameEndData.winner.username;
+            
+            const finalPlacement = gameEndData.tournamentAdvancement.result === 'forfeit_scenario_first_place' ? 1 : 2;
+            
+            try {
+                await TournamentClientHandler.handleFinalGameEnd(
+                    gameEndData,
+                    localPlayerId,
+                    opponentName,
+                    finalPlacement as 1 | 2
+                );
+            } catch (error) {
+                console.error('🏆 ERROR: Error showing forfeit scenario first/second place splash:', error);
+                cleanup();
+            }
+            return;
+        }
+
         // ⭐ NEW: Check for automatic third place (when opponent forfeited from losers final)
         if (gameEndData.tournamentAdvancement?.result === 'automatic_third_place') {
             console.log('🏆 Handling automatic 3rd place due to forfeit in losers final');
