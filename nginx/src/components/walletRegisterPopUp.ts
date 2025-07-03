@@ -1,0 +1,124 @@
+import AuthNanoService from "../auth/AuthNanoService.js";
+import { UI_THEME } from "../style/tailwindClasses.js";
+import { buttonHTML } from "./button.js";
+import ModalView from "./ModalView.js";
+
+export default class WalletRegisterPopup extends ModalView {
+  private _authService: AuthNanoService;
+
+  constructor() {
+    super({
+      width: "100%",
+      maxWidth: "28rem",
+      contentContainerClasses: "p-8 mx-4",
+    });
+    this._authService = AuthNanoService.getInstance();
+  }
+
+  public show(): void {
+    if (this._isVisible) return;
+    this.render();
+    super.show();
+  }
+
+  public render(): void {
+    this._contentContainer.innerHTML = /* HTML */ `
+      <h2 class="${UI_THEME.components.title} mb-6">Register with Wallet</h2>
+
+      <form
+        id="popup-container-form-wallet-register"
+        class="${UI_THEME.components.form}"
+      >
+        <div>
+          <input
+            type="text"
+            id="popup-container-username-wallet-register"
+            placeholder="Username"
+            class="${UI_THEME.components.input}"
+          />
+        </div>
+
+        <div
+          id="popup-container-message-container-wallet-register"
+          class="h-6 mt-4"
+        >
+          <div
+            id="popup-container-message-wallet-register"
+            class="${UI_THEME.components
+              .message} opacity-0 invisible transition-all duration-200"
+          ></div>
+        </div>
+
+        ${buttonHTML({
+          id: "popup-container-submit-wallet-register",
+          type: "submit",
+          label: "Register with Wallet",
+          style: UI_THEME.components.button.primary,
+        })}
+      </form>
+    `;
+
+    this._attachFormEventListeners();
+  }
+
+  private _attachFormEventListeners(): void {
+    const form = document.getElementById(
+      "popup-container-form-wallet-register"
+    ) as HTMLFormElement;
+    form?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      await this._handleSubmit();
+    });
+  }
+
+  private async _handleSubmit(): Promise<void> {
+    const usernameInput = document.getElementById(
+      "popup-container-username-wallet-register"
+    ) as HTMLInputElement;
+
+    if (!usernameInput.value.trim()) {
+      this._showError("Please enter a username.");
+      return;
+    }
+
+    try {
+      await this._authService.registerWithWallet(usernameInput.value.trim());
+
+      this._showSuccess("Wallet registration successful.");
+
+      setTimeout(() => {
+        this.hide();
+      }, 1500);
+    } catch (error) {
+      this._showError(
+        error instanceof Error ? error.message : "Wallet registration failed."
+      );
+    }
+  }
+
+  private _showError(message: string): void {
+    this._showMessage(message, "text-red-400");
+  }
+
+  private _showSuccess(message: string): void {
+    this._showMessage(message, "text-green-400");
+  }
+
+  private _showMessage(message: string, colorClass: string): void {
+    const messageElement = document.getElementById(
+      "popup-container-message-wallet-register"
+    );
+    if (!messageElement) return;
+
+    messageElement.className = `${UI_THEME.components.message} ${colorClass} opacity-100 visible transition-all duration-200`;
+    messageElement.textContent = message;
+
+    setTimeout(() => {
+      messageElement.classList.remove("opacity-100", "visible");
+      messageElement.classList.add("opacity-0", "invisible");
+      setTimeout(() => {
+        messageElement.textContent = "";
+      }, 200);
+    }, 3000);
+  }
+}

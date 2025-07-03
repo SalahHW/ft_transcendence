@@ -65,4 +65,119 @@ export default class AuthNanoService {
     // After successful registration, log the user in.
     return this.login(username, password);
   }
+
+  public async registerWithWallet(username: string): Promise<void> {
+    try {
+      const wallet = await this._getWalletAddress();
+      if (!wallet) throw new Error("No wallet detected");
+
+      //️Récupérer le challenge (et le timestamp)
+      const challengeRes = await fetch(
+        `https://elsalmajori.games:8443/wallet/challenge?wallet=${wallet}`
+      );
+      if (!challengeRes.ok) {
+        const errorText = await challengeRes.text();
+        throw new Error(`Failed to get challenge: ${errorText}`);
+      }
+
+      const { challenge, timestamp } = await challengeRes.json();
+      if (!challenge || !timestamp)
+        throw new Error("Invalid challenge response");
+
+      // Signature du challenge via MetaMask
+      const signature = await this._signMessage(challenge, wallet);
+
+      // ️Envoi au backend
+      const registerRes = await fetch(
+        "https://elsalmajori.games:8443/register/wallet",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            wallet,
+            username,
+            signature,
+            timestamp,
+          }),
+        }
+      );
+
+      if (!registerRes.ok) {
+        const errorText = await registerRes.text();
+        throw new Error(`Wallet registration failed: ${errorText}`);
+      }
+    } catch (error) {
+      console.error("registerWithWallet() error:", error);
+      throw error;
+    }
+  }
+
+  private async _getWalletAddress(): Promise<string | null> {
+    const ethereum = (window as any).ethereum;
+    if (!ethereum) throw new Error("MetaMask not detected");
+
+    const accounts: string[] = await ethereum.request({
+      method: "eth_requestAccounts",
+    });
+    return accounts[0] || null;
+  }
+
+  private async _signMessage(
+    message: string,
+    address: string
+  ): Promise<string> {
+    const ethereum = (window as any).ethereum;
+    if (!ethereum) throw new Error("Ethereum provider not available");
+
+    const signature: string = await ethereum.request({
+      method: "personal_sign",
+      params: [message, address],
+    });
+    return signature;
+  }
+
+  public async loginWithWallet(): Promise<void> {
+    try {
+      const wallet = await this._getWalletAddress();
+      if (!wallet) throw new Error("No wallet detected");
+
+      // Récupérer le challenge à signer
+      const challengeRes = await fetch(
+        `https://elsalmajori.games:8443/wallet/challenge?wallet=${wallet}`
+      );
+      if (!challengeRes.ok) {
+        const errorText = await challengeRes.text();
+        throw new Error(`Failed to get challenge: ${errorText}`);
+      }
+
+      const { challenge, timestamp } = await challengeRes.json();
+      if (!challenge || !timestamp)
+        throw new Error("Invalid challenge response");
+
+      // Signer le challenge avec MetaMask
+      const signature = await this._signMessage(challenge, wallet);
+
+      // Envoyer la signature pour login
+      const loginRes = await fetch(
+        "https://elsalmajori.games:8443/login/wallet",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            wallet,
+            signature,
+            timestamp,
+          }),
+        }
+      );
+
+      if (!loginRes.ok) {
+        const errorText = await loginRes.text();
+        throw new Error(`Wallet login failed: ${errorText}`);
+      }
+    } catch (error) {
+      console.error("loginWithWallet() error:", error);
+      throw error;
+    }
+  }
 }
