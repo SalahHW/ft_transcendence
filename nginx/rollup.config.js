@@ -15,7 +15,7 @@ export default [
     },
     external: (id) => {
       // Treat dynamic imports to game bundle as external
-      return id.includes('game.bundle.js');
+      return id.includes('game.bundle.js') || id.includes('gamePages.bundle.js');
     },
     plugins: [
       nodeResolve({
@@ -51,6 +51,32 @@ export default [
       commonjs(),
       typescript({
         tsconfig: './src/game/tsconfig.json',
+        outDir: null
+      }),
+      terser({
+        compress: {
+          drop_console: false
+        }
+      })
+    ]
+  },
+  // Game pages bundle
+  {
+    input: 'src/views/gamePages/gamePage.ts',
+    output: {
+      file: 'public/js/gamePages.bundle.js',
+      format: 'es',
+      sourcemap: false,
+      inlineDynamicImports: true
+    },
+    plugins: [
+      nodeResolve({
+        browser: true,
+        preferBuiltins: false
+      }),
+      commonjs(),
+      typescript({
+        tsconfig: './src/views/gamePages/tsconfig.json',
         outDir: null
       }),
       terser({

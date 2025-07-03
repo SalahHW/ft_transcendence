@@ -23,6 +23,7 @@
 		"./src/*/*/*.ts"
 	],
 	"exclude": [
-		"./src/game"
+		"./src/game",
+		"./src/views/gamePages"
 	]
 }

@@ -1,15 +1,7 @@
 {
-	"extends": "../../tsconfig.json",
-	"compilerOptions": {
-		"strict": false,
-		"noImplicitAny": false,
-		"noImplicitReturns": false,
-		"noFallthroughCasesInSwitch": false,
-		"noUnusedLocals": false,
-		"noUnusedParameters": false
-	},
+    "extends": "../../tsconfig.relaxed.json",
 	"include": [
-		"./**/*.ts"
+		"./*/*.ts"
 	],
 	"exclude": []
 }
