@@ -6,6 +6,7 @@ import { MESSAGE_TYPES } from '../core/constants.js';
 import { playerManager } from '../player/PlayerManager.js';
 import { playerInput } from '../player/PlayerInput.js';
 import { disconnectionHandler } from '../server/disconnect.js';
+import { browserDisconnectHandler } from '../server/disconnect/browserDisconnect/index.js';
 import { schemas, messageTypeSchema } from './schemas.js';
 
 /**
@@ -28,6 +29,7 @@ export class MessageRouter {
     this.messageHandlers.set(MESSAGE_TYPES.LEAVE_GAME, this._handleLeaveGame.bind(this));
     this.messageHandlers.set(MESSAGE_TYPES.REQUEST_BALL_RESPAWN, this._handleBallRespawn.bind(this));
     this.messageHandlers.set(MESSAGE_TYPES.KEEP_ALIVE, this._handleKeepAlive.bind(this));
+    this.messageHandlers.set('updatePlayerState', this._handleUpdatePlayerState.bind(this));
     this.messageHandlers.set('powerupActivation', this._handlePowerupActivation.bind(this));
   }
 
@@ -290,6 +292,19 @@ export class MessageRouter {
         reason: msg.reason || 'keep_alive_ack'
       }));
     }
+  }
+
+  /**
+   * Handle player state updates from browser
+   */
+  _handleUpdatePlayerState(msg, playerId, roomId, ws) {
+    console.log(`🏖️ Received player state update from ${playerId}: ${msg.state} in room ${roomId}`);
+    
+    // Update player state in browser disconnect handler
+    browserDisconnectHandler.setPlayerConnectionState(playerId, roomId, msg.state);
+    
+    // Update player activity to prevent stale connection cleanup
+    disconnectionHandler.updatePlayerActivity(playerId);
   }
 }
 

@@ -1,6 +1,7 @@
 import { messageRouter } from './MessageRouter.js';
 import { connectionManager } from './ConnectionManager.js';
 import { disconnectionHandler } from '../server/disconnect.js';
+import { browserDisconnectHandler } from '../server/disconnect/browserDisconnect/index.js';
 import { WebSocketUtils } from '../utils/helpers.js';
 import { gameStateManager } from '../game/GameStateManager.js';
 
@@ -41,8 +42,8 @@ export class WebSocketHandler {
     // Setup message handling
     this._setupMessageHandling(ws, playerId, roomId);
     
-    // Setup disconnect handling using dedicated module
-    disconnectionHandler.setupWebSocketDisconnectHandlers(ws, playerId, roomId);
+    // Setup browser disconnect handling for enhanced detection
+    browserDisconnectHandler.setupBrowserDisconnectHandlers(ws, playerId, roomId);
   }
 
   /**
