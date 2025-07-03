@@ -1,4 +1,5 @@
 import * as avatarModels from "../models/avatarModels.js";
+import * as userServices from "../services/userServices.js";
 import { saveUploadedAvatar } from "../utils/uploadUtils.js";
 import { deleteFile } from "../utils/fileUtils.js";
 import path from "path";
@@ -14,6 +15,10 @@ export const createAvatar = async (request, reply) => {
         .send({ error: "Request is not multipart/form-data" });
     }
 
+    const userId = request.params.id;
+
+    await userServices.userExists(userId);
+
     const fileData = await request.file();
 
     if (!fileData) {
@@ -21,8 +26,6 @@ export const createAvatar = async (request, reply) => {
     }
 
     ({ fileName } = await saveUploadedAvatar(fileData));
-
-    const userId = request.params.id;
 
     await avatarModels.createAvatar(userId, fileName);
 

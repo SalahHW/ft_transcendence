@@ -14,6 +14,12 @@ export default async function authenticationRoutes(fastify) {
   });
 
   fastify.route({
+    method: "POST",
+    url: "/logout",
+    handler: authenticationControllers.logoutUser,
+  });
+
+  fastify.route({
     method: "GET",
     url: "/me",
     handler: async (request, reply) => {

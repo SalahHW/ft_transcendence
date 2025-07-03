@@ -17,7 +17,7 @@ services:
     networks:
       - transcendence
     volumes:
-      - ./database:/app/database
+      - ./users-service/database:/app/database
 
   jwt:
     container_name: jwt
