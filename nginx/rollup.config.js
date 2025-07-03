@@ -50,7 +50,7 @@ export default [
       }),
       commonjs(),
       typescript({
-        tsconfig: './tsconfig.json',
+        tsconfig: './src/game/tsconfig.json',
         outDir: null
       }),
       terser({
@@ -60,4 +60,4 @@ export default [
       })
     ]
   }
-]; 
+];
