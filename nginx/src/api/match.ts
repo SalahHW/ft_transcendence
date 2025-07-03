@@ -6,89 +6,107 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:41:07 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/01 17:51:50 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/03 13:16:22 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 /**
  * Match object.
- * @property `id` - The match's ID
- * @property `userId1` - The ID of the first user (not user object avoid surcharge. Use `UserServiceAPI` to get user object)
- * @property `userId2` - The ID of the second user (not user object avoid surcharge. Use `UserServiceAPI` to get user object)
- * @property `userScore1` - The score of the first user
- * @property `userScore2` - The score of the second user
- * @property `date` - The date of the match
+ * @property `matchId` - The match's ID
+ * @property `player1` - The name of the first player
+ * @property `player2` - The name of the second player
+ * @property `player1Score` - The score of the first player
+ * @property `player2Score` - The score of the second player
+ * @property `winner` - The address of the winner
  */
 export interface Match {
-	id?: number;
-	userId1?: number;
-	userId2?: number;
-	userScore1?: number;
-	userScore2?: number;
-	date?: Date;
+	matchId?: number;
+	player1?: string;
+	player2?: string;
+	player1Score?: number;
+	player2Score?: number;
+	winner?: string;
 }
 
 /**
- * Match service API.
+ * Match service API (blockchain-service).
+ * Toutes les méthodes correspondent aux routes exposées par le backend Fastify du blockchain-service.
  */
 export default class MatchServiceAPI {
-	/*
-		TODO : passer sur elsalmajori.games:8443 (comme les autres API)
-	*/
-	private _baseUrl: string = "http://localhost:3000/api/matches";
+	private _baseUrl: string = "https://elsalmajori.games:8444"; // Port du blockchain-service
 
 	/**
-	 * Get all matches
+	 * Get all matches played by a player (by name)
+	 * @param name - The player's name
 	 * @returns A promise that resolves to an array of matches
 	 */
-	async getAllMatches(): Promise<Match[]> {
-		const response = await fetch(`${this._baseUrl}`, {
-			method: "GET",
-			headers: {
-				"Authorization": `Bearer CONNECTED_USER_TOKEN`,
-			}
+	async getMatchesByPlayer(name: string): Promise<Match[]> {
+		const response = await fetch(`${this._baseUrl}/match/player/${encodeURIComponent(name)}`, {
+			method: "GET"
 		});
-		if (response.status !== 200) {
-			throw new Error(`Failed to fetch matches: ${response.statusText}`);
-		}
-		return response.json();
+		const data = await response.json();
+		if (response.status === 200 && data.success)
+			return data.matches;
+		else
+			throw new Error(`Failed to fetch matches by player:\n${JSON.stringify(data, null, 2)}`);
 	}
 
 	/**
-	 * Create a new match
-	 * @param match - The match object to create
-	 * @returns A promise that resolves to the created match
+	 * Get all matches won by an address
+	 * @param address - The winner's address
+	 * @returns A promise that resolves to an array of matches
 	 */
-	async createMatch(match: Match): Promise<Match> {
-		const response = await fetch(`${this._baseUrl}`, {
+	async getMatchesByWinner(address: string): Promise<Match[]> {
+		const response = await fetch(`${this._baseUrl}/match/winner/${address}`, {
+			method: "GET"
+		});
+		const data = await response.json();
+		if (response.status === 200 && data.success)
+			return data.matches;
+		else
+			throw new Error(`Failed to fetch matches by winner:\n${JSON.stringify(data, null, 2)}`);
+	}
+
+	/**
+	 * Get a match by its ID
+	 * @param matchId - The match ID
+	 * @returns A promise that resolves to the match
+	 */
+	async getMatchById(matchId: number): Promise<Match> {
+		const response = await fetch(`${this._baseUrl}/match/${matchId}`, {
+			method: "GET"
+		});
+		const data = await response.json();
+		if (response.status === 200 && data.success)
+			return data.match;
+		else
+			throw new Error(`Failed to fetch match by id:\n${JSON.stringify(data, null, 2)}`);
+	}
+
+	/**
+	 * Report a new match (declare a match on-chain)
+	 * @param match - The match object to report
+	 * @returns A promise that resolves to the transaction hash
+	 */
+	async reportMatch(match: {
+		player1: string;
+		player2: string;
+		matchId: number;
+		player1Score: number;
+		player2Score: number;
+		winner: string;
+	}): Promise<string> {
+		const response = await fetch(`${this._baseUrl}/report-match`, {
 			method: "POST",
 			headers: {
-				"Authorization": `Bearer CONNECTED_USER_TOKEN`,
 				"Content-Type": "application/json"
 			},
 			body: JSON.stringify(match)
 		});
-		if (response.status !== 201) {
-			throw new Error(`Failed to create match: ${response.statusText}`);
-		}
-		return response.json();
-	}
-
-	/**
-	 * Get a match by ID
-	 * @param id - The ID of the match
-	 * @returns A promise that resolves to the match
-	 */
-	async getMatchById(id: number): Promise<Match> {
-		const response = await fetch(`${this._baseUrl}/${id}`, {
-			method: "GET",
-			headers: {
-				"Authorization": `Bearer CONNECTED_USER_TOKEN`,
-			}
-		});
-		if (response.status !== 200) {
-			throw new Error(`Failed to fetch match: ${response.statusText}`);
-		}
-		return response.json();
+		const data = await response.json();
+		if (response.status === 200 && data.success)
+			return data.transactionHash;
+		else
+			throw new Error(`Failed to report match:\n${JSON.stringify(data, null, 2)}`);
 	}
 }
