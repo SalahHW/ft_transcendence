@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:42:23 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/01 15:57:02 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/03 23:35:30 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -240,7 +240,7 @@ export default class CustomTerminal {
     logError(message: string): void {
         const line = document.createElement('p');
         line.className = 'm-0 py-0.5 whitespace-pre-wrap break-words text-red-400';
-        line.textContent = `{message}`;
+        line.textContent = `${message}`;
         this._outputElement.appendChild(line);
 
         // Auto-scroll to bottom
