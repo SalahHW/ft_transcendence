@@ -119,11 +119,77 @@ export function handleIncompleteFinalRoomsAfterDelay(finalRoomA, finalRoomB, tou
   if (!currentFinalRoomA || !currentFinalRoomB) return;
   const winnersComplete = currentFinalRoomA.players.length === 2;
   const losersComplete = currentFinalRoomB.players.length === 2;
+  const losersHasForfeit = currentFinalRoomB.metadata?.hasForfeitMissingPlayer === true;
+  
   if (winnersComplete && losersComplete) {
     startBothFinalsWithTiming(currentFinalRoomA, currentFinalRoomB, tournamentId, roomManager, gameEngine);
   } else if (winnersComplete && !losersComplete) {
     startWinnersFinalWithTiming(currentFinalRoomA, tournamentId, roomManager, gameEngine);
+    
+    // ⭐ NEW: Handle automatic 3rd place for player in losers final
+    if (currentFinalRoomB.players.length === 1 && losersHasForfeit) {
+      handleAutomaticThirdPlace(currentFinalRoomB, roomManager);
+    }
   } else if (!winnersComplete && losersComplete) {
     startLosersFinalWithTiming(currentFinalRoomB, tournamentId, roomManager, gameEngine);
   }
+}
+
+/**
+ * Handle automatic 3rd place award when player is alone in losers final due to forfeit
+ * @param {Object} losersFinalRoom - The losers final room
+ * @param {Object} roomManager - The room manager
+ */
+export function handleAutomaticThirdPlace(losersFinalRoom, roomManager) {
+  const remainingPlayer = losersFinalRoom.players[0];
+  const forfeitPlayer = losersFinalRoom.metadata.forfeitMissingPlayer;
+  
+  if (!remainingPlayer || !forfeitPlayer) {
+    console.error('🏆 Cannot award automatic 3rd place - missing player data');
+    return;
+  }
+  
+  // Create automatic 3rd place match data
+  const automaticThirdPlaceData = {
+    type: 'gameEnd',
+    roomId: losersFinalRoom.id,
+    winner: {
+      id: remainingPlayer.id,
+      username: remainingPlayer.username,
+      score: 11
+    },
+    loser: {
+      id: forfeitPlayer.id,
+      username: forfeitPlayer.username,
+      score: 0
+    },
+    gameStats: {
+      totalRebounds: 0,
+      finalScore: '11-0',
+      ballSpeed: 0,
+      lastHitBy: null,
+      forfeitReason: 'opponent_forfeited_losers_final',
+      automaticThirdPlace: true
+    },
+    matchType: 'final',
+    finalMatchType: 'losers',
+    tournamentStage: 'final',
+    serverTime: Date.now(),
+    tournamentAdvancement: {
+      stage: 'final',
+      result: 'automatic_third_place',
+      message: 'Congratulations! You finish in 3rd place!',
+      finalPlacement: 3
+    }
+  };
+  
+  // Send automatic 3rd place message to the player
+  if (remainingPlayer.ws && remainingPlayer.ws.readyState === 1) {
+    remainingPlayer.ws.send(JSON.stringify(automaticThirdPlaceData));
+    console.log(`🏆 Awarded automatic 3rd place to ${remainingPlayer.username} due to forfeit in losers final`);
+  }
+  
+  // Clean up the losers final room
+  roomManager.removeRoom(losersFinalRoom.id);
+  console.log(`🏆 Removed losers final room ${losersFinalRoom.id} after automatic 3rd place award`);
 } 
