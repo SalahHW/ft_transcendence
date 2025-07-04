@@ -14,7 +14,7 @@ export const mockProfile = {
 	avatar: {
 		id: 1,
 		userId: 42,
-		avatarName: "devuser.png"
+		avatarName: "/public/assets/devuser.png"
 	} as Avatar,
 	matches: [
 		{
