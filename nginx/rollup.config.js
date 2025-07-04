@@ -13,10 +13,10 @@ export default [
       sourcemap: false,
       inlineDynamicImports: true
     },
-    external: (id) => {
-      // Treat dynamic imports to game bundle as external
-      return id.includes('game.bundle.js') || id.includes('gamePages.bundle.js');
-    },
+    external: [
+      '/js/game.bundle.js',
+      '/js/gamePages.bundle.js'
+    ],
     plugins: [
       nodeResolve({
         browser: true,
@@ -25,7 +25,8 @@ export default [
       commonjs(),
       typescript({
         tsconfig: './tsconfig.json',
-        outDir: null // Let rollup handle output
+        outDir: null, // Let rollup handle output
+        exclude: ["src/game/**/*", "src/views/gamePages/**/*"]
       }),
       terser({
         compress: {
@@ -58,7 +59,11 @@ export default [
           drop_console: false
         }
       })
-    ]
+    ],
+    external: [
+      '/js/game.bundle.js',
+      '/js/gamePages.bundle.js'
+    ],
   },
   // Game pages bundle
   {

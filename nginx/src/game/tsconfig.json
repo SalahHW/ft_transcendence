@@ -1,7 +1,7 @@
 {
     "extends": "../../tsconfig.relaxed.json",
 	"include": [
-		"./*/*.ts"
+		"./**/*.ts"
 	],
 	"exclude": []
 }
