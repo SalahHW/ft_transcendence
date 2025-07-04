@@ -3,7 +3,6 @@ import { gameEngine } from '../game/GameEngine.js';
 import { reportMatchResultsToAPI } from './api.js';
 import { LogUtils, TimeUtils } from '../utils/helpers.js';
 import { playerManager } from '../player/PlayerManager.js';
-import { tournamentDisconnectionHandler } from './tournamentDisconnect.js';
 
 /**
  * Server-side disconnection handling for 1v1 games
@@ -23,24 +22,12 @@ export class DisconnectionHandler {
 
   /**
    * Main entry point for handling player disconnection
-   * Routes to appropriate handler based on room type
    */
   handlePlayerDisconnect(playerId, roomId) {
     const room = gameStateManager.getRoom(roomId);
     if (!room) {
       console.log(`Room ${roomId} not found during disconnect`);
       return;
-    }
-
-    // Check if this is a tournament room
-    const isTournamentRoom = room.metadata?.isTournament === true || 
-                           roomId.includes('tournament') || 
-                           roomId.includes('semi') || 
-                           roomId.includes('final');
-
-    if (isTournamentRoom) {
-      console.log(`🏆 Routing disconnect to tournament handler for player ${playerId} in room ${roomId}`);
-      return tournamentDisconnectionHandler.handleTournamentPlayerDisconnect(playerId, roomId);
     }
 
     // Handle as regular 1v1 game

@@ -5,7 +5,6 @@ import { gameStateManager } from './GameStateManager.js';
 import {  WebSocketUtils } from '../utils/helpers.js';
 import { roomMatchmaker } from '../room/RoomMatchmaker.js';
 import { createWaitingMessage } from '../player/playerStatus.js';
-import { TournamentGameHandler } from '../tournament/tournamentGameHandler.js';
 
 /**
  * Core game engine responsible for game logic orchestration
@@ -133,21 +132,12 @@ export class GameEngine {
         console.error('Failed to report match results to external services:', err.message);
       });
       
-      // ⭐ TOURNAMENT LOGIC: Handle tournament game completion
-      const isTournamentGame = TournamentGameHandler.isTournamentRoom(room);
-      
-      if (isTournamentGame) {
-        console.log(`🏆 Tournament game ended in room ${roomId}, delegating to TournamentGameHandler`);
-        TournamentGameHandler.handleTournamentGameEnd(room, roomId, matchData, this.broadcastToRoom.bind(this));
-        // Tournament handler will send appropriate messages, don't send basic gameEnd
-      } else {
-        console.log(`🏆 Regular game ended in room ${roomId}, sending standard gameEnd message`);
-        // Enhanced client message for regular games
-        this.broadcastToRoom(roomId, {
-          type: 'gameEnd',
-          ...matchData
-        });
-      }
+      // Send game end message to players
+      console.log(`🎮 Regular game ended in room ${roomId}, sending standard gameEnd message`);
+      this.broadcastToRoom(roomId, {
+        type: 'gameEnd',
+        ...matchData
+      });
     }
   }
 
@@ -266,39 +256,13 @@ export class GameEngine {
     const matchEndTime = new Date().toISOString();
     const matchStartTime = room.startTime || new Date().toISOString();
     
-    // ⭐ TOURNAMENT FIX: Determine match type based on room metadata and ID
-    let matchType = 'regular';
-    let finalMatchType = null; // Track if this is winners or losers final
-    
-    if (room.metadata?.isTournament === true) {
-      if (room.metadata?.tournamentType === 'semifinal') {
-        matchType = 'semi-final';
-      } else if (room.metadata?.tournamentType === 'final') {
-        matchType = 'final';
-        finalMatchType = room.metadata?.finalMatch; // 'winners' or 'losers'
-      } else if (roomId?.includes('_sf_')) {
-        matchType = 'semi-final';
-      } else if (roomId?.includes('_final_')) {
-        matchType = 'final';
-        // Try to determine final type from room ID
-        if (roomId.includes('_final_winners')) {
-          finalMatchType = 'winners';
-        } else if (roomId.includes('_final_losers')) {
-          finalMatchType = 'losers';
-        }
-      }
-    }
-    
-    console.log(`🏆 DEBUG: _createMatchData - roomId: ${roomId}, matchType: ${matchType}, finalMatchType: ${finalMatchType}`);
-    console.log(`🏆 DEBUG: Full room.metadata:`, room.metadata);
-    
     return {
       roomId,
       matchStartTime,
       matchEndTime,
       matchDuration: new Date() - new Date(matchStartTime),
-      matchType, // ⭐ ADD MATCH TYPE
-      finalMatchType, // ⭐ ADD FINAL MATCH TYPE ('winners' or 'losers')
+      matchType: 'regular',
+      finalMatchType: null,
       winner: {
         id: winner.id,
         username: winner.username || 'Anonymous',
@@ -315,8 +279,8 @@ export class GameEngine {
         scoreHistory: room.scoreHistory || [],
         ballSpeed: room.ball.speed,
         lastHitBy: room.ball.wasHitByPlayer,
-        matchType, // ⭐ ADD MATCH TYPE IN GAME STATS TOO
-        finalMatchType // ⭐ ADD FINAL MATCH TYPE IN GAME STATS TOO
+        matchType: 'regular',
+        finalMatchType: null
       },
       serverTime: Date.now(),
     };
@@ -342,27 +306,8 @@ export class GameEngine {
 
     console.log(`Attempting ball update for room ${roomId}, attempt ${attempt}`);
     if (room.players.length === 2) {
-      // 🎬 Check if this is a tournament room - if so, add splash screen delay
-      const isTournamentRoom = room.metadata?.isTournament === true;
-      
-      if (isTournamentRoom) {
-        console.log(`🏆 Tournament room ${roomId} detected - adding splash screen delay before ball update`);
-        
-        // Add the same delay as in MessageRouter for tournament games
-        setTimeout(() => {
-          // Double-check that room still exists and is valid
-          const roomCheck = this.stateManager.getRoom(roomId);
-          if (roomCheck && !roomCheck.ballUpdateSent) {
-            console.log(`🏆 Sending ballUpdate for tournament room ${roomId} after splash screen delay`);
-            this.sendBallUpdateForced(roomId);
-          } else {
-            console.log(`🏆 Skipping ballUpdate for tournament room ${roomId} - room state changed or ball already sent`);
-          }
-        }, 3500); // 3000ms splash screen + 500ms buffer
-      } else {
-        // Regular 1v1 room - immediate ball update (will wait for animationComplete)
-        this.sendBallUpdateForced(roomId);
-      }
+      // Regular 1v1 room - immediate ball update (will wait for animationComplete)
+      this.sendBallUpdateForced(roomId);
     } else {
       setTimeout(() => this._attemptBallUpdate(roomId, attempt + 1), 100 * attempt);
     }

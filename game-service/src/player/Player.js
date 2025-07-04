@@ -18,7 +18,6 @@ export class Player {
     this.isDownPressed = false;
     this.readyToPlay = options.readyToPlay || false;
     this.isLeaving = false;
-    this.tournament = options.tournament || false;
     
     // Timing and activity
     this.lastUpdate = Date.now();
@@ -223,7 +222,6 @@ export class Player {
       positionZ: this.positionZ,
       gamesPlayed: this.gamesPlayed,
       gamesWon: this.gamesWon,
-      tournament: this.tournament
     };
   }
 

@@ -19,7 +19,7 @@ import { getUserResponseData, registerCurrentUserForGame } from "../utils/fetch.
  */
 export async function handleSimpleMatch(cache: any): Promise<void> {
 	try {
-		const playerData = await registerCurrentUserForGame(false);
+		const playerData = await registerCurrentUserForGame();
 		
 		if (!cache.cache) {
 			cache.cache = new GamePage("app-container");

@@ -1,5 +1,4 @@
 import { roomManager } from './RoomManager.js';
-import { tournamentManager } from './tournamentManager.js';
 
 /**
  * Handles matchmaking logic for finding or creating rooms
@@ -14,13 +13,7 @@ export class RoomMatchmaker {
    * Find or create a room for a player
    */
   findOrCreateRoom(player, preferences = {}) {
-    // Log whether player clicked tournament button
-    console.log(`**** Player ${player.id} (${player.username || 'Anonymous'}) - Tournament button clicked: ${player.tournament}`);
-    
-    // ⭐ TOURNAMENT HANDLER: Use TournamentManager for tournament players
-    if (player.tournament) {
-      return tournamentManager.handleTournamentPlayer(player, preferences);
-    }
+    console.log(`**** Player ${player.id} (${player.username || 'Anonymous'}) - Joining 1v1 game`);
     
     // Regular 1v1 player logic
     let room = this._findSuitableRoom(player, preferences);
@@ -127,13 +120,8 @@ export class RoomMatchmaker {
   _findSuitableRoom(player, preferences) {
     const availableRooms = this.roomManager.getAvailableRooms();
     
-    // Filter rooms for regular 1v1 players only
+    // Filter rooms for 1v1 players
     const suitableRooms = availableRooms.filter(room => {
-      // Regular players should not join tournament rooms
-      if (room.metadata?.isTournament) {
-        return false;
-      }
-      
       // Check max players preference
       if (preferences.maxPlayers && room.maxPlayers !== preferences.maxPlayers) {
         return false;

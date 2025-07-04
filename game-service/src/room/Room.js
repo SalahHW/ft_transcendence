@@ -56,15 +56,6 @@ export class Room {
     player.assignToRoom(this.id, this.players.length - 1);
     this.metadata.lastActivity = Date.now();
     
-    // ⭐ TOURNAMENT POWERUP FIX: Reset powerup state when entering new tournament rooms
-    const isTournamentRoom = this.metadata?.isTournament === true;
-    const isSemiFinalOrFinal = this.metadata?.tournamentType === 'semifinal' || this.metadata?.tournamentType === 'final';
-    
-    if (isTournamentRoom && isSemiFinalOrFinal && player.powerup) {
-      player.powerup.reset();
-      console.log(`🏆 Powerup state reset for player ${player.id} entering ${this.metadata.tournamentType} room ${this.id}`);
-    }
-    
     console.log(`Player ${player.id} added to room ${this.id} (${this.players.length}/${this.maxPlayers})`);
     return this.players.length - 1; // Return role
   }

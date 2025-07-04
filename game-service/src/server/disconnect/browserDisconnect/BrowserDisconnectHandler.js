@@ -1,10 +1,8 @@
 import { gameStateManager } from '../../../game/GameStateManager.js';
-import { tournamentDisconnectionHandler } from '../tournament/TournamentDisconnectHandler.js';
-import { TournamentDisconnectUtils } from '../tournament/utils/TournamentDisconnectUtils.js';
 
 /**
  * Browser Disconnect Handler
- * Detects disconnections during loading/transition states and routes to existing tournament flow
+ * Detects disconnections during loading/transition states for 1v1 games
  */
 export class BrowserDisconnectHandler {
   constructor() {
@@ -22,81 +20,26 @@ export class BrowserDisconnectHandler {
       BROWSER_NAVIGATION: 'browser_navigation',
       BROWSER_CLOSE: 'browser_close',
       NETWORK_DISCONNECT: 'network_disconnect',
-      UNEXPECTED_DISCONNECT: 'unexpected_disconnect',
-      FINAL_DISCONNECT: 'final_disconnect',
-      WINNERS_FINAL_DISCONNECT: 'winners_final_disconnect',
-      LOSERS_FINAL_DISCONNECT: 'losers_final_disconnect'
+      UNEXPECTED_DISCONNECT: 'unexpected_disconnect'
     };
   }
 
   /**
    * Main entry point for browser disconnection handling
-   * Routes to appropriate handler based on room type and connection state
    */
   handleBrowserDisconnect(playerId, roomId, disconnectReason = 'unexpected_disconnect') {
     const room = gameStateManager.getRoom(roomId);
     if (!room) {
-      console.log(`🏖️ Room ${roomId} not found during browser disconnect`);
+      console.log(`Room ${roomId} not found during browser disconnect`);
       return;
     }
 
-    // Check if this is a tournament room
-    const isTournamentRoom = TournamentDisconnectUtils.isTournamentRoom(room);
-    
-    if (isTournamentRoom) {
-      console.log(`🏆🔥 BROWSER DISCONNECT: Player ${playerId} from tournament room ${roomId} (${disconnectReason})`);
-      return this.handleTournamentBrowserDisconnect(playerId, roomId, disconnectReason);
-    }
-
-    // Handle as regular 1v1 game (for future implementation)
-    console.log(`🎮🔥 BROWSER DISCONNECT: Player ${playerId} from 1v1 room ${roomId} (${disconnectReason})`);
+    // Handle as regular 1v1 game
+    console.log(`Browser disconnect: Player ${playerId} from room ${roomId} (${disconnectReason})`);
     return this.handle1v1BrowserDisconnect(playerId, roomId, disconnectReason);
   }
 
-  /**
-   * Handle tournament browser disconnection
-   * Routes to existing tournament disconnect flow with browser-specific context
-   */
-  handleTournamentBrowserDisconnect(playerId, roomId, disconnectReason) {
-    const room = gameStateManager.getRoom(roomId);
-    if (!room) return;
 
-    const player = gameStateManager.getPlayer(playerId);
-    
-    // 🏆 CRITICAL FIX: Check if player is actually in a semi-final room, even if WebSocket is from waiting room
-    const actualRoomId = this.findPlayerActualRoom(playerId);
-    const actualRoom = actualRoomId ? gameStateManager.getRoom(actualRoomId) : null;
-    
-    let targetRoomId = roomId;
-    let targetRoom = room;
-    
-    // If player is actually in a semi-final room, use that instead of the WebSocket room
-    if (actualRoom && TournamentDisconnectUtils.getTournamentRoomType(actualRoom) === 'semifinal') {
-      console.log(`🏆🔥 BROWSER DISCONNECT: Player ${playerId} is actually in semi-final room ${actualRoomId}, not WebSocket room ${roomId}`);
-      targetRoomId = actualRoomId;
-      targetRoom = actualRoom;
-    }
-    
-    // If player is actually in a final room, use that instead of the WebSocket room
-    if (actualRoom && TournamentDisconnectUtils.getTournamentRoomType(actualRoom) === 'final') {
-      console.log(`🏆🔥 BROWSER DISCONNECT: Player ${playerId} is actually in final room ${actualRoomId}, not WebSocket room ${roomId}`);
-      targetRoomId = actualRoomId;
-      targetRoom = actualRoom;
-    }
-    
-    const roomType = TournamentDisconnectUtils.getTournamentRoomType(targetRoom);
-    console.log(`🏆🔥 BROWSER DISCONNECT: Using room ${targetRoomId} (type: ${roomType}) for player ${playerId}`);
-    
-    // Mark player as leaving due to browser disconnect
-    if (player) {
-      player.isLeaving = true;
-      player.disconnectionReason = disconnectReason;
-    }
-
-    // Route to existing tournament disconnect handler with the correct room
-    // This ensures we use all the existing forfeit logic and tournament progression
-    return tournamentDisconnectionHandler.handleTournamentPlayerDisconnect(playerId, targetRoomId);
-  }
 
   /**
    * Find the actual room where the player is located (not just WebSocket room)
@@ -114,11 +57,15 @@ export class BrowserDisconnectHandler {
   }
 
   /**
-   * Handle 1v1 browser disconnection (placeholder for future implementation)
+   * Handle 1v1 browser disconnection
    */
   handle1v1BrowserDisconnect(playerId, roomId, disconnectReason) {
-    // TODO: Implement 1v1 browser disconnect handling
-    console.log(`🎮 1v1 browser disconnect handling not yet implemented for player ${playerId}`);
+    const player = gameStateManager.getPlayer(playerId);
+    if (player) {
+      player.isLeaving = true;
+      player.disconnectionReason = disconnectReason;
+    }
+    console.log(`1v1 browser disconnect handled for player ${playerId}`);
   }
 
   /**
@@ -183,21 +130,7 @@ export class BrowserDisconnectHandler {
         disconnectReason = this.disconnectReasons.NETWORK_DISCONNECT;
       }
 
-      // 🏆 ENHANCED: Add final-specific disconnect reason detection
-      const actualRoomId = this.findPlayerActualRoom(playerId);
-      const actualRoom = actualRoomId ? gameStateManager.getRoom(actualRoomId) : null;
-      
-      if (actualRoom && TournamentDisconnectUtils.getTournamentRoomType(actualRoom) === 'final') {
-        const finalMatchType = actualRoom.metadata?.finalMatch;
-        if (finalMatchType === 'winners') {
-          disconnectReason = this.disconnectReasons.WINNERS_FINAL_DISCONNECT;
-        } else if (finalMatchType === 'losers') {
-          disconnectReason = this.disconnectReasons.LOSERS_FINAL_DISCONNECT;
-        } else {
-          disconnectReason = this.disconnectReasons.FINAL_DISCONNECT;
-        }
-        console.log(`🏆 Final disconnect detected: ${disconnectReason} for ${finalMatchType} final`);
-      }
+
 
       this.handleBrowserDisconnect(playerId, roomId, disconnectReason);
     });
@@ -224,21 +157,7 @@ export class BrowserDisconnectHandler {
     this.handleBrowserDisconnect(playerId, roomId, this.disconnectReasons.BROWSER_REFRESH);
   }
 
-  /**
-   * Handle final-specific browser disconnection
-   */
-  handleFinalBrowserDisconnect(playerId, roomId, finalMatchType = 'unknown') {
-    let disconnectReason = this.disconnectReasons.FINAL_DISCONNECT;
-    
-    if (finalMatchType === 'winners') {
-      disconnectReason = this.disconnectReasons.WINNERS_FINAL_DISCONNECT;
-    } else if (finalMatchType === 'losers') {
-      disconnectReason = this.disconnectReasons.LOSERS_FINAL_DISCONNECT;
-    }
-    
-    console.log(`🏆 Final browser disconnect detected for player ${playerId} in ${finalMatchType} final`);
-    this.handleBrowserDisconnect(playerId, roomId, disconnectReason);
-  }
+
 }
 
 // Export singleton instance

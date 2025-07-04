@@ -4,7 +4,6 @@ import { ValidationUtils, LogUtils } from '../utils/helpers.js';
 import { playerManager } from '../player/PlayerManager.js';
 import { gameStateManager } from '../game/GameStateManager.js';
 import { gameEngine } from '../game/GameEngine.js';
-import { tournamentManager } from '../room/tournamentManager.js';
 import { roomManager } from '../room/RoomManager.js';
 
 // Constants for paddle movement
@@ -67,14 +66,14 @@ export async function registerApiRoutes(fastify) {
   fastify.post('/api/players', async (request, reply) => {
     try {
       console.log('API request: POST /api/players');
-      const { username, tournament = false } = request.body || {};
+      const { username } = request.body || {};
       
-      const player = playerManager.registerPlayerWithUsername(username, { tournament });
+      const player = playerManager.registerPlayerWithUsername(username);
       
-      console.log(`Created player ${player.id} with username ${username}, tournament: ${tournament}`);
+      console.log(`Created player ${player.id} with username ${username}`);
       return reply.status(201).send({
         status: 'success',
-        data: { id: player.id, username: player.username, tournament: player.tournament },
+        data: { id: player.id, username: player.username },
       });
     } catch (error) {
       console.error('Error in POST /api/players:', error);
@@ -218,11 +217,6 @@ export async function registerApiRoutes(fastify) {
       });
     }
   });
-
-  /**
-   * Diagnostic endpoint for monitoring parallel tournaments
-   */
-  fastify.get('/api/tournament-diagnostics', getTournamentDiagnostics);
 }
 
 // Service-to-service notification functions
@@ -237,11 +231,6 @@ async function notifyOtherServices(matchData) {
       name: 'stats-service', 
       url: process.env.STATS_SERVICE_URL || 'http://localhost:3002',
       endpoints: ['/api/player-stats', '/api/match-history']
-    },
-    {
-      name: 'tournament-service',
-      url: process.env.TOURNAMENT_SERVICE_URL || 'http://localhost:3003',
-      endpoints: ['/api/tournament/match-result']
     }
   ];
 
@@ -295,89 +284,3 @@ export async function reportMatchResultsToAPI(matchData) {
     console.error('❌ Failed to process match results:', error.message);
   }
 }
-
-/**
- * Diagnostic endpoint for monitoring parallel tournaments
- */
-export const getTournamentDiagnostics = async (request, reply) => {
-  try {
-    console.log('🏆 Tournament diagnostics requested');
-    
-    const tournamentStats = tournamentManager.getTournamentStats();
-    const allRooms = roomManager.getAllRooms();
-    
-    // Group rooms by tournament ID
-    const tournamentGroups = {};
-    const tournamentRooms = allRooms.filter(room => room.metadata?.isTournament);
-    
-    tournamentRooms.forEach(room => {
-      const tournamentId = room.metadata.tournamentId || 'unknown';
-      if (!tournamentGroups[tournamentId]) {
-        tournamentGroups[tournamentId] = {
-          tournamentId,
-          rooms: [],
-          totalPlayers: 0,
-          roomTypes: { waiting: 0, semifinal: 0, final: 0 },
-          status: 'unknown'
-        };
-      }
-      
-      tournamentGroups[tournamentId].rooms.push({
-        roomId: room.id,
-        type: room.metadata.tournamentType || 'unknown',
-        players: room.players.length,
-        maxPlayers: room.maxPlayers,
-        gameStarted: room.gameStarted,
-        isGameOver: room.isGameOver,
-        ready: room.ready
-      });
-      
-      tournamentGroups[tournamentId].totalPlayers += room.players.length;
-      
-      const roomType = room.metadata.tournamentType || 'waiting';
-      if (tournamentGroups[tournamentId].roomTypes[roomType] !== undefined) {
-        tournamentGroups[tournamentId].roomTypes[roomType]++;
-      }
-    });
-    
-    // Determine tournament status
-    Object.values(tournamentGroups).forEach(tournament => {
-      if (tournament.roomTypes.final > 0) {
-        tournament.status = 'finals';
-      } else if (tournament.roomTypes.semifinal > 0) {
-        tournament.status = 'semifinals';
-      } else {
-        tournament.status = 'waiting';
-      }
-    });
-    
-    const diagnostics = {
-      timestamp: new Date().toISOString(),
-      tournamentStats,
-      parallelTournaments: Object.keys(tournamentGroups).length,
-      tournaments: tournamentGroups,
-      totalTournamentRooms: tournamentRooms.length,
-      totalPlayers: Object.values(tournamentGroups).reduce((sum, t) => sum + t.totalPlayers, 0),
-      roomManager: {
-        totalRooms: allRooms.length,
-        roomCounter: roomManager._roomCounter || 0
-      },
-      playerManager: {
-        totalPlayers: playerManager.getAllPlayers().length,
-        playerCounter: playerManager._playerCounter || 0
-      }
-    };
-    
-    reply.send({
-      success: true,
-      diagnostics
-    });
-  } catch (error) {
-    console.error('Tournament diagnostics error:', error.message);
-    reply.status(500).send({
-      success: false,
-      error: 'Failed to get tournament diagnostics',
-      details: error.message
-    });
-  }
-};
