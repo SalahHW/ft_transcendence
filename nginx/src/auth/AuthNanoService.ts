@@ -56,14 +56,30 @@ export default class AuthNanoService {
     }
   }
 
-  public async register(
-    username: string,
-    password: string,
-    email: string
-  ): Promise<User> {
-    await this._usersApi.register(username, password, email);
-    // After successful registration, log the user in.
-    return this.login(username, password);
+  public async register(data: {
+    username: string;
+    password: string;
+    email: string;
+    authenticationMethod: string;
+    wallet: string;
+  }): Promise<User> {
+    const response = await fetch("https://elsalmajori.games:8443/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      const errorMessage =
+        errorBody?.error || `Failed to register: ${response.statusText}`;
+      const error: any = new Error(errorMessage);
+      error.response = response;
+      throw error;
+    }
+
+    // Enchaîne avec login si tu veux auto-connecter après création
+    return this.login(data.username, data.password);
   }
 
   public async registerWithWallet(username: string): Promise<void> {
@@ -106,6 +122,9 @@ export default class AuthNanoService {
         const errorText = await registerRes.text();
         throw new Error(`Wallet registration failed: ${errorText}`);
       }
+
+      this._user = await this._usersApi.getCurrentUser();
+      this._isLoggedIn = true;
     } catch (error) {
       console.error("registerWithWallet() error:", error);
       throw error;
@@ -175,6 +194,8 @@ export default class AuthNanoService {
         const errorText = await loginRes.text();
         throw new Error(`Wallet login failed: ${errorText}`);
       }
+      this._user = await this._usersApi.getCurrentUser();
+      this._isLoggedIn = true;
     } catch (error) {
       console.error("loginWithWallet() error:", error);
       throw error;

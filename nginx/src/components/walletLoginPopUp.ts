@@ -4,7 +4,7 @@ import { UI_THEME } from "../style/tailwindClasses.js";
 import { buttonHTML } from "./button.js";
 import { loadingSpinnerHTML } from "./loadingSpinner";
 
-export default class WalletRegisterPopup extends ModalView {
+export default class WalletLoginPopup extends ModalView {
   private _authService: AuthNanoService;
 
   constructor() {
@@ -24,32 +24,23 @@ export default class WalletRegisterPopup extends ModalView {
 
   public render(): void {
     this._contentContainer.innerHTML = /* HTML */ `
-      <h2 class="${UI_THEME.components.title} mb-4">Register with Wallet</h2>
+      <h2 class="${UI_THEME.components.title} mb-4">Login with Wallet</h2>
 
-      <form id="wallet-register-form" class="${UI_THEME.components.form}">
-        <div>
-          <input
-            type="text"
-            id="wallet-register-username"
-            placeholder="Username"
-            class="${UI_THEME.components.input}"
-          />
-        </div>
-
-        <div id="wallet-register-message-container" class="h-6 mb-4">
+      <form id="wallet-login-form" class="${UI_THEME.components.form}">
+        <div id="wallet-login-message-container" class="h-6 mb-4">
           <div
-            id="wallet-register-message"
+            id="wallet-login-message"
             class="${UI_THEME.components
               .message} opacity-0 invisible transition-all duration-200"
           ></div>
         </div>
 
-        ${loadingSpinnerHTML({ id: "wallet-register-spinner" })}
+        ${loadingSpinnerHTML({ id: "wallet-login-spinner" })}
         <div class="flex justify-center mt-6">
           ${buttonHTML({
-            id: "wallet-register-button",
+            id: "wallet-login-button",
             type: "submit",
-            label: "Register with MetaMask",
+            label: "Sign in with MetaMask",
             style: UI_THEME.components.button.primary,
           })}
         </div>
@@ -61,7 +52,7 @@ export default class WalletRegisterPopup extends ModalView {
 
   private _attachEventListeners(): void {
     const form = document.getElementById(
-      "wallet-register-form"
+      "wallet-login-form"
     ) as HTMLFormElement;
 
     form?.addEventListener("submit", async (event) => {
@@ -71,32 +62,23 @@ export default class WalletRegisterPopup extends ModalView {
   }
 
   private async _handleSubmit(): Promise<void> {
-    const usernameInput = document.getElementById(
-      "wallet-register-username"
-    ) as HTMLInputElement;
-    const spinner = document.getElementById("wallet-register-spinner");
+    const spinner = document.getElementById("wallet-login-spinner");
     const button = document.getElementById(
-      "wallet-register-button"
+      "wallet-login-button"
     ) as HTMLButtonElement;
-
-    const username = usernameInput.value.trim();
-    if (!username) {
-      this._showError("Username is required.");
-      return;
-    }
 
     this._setLoading(true);
 
     try {
-      await this._authService.registerWithWallet(username);
-      this._showSuccess(`Welcome, ${username}!`);
+      await this._authService.loginWithWallet();
+      this._showSuccess("Logged in successfully!");
 
       setTimeout(() => {
         this.hide();
       }, 1500);
     } catch (error: any) {
       this._showError(
-        error instanceof Error ? error.message : "Wallet registration failed"
+        error instanceof Error ? error.message : "Wallet login failed"
       );
     } finally {
       this._setLoading(false);
@@ -104,9 +86,9 @@ export default class WalletRegisterPopup extends ModalView {
   }
 
   private _setLoading(isLoading: boolean): void {
-    const spinner = document.getElementById("wallet-register-spinner");
+    const spinner = document.getElementById("wallet-login-spinner");
     const button = document.getElementById(
-      "wallet-register-button"
+      "wallet-login-button"
     ) as HTMLButtonElement;
 
     if (!spinner || !button) return;
@@ -131,7 +113,7 @@ export default class WalletRegisterPopup extends ModalView {
   }
 
   private _showMessage(message: string, colorClass: string): void {
-    const el = document.getElementById("wallet-register-message");
+    const el = document.getElementById("wallet-login-message");
     if (!el) return;
 
     el.className = `${UI_THEME.components.message} ${colorClass} opacity-100 visible transition-all duration-200`;
