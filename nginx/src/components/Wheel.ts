@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 16:41:12 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/01 17:45:48 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/04 20:09:14 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,7 +29,7 @@ interface Option {
 */
 
 export default class Wheel {
-    private _element: HTMLElement;
+		private _element: HTMLElement;
 	private _optionHistory: Option[][] = []; // Pour naviguer dans les sous-menus
 	private _selectedIndex: number = 0;
 	private _isVisible: boolean = false;
@@ -43,6 +43,7 @@ export default class Wheel {
 			onClick: () => {
 				console.log("API Test page clicked");
 				this._router.navigate("/api-test");
+				this._router.navigate("/api-test");
 			},
 		},
 		{
@@ -51,12 +52,21 @@ export default class Wheel {
 			onClick: () => {
 				this._router.navigate("/profile");
 			},
+			condition: () => this._userIsLoggedIn
 		},
 		{
 			label: "Login",
 			icon: "🔑",
 			condition: () => !this._userIsLoggedIn,
 			subMenu: [
+				{
+					label: "Sign In",
+					icon: "→",
+					onClick: () => {
+						console.log("Sign In clicked");
+						this._router.navigate("/login");
+					}
+				},
 				{
 					label: "Register",
 					icon: "+",
@@ -66,21 +76,23 @@ export default class Wheel {
 					}
 				},
 				{
-					label: "Register (Wallet)",
+					label: "Wallet Register",
 					icon: "🦊",
 					onClick: () => {
-						console.log("Register with WalletConnect clicked");
-						this._router.navigate("/register-wallet");
-					}
+						this._router.navigate("/wallet-register");
+					},
 				},
 				{
-					label: "Sign In",
-					icon: "→",
-					onClick: () => {
-						console.log("Sign In clicked");
-						this._router.navigate("/login");
-					}
-				}
+					label: "Wallet Login",
+					icon: "🔐",
+					onClick: async () => {
+						try {
+							await this._authService.loginWithWallet();
+						} catch (error) {
+							console.error("Wallet Login failed:", error);
+						}
+					},
+				},
 			]
 		},
 		{
@@ -105,12 +117,11 @@ export default class Wheel {
 			throw new Error(`Element with id ${elementId} not found`);
 		}
 
-
 		this._setupKeyboardEvents();
 		this._setupMouseEvents();
 
 		this.render();
-    }
+	}
 
     private _setupKeyboardEvents(): void {
         document.addEventListener("keydown", async (event: KeyboardEvent) => {
@@ -177,7 +188,9 @@ export default class Wheel {
 
 		this._isVisible = true;
 		this._selectedIndex = 0;
-		this._wheelOptions = this._baseWheelOptions.filter(option => option.condition === undefined || option.condition());
+		this._wheelOptions = this._baseWheelOptions.filter(
+			(option) => option.condition === undefined || option.condition()
+		);
 		this._optionHistory = [];
 
 		this._element.classList.remove("hidden");
@@ -220,7 +233,7 @@ export default class Wheel {
 	}
 
 	private _renderWheel(): void {
-		const svg = this._element.querySelector('.wheel-svg') as SVGElement;
+		const svg = this._element.querySelector(".wheel-svg") as SVGElement;
 		if (!svg) return;
 
 		const centerX = 480;
@@ -230,7 +243,7 @@ export default class Wheel {
 		const optionCount = this._wheelOptions.length;
 
 		// Nettoyer le SVG
-		svg.innerHTML = '';
+		svg.innerHTML = "";
 
 		if (optionCount === 0) return;
 
@@ -238,17 +251,23 @@ export default class Wheel {
 		const startAngle = -Math.PI / 2; // Commencer en haut
 
 		// Créer le cercle central avec les styles centralisés
-		const centerCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-		centerCircle.setAttribute('cx', centerX.toString());
-		centerCircle.setAttribute('cy', centerY.toString());
-		centerCircle.setAttribute('r', innerRadius.toString());
-		centerCircle.setAttribute('fill', UI_THEME.wheel.svg.fill.center);
-		centerCircle.setAttribute('stroke', UI_THEME.wheel.svg.stroke.normal);
-		centerCircle.setAttribute('stroke-width', '1');
-		centerCircle.setAttribute('class', 'cursor-pointer transition-all duration-200 hover:fill-gray-600/90');
+		const centerCircle = document.createElementNS(
+			"http://www.w3.org/2000/svg",
+			"circle"
+		);
+		centerCircle.setAttribute("cx", centerX.toString());
+		centerCircle.setAttribute("cy", centerY.toString());
+		centerCircle.setAttribute("r", innerRadius.toString());
+		centerCircle.setAttribute("fill", UI_THEME.wheel.svg.fill.center);
+		centerCircle.setAttribute("stroke", UI_THEME.wheel.svg.stroke.normal);
+		centerCircle.setAttribute("stroke-width", "1");
+		centerCircle.setAttribute(
+			"class",
+			"cursor-pointer transition-all duration-200 hover:fill-gray-600/90"
+		);
 
 		// Gestionnaire de clic pour revenir en arrière
-		centerCircle.addEventListener('click', () => {
+		centerCircle.addEventListener("click", () => {
 			this._goBack();
 		});
 
@@ -271,7 +290,10 @@ export default class Wheel {
 			const y4 = centerY + Math.sin(angle2) * innerRadius;
 
 			// Créer le segment
-			const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+			const path = document.createElementNS(
+				"http://www.w3.org/2000/svg",
+				"path"
+			);
 			const largeArcFlag = angleStep > Math.PI ? 1 : 0;
 
 			const pathData = [
@@ -280,23 +302,36 @@ export default class Wheel {
 				`A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x3} ${y3}`,
 				`L ${x4} ${y4}`,
 				`A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${x1} ${y1}`,
-				'Z'
-			].join(' ');
+				"Z",
+			].join(" ");
 
-			path.setAttribute('d', pathData);
-			path.setAttribute('fill', isSelected ? UI_THEME.wheel.svg.fill.selected : UI_THEME.wheel.svg.fill.normal);
-			path.setAttribute('stroke', isSelected ? UI_THEME.wheel.svg.stroke.selected : UI_THEME.wheel.svg.stroke.normal);
-			path.setAttribute('stroke-width', '1');
-			path.setAttribute('class', 'cursor-pointer transition-all duration-200 hover:fill-gray-600/90');
+			path.setAttribute("d", pathData);
+			path.setAttribute(
+				"fill",
+				isSelected
+					? UI_THEME.wheel.svg.fill.selected
+					: UI_THEME.wheel.svg.fill.normal
+			);
+			path.setAttribute(
+				"stroke",
+				isSelected
+					? UI_THEME.wheel.svg.stroke.selected
+					: UI_THEME.wheel.svg.stroke.normal
+			);
+			path.setAttribute("stroke-width", "1");
+			path.setAttribute(
+				"class",
+				"cursor-pointer transition-all duration-200 hover:fill-gray-600/90"
+			);
 
 			// Gestionnaire de clic
-			path.addEventListener('click', async () => {
+			path.addEventListener("click", async () => {
 				this._selectedIndex = index;
 				await this._selectOption();
 			});
 
 			// Gestionnaire de survol
-			path.addEventListener('mouseenter', () => {
+			path.addEventListener("mouseenter", () => {
 				if (!isSelected) {
 					this._selectedIndex = index;
 					this._updateSelection();
@@ -312,37 +347,56 @@ export default class Wheel {
 			const textY = centerY + Math.sin(textAngle) * textRadius;
 
 			// Créer un groupe pour le texte et l'icône
-			const textGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-			textGroup.setAttribute('class', 'pointer-events-none');
-			textGroup.style.userSelect = 'none';
-			textGroup.style.webkitUserSelect = 'none';
-			(textGroup.style as any).MozUserSelect = 'none';
+			const textGroup = document.createElementNS(
+				"http://www.w3.org/2000/svg",
+				"g"
+			);
+			textGroup.setAttribute("class", "pointer-events-none");
+			textGroup.style.userSelect = "none";
+			textGroup.style.webkitUserSelect = "none";
+			(textGroup.style as any).MozUserSelect = "none";
 
 			// Icône
 			if (option.icon) {
-				const iconText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-				iconText.setAttribute('x', textX.toString());
-				iconText.setAttribute('y', (textY - 20).toString());
-				iconText.setAttribute('text-anchor', 'middle');
-				iconText.setAttribute('dominant-baseline', 'middle');
-				iconText.setAttribute('fill', isSelected ? UI_THEME.wheel.svg.text.selected : UI_THEME.wheel.svg.text.normal);
-				iconText.setAttribute('font-size', '32');
-				iconText.setAttribute('font-family', UI_THEME.wheel.svg.text.font);
-				iconText.setAttribute('font-weight', '300');
+				const iconText = document.createElementNS(
+					"http://www.w3.org/2000/svg",
+					"text"
+				);
+				iconText.setAttribute("x", textX.toString());
+				iconText.setAttribute("y", (textY - 20).toString());
+				iconText.setAttribute("text-anchor", "middle");
+				iconText.setAttribute("dominant-baseline", "middle");
+				iconText.setAttribute(
+					"fill",
+					isSelected
+						? UI_THEME.wheel.svg.text.selected
+						: UI_THEME.wheel.svg.text.normal
+				);
+				iconText.setAttribute("font-size", "32");
+				iconText.setAttribute("font-family", UI_THEME.wheel.svg.text.font);
+				iconText.setAttribute("font-weight", "300");
 				iconText.textContent = option.icon;
 				textGroup.appendChild(iconText);
 			}
 
 			// Label
-			const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-			label.setAttribute('x', textX.toString());
-			label.setAttribute('y', (textY + 20).toString());
-			label.setAttribute('text-anchor', 'middle');
-			label.setAttribute('dominant-baseline', 'middle');
-			label.setAttribute('fill', isSelected ? UI_THEME.wheel.svg.text.selected : UI_THEME.wheel.svg.text.normal);
-			label.setAttribute('font-size', '24');
-			label.setAttribute('font-weight', isSelected ? '500' : '400');
-			label.setAttribute('font-family', UI_THEME.wheel.svg.text.font);
+			const label = document.createElementNS(
+				"http://www.w3.org/2000/svg",
+				"text"
+			);
+			label.setAttribute("x", textX.toString());
+			label.setAttribute("y", (textY + 20).toString());
+			label.setAttribute("text-anchor", "middle");
+			label.setAttribute("dominant-baseline", "middle");
+			label.setAttribute(
+				"fill",
+				isSelected
+					? UI_THEME.wheel.svg.text.selected
+					: UI_THEME.wheel.svg.text.normal
+			);
+			label.setAttribute("font-size", "24");
+			label.setAttribute("font-weight", isSelected ? "500" : "400");
+			label.setAttribute("font-family", UI_THEME.wheel.svg.text.font);
 			label.textContent = option.label;
 			textGroup.appendChild(label);
 
@@ -351,16 +405,22 @@ export default class Wheel {
 
 		// Ajouter un petit indicateur au centre si on est dans un sous-menu
 		if (this._optionHistory.length > 0) {
-			const backIndicator = document.createElementNS("http://www.w3.org/2000/svg", "text");
-			backIndicator.setAttribute('x', centerX.toString());
-			backIndicator.setAttribute('y', centerY.toString());
-			backIndicator.setAttribute('text-anchor', 'middle');
-			backIndicator.setAttribute('dominant-baseline', 'middle');
-			backIndicator.setAttribute('fill', 'rgb(156, 163, 175)');
-			backIndicator.setAttribute('font-size', '20');
-			backIndicator.setAttribute('font-family', 'SF Pro Display, system-ui, -apple-system, sans-serif');
-			backIndicator.setAttribute('font-weight', '400');
-			backIndicator.textContent = '← ESC';
+			const backIndicator = document.createElementNS(
+				"http://www.w3.org/2000/svg",
+				"text"
+			);
+			backIndicator.setAttribute("x", centerX.toString());
+			backIndicator.setAttribute("y", centerY.toString());
+			backIndicator.setAttribute("text-anchor", "middle");
+			backIndicator.setAttribute("dominant-baseline", "middle");
+			backIndicator.setAttribute("fill", "rgb(156, 163, 175)");
+			backIndicator.setAttribute("font-size", "20");
+			backIndicator.setAttribute(
+				"font-family",
+				"SF Pro Display, system-ui, -apple-system, sans-serif"
+			);
+			backIndicator.setAttribute("font-weight", "400");
+			backIndicator.textContent = "← ESC";
 			svg.appendChild(backIndicator);
 		}
 	}
