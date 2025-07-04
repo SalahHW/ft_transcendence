@@ -6,16 +6,13 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: Invalid Date        by              +#+  #+#    #+#             */
-/*   Updated: 2025/07/03 23:55:52 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/04 12:09:01 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 
 // TODO: Mettre cette classe ça au propre
 // TODO: (opt) Mettre des views pour les differents forms de APITestPage
-
-import { handleSimpleMatch } from "../game/gameMode/1v1Handler.js";
-import { handleTournament } from "../game/gameMode/tournamentHandler.js";
 
 interface Route {
 	path: string;
@@ -135,12 +132,16 @@ export default class Router {
 		{
 			path: "/1v1",
 			handler: async function() {
+				// @ts-ignore
+				const { handleSimpleMatch } = await import('/js/game.bundle.js');
 				await handleSimpleMatch(this);
 			}
 		},
 		{
 			path: "/tournament",
 			handler: async function() {
+				// @ts-ignore
+				const { handleTournament } = await import('/js/game.bundle.js');
 				await handleTournament(this);
 			}
 		}
