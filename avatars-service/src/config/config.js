@@ -5,8 +5,12 @@ export const DB_PATH = isDev
   ? process.env.DEV_DB_PATH
   : process.env.AVATARS_DB_PATH;
 export const AVATARS_PATH = process.env.AVATARS_PATH;
+export const ALLOWED_MIME_TYPES = process.env.ALLOWED_MIME_TYPES;
 export const USERS_SERVICE_URL = process.env.USERS_SERVICE_URL;
 export const USERS_SERVICE_TIMEOUT = process.env.USERS_SERVICE_TIMEOUT;
+
+
+//! Variable formats are not validated
 
 if (!PORT) {
   console.error("Unable to load port from environment variables");
@@ -20,6 +24,11 @@ if (!DB_PATH) {
 
 if (!AVATARS_PATH) {
   console.error("Unable to load avatar path from environment variables");
+  process.exit(1);
+}
+
+if (!ALLOWED_MIME_TYPES) {
+  console.error("Unable to load allowed mime types from environment variables");
   process.exit(1);
 }
 
