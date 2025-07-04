@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/22 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/04 12:40:50 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/04 14:01:09 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,7 +48,7 @@ export default class ProfileView extends ModalView {
 		profileContainer.innerHTML = /* HTML */`
 			<div class="flex gap-2">
 				<div class="flex-1 rounded-lg border border-gray-300 p-4">
-					<!-- Content 1 -->
+					<img src="./assets/devuser.png" alt="Profile Picture" class="w-full h-full object-cover">
 				</div>
 				<div class="flex-1 rounded-lg border border-gray-300 p-4">
 					<!-- Content 2 -->
