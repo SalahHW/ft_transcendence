@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: Invalid Date        by              +#+  #+#    #+#             */
-/*   Updated: 2025/07/04 12:09:01 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/04 22:17:33 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,7 +17,7 @@
 interface Route {
 	path: string;
 	cache?: any;
-	handler: () => void;
+	handler: () => void | Promise<void>;
 }
 
 export default class Router {
@@ -41,7 +41,7 @@ export default class Router {
 		},
 		{
 			path: "/api-test",
-			handler: function() {
+			handler: async function() {
 				// Revenir à la page précédente dans l'historique
 				window.history.back();
 
@@ -59,7 +59,7 @@ export default class Router {
 		},
 		{
 			path: "/login",
-			handler: function() {
+			handler: async function() {
 				// Revenir à la page précédente dans l'historique
 				window.history.back();
 
@@ -77,7 +77,7 @@ export default class Router {
 		},
 		{
 			path: "/register",
-			handler: function() {
+			handler: async function() {
 				// Revenir à la page précédente dans l'historique
 				window.history.back();
 
@@ -113,7 +113,7 @@ export default class Router {
 		},
 		{
 			path: "/profile",
-			handler: function() {
+			handler: async function() {
 				// Revenir à la page précédente dans l'historique
 				window.history.back();
 
@@ -154,7 +154,7 @@ export default class Router {
 		return Router._instance;
 	}
 
-	private _executeHandler(path: string) {
+	private async _executeHandler(path: string): Promise<boolean> {
 		// **CRITICAL FIX**: Clean up ANY route when navigating away
 		// Don't clean up during popstate events (back navigation) as cleanup should already be done
 		const currentPath = this.getCurrentPath();
@@ -165,9 +165,13 @@ export default class Router {
 			this._cleanupCurrentRoute();
 		}
 
-		var route = this._routes.find(route => route.path === path);
+		const route = this._routes.find(route => route.path === path);
 		if (route?.handler) {
-			route.handler();
+			try {
+				await route.handler();
+			} catch (error) {
+				console.error(`Error in handler for route ${path}:`, error);
+			}
 			return true;
 		}
 		console.warn(`No handler found for route: ${path}`);
@@ -219,7 +223,7 @@ export default class Router {
 		return this._routes.some(route => route.path === path);
 	}
 
-	private _redirectToHome(): void {
+	private async _redirectToHome(): Promise<void> {
 		// **CRITICAL FIX**: Prevent recursive calls by checking if we're already redirecting
 		if ((window as any).redirectingToHome) {
 			return;
@@ -229,7 +233,7 @@ export default class Router {
 
 		try {
 			window.history.replaceState({ path: '/' }, '', '/');
-			this._executeHandler('/');
+			await this._executeHandler('/');
 		} catch (error) {
 			console.error('Error redirecting to home:', error);
 			// Force navigation on error
@@ -241,7 +245,7 @@ export default class Router {
 		}
 	}
 
-	public navigate(path: string, replaceState: boolean = false): boolean {
+	public async navigate(path: string, replaceState: boolean = false): Promise<boolean> {
 		// **CRITICAL FIX**: Prevent recursive navigation
 		if ((window as any).navigationInProgress) {
 			return false;
@@ -256,7 +260,7 @@ export default class Router {
 				else
 					window.history.pushState({ path }, '', path);
 
-				this._executeHandler(path);
+				await this._executeHandler(path);
 				return true;
 			}
 			else {
@@ -279,7 +283,7 @@ export default class Router {
 		return window.location.pathname;
 	}
 
-	private _handlePopState = (): void => {
+	private _handlePopState = async (): Promise<void> => {
 		// **CRITICAL FIX**: Prevent recursive popstate handling
 		if ((window as any).popstateInProgress) {
 			return;
