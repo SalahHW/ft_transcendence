@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:41:03 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/01 18:42:05 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/03 12:31:08 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,10 +32,9 @@ export interface User {
 	id?: number;
 	username?: string;
 	email?: string;
-	password?: string;
-	matcheId?: number[];
 	createdAt?: Date;
 	role?: UserRole;
+	matchesId?: number[];
 }
 
 /**
@@ -66,7 +65,7 @@ export default class UsersApi {
 	 * @param user - The user object to create
 	 * @returns A promise that resolves to the created user
 	 */
-	async createUser(user: User): Promise<User> {
+	async createUser(user: { username: string; email: string; password: string }): Promise<User> {
 		const response = await fetch(`${this._usersBaseUrl}`, {
 			method: "POST",
 			headers: {
@@ -121,7 +120,7 @@ export default class UsersApi {
 	 * @param user - The updated user object
 	 * @returns A promise that resolves to the updated user
 	 */
-	async updateUser(id: number, user: User): Promise<User> {
+	async updateUser(id: number, user: Partial<{ username: string; email: string; password: string }>): Promise<User> {
 		const response = await fetch(`${this._usersBaseUrl}/${id}`, {
 			method: "PUT",
 			headers: {
@@ -139,25 +138,23 @@ export default class UsersApi {
 	/**
 	 * Deletes a user by ID
 	 * @param id - The ID of the user to delete
-	 * @returns A promise that resolves to the deleted user
 	 */
 	async deleteUser(id: number): Promise<void> {
 		const response = await fetch(`${this._usersBaseUrl}/${id}`, {
 			method: "DELETE"
 		});
-		const responseData = await response.json();
 		if (response.status === 204)
 			return;
-		else
-			throw new Error(`failed to delete user:\n${JSON.stringify(responseData, null, 2)}`);
+		const responseData = await response.json();
+		throw new Error(`failed to delete user:\n${JSON.stringify(responseData, null, 2)}`);
 	}
 
 	/**
-	 * Gets users by username
-	 * @param username - The username of the users to get
-	 * @returns A promise that resolves to the users
+	 * Gets a user by username
+	 * @param username - The username of the user to get
+	 * @returns A promise that resolves to the user
 	 */
-	async getUsersByUsername(username: string): Promise<User[]> {
+	async getUserByUsername(username: string): Promise<User> {
 		const response = await fetch(`${this._usersBaseUrl}/username/${username}`, {
 			method: "GET"
 		});
@@ -165,7 +162,7 @@ export default class UsersApi {
 		if (response.status === 200)
 			return responseData;
 		else
-			throw new Error(`failed to get users by username:\n${JSON.stringify(responseData, null, 2)}`);
+			throw new Error(`failed to get user by username:\n${JSON.stringify(responseData, null, 2)}`);
 	}
 
 	/**
