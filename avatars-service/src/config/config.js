@@ -4,11 +4,12 @@ export const PORT = process.env.AVATARS_SERVICE_PORT;
 export const DB_PATH = isDev
   ? process.env.DEV_DB_PATH
   : process.env.AVATARS_DB_PATH;
-export const AVATARS_PATH = process.env.AVATARS_PATH;
+export const AVATARS_PATH = isDev
+  ? process.env.DEV_AVATARS_PATH
+  : process.env.AVATARS_PATH;
 export const ALLOWED_MIME_TYPES = process.env.ALLOWED_MIME_TYPES;
 export const USERS_SERVICE_URL = process.env.USERS_SERVICE_URL;
 export const USERS_SERVICE_TIMEOUT = process.env.USERS_SERVICE_TIMEOUT;
-
 
 //! Variable formats are not validated
 
