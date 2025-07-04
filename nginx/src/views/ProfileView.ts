@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/22 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/01 16:12:34 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/04 12:40:50 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,8 +25,8 @@ export default class ProfileView extends ModalView {
 
 	public render(): void {
 		this._contentContainer.innerHTML = /* HTML */`
-			<div class="flex h-full w-full gap-4">
-				<div class="flex flex-[3] flex-col gap-4">
+			<div class="flex h-full w-full gap-2">
+				<div class="flex flex-[3] flex-col gap-2">
 					<div class="flex-1 rounded-2xl border border-red-500/30 p-4" id="profile"></div>
 					<div class="flex-[2] rounded-2xl border border-red-500/30 p-4" id="match-history"></div>
 				</div>
@@ -35,13 +35,28 @@ export default class ProfileView extends ModalView {
 				</div>
 			</div>
 		`;
+		this.updateProfile();
 	}
 
 	public async updateProfile(): Promise<void> {
+		console.log('Updating profile...');
 		const profileContainer = this._contentContainer.querySelector('#profile');
 		if (!profileContainer) {
 			console.error('Profile container not found');
 			return;
 		}
+		profileContainer.innerHTML = /* HTML */`
+			<div class="flex gap-2">
+				<div class="flex-1 rounded-lg border border-gray-300 p-4">
+					<!-- Content 1 -->
+				</div>
+				<div class="flex-1 rounded-lg border border-gray-300 p-4">
+					<!-- Content 2 -->
+				</div>
+				<div class="flex-1 rounded-lg border border-gray-300 p-4">
+					<!-- Content 3 -->
+				</div>
+			</div>
+		`;
 	}
 }
