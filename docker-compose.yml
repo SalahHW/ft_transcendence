@@ -58,6 +58,7 @@ services:
       - transcendence
     volumes:
       - ./avatars-service/database:/app/database
+      - ./avatars-service/avatars:/app/avatars
 
   friends:
     container_name: friends
