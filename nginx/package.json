@@ -4,14 +4,14 @@
   "description": "Frontend SPA for ft_transcendence project with integrated game client",
   "type": "module",
   "scripts": {
-    "build": "npm run tw-build && npm run bundle",
+    "build": "npm run tw:build && npm run bundle",
     "bundle": "rollup -c",
     "bundle:watch": "rollup -c -w",
-    "ts-build": "tsc",
-    "ts-watch": "tsc --watch",
-    "tw-build": "npx @tailwindcss/cli -i ./src/style/input.css -o ./public/style/style.css",
-    "tw-watch": "npx @tailwindcss/cli -i ./src/style/input.css -o ./public/style/style.css --watch",
-    "dev": "npm run tw-watch & npm run bundle:watch"
+    "ts:build": "tsc",
+    "ts:watch": "tsc --watch",
+    "tw:build": "npx @tailwindcss/cli -i ./src/style/input.css -o ./public/style/style.css",
+    "tw:watch": "npx @tailwindcss/cli -i ./src/style/input.css -o ./public/style/style.css --watch",
+    "dev": "npm run tw:watch & npm run bundle:watch"
   },
   "dependencies": {
     "@babylonjs/core": "^7.54.3",
