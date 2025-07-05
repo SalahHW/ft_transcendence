@@ -1,5 +1,5 @@
 import * as avatarModels from "../models/avatarModels.js";
-import * as userServices from "../services/userServices.js";
+import { validateUserId } from "./userIdControllers.js";
 import { saveUploadedAvatar } from "../utils/uploadUtils.js";
 import { deleteFile } from "../utils/fileUtils.js";
 import path from "path";
@@ -11,7 +11,7 @@ import { handleFileUpload } from "./uploadControllers.js";
 export async function createAvatar(request, reply) {
   let savedFile = null;
   try {
-    const userId = await userServices.validateUserId(request);
+    const userId = await validateUserId(request);
     const fileData = await extractFile(request);
     savedFile = await handleFileUpload(fileData);
 
