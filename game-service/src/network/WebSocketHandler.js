@@ -1,7 +1,6 @@
 import { messageRouter } from './MessageRouter.js';
 import { connectionManager } from './ConnectionManager.js';
-import { disconnectionHandler } from '../server/disconnect.js';
-import { browserDisconnectHandler } from '../server/disconnect/browserDisconnect/index.js';
+import { setupDisconnectDetection } from '../server/disconnect/index.js';
 import { WebSocketUtils } from '../utils/helpers.js';
 import { gameStateManager } from '../game/GameStateManager.js';
 
@@ -42,8 +41,8 @@ export class WebSocketHandler {
     // Setup message handling
     this._setupMessageHandling(ws, playerId, roomId);
     
-    // Setup browser disconnect handling for enhanced detection
-    browserDisconnectHandler.setupBrowserDisconnectHandlers(ws, playerId, roomId);
+    // Setup disconnect detection for unexpected disconnections
+    setupDisconnectDetection(ws, playerId, roomId);
   }
 
   /**
@@ -66,26 +65,26 @@ export class WebSocketHandler {
         data, 
         playerId, 
         currentRoomId,
-        ws, 
-        disconnectionHandler.createDisconnectHandler(playerId, currentRoomId)
+        ws
       );
     });
   }
 
   /**
-   * Setup disconnect handling for WebSocket connection (delegated to disconnect module)
+   * Setup disconnect handling for WebSocket connection
    */
   _setupDisconnectHandling(ws, playerId, roomId) {
-    // Delegate to the dedicated disconnect handler
-    return disconnectionHandler.setupWebSocketDisconnectHandlers(ws, playerId, roomId);
+    setupDisconnectDetection(ws, playerId, roomId);
   }
 
   /**
-   * Create disconnect handler function (delegated to disconnect module)
+   * Create disconnect handler function
    */
   _createDisconnectHandler(playerId, roomId) {
-    // Delegate to the dedicated disconnect handler
-    return disconnectionHandler.createDisconnectHandler(playerId, roomId);
+    return (reason) => {
+      // This is now handled by the disconnect detection system
+      console.log(`Disconnect handler called for player ${playerId} with reason: ${reason}`);
+    };
   }
 
   /**
@@ -107,19 +106,19 @@ export class WebSocketHandler {
   }
 
   /**
-   * Clean up stale connections (delegated to disconnect module)
+   * Clean up stale connections
    */
   cleanupStaleConnections() {
-    // Delegate to the dedicated disconnect handler
-    return disconnectionHandler.cleanupStaleConnections();
+    // This is now handled by the disconnect detection system
+    console.log('Cleanup handled by disconnect detection system');
   }
 
   /**
-   * Gracefully close all connections (delegated to disconnect module)
+   * Close all connections
    */
   closeAllConnections() {
-    // Delegate to the dedicated disconnect handler
-    return disconnectionHandler.closeAllConnections();
+    // This is now handled by the disconnect detection system
+    console.log('Connection closing handled by disconnect detection system');
   }
 }
 

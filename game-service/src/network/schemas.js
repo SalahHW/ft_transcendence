@@ -36,6 +36,20 @@ export const schemas = {
     reason: z.string().optional(),
     timestamp: z.number().optional(),
   }),
+  [MESSAGE_TYPES.UPDATE_PLAYER_STATE]: z.object({
+    type: z.literal(MESSAGE_TYPES.UPDATE_PLAYER_STATE),
+    playerId: z.string().optional(),
+    roomId: z.string().optional(),
+    state: z.string(),
+    timestamp: z.number().optional(),
+  }),
+  [MESSAGE_TYPES.BROWSER_EVENT]: z.object({
+    type: z.literal(MESSAGE_TYPES.BROWSER_EVENT),
+    playerId: z.string().optional(),
+    roomId: z.string().optional(),
+    eventType: z.string(),
+    timestamp: z.number().optional(),
+  }),
   powerupActivation: z.object({
     type: z.literal('powerupActivation'),
   }),

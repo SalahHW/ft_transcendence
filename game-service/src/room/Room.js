@@ -36,6 +36,7 @@ export class Room {
     this.metadata = {
       lastActivity: Date.now(),
       totalPlayTime: 0,
+      playerStates: {}, // Initialize player states tracking
       ...options.metadata
     };
   }

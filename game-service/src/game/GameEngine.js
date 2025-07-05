@@ -154,6 +154,7 @@ export class GameEngine {
   _startGame(room, roomId) {
     room.setReady();
     
+    // Set player states to LAUNCH_ANIMATION when game starts
     room.players.forEach((p, i) => {
       const otherPlayer = room.players[1 - i];
       if (p.ws && p.ws.readyState === 1) {
@@ -176,6 +177,17 @@ export class GameEngine {
 
     // Initialize animation status
     this.stateManager.initializeAnimationStatus(roomId);
+    
+    // Set player states to LAUNCH_ANIMATION
+    room.players.forEach(p => {
+      if (room.metadata && room.metadata.playerStates) {
+        room.metadata.playerStates[p.id] = {
+          state: 'launch_animation',
+          timestamp: Date.now(),
+          previousState: room.metadata.playerStates[p.id]?.state || 'waiting'
+        };
+      }
+    });
     
     // ⭐ ANIMATION FIX: Do NOT send the ball update here.
     // The ball update will be triggered by MessageRouter._handleAnimationComplete

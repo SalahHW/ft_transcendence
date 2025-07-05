@@ -73,6 +73,8 @@ export const MESSAGE_TYPES = {
   REQUEST_BALL_RESPAWN: 'requestBallRespawn',
   ANIMATION_COMPLETE: 'animationComplete',
   KEEP_ALIVE: 'keepAlive',
+  UPDATE_PLAYER_STATE: 'updatePlayerState',
+  BROWSER_EVENT: 'browserEvent',
   
   // Server to Client  
   INIT: 'init',

@@ -5,8 +5,7 @@ import { gameEngine } from '../game/GameEngine.js';
 import { MESSAGE_TYPES } from '../core/constants.js';
 import { playerManager } from '../player/PlayerManager.js';
 import { playerInput } from '../player/PlayerInput.js';
-import { disconnectionHandler } from '../server/disconnect.js';
-import { browserDisconnectHandler } from '../server/disconnect/browserDisconnect/index.js';
+import { disconnectionHandler, handlePlayerStateUpdate, handleBrowserEvent } from '../server/disconnect/index.js';
 import { schemas, messageTypeSchema } from './schemas.js';
 
 /**
@@ -29,14 +28,15 @@ export class MessageRouter {
     this.messageHandlers.set(MESSAGE_TYPES.LEAVE_GAME, this._handleLeaveGame.bind(this));
     this.messageHandlers.set(MESSAGE_TYPES.REQUEST_BALL_RESPAWN, this._handleBallRespawn.bind(this));
     this.messageHandlers.set(MESSAGE_TYPES.KEEP_ALIVE, this._handleKeepAlive.bind(this));
-    this.messageHandlers.set('updatePlayerState', this._handleUpdatePlayerState.bind(this));
+    this.messageHandlers.set(MESSAGE_TYPES.UPDATE_PLAYER_STATE, this._handleUpdatePlayerState.bind(this));
+    this.messageHandlers.set(MESSAGE_TYPES.BROWSER_EVENT, this._handleBrowserEvent.bind(this));
     this.messageHandlers.set('powerupActivation', this._handlePowerupActivation.bind(this));
   }
 
   /**
    * Route a message to the appropriate handler
    */
-  routeMessage(data, playerId, roomId, ws, disconnectHandler) {
+  routeMessage(data, playerId, roomId, ws) {
     let msg;
     try {
       msg = JSON.parse(data);
@@ -73,7 +73,7 @@ export class MessageRouter {
 
     const handler = this.messageHandlers.get(msg.type);
     if (handler) {
-      handler(msg, playerId, roomId, ws, disconnectHandler);
+      handler(msg, playerId, roomId, ws);
     } else {
       console.warn(`Unknown message type: ${msg.type}`);
     }
@@ -144,11 +144,11 @@ export class MessageRouter {
   }
 
   /**
-   * Handle player leaving game (delegated to disconnect module)
+   * Handle player leaving game (explicit leave button only)
    */
-  _handleLeaveGame(msg, playerId, roomId, ws, disconnectHandler) {
-    // Delegate to the dedicated disconnect handler
-    return disconnectionHandler.handleLeaveGameMessage(playerId, roomId);
+  _handleLeaveGame(msg, playerId, roomId, ws) {
+    // Handle explicit leave game button click
+    return disconnectionHandler.handleExplicitLeave(playerId, roomId);
   }
 
   /**
@@ -166,6 +166,17 @@ export class MessageRouter {
         return; // Wait for the other player
       }
       console.log(`Both players are ready in room ${roomId}. Spawning initial ball.`);
+      
+      // Set both players to PLAYING state when ball spawns
+      room.players.forEach(p => {
+        if (room.metadata && room.metadata.playerStates) {
+          room.metadata.playerStates[p.id] = {
+            state: 'playing',
+            timestamp: Date.now(),
+            previousState: room.metadata.playerStates[p.id]?.state || 'launch_animation'
+          };
+        }
+      });
     }
 
     if (!room.ball) {
@@ -275,36 +286,27 @@ export class MessageRouter {
   }
 
   /**
-   * Handle keep-alive ping messages (for forfeit winners)
+   * Handle keep-alive ping messages (disabled - only explicit leave button)
    */
   _handleKeepAlive(msg, playerId, roomId, ws) {
-    console.log(`🏆 Received keep-alive ping from ${playerId}: ${msg.reason || 'no reason specified'}`);
-    
-    // Update player activity to prevent stale connection cleanup
-    disconnectionHandler.updatePlayerActivity(playerId);
-    
-    // Send acknowledgment back to client
-    if (ws && ws.readyState === 1) {
-      ws.send(JSON.stringify({
-        type: MESSAGE_TYPES.KEEP_ALIVE_ACK,
-        timestamp: Date.now(),
-        serverTime: new Date().toISOString(),
-        reason: msg.reason || 'keep_alive_ack'
-      }));
-    }
+    console.log(`🏆 Keep-alive ping ignored from ${playerId}: ${msg.reason || 'no reason specified'}`);
+    // Disabled - only explicit leave button handling
   }
 
   /**
    * Handle player state updates from browser
    */
   _handleUpdatePlayerState(msg, playerId, roomId, ws) {
-    console.log(`🏖️ Received player state update from ${playerId}: ${msg.state} in room ${roomId}`);
-    
-    // Update player state in browser disconnect handler
-    browserDisconnectHandler.setPlayerConnectionState(playerId, roomId, msg.state);
-    
-    // Update player activity to prevent stale connection cleanup
-    disconnectionHandler.updatePlayerActivity(playerId);
+    console.log(`🔄 Player state update from ${playerId}: ${msg.state} in room ${roomId}`);
+    handlePlayerStateUpdate(playerId, roomId, msg.state);
+  }
+
+  /**
+   * Handle browser events from client
+   */
+  _handleBrowserEvent(msg, playerId, roomId, ws) {
+    console.log(`🌐 Browser event from ${playerId}: ${msg.eventType} in room ${roomId}`);
+    handleBrowserEvent(playerId, roomId, msg.eventType);
   }
 }
 

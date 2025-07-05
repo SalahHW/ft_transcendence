@@ -1,6 +1,6 @@
 import { gameStateManager } from '../game/GameStateManager.js';
 import { gameEngine } from '../game/GameEngine.js';
-import { disconnectionHandler } from '../server/disconnect.js';
+import { disconnectionHandler } from '../server/disconnect/index.js';
 import { LogUtils, TimeUtils } from '../utils/helpers.js';
 import { playerManager } from '../player/PlayerManager.js';
 import { roomManager } from '../room/RoomManager.js';
@@ -34,11 +34,8 @@ export class ConnectionManager {
    * Handle player disconnection (delegated to disconnect module)
    */
   handlePlayerDisconnect(playerId, roomId) {
-    // Set connection metadata in the disconnect handler
-    disconnectionHandler.setConnectionMetadata(playerId, roomId, this.connectionMetadata.get(playerId));
-    
-    // Delegate to the dedicated disconnect handler
-    return disconnectionHandler.handlePlayerDisconnect(playerId, roomId);
+    // This is now handled by the disconnect detection system
+    console.log(`Player disconnect handled by disconnect detection system: ${playerId}`);
   }
 
   /**
@@ -70,10 +67,7 @@ export class ConnectionManager {
    * Clean up player connection (delegated to disconnect module)
    */
   _cleanupPlayerConnection(playerId) {
-    // Delegate to the dedicated disconnect handler
-    disconnectionHandler.cleanupPlayerConnection(playerId);
-    
-    // Also clean up local metadata
+    // This is now handled by the disconnect detection system
     this.connectionMetadata.delete(playerId);
   }
 
@@ -81,24 +75,21 @@ export class ConnectionManager {
    * Handle disconnect during active game (delegated to disconnect module)
    */
   _handleGameInProgressDisconnect(playerId, roomId, isExplicitLeave) {
-    // Delegate to the dedicated disconnect handler
-    return disconnectionHandler.handleGameInProgressDisconnect(playerId, roomId, isExplicitLeave);
+    // This is now handled by the disconnect detection system
   }
 
   /**
    * Handle regular disconnect (delegated to disconnect module)
    */
   _handleRegularDisconnect(playerId, roomId) {
-    // Delegate to the dedicated disconnect handler
-    return disconnectionHandler.handleRegularDisconnect(playerId, roomId);
+    // This is now handled by the disconnect detection system
   }
 
   /**
    * Create match data for forfeit scenarios (delegated to disconnect module)
    */
   _createForfeitMatchData(room, roomId, winner, loser, reason) {
-    // Delegate to the dedicated disconnect handler
-    return disconnectionHandler.createForfeitMatchData(room, roomId, winner, loser, reason, 'disconnect');
+    // This is now handled by the disconnect detection system
   }
 
   /**
@@ -126,12 +117,7 @@ export class ConnectionManager {
    * Clean up stale connections (delegated to disconnect module)
    */
   cleanupStaleConnections() {
-    // Copy metadata to disconnect handler and delegate
-    for (const [playerId, metadata] of this.connectionMetadata.entries()) {
-      disconnectionHandler.setConnectionMetadata(playerId, metadata.roomId, metadata);
-    }
-    
-    return disconnectionHandler.cleanupStaleConnections();
+    // This is now handled by the disconnect detection system
   }
 
   /**
@@ -142,9 +128,6 @@ export class ConnectionManager {
     if (metadata) {
       metadata.lastActivity = Date.now();
     }
-    
-    // Also update in disconnect handler
-    disconnectionHandler.updatePlayerActivity(playerId);
   }
 }
 

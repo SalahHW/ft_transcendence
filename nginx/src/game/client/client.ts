@@ -2,6 +2,8 @@ import { playerPaddle } from '../player/player.js';
 import { gameMap } from '../map/gameMap.js';
 import { webSocketClient } from '../webSocketClient/webSocketClient.js';
 import { webSocketClientDisconnect, leaveGame as disconnectLeaveGame, cleanup as disconnectCleanup } from '../webSocketClient/webSocketClientDisconnect.js';
+import { stateTracker } from '../webSocketClient/StateTracker.js';
+import { browserEventHandler } from '../webSocketClient/BrowserEventHandler.js';
 import { Ball } from '../ball/ball.js';
 import * as BABYLON from '@babylonjs/core';
 import { fetchWithSelfSigned } from '../utils/fetch.js';
@@ -137,6 +139,9 @@ export function initializeGame(playerId: string): void {
     isGameLoopRunning = false;
     localPlayerId = playerId;
     
+    // Reset cleanup flags for new game session
+    webSocketClientDisconnect.resetCleanupFlag();
+    
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${wsProtocol}//${window.location.host}/api/game/ws`;
     clientConnection = new webSocketClient(wsUrl, playerId);
@@ -144,18 +149,24 @@ export function initializeGame(playerId: string): void {
     // Make leaveGame function available globally for Leave Game button
     (window as any).leaveGame = leaveGame;
     (window as any).clientConnection = clientConnection;
+    
+
 
     clientConnection.socket.addEventListener('open', () => {
         updateGameStatus('Connected to game server');
+        
+        // Initialize state tracking and browser event handling AFTER connection is established
+        console.log('🌐 WebSocket connection opened, initializing disconnect handlers');
+        if (clientConnection) {
+            stateTracker.initialize(clientConnection, playerId, 'waiting'); // Temporary room ID
+            browserEventHandler.initialize(clientConnection, playerId, 'waiting'); // Temporary room ID
+        }
     });
 
     clientConnection.socket.addEventListener('error', err => {
         console.error('WebSocket error:', err);
         updateGameStatus('Connection error');
     });
-
-    // Setup disconnection handlers
-    webSocketClientDisconnect.setupWebSocketDisconnectionHandlers(clientConnection);
     
     // Update the disconnect handler with current game state
     webSocketClientDisconnect.updateGameState({
@@ -196,6 +207,11 @@ export function initializeGame(playerId: string): void {
         }
         if (msg.ballState) {
             ball.setState(msg.ballState);
+        }
+        
+        // Update state to playing when ball is active
+        if (msg.ballState && !msg.ballState.isRespawning) {
+            stateTracker.setPlayingState();
         }
     });
 
@@ -266,6 +282,9 @@ export function initializeGame(playerId: string): void {
         const gameEndData = msg;
         isGameOver = true;
         
+        // Update state to game over
+        stateTracker.setGameOverState();
+        
         // Stop the game loop and clean up
         if (isGameLoopRunning && map?.getEngine) {
             map.getEngine.stopRenderLoop();
@@ -286,6 +305,9 @@ export function initializeGame(playerId: string): void {
             if (message.type === 'waitingForPlayers') {
                 console.log('CLIENT: Received waitingForPlayers message:', message);
                 handleWaitingForPlayers(message, updateGameStatus);
+                
+                // Update state to waiting
+                stateTracker.setWaitingState();
             }
         } catch (error) {
             console.error('Error parsing message:', error);
@@ -368,120 +390,153 @@ export function initializeGame(playerId: string): void {
     });
 
     clientConnection.onInit(async ({ playerId, roomId: rId, role, opponentId, playerName, opponentName }) => {
+        console.log('🎮 Game init received:', { playerId, roomId: rId, role, opponentId, playerName, opponentName });
+        
         initTime = Date.now();
         roomId = rId || null;
         localPlayerId = playerId || null;
+
+        // Update state tracker and browser event handler with actual room ID
+        if (roomId) {
+            stateTracker.updateRoomId(roomId);
+            browserEventHandler.updateRoomId(roomId);
+            console.log(`🔄 Updated disconnect handlers with room ID: ${roomId}`);
+        }
 
         stopForfeitWinnerPing();
 
         isGameOver = false;
         isGameLoopRunning = false;
-
-        // Store player names for UI updates
-        let player1Name, player2Name;
-        if (role === 0) {
-            player1Name = playerName || 'Player 1';
-            player2Name = opponentName || 'Player 2';
-        } else {
-            player1Name = opponentName || 'Player 1';
-            player2Name = playerName || 'Player 2';
-        }
-
+        
+        // Get player names for splash screen
         const currentPlayerName = playerName || 'You';
         const opponentDisplayName = opponentName || 'Opponent';
         
+        // 🎬 Show splash screen BEFORE creating any game elements
         updateGameStatus('Preparing match...');
         
         try {
+            // Show splash screen for 3 seconds
             await showSplashScreen(currentPlayerName, opponentDisplayName, 3000);
         } catch (error) {
             console.error('Error showing splash screen:', error);
+            // Continue with game initialization even if splash screen fails
         }
-
-        // Create new map
-        if (!map) {
-            try {
-                map = new gameMap();
-                map.createMap();
-                map.createPlayground();
-                if (!map.getScene) {
-                    throw new Error('map.getScene is undefined');
-                }
-            } catch (e) {
-                console.error('Map creation failed:', e);
-                updateGameStatus('Error: Failed to create game map');
-                return;
-            }
-        }
-
-        // Create fresh paddles
-        if (!player1 || !player2) {
-            if (!playerId || !opponentId) {
-                console.error('Missing player IDs');
-                return;
+        
+        // NOW create the game elements AFTER splash screen
+        
+        // ⭐ FIX: Always recreate map for new game session
+        console.log('🎮 Creating new game map...');
+        try {
+            // Dispose of existing map if it exists
+            if (map) {
+                console.log('🧹 Disposing existing map...');
+                map.dispose();
             }
             
-            if (role === 0) {
-                player1 = new playerPaddle(player1Name, playerId, 0);
-                player2 = new playerPaddle(player2Name, opponentId, 1);
-            } else {
-                player1 = new playerPaddle(player1Name, opponentId, 0);
-                player2 = new playerPaddle(player2Name, playerId, 1);
+            map = new gameMap();
+            map.createMap();
+            map.createPlayground();
+            if (!map.getScene) {
+                throw new Error('map.getScene is undefined');
             }
-
-            try {
-                player1.createPaddle(map.getScene!, 19.5, 2, 20);
-                player2.createPaddle(map.getScene!, -19.5, 2, 20);
-                
-                // Reset paddle positions
-                player1.setZ(0);
-                player2.setZ(0);
-                
-                // Create powerup UI system for LOCAL player only
-                if (map.getScene) {
-                    const isLocalPlayer1 = player1.playerId === localPlayerId;
-                    
-                    if (isLocalPlayer1) {
-                        player1Powerup = new PlayerPowerup(player1.playerId, map.getScene, 0);
-                        player2Powerup = null;
-                    } else {
-                        player1Powerup = null;
-                        player2Powerup = new PlayerPowerup(player2.playerId, map.getScene, 1);
-                    }
-                    
-                    console.log('🎮 Powerup UI systems created for local player');
-                }
-                
-            } catch (e) {
-                console.error('Paddle creation failed:', e);
-                return;
-            }
+            console.log('✅ New game map created successfully');
+        } catch (e) {
+            console.error('Map creation failed:', e);
+            updateGameStatus('Error: Failed to create game map');
+            return;
         }
 
-        // Create fresh ball
-        if (!ball) {
-            try {
-                ball = new Ball(player1, player2);
-                ball.createBall(map.getScene!);
-                if (ball.ballBody) {
-                    ball.ballBody.metadata = { roomId };
-                    ball.ballBody.position = new BABYLON.Vector3(0, -2, 0);
-                    ball.ballBody.isVisible = true;
-                }
-                ball.position = new BABYLON.Vector3(0, -2, 0);
-                ball.isRespawning = true;
-                ball.respawnTime = 0;
-                ball.hasValidPosition = true;
+        // ⭐ FIX: Always recreate players for new game session
+        console.log('🎮 Creating fresh player paddles...');
+        if (!playerId || !opponentId) {
+            console.error('Missing player IDs');
+            return;
+        }
+        
+        // Clear existing players (they don't have dispose method)
+        if (player1) {
+            console.log('🧹 Clearing existing player1...');
+            player1 = null;
+        }
+        if (player2) {
+            console.log('🧹 Clearing existing player2...');
+            player2 = null;
+        }
+        
+        const player1Name = role === 0 ? playerName : opponentName;
+        const player2Name = role === 0 ? opponentName : playerName;
+        
+        if (role === 0) {
+            player1 = new playerPaddle(player1Name, playerId, 0);
+            player2 = new playerPaddle(player2Name, opponentId, 1);
+        } else {
+            player1 = new playerPaddle(player1Name, opponentId, 0);
+            player2 = new playerPaddle(player2Name, playerId, 1);
+        }
+
+        try {
+            player1.createPaddle(map.getScene!, 19.5, 2, 20);
+            player2.createPaddle(map.getScene!, -19.5, 2, 20);
+            
+            // Reset paddle positions
+            player1.setZ(0);
+            player2.setZ(0);
+            
+            // Create powerup UI system for LOCAL player only
+            if (map.getScene) {
+                const isLocalPlayer1 = player1.playerId === localPlayerId;
                 
-                clientConnection!.send({
-                    type: 'requestBallRespawn',
-                    isInitial: true
-                });
-                console.log('Requested initial ball respawn');
-            } catch (e) {
-                console.error('Ball creation failed:', e);
-                return;
+                if (isLocalPlayer1) {
+                    player1Powerup = new PlayerPowerup(player1.playerId, map.getScene, 0);
+                    player2Powerup = null;
+                } else {
+                    player1Powerup = null;
+                    player2Powerup = new PlayerPowerup(player2.playerId, map.getScene, 1);
+                }
+                
+                console.log('🎮 Powerup UI systems created for local player');
             }
+            
+            console.log('✅ Fresh player paddles created successfully');
+        } catch (e) {
+            console.error('Paddle creation failed:', e);
+            return;
+        }
+
+        // ⭐ FIX: Always recreate ball for new game session
+        console.log('🎮 Creating fresh ball...');
+        try {
+            // Dispose of existing ball if it exists
+            if (ball) {
+                console.log('🧹 Disposing existing ball...');
+                ball.dispose();
+            }
+            
+            ball = new Ball(player1, player2);
+            ball.createBall(map.getScene!);
+            if (ball.ballBody) {
+                ball.ballBody.metadata = { roomId };
+                ball.ballBody.position = new BABYLON.Vector3(0, -2, 0);
+                ball.ballBody.isVisible = true;
+            }
+            ball.position = new BABYLON.Vector3(0, -2, 0);
+            ball.isRespawning = true;
+            ball.respawnTime = 0;
+            ball.hasValidPosition = true;
+            
+            clientConnection!.send({
+                type: 'requestBallRespawn',
+                isInitial: true
+            });
+            console.log('Requested initial ball respawn');
+            
+            // Update state to playing when ball spawns
+            stateTracker.setPlayingState();
+            console.log('✅ Fresh ball created successfully');
+        } catch (e) {
+            console.error('Ball creation failed:', e);
+            return;
         }
 
         // Ensure all elements are visible
@@ -502,6 +557,9 @@ export function initializeGame(playerId: string): void {
         }
 
         updateGameStatus('Game starting...');
+        
+        // Update state to launch animation
+        stateTracker.setLaunchAnimationState();
         
         soundManager.preloadSounds().catch(error => {
             console.warn('Failed to initialize sound manager:', error);
@@ -656,6 +714,8 @@ export function cleanup(): void {
     });
     
     disconnectCleanup();
+    stateTracker.cleanup();
+    browserEventHandler.cleanup();
     cameraManager.dispose();
     
     isGameOver = true;
@@ -691,6 +751,8 @@ export function leaveGame(): void {
     });
     
     disconnectLeaveGame();
+    stateTracker.cleanup();
+    browserEventHandler.cleanup();
     cameraManager.dispose();
     
     isGameOver = true;
@@ -788,6 +850,9 @@ function setupGameLoop(): void {
     if (map && map.getEngine) {
         map.getEngine.runRenderLoop(renderLoop);
         isGameLoopRunning = true;
+        
+        // Update state to playing
+        stateTracker.setPlayingState();
     } else {
         console.error('Failed to start game loop: map or engine not initialized');
     }
