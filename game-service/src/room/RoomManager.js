@@ -85,13 +85,20 @@ export class RoomManager {
   /**
    * Get available rooms (not full, not finished)
    */
-  getAvailableRooms() {
+  getAvailableRooms(matchType = null) {
     const rooms = this.getAllRooms();
-    return rooms.filter(room => 
+    let filteredRooms = rooms.filter(room => 
       !room.isFull() && 
       !room.isGameOver && 
       !room.ready
     );
+    
+    // 🏆 CRITICAL FIX: Filter by match type if specified
+    if (matchType) {
+      filteredRooms = filteredRooms.filter(room => room.matchType === matchType);
+    }
+    
+    return filteredRooms;
   }
 
   /**
@@ -114,6 +121,20 @@ export class RoomManager {
    */
   getWaitingRooms() {
     return this.getRoomsByStatus('waiting_for_players');
+  }
+
+  /**
+   * Get available tournament rooms
+   */
+  getAvailableTournamentRooms() {
+    return this.getAvailableRooms('tournament');
+  }
+
+  /**
+   * Get available 1v1 rooms
+   */
+  getAvailableOneVOneRooms() {
+    return this.getAvailableRooms('1v1');
   }
 
   /**
