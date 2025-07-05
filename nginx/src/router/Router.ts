@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: Invalid Date        by              +#+  #+#    #+#             */
-/*   Updated: 2025/07/04 20:11:38 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/05 14:49:35 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,90 +17,134 @@
 interface Route {
 	path: string;
 	cache?: any;
-	handler: () => void;
+	handler: () => void | Promise<void>;
 }
 
 export default class Router {
 	private constructor() {}
-	private static _instance: Router;
+	private static	_instance: Router;
 
 	private			_routes: Route[] = [
 		{
 			path: "/",
 			handler: function() {
-				if (!this.cache)
-					this.cache = new HomePage("app-container");
-				this.cache.render();
+				if (!this.cache) {
+					import('../views/homePage.js').then(module => {
+						const HomePage = module.default;
+						this.cache = new HomePage("app-container");
+						this.cache.render();
+					});
+				} else {
+					this.cache.render();
+				}
 			}
 		},
 		{
 			path: "/api-test",
-			handler: function() {
+			handler: async function() {
 				// Revenir à la page précédente dans l'historique
 				window.history.back();
 
 				// Afficher la vue API test
-				if (!this.cache)
-					this.cache = new APITestPage();
-				this.cache.show();
+				if (!this.cache) {
+					import('../views/apiTestPage/APITestPage.js').then(module => {
+						const APITestPage = module.default;
+						this.cache = new APITestPage();
+						this.cache.show();
+					});
+				} else {
+					this.cache.show();
+				}
 			}
 		},
 		{
 			path: "/login",
-			handler: function() {
+			handler: async function() {
 				// Revenir à la page précédente dans l'historique
 				window.history.back();
 
 				// Afficher la popup de login
-				if (!this.cache)
-					this.cache = new LoginPopup();
-				this.cache.show();
+				if (!this.cache) {
+					import('../components/LoginPopup.js').then(module => {
+						const LoginPopup = module.default;
+						this.cache = new LoginPopup();
+						this.cache.show();
+					});
+				} else {
+					this.cache.show();
+				}
 			}
 		},
 		{
 			path: "/register",
-			handler: function() {
+			handler: async function() {
 				// Revenir à la page précédente dans l'historique
 				window.history.back();
 
 				// Afficher la popup de register
-				if (!this.cache)
-					this.cache = new RegisterPopup();
-				this.cache.show();
+				if (!this.cache) {
+					import('../components/RegisterPopup.js').then(module => {
+						const RegisterPopup = module.default;
+						this.cache = new RegisterPopup();
+						this.cache.show();
+					});
+				} else {
+					this.cache.show();
+				}
 			}
 		},
 		{
-			path: "/profile",
+			path: "/register-wallet",
 			handler: function() {
 				// Revenir à la page précédente dans l'historique
 				window.history.back();
 
+				// Afficher la popup WalletConnect register
+				if (!this.cache) {
+					import('../components/WalletConnectRegisterPopup.js').then(module => {
+						const WalletConnectRegisterPopup = module.default;
+						this.cache = new WalletConnectRegisterPopup();
+						this.cache.show();
+					});
+				} else {
+					this.cache.show();
+				}
+			}
+		},
+		{
+			path: "/profile",
+			handler: async function() {
+				// Revenir à la page précédente dans l'historique
+				window.history.back();
+
 				// Afficher la vue de profil
-				if (!this.cache)
-					this.cache = new ProfileView();
-				this.cache.show();
+				if (!this.cache) {
+					import('../views/ProfileView.js').then(module => {
+						const ProfileView = module.default;
+						this.cache = new ProfileView();
+						this.cache.show();
+					});
+				} else {
+					this.cache.show();
+				}
 			}
 		},
 		{
 			path: "/1v1",
 			handler: async function() {
+				// @ts-ignore
+				const { handleSimpleMatch } = await import('/js/game.bundle.js');
 				await handleSimpleMatch(this);
 			}
 		},
 		{
 			path: "/tournament",
 			handler: async function() {
+				// @ts-ignore
+				const { handleTournament } = await import('/js/game.bundle.js');
 				await handleTournament(this);
 			}
-		},
-		{
-			path: "/wallet-register",
-			handler: function () {
-				window.history.back();
-				if (!this.cache) this.cache = new WalletRegisterPopup();
-				this.cache.show();
-      },
-    },
+		}
 	];
 
 	public static getInstance(): Router {
@@ -110,7 +154,7 @@ export default class Router {
 		return Router._instance;
 	}
 
-	private _executeHandler(path: string) {
+	private async _executeHandler(path: string): Promise<boolean> {
 		// **CRITICAL FIX**: Clean up ANY route when navigating away
 		// Don't clean up during popstate events (back navigation) as cleanup should already be done
 		const currentPath = this.getCurrentPath();
@@ -121,9 +165,13 @@ export default class Router {
 			this._cleanupCurrentRoute();
 		}
 
-		var route = this._routes.find(route => route.path === path);
+		const route = this._routes.find(route => route.path === path);
 		if (route?.handler) {
-			route.handler();
+			try {
+				await route.handler();
+			} catch (error) {
+				console.error(`Error in handler for route ${path}:`, error);
+			}
 			return true;
 		}
 		console.warn(`No handler found for route: ${path}`);
@@ -172,10 +220,10 @@ export default class Router {
 	}
 
 	private _isValidRoute(path: string): boolean {
-		return this._routes.some((route) => route.path === path);
+		return this._routes.some(route => route.path === path);
 	}
 
-	private _redirectToHome(): void {
+	private async _redirectToHome(): Promise<void> {
 		// **CRITICAL FIX**: Prevent recursive calls by checking if we're already redirecting
 		if ((window as any).redirectingToHome) {
 			return;
@@ -185,7 +233,7 @@ export default class Router {
 
 		try {
 			window.history.replaceState({ path: '/' }, '', '/');
-			this._executeHandler('/');
+			await this._executeHandler('/');
 		} catch (error) {
 			console.error('Error redirecting to home:', error);
 			// Force navigation on error
@@ -197,7 +245,7 @@ export default class Router {
 		}
 	}
 
-	public navigate(path: string, replaceState: boolean = false): boolean {
+	public async navigate(path: string, replaceState: boolean = false): Promise<boolean> {
 		// **CRITICAL FIX**: Prevent recursive navigation
 		if ((window as any).navigationInProgress) {
 			return false;
@@ -212,11 +260,13 @@ export default class Router {
 				else
 					window.history.pushState({ path }, '', path);
 
-				this._executeHandler(path);
+				await this._executeHandler(path);
 				return true;
-			} else {
+			}
+			else {
 				console.warn(`Route not found: ${path}`);
-				if (path !== "/") this._redirectToHome();
+				if (path !== '/')
+					this._redirectToHome();
 				return false;
 			}
 		} catch (error) {
@@ -233,7 +283,7 @@ export default class Router {
 		return window.location.pathname;
 	}
 
-	private _handlePopState = (): void => {
+	private _handlePopState = async (): Promise<void> => {
 		// **CRITICAL FIX**: Prevent recursive popstate handling
 		if ((window as any).popstateInProgress) {
 			return;
@@ -245,30 +295,32 @@ export default class Router {
 			const path = this.getCurrentPath();
 
 			if (!this._executeHandler(path)) {
-				if (path !== "/") {
+				if (path !== '/') {
 					// **CRITICAL**: Use replaceState without calling _executeHandler to prevent recursion
-					window.history.replaceState({ path: "/" }, "", "/");
+					window.history.replaceState({ path: '/' }, '', '/');
 					// Force a page reload instead of recursive navigation
-					window.location.pathname = "/";
+					window.location.pathname = '/';
 				}
 			}
 		} catch (error) {
-			console.error("Error in popstate handler:", error);
+			console.error('Error in popstate handler:', error);
 			// Force navigation to home on error
-			window.location.pathname = "/";
+			window.location.pathname = '/';
 		} finally {
 			// Clear the flag after a short delay
 			setTimeout(() => {
 				(window as any).popstateInProgress = false;
 			}, 100);
 		}
-	};
+	}
 
 	public init(): void {
-		window.addEventListener("popstate", this._handlePopState);
+		window.addEventListener('popstate', this._handlePopState);
 
 		const currentPath = this.getCurrentPath();
-		if (!this._isValidRoute(currentPath)) this.navigate("/", true);
-		else this.navigate(currentPath, true);
+		if (!this._isValidRoute(currentPath))
+			this.navigate('/', true);
+		 else
+			this.navigate(currentPath, true);
 	}
 }
