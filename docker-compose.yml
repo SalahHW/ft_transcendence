@@ -54,6 +54,7 @@ services:
     build: ./avatars-service
     env_file:
       - ./.env
+      - ./avatars-service/.env
     networks:
       - transcendence
     volumes:
