@@ -74,10 +74,6 @@ export default class WalletRegisterPopup extends ModalView {
     const usernameInput = document.getElementById(
       "wallet-register-username"
     ) as HTMLInputElement;
-    const spinner = document.getElementById("wallet-register-spinner");
-    const button = document.getElementById(
-      "wallet-register-button"
-    ) as HTMLButtonElement;
 
     const username = usernameInput.value.trim();
     if (!username) {
