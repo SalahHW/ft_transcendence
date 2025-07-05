@@ -2,13 +2,31 @@ import fastify from "fastify";
 
 const fastify = fastify();
 
-let onlineUsers = []; 
+export const isDev = process.env.NODE_ENV === "development";
 
-export default onlineUsers;
+const devPort = 3002;
 
-// faire routes avec methodes add et delete dans tableau
-//  fichier routes
-//  fichier methodes
-//  fichier fastify
+export let onlineUsers = [];
 
-// faire un get pour renvoyer liste des id des players dans le tab, renvoyer json tableau de int
+export const PORT = isDev ? devPort : process.env.PRESENCES_SERVICE_PORT;
+
+export const PRESENCES_SERVICE_TIMEOUT = 2000;
+
+if (!PORT) {
+  console.error("Unable to load port from environment variables");
+  process.exit(1);
+}
+
+fastify.listen(
+  {
+    port: PORT,
+    host: "0.0.0.0",
+  },
+  (err, address) => {
+    if (err) {
+      fastify.log.error(err);
+      process.exit(1);
+    }
+    fastify.log.info(`server listening on ${address}`);
+  }
+);
