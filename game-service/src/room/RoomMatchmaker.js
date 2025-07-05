@@ -22,6 +22,7 @@ export class RoomMatchmaker {
       // No suitable room found, create a new regular 1v1 room
       room = this.roomManager.createRoom(null, {
         maxPlayers: preferences.maxPlayers || 2,
+        matchType: '1v1', // 🏆 CRITICAL FIX: Explicitly set matchType for 1v1 rooms
         gameMode: preferences.gameMode || 'classic',
         metadata: {
           createdBy: player.id,
@@ -118,7 +119,8 @@ export class RoomMatchmaker {
    * Find a suitable existing room for a regular 1v1 player
    */
   _findSuitableRoom(player, preferences) {
-    const availableRooms = this.roomManager.getAvailableRooms();
+    // 🏆 CRITICAL FIX: Get only 1v1 rooms to prevent cross-contamination
+    const availableRooms = this.roomManager.getAvailableRooms('1v1');
     
     // Filter rooms for 1v1 players
     const suitableRooms = availableRooms.filter(room => {
@@ -234,6 +236,7 @@ export class RoomMatchmaker {
     // Merge preferences (requester takes priority)
     const roomOptions = {
       maxPlayers: requester.preferences.maxPlayers || 2,
+      matchType: '1v1', // 🏆 CRITICAL FIX: Explicitly set matchType for matchmade 1v1 rooms
       gameMode: requester.preferences.gameMode || 'classic',
       metadata: {
         matchType: 'matchmade',
