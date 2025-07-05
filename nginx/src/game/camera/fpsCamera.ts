@@ -80,7 +80,7 @@ export class FPSCamera {
         this.configureCameraSettings();
         this.updateCameraTarget();
         
-        console.log(`🎮 Stable FPS Camera created for ${this.isPlayer1 ? 'Player 1' : 'Player 2'} at position:`, initialPosition);
+
     }
 
     /**
@@ -199,7 +199,7 @@ export class FPSCamera {
      */
     public setZOffset(zOffset: number): void {
         this.cameraOffset.z = zOffset;
-        console.log(`🎮 Camera Z offset set to ${zOffset} for better paddle alignment`);
+
     }
 
     /**
@@ -237,7 +237,7 @@ export class FPSCamera {
     public triggerShake(duration: number = 400, intensity: number = 1.5): Promise<void> {
         return new Promise((resolve) => {
             try {
-                console.log('🎮 Triggering FPS camera shake for losing player');
+        
                 
                 this.isShaking = true;
                 this.shakeStartTime = Date.now();

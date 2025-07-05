@@ -46,15 +46,11 @@ export class BallPowerup {
             this.speedMultiplier = state.speedMultiplier;
             this.activatedByPlayer = state.activatedByPlayer;
             
-            console.log(`Ball speed boost visual effect activated by player ${state.activatedByPlayer}`);
-            
         } else if (!state.isSpeedBoosted && this.isSpeedBoosted) {
             // Stop speed boost visual effects
             this.stopSpeedBoostEffect();
             this.isSpeedBoosted = false;
             this.activatedByPlayer = null;
-            
-            console.log('Ball speed boost visual effect deactivated');
         }
     }
 

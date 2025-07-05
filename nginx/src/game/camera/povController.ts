@@ -50,7 +50,7 @@ export class POVController {
      * Switch to FPS perspective for the local player
      */
     public switchToFPSPerspective(): void {
-        console.log('🎮 Switching to FPS perspective for player:', this.localPlayerId);
+
         
         // Determine which player is the local player
         const isPlayer1 = this.player1.getPlayerId() === this.localPlayerId;
@@ -75,7 +75,7 @@ export class POVController {
         // Update perspective state
         this.currentPerspective = isPlayer1 ? CameraPerspective.FPS_PLAYER1 : CameraPerspective.FPS_PLAYER2;
         
-        console.log('🎮 FPS camera activated for', isPlayer1 ? 'Player 1' : 'Player 2');
+
     }
 
     /**
@@ -87,7 +87,7 @@ export class POVController {
             this.scene.activeCamera = this.topDownCamera;
             this.currentPerspective = CameraPerspective.TOP_DOWN;
             
-            console.log('🎮 Switched back to top-down perspective');
+    
         }
     }
 

@@ -4,6 +4,7 @@
  */
 
 import { roomManager } from '../../room/RoomManager.js';
+import { gameStateManager } from '../../game/GameStateManager.js';
 import { TournamentPhases, TournamentRoomTypes } from '../constants.js';
 
 export class TournamentRoomFactory {
@@ -25,6 +26,9 @@ export class TournamentRoomFactory {
       }
     });
     
+    // Initialize animation status for semi-final A
+    gameStateManager.initializeAnimationStatus(`${waitingRoomId}SA`);
+    
     rooms.semiFinalB = roomManager.createRoom(`${waitingRoomId}SB`, {
       maxPlayers: 2,
       matchType: 'tournament',
@@ -35,6 +39,9 @@ export class TournamentRoomFactory {
         createdAt: Date.now()
       }
     });
+    
+    // Initialize animation status for semi-final B
+    gameStateManager.initializeAnimationStatus(`${waitingRoomId}SB`);
     
     // Final rooms
     rooms.winnerFinal = roomManager.createRoom(`${waitingRoomId}winFin`, {
@@ -48,6 +55,9 @@ export class TournamentRoomFactory {
       }
     });
     
+    // Initialize animation status for winner final
+    gameStateManager.initializeAnimationStatus(`${waitingRoomId}winFin`);
+    
     rooms.loserFinal = roomManager.createRoom(`${waitingRoomId}winLos`, {
       maxPlayers: 2,
       matchType: 'tournament',
@@ -58,6 +68,9 @@ export class TournamentRoomFactory {
         createdAt: Date.now()
       }
     });
+    
+    // Initialize animation status for loser final
+    gameStateManager.initializeAnimationStatus(`${waitingRoomId}winLos`);
     
     return rooms;
   }
@@ -75,6 +88,9 @@ export class TournamentRoomFactory {
         createdAt: Date.now()
       }
     });
+    
+    // Initialize animation status for waiting room
+    gameStateManager.initializeAnimationStatus(waitingRoomId);
     
     return waitingRoom;
   }

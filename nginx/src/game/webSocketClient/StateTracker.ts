@@ -20,7 +20,7 @@ export class StateTracker {
     this.roomId = roomId;
     this.currentState = 'waiting';
     
-    console.log(`🔄 State tracker initialized for player ${playerId} in room ${roomId}`);
+
   }
 
   /**

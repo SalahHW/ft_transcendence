@@ -27,6 +27,7 @@ export class MessageRouter {
     this.messageHandlers.set(MESSAGE_TYPES.PADDLE_POSITION, this._handlePaddlePosition.bind(this));
     this.messageHandlers.set(MESSAGE_TYPES.LEAVE_GAME, this._handleLeaveGame.bind(this));
     this.messageHandlers.set(MESSAGE_TYPES.REQUEST_BALL_RESPAWN, this._handleBallRespawn.bind(this));
+    this.messageHandlers.set(MESSAGE_TYPES.ANIMATION_COMPLETE, this._handleAnimationComplete.bind(this));
     this.messageHandlers.set(MESSAGE_TYPES.KEEP_ALIVE, this._handleKeepAlive.bind(this));
     this.messageHandlers.set(MESSAGE_TYPES.UPDATE_PLAYER_STATE, this._handleUpdatePlayerState.bind(this));
     this.messageHandlers.set(MESSAGE_TYPES.BROWSER_EVENT, this._handleBrowserEvent.bind(this));
@@ -153,20 +154,63 @@ export class MessageRouter {
   }
 
   /**
+   * Handle animation complete messages
+   */
+  _handleAnimationComplete(msg, playerId, roomId) {
+    // Add player to animation status
+    const statusSize = gameStateManager.addPlayerToAnimationStatus(roomId, playerId);
+    
+    // Check if this is a tournament room
+    const room = gameStateManager.getRoom(roomId);
+    const isTournamentRoom = room && (room.matchType === 'tournament' || 
+                                     room.metadata?.roomType?.includes('semi_final') ||
+                                     room.metadata?.roomType?.includes('final'));
+    
+    const currentPlayers = gameStateManager.getAnimationStatusForRoom(roomId);
+    console.log(`Animation: ${statusSize}/2 ready in ${isTournamentRoom ? 'tournament' : '1v1'} room ${roomId} - Players: [${currentPlayers.join(', ')}]`);
+    
+    // Debug: Check if this is the wrong room for tournament players
+    if (isTournamentRoom && room.metadata?.roomType?.includes('semi_final')) {
+      const expectedRoomId = roomId;
+      console.log(`🏆 Player ${playerId} completed animation in semi-final room ${roomId}`);
+    } else if (room && room.matchType === 'tournament' && room.metadata?.roomType === 'waiting') {
+      console.log(`⚠️ WARNING: Player ${playerId} completed animation in WAITING room ${roomId} instead of semi-final room!`);
+    }
+  }
+
+  /**
    * Handle ball respawn requests
    */
   _handleBallRespawn(msg, playerId, roomId) {
     const room = gameStateManager.getRoom(roomId);
     if (!room) return;
 
-    // For initial spawn, wait for both players to be ready
+    // For initial spawn, check if both players have completed animation
     if (msg.isInitial) {
-      const statusSize = gameStateManager.addPlayerToAnimationStatus(roomId, playerId);
-      if (statusSize < 2) {
-        console.log(`Player ${playerId} is ready for ball spawn. Waiting for opponent.`);
-        return; // Wait for the other player
+      const animationStatus = gameStateManager.getAnimationStatus().get(roomId);
+      const statusSize = animationStatus ? animationStatus.size : 0;
+      
+      // Check if this is a tournament room (semi-finals, finals)
+      const isTournamentRoom = room.matchType === 'tournament' || 
+                               room.metadata?.roomType?.includes('semi_final') ||
+                               room.metadata?.roomType?.includes('final');
+      
+      const requiredPlayers = 2; // Both tournament and 1v1 need 2 players
+      
+      if (statusSize < requiredPlayers) {
+        const currentPlayers = gameStateManager.getAnimationStatusForRoom(roomId);
+        console.log(`Ball spawn: waiting for opponent in ${isTournamentRoom ? 'tournament' : '1v1'} room (${statusSize}/${requiredPlayers}) - Current: [${currentPlayers.join(', ')}]`);
+        
+        // Debug: Check if we're waiting in the wrong room
+        if (isTournamentRoom && room.metadata?.roomType?.includes('semi_final')) {
+          console.log(`🏆 Waiting for opponent in semi-final room ${roomId}`);
+        } else if (room && room.matchType === 'tournament' && room.metadata?.roomType === 'waiting') {
+          console.log(`⚠️ WARNING: Waiting for opponent in WAITING room ${roomId} instead of semi-final room!`);
+        }
+        
+        return; // Wait for the other player to complete animation
       }
-      console.log(`Both players are ready in room ${roomId}. Spawning initial ball.`);
+      console.log(`Ball spawn: all players ready in ${isTournamentRoom ? 'tournament' : '1v1'} room ${roomId}`);
       
       // Set both players to PLAYING state when ball spawns
       room.players.forEach(p => {
@@ -201,7 +245,7 @@ export class MessageRouter {
     room.ball.isRespawning = true;
     const ballState = this._createBallState(room.ball);
 
-    console.log(`Sending ballUpdate on requestBallRespawn at ${Date.now()}:`, ballState);
+    console.log(`Ball update sent for room ${roomId}`);
     gameEngine.broadcastToRoom(roomId, {
       type: 'ballUpdate',
       ballState,

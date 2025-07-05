@@ -195,7 +195,6 @@ export class PlayerPowerup {
         textMesh.material = textMaterial;
         
         // Add text texture (simplified - you might want to use a proper text texture)
-        console.log('⚡ POWER UP SUCCESS! ⚡');
         
         // Animate the text (scale up then fade out)
         const scaleAnimation = new BABYLON.Animation(

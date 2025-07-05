@@ -7,10 +7,12 @@ import GamePage from "../../../views/gamePages/gamePage.js";
 import { getUserResponseData, registerCurrentUserForTournament } from "../../utils/fetch.js";
 import { TournamentUI } from "./TournamentUI.js";
 import { TournamentWebSocket } from "./TournamentWebSocket.js";
+import { GameClient } from "../../client/gameClient.js";
 
 export class TournamentHandler {
   private cache: any;
   private webSocketManager: TournamentWebSocket;
+  private gameClient: GameClient | null = null;
 
   constructor(cache: any) {
     this.cache = cache;
@@ -32,22 +34,22 @@ export class TournamentHandler {
       }
       this.cache.cache.render();
       
+      // Create game client instance for tournament
+      this.gameClient = new GameClient();
+      
       // Establish WebSocket connection for tournament waiting room
       if (playerData.websocketUrl) {
         const tournamentWs = this.webSocketManager.establishConnection(playerData);
         
         // Store WebSocket connection for later use
         (this.cache.cache as any).tournamentWs = tournamentWs;
+        
+        // Pass the WebSocket connection to the game client
+        this.gameClient.setWebSocketConnection(tournamentWs);
       }
       
-      // Load the pre-bundled game client
-      const gameBundlePath = "/js/game.bundle.js";
-      const gameClientModule = await import(gameBundlePath);
-      
-      if (gameClientModule.setupJoinGameButton) {
-        gameClientModule.setupJoinGameButton('tournament');
-      }
-      await gameClientModule.initializeGame(playerData.id, 'tournament');
+      // Initialize the game client for tournament mode
+      await this.gameClient.initializeGame(playerData.id, true); // true = tournament mode
       
     } catch (error) {
       console.error("Error registering user for tournament:", error);

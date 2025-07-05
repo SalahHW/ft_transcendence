@@ -133,7 +133,7 @@ export function showSplashScreen(
         // Add to DOM
         document.body.appendChild(splashOverlay);
 
-        console.log(`🎬 Showing splash screen: ${currentPlayerName} vs ${opponentName} for ${duration}ms`);
+    
 
         // Remove splash screen after duration
         setTimeout(() => {
@@ -149,7 +149,7 @@ export function showSplashScreen(
                 if (styleSheet.parentNode) {
                     styleSheet.parentNode.removeChild(styleSheet);
                 }
-                console.log('🎬 Splash screen removed');
+        
                 resolve();
             }, 500); // Wait for fade out animation
         }, duration);
@@ -163,6 +163,6 @@ export function removeSplashScreen(): void {
     const splashScreen = document.getElementById('game-splash-screen');
     if (splashScreen && splashScreen.parentNode) {
         splashScreen.parentNode.removeChild(splashScreen);
-        console.log('🎬 Splash screen force removed');
+
     }
 } 

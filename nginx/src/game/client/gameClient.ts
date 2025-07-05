@@ -15,9 +15,10 @@ import { gameMap } from '../map/gameMap.js';
 import { playerPaddle } from '../player/player.js';
 import { Ball } from '../ball/ball.js';
 import { handleWaitingForPlayers } from '../ui/waitingStatusHandler.js';
-import { TournamentClientHandler } from '../tournament/tournamentClientHandler.js';
+import { TournamentClientHandler } from '../gameMode/tournament/TournamentClientHandler.js';
 import { showSplashScreen } from '../ui/splashScreen.js';
 import { cameraManager } from '../camera/cameraManager.js';
+import * as BABYLON from '@babylonjs/core';
 
 export class GameClient {
     private clientConnection: webSocketClient | null = null;
@@ -35,45 +36,208 @@ export class GameClient {
     private isGameStarted: boolean = false;
     constructor() {
         // Initialize the game client
-        console.log('Game client constructor started');
-        console.log('Game client initialized successfully');
     }
 
     // Initialize the game with a registered player ID
-    public async initializeGame(playerId: string): Promise<void> {
-        console.log(`Initializing game for player: ${playerId}`);
-        
+    public async initializeGame(playerId: string, isTournamentMode: boolean = false): Promise<void> {
         this.localPlayerId = playerId;
-        console.log('Player ID set successfully');
         
         // Check if canvas exists
-        console.log('Checking for canvas element...');
         const canvasElement = document.getElementById('renderCanvas');
         if (!canvasElement || !(canvasElement instanceof HTMLCanvasElement)) {
             console.error('Canvas element not found in DOM');
             throw new Error('Game canvas not found! Make sure the game page is rendered first.');
         }
         const canvas = canvasElement;
-        console.log('Canvas found successfully:', canvas);
 
-        // FIXED: Use current domain instead of localhost for WebSocket connection
-        // Initialize WebSocket connection using WSS for HTTPS or WS for HTTP
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/api/game/ws`;
-        console.log('Creating WebSocket connection to:', wsUrl);
-        
-        this.clientConnection = new webSocketClient(wsUrl, playerId);
-        console.log('WebSocket client created');
+        // For tournament mode, we don't create a new WebSocket connection
+        // as the player is already connected through the tournament waiting room
+        if (!isTournamentMode) {
+            // FIXED: Use current domain instead of localhost for WebSocket connection
+            // Initialize WebSocket connection using WSS for HTTPS or WS for HTTP
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/api/game/ws`;
+            
+            this.clientConnection = new webSocketClient(wsUrl, playerId);
+            this.setupWebSocketHandlers();
+        } else {
+            // Tournament mode: Using existing WebSocket connection
+        }
 
-        this.setupWebSocketHandlers();
         this.setupKeyboardControls();
+    }
+
+    // Set WebSocket connection for tournament mode
+    public setWebSocketConnection(connection: webSocketClient): void {
+        this.clientConnection = connection;
+        this.setupWebSocketHandlers();
+    }
+
+    // Initialize tournament game with provided match data
+    public async initializeTournamentGame(matchData: any): Promise<void> {
+        // Tournament game initialization
+        
+        // Reset game state for clean start
+        TournamentClientHandler.resetTournamentGameState({ 
+            isGameOver: this.isGameOver, 
+            isGameLoopRunning: this.isGameLoopRunning 
+        });
+        this.isGameOver = false;
+        this.isGameLoopRunning = false;
+        
+        this.roomId = matchData.roomId;
+        this.localPlayerId = matchData.playerId;
+        
+        // Create the game map if it doesn't exist
+        if (!this.map) {
+            this.map = new gameMap();
+            this.map.createMap();
+            this.map.createPlayground();
+        }
+
+        // Create players with correct roles and positions
+        if (matchData.role === 0) {
+            this.player1 = new playerPaddle('Player1', matchData.playerId, 0);
+            this.player2 = new playerPaddle('Player2', matchData.opponentId, 1);
+        } else {
+            this.player1 = new playerPaddle('Player1', matchData.opponentId, 0);
+            this.player2 = new playerPaddle('Player2', matchData.playerId, 1);
+        }
+
+                    // Create paddles in the scene with correct positions
+            try {
+                this.player1.createPaddle(this.map.getScene!, 19.5, 2, 20);
+                this.player2.createPaddle(this.map.getScene!, -19.5, 2, 20);
+                
+                // Reset paddle positions
+                this.player1.setZ(0);
+                this.player2.setZ(0);
+            } catch (e) {
+                console.error('Tournament paddle creation failed:', e);
+                return;
+            }
+
+        // Create fresh ball
+        if (!this.ball) {
+            this.ball = new Ball(this.player1, this.player2);
+            this.ball.createBall(this.map.getScene!);
+            if (this.ball.ballBody) {
+                this.ball.ballBody.metadata = { roomId: this.roomId };
+                this.ball.ballBody.position.set(0, -2, 0);
+                this.ball.ballBody.isVisible = true; 
+            }
+            this.ball.position.set(0, -2, 0);
+            this.ball.isRespawning = true;
+            this.ball.hasValidPosition = true;
+        }
+
+        // Initialize camera manager (CRITICAL for POV switching)
+        if (this.map && this.player1 && this.player2 && this.localPlayerId) {
+            cameraManager.initialize(this.map, this.player1, this.player2, this.localPlayerId);
+        }
+
+        // Reset scores display
+        this.updateScores(0, 0);
+
+        // Ensure all game elements are visible
+        TournamentClientHandler.ensureTournamentElementsVisible({
+            ball: null,
+            player1: this.player1,
+            player2: this.player2
+        });
+
+        // Launch match animation and start game loop
+        try {
+            if (this.map) {
+                // Ensure ball is not visible during the animation
+                if (this.ball?.ballBody) {
+                    this.ball.ballBody.isVisible = false;
+                }
+
+                this.isIntroAnimationRunning = true;
+                await this.map.launchMatchAnimation();
+                this.isIntroAnimationRunning = false;
+                
+                // CRITICAL: Switch to FPS perspective after animation
+                cameraManager.switchToFPSAfterAnimation();
+                
+                // Re-enforce visibility after animation completes
+                if (this.player1?.paddleBody) {
+                    this.player1.paddleBody.isVisible = true;
+                }
+                if (this.player2?.paddleBody) {
+                    this.player2.paddleBody.isVisible = true;
+                }
+                if (this.ball?.ballBody) {
+                    this.ball.ballBody.isVisible = true;
+                }
+                
+                // CRITICAL: Send animationComplete FIRST, then request ball respawn
+                if (this.clientConnection) {
+                    this.clientConnection.send({
+                        type: 'animationComplete',
+                        playerId: this.localPlayerId
+                    });
+                    
+                    // Wait a moment for server to process animation complete, then request ball respawn
+                    setTimeout(() => {
+                        if (this.clientConnection) {
+                            this.clientConnection.send({
+                                type: 'requestBallRespawn',
+                                isInitial: true
+                            });
+                        }
+                    }, 100); // Small delay to ensure proper order
+                }
+            }
+            
+            // Ensure all game elements are visible and ready
+            TournamentClientHandler.ensureTournamentElementsVisible({
+                ball: null,
+                player1: this.player1,
+                player2: this.player2
+            });
+            
+            this.startGameLoop();
+        } catch (error) {
+            console.error('Error during tournament game initialization:', error);
+            
+            // Re-enforce visibility after error
+            if (this.player1?.paddleBody) {
+                this.player1.paddleBody.isVisible = true;
+            }
+            if (this.player2?.paddleBody) {
+                this.player2.paddleBody.isVisible = true;
+            }
+            if (this.ball?.ballBody) {
+                this.ball.ballBody.isVisible = true;
+            }
+            
+            // Send animation complete first, then ball respawn request (after error)
+            if (this.clientConnection) {
+                this.clientConnection.send({
+                    type: 'animationComplete',
+                    playerId: this.localPlayerId
+                });
+                
+                // Wait a moment for server to process animation complete, then request ball respawn
+                setTimeout(() => {
+                    if (this.clientConnection) {
+                        this.clientConnection.send({
+                            type: 'requestBallRespawn',
+                            isInitial: true
+                        });
+                    }
+                }, 100); // Small delay to ensure proper order
+            }
+            this.startGameLoop(); // Start anyway
+        }
     }
 
     private setupWebSocketHandlers(): void {
         if (!this.clientConnection) return;
 
         this.clientConnection.socket.addEventListener('open', () => {
-            console.log('WebSocket connection opened');
             this.updateGameStatus('Connected to game server');
         });
 
@@ -83,7 +247,6 @@ export class GameClient {
         });
 
         this.clientConnection.socket.addEventListener('close', () => {
-            console.log('WebSocket connection closed');
             this.updateGameStatus('Connection closed');
             this.cleanup();
         });
@@ -131,6 +294,12 @@ export class GameClient {
                         player1: this.player1,
                         player2: this.player2
                     });
+                } else if (message.type === 'matchAssignment') {
+                    // Handle match assignment for tournament
+                    TournamentClientHandler.handleMatchAssignment(message, this.updateGameStatus.bind(this));
+                } else if (message.type === 'gameInit') {
+                    // Handle game initialization for tournament matches
+                    TournamentClientHandler.handleGameInit(message, this.updateGameStatus.bind(this), this);
                 }
             } catch (error) {
                 console.error('Error parsing message:', error);
@@ -139,7 +308,15 @@ export class GameClient {
     }
 
     private async handleGameInit(data: any): Promise<void> {
-        console.log('Received game init:', data);
+        
+        // Check if this is a tournament match
+        const isTournamentMatch = data.matchType === 'tournament_semi_final';
+        
+        if (isTournamentMatch) {
+            // For tournament matches, the splash screen is already shown by TournamentClientHandler
+            // and the game initialization is handled there
+            return;
+        }
         
         // ⭐ TOURNAMENT FIX: Reset game state for clean start (especially for final games)
         TournamentClientHandler.resetTournamentGameState({ 
@@ -186,7 +363,6 @@ export class GameClient {
 
         // ⭐ TOURNAMENT FIX: Reset scores display when game initializes
         this.updateScores(0, 0);
-        console.log('✅ Score display reset to 0-0 for new game');
 
         // Create fresh ball (important for tournament final matches)
         if (!this.ball) {
@@ -208,8 +384,6 @@ export class GameClient {
             player1: this.player1,
             player2: this.player2
         });
-        
-        console.log('✅ GameClient: All tournament game elements configured');
 
         // ⭐ TOURNAMENT FIX: Launch match animation and start fresh game loop
         try {
@@ -223,13 +397,22 @@ export class GameClient {
                 await this.map.launchMatchAnimation();
                 this.isIntroAnimationRunning = false;
                 
-                // Notify server that animation is complete
+                // CRITICAL: Send animationComplete FIRST, then request ball respawn
                 if (this.clientConnection) {
                     this.clientConnection.send({
                         type: 'animationComplete',
                         playerId: this.localPlayerId
                     });
-                    console.log('Sent animationComplete to server');
+                    
+                    // Wait a moment for server to process animation complete, then request ball respawn
+                    setTimeout(() => {
+                        if (this.clientConnection) {
+                            this.clientConnection.send({
+                                type: 'requestBallRespawn',
+                                isInitial: true
+                            });
+                        }
+                    }, 100); // Small delay to ensure proper order
                 }
             }
             
@@ -240,17 +423,25 @@ export class GameClient {
                 player2: this.player2
             });
             
-            console.log('✅ GameClient: All tournament game elements configured');
             this.startGameLoop();
         } catch (error) {
             console.error('Error during game initialization:', error);
-            // Send animation complete anyway to prevent server hanging
+            // Send animation complete first, then ball respawn request (after error)
             if (this.clientConnection) {
                 this.clientConnection.send({
                     type: 'animationComplete',
                     playerId: this.localPlayerId
                 });
-                console.log('Sent animationComplete to server (after error)');
+                
+                // Wait a moment for server to process animation complete, then request ball respawn
+                setTimeout(() => {
+                    if (this.clientConnection) {
+                        this.clientConnection.send({
+                            type: 'requestBallRespawn',
+                            isInitial: true
+                        });
+                    }
+                }, 100); // Small delay to ensure proper order
             }
             this.startGameLoop(); // Start anyway
         }
@@ -288,14 +479,12 @@ export class GameClient {
 
         // For initial spawn, ensure ball is visible and starts its own animation
         if (msg.isInitialSpawn) {
-            console.log('Received initial ball spawn from server:', ballState);
             this.isGameStarted = true; // OFFICIALLY START THE GAME
             if (this.ball.ballBody) {
                 this.ball.ballBody.isVisible = true;
                 this.ball.ballBody.position.copyFrom(ballState.position);
             }
         } else if (msg.isScoreRespawn) {
-            console.log('Received score respawn from server:', ballState);
             if (this.ball.ballBody) {
                 this.ball.ballBody.isVisible = true;
                 this.ball.ballBody.position.copyFrom(ballState.position);
@@ -331,8 +520,6 @@ export class GameClient {
         
         // Update UI scores
         this.updateScores(player1Score, player2Score);
-        
-        console.log(`Score update: Player1: ${player1Score}, Player2: ${player2Score}`);
     }
 
     private handleGameEnd(gameEndData: any): void {
@@ -368,11 +555,9 @@ export class GameClient {
                 if (direction === 'up' && !this.isUpPressed) {
                     this.isUpPressed = true;
                     this.clientConnection.send({ type: 'keyDown', direction: 'up' });
-                    console.log(`🎮 ArrowLeft pressed, sending direction: up (inverted: ${shouldInvert})`);
                 } else if (direction === 'down' && !this.isDownPressed) {
                     this.isDownPressed = true;
                     this.clientConnection.send({ type: 'keyDown', direction: 'down' });
-                    console.log(`🎮 ArrowLeft pressed, sending direction: down (inverted: ${shouldInvert})`);
                 }
             } else if (event.key === 'ArrowRight') {
                 // Determine the actual direction we'll send based on perspective
@@ -382,11 +567,9 @@ export class GameClient {
                 if (direction === 'up' && !this.isUpPressed) {
                     this.isUpPressed = true;
                     this.clientConnection.send({ type: 'keyDown', direction: 'up' });
-                    console.log(`🎮 ArrowRight pressed, sending direction: up (inverted: ${shouldInvert})`);
                 } else if (direction === 'down' && !this.isDownPressed) {
                     this.isDownPressed = true;
                     this.clientConnection.send({ type: 'keyDown', direction: 'down' });
-                    console.log(`🎮 ArrowRight pressed, sending direction: down (inverted: ${shouldInvert})`);
                 }
             }
         });
@@ -405,11 +588,9 @@ export class GameClient {
                 if (direction === 'up' && this.isUpPressed) {
                     this.isUpPressed = false;
                     this.clientConnection.send({ type: 'keyUp', direction: 'up' });
-                    console.log(`🎮 ArrowLeft released, sending direction: up (inverted: ${shouldInvert})`);
                 } else if (direction === 'down' && this.isDownPressed) {
                     this.isDownPressed = false;
                     this.clientConnection.send({ type: 'keyUp', direction: 'down' });
-                    console.log(`🎮 ArrowLeft released, sending direction: down (inverted: ${shouldInvert})`);
                 }
             } else if (event.key === 'ArrowRight') {
                 // Determine the actual direction we were sending based on perspective
@@ -419,11 +600,9 @@ export class GameClient {
                 if (direction === 'up' && this.isUpPressed) {
                     this.isUpPressed = false;
                     this.clientConnection.send({ type: 'keyUp', direction: 'up' });
-                    console.log(`🎮 ArrowRight released, sending direction: up (inverted: ${shouldInvert})`);
                 } else if (direction === 'down' && this.isDownPressed) {
                     this.isDownPressed = false;
                     this.clientConnection.send({ type: 'keyUp', direction: 'down' });
-                    console.log(`🎮 ArrowRight released, sending direction: down (inverted: ${shouldInvert})`);
                 }
             }
         });
@@ -434,7 +613,6 @@ export class GameClient {
     private startGameLoop(): void {
         if (this.isGameLoopRunning || !this.map) return;
 
-        console.log('Starting game loop...');
         this.isGameLoopRunning = true;
 
         const renderLoop = () => {
@@ -471,6 +649,9 @@ export class GameClient {
                 }
             }
 
+            // Update camera system (CRITICAL for FPS mode)
+            cameraManager.update();
+
             // Render the scene
             if (this.map.getScene) {
                 this.map.getScene.render();
@@ -502,7 +683,6 @@ export class GameClient {
     }
 
     public cleanup(): void {
-        console.log('Cleaning up game client...');
         
         if (this.isGameLoopRunning && this.map?.getEngine) {
             this.map.getEngine.stopRenderLoop();
@@ -515,7 +695,6 @@ export class GameClient {
 
         // ⭐ CLEANUP: Properly dispose of map resources
         if (this.map) {
-            console.log('🗑️ Disposing map during cleanup...');
             this.map.dispose();
         }
 
@@ -530,7 +709,6 @@ export class GameClient {
     }
 
     public leaveGame(): void {
-        console.log('Player leaving game...');
         
         // Set game as over to stop input and rendering
         this.isGameOver = true;

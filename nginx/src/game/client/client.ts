@@ -338,7 +338,6 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
     });
 
     clientConnection.onPowerupActivated((msg) => {
-        console.log('Powerup activated:', msg);
         
         const isDefensive = msg.powerupType === 'defensive';
         
@@ -379,7 +378,6 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
     });
 
     clientConnection.onPowerupDeactivated((msg) => {
-        console.log('Powerup deactivated:', msg);
         
         if (ball && ball.ballPowerup) {
             ball.ballPowerup.updateState({
@@ -436,11 +434,9 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
         // NOW create the game elements AFTER splash screen
         
         // ⭐ FIX: Always recreate map for new game session
-        console.log('🎮 Creating new game map...');
         try {
             // Dispose of existing map if it exists
             if (map) {
-                console.log('🧹 Disposing existing map...');
                 map.dispose();
             }
             
@@ -450,7 +446,6 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
             if (!map.getScene) {
                 throw new Error('map.getScene is undefined');
             }
-            console.log('✅ New game map created successfully');
         } catch (e) {
             console.error('Map creation failed:', e);
             updateGameStatus('Error: Failed to create game map');
@@ -458,7 +453,6 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
         }
 
         // ⭐ FIX: Always recreate players for new game session
-        console.log('🎮 Creating fresh player paddles...');
         if (!playerId || !opponentId) {
             console.error('Missing player IDs');
             return;
@@ -466,11 +460,9 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
         
         // Clear existing players (they don't have dispose method)
         if (player1) {
-            console.log('🧹 Clearing existing player1...');
             player1 = null;
         }
         if (player2) {
-            console.log('🧹 Clearing existing player2...');
             player2 = null;
         }
         
@@ -505,21 +497,16 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
                     player2Powerup = new PlayerPowerup(player2.playerId, map.getScene, 1);
                 }
                 
-                console.log('🎮 Powerup UI systems created for local player');
             }
-            
-            console.log('✅ Fresh player paddles created successfully');
         } catch (e) {
             console.error('Paddle creation failed:', e);
             return;
         }
 
         // ⭐ FIX: Always recreate ball for new game session
-        console.log('🎮 Creating fresh ball...');
         try {
             // Dispose of existing ball if it exists
             if (ball) {
-                console.log('🧹 Disposing existing ball...');
                 ball.dispose();
             }
             
@@ -543,7 +530,6 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
             
             // Update state to playing when ball spawns
             stateTracker.setPlayingState();
-            console.log('✅ Fresh ball created successfully');
         } catch (e) {
             console.error('Ball creation failed:', e);
             return;
@@ -563,7 +549,6 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
         // Initialize camera manager
         if (map && player1 && player2 && localPlayerId) {
             cameraManager.initialize(map, player1, player2, localPlayerId);
-            console.log('🎮 Camera manager initialized after game setup');
         }
 
         updateGameStatus('Game starting...');
@@ -590,11 +575,9 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
                     if (direction === 'up' && !isUpPressed) {
                         isUpPressed = true;
                         clientConnection!.send({ type: 'keyDown', direction: 'up' });
-                        console.log(`🎮 ArrowLeft pressed, sending direction: up (inverted: ${shouldInvert})`);
                     } else if (direction === 'down' && !isDownPressed) {
                         isDownPressed = true;
                         clientConnection!.send({ type: 'keyDown', direction: 'down' });
-                        console.log(`🎮 ArrowLeft pressed, sending direction: down (inverted: ${shouldInvert})`);
                     }
                 } else if (event.key === 'ArrowRight') {
                     const direction = shouldInvert ? 'up' : 'down';
@@ -609,7 +592,6 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
                 } else if (event.key.toLowerCase() === 'a') {
                     if (clientConnection) {
                         clientConnection.activatePowerup();
-                        console.log('🎮 A key pressed, sending powerup activation to server');
                     }
                 }
             };
@@ -666,7 +648,6 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
                     ball.ballBody.isVisible = true;
                 }
 
-                console.log('🎮 EXPERIMENT: Switching to FPS after animation');
                 cameraManager.switchToFPSAfterAnimation();
                 
                 if (clientConnection) {
@@ -674,7 +655,6 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
                         type: 'requestBallRespawn',
                         isInitial: true
                     });
-                    console.log('Sent initial ball respawn request to server after animation');
                 }
                 
                 setupGameLoop();
@@ -696,7 +676,6 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
                         type: 'requestBallRespawn',
                         isInitial: true
                     });
-                    console.log('Sent initial ball respawn request to server (after error)');
                 }
                 setupGameLoop();
             }

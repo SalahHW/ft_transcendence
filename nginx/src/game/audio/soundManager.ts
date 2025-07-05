@@ -35,8 +35,6 @@ class SoundManager {
             fourthPlace: `${window.location.protocol}//${window.location.host}/sounds/finalSounds/fourth-place.mp3`
         };
 
-        console.log('Preloading sounds...');
-        
         for (const [name, path] of Object.entries(soundFiles)) {
             try {
                 const audio = new Audio(path);
@@ -51,14 +49,12 @@ class SoundManager {
                 });
                 
                 this.sounds[name] = audio;
-                console.log(`✓ Loaded sound: ${name}`);
             } catch (error) {
                 console.warn(`Failed to load sound: ${name}`, error);
             }
         }
         
         this.isInitialized = true;
-        console.log('Sound manager initialized');
     }
 
     /**
@@ -98,7 +94,6 @@ class SoundManager {
      */
     setEnabled(enabled: boolean): void {
         this.isEnabled = enabled;
-        console.log(`Sounds ${enabled ? 'enabled' : 'disabled'}`);
     }
 
     /**

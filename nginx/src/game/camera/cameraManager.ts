@@ -41,7 +41,7 @@ export class CameraManager {
             this.povController.initializeWithTopDownCamera(gameMapInstance.globalPov);
         }
 
-        console.log('🎮 Camera Manager initialized');
+
     }
 
     /**
@@ -53,7 +53,6 @@ export class CameraManager {
             return;
         }
 
-        console.log('🎮 Switching to FPS perspective after animation');
         this.povController.switchToFPSPerspective();
     }
 
