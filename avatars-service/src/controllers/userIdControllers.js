@@ -1,3 +1,4 @@
+import { httpError } from "../errors/httpErrors.js";
 import * as userServices from "../services/userServices.js";
 
 export async function validateUserId(request) {
@@ -8,6 +9,10 @@ export async function validateUserId(request) {
     throw new Error("Invalid user ID");
   }
 
-  await userServices.userExists(userId);
+  try {
+    await userServices.userExists(userId);
+  } catch (err) {
+    throw httpError(err.message, 503);
+  }
   return userId;
 }
