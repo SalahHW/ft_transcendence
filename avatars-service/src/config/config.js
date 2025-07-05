@@ -8,7 +8,13 @@ export const AVATARS_PATH = isDev
   ? process.env.DEV_AVATARS_PATH
   : process.env.AVATARS_PATH;
 export const ALLOWED_MIME_TYPES = process.env.ALLOWED_MIME_TYPES;
-export const USERS_SERVICE_URL = process.env.USERS_SERVICE_URL;
+
+// Users service
+export const USERS_SERVICE_HOST = isDev
+  ? "localhost"
+  : process.env.USERS_SERVICE_HOST;
+export const USERS_SERVICE_PORT = process.env.USERS_SERVICE_PORT;
+export const USERS_SERVICE_URL = `http://${USERS_SERVICE_HOST}:${USERS_SERVICE_PORT}`;
 export const USERS_SERVICE_TIMEOUT = process.env.USERS_SERVICE_TIMEOUT;
 
 //! Variable formats are not validated
@@ -30,6 +36,16 @@ if (!AVATARS_PATH) {
 
 if (!ALLOWED_MIME_TYPES) {
   console.error("Unable to load allowed mime types from environment variables");
+  process.exit(1);
+}
+
+if (!USERS_SERVICE_HOST) {
+  console.error("Unable to load users service host from environment variables");
+  process.exit(1);
+}
+
+if (!USERS_SERVICE_PORT) {
+  console.error("Unable to load users service port from environment variables");
   process.exit(1);
 }
 
