@@ -20,7 +20,7 @@ import LoginPopup from "../components/LoginPopup.js";
 import RegisterPopup from "../components/RegisterPopup.js";
 import ProfileView from "../views/ProfileView.js";
 import { handleSimpleMatch } from "../game/gameMode/1v1Handler.js";
-// import { handleTournament } from "../game/gameMode/tournamentHandler.js";
+import { handleTournament } from "../game/gameMode/tournamentHandler.js";
 
 interface Route {
 	path: string;
@@ -98,7 +98,7 @@ export default class Router {
 		{
 			path: "/tournament",
 			handler: async function() {
-				//await handleTournament(this);
+				await handleTournament(this);
 			}
 		}
 	];

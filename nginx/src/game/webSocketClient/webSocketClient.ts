@@ -32,7 +32,13 @@ export class webSocketClient {
     public matchEndTime: Date | null;
 
     constructor(url: string, playerId: string | null = null) {
-        this.socket = new WebSocket(playerId ? `${url}?playerId=${playerId}` : url);
+        // Handle URLs that already have query parameters
+        let finalUrl = url;
+        if (playerId && !url.includes('playerId=')) {
+            const separator = url.includes('?') ? '&' : '?';
+            finalUrl = `${url}${separator}playerId=${playerId}`;
+        }
+        this.socket = new WebSocket(finalUrl);
         this.playerId = playerId;
         this.queue = [];
         this.initCallback = null;
@@ -135,6 +141,12 @@ export class webSocketClient {
 
             if (msg.type === 'resetPlayerStates' && this.resetPlayerStatesCallback) {
                 this.resetPlayerStatesCallback(msg);
+            }
+
+            // Tournament-specific message handlers
+            if (msg.type === 'tournamentWelcome' || msg.type === 'tournamentWaitingRoomStatus') {
+                // These are handled by the messageCallback for tournament UI updates
+                return;
             }
         });
 

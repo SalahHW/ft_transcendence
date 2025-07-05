@@ -31,9 +31,9 @@ export async function handleSimpleMatch(cache: any): Promise<void> {
 		const gameClientModule = await import(gameBundlePath);
 		
 		if (gameClientModule.setupJoinGameButton) {
-			gameClientModule.setupJoinGameButton();
+			gameClientModule.setupJoinGameButton('1v1');
 		}
-		await gameClientModule.initializeGame(playerData.id);
+		await gameClientModule.initializeGame(playerData.id, '1v1');
 		
 	} catch (error) {
 		console.error("Error registering user for game:", error);

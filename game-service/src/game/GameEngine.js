@@ -80,10 +80,10 @@ export class GameEngine {
     const json = JSON.stringify(message);
     const room = this.stateManager.getRoom(roomId) || { players: [] };
     
-    // Filter out disconnected players
-    room.players = room.players.filter(p => p.ws && p.ws.readyState === 1);
+    // Only filter for connected players when sending, do NOT mutate room.players
+    const connectedPlayers = room.players.filter(p => p.ws && p.ws.readyState === 1);
     
-    room.players.forEach(({ ws, id }) => {
+    connectedPlayers.forEach(({ ws, id }) => {
       if (WebSocketUtils.isWebSocketReady(ws)) {
         try {
           ws.send(json);

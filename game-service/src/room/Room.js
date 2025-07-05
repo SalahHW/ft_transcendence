@@ -39,6 +39,9 @@ export class Room {
       playerStates: {}, // Initialize player states tracking
       ...options.metadata
     };
+    
+    // Set match type from options
+    this.matchType = options.matchType || '1v1';
   }
 
   /**

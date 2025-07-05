@@ -4,6 +4,7 @@
  */
 
 import { oneVOneDisconnectHandler } from './OneVOneDisconnectHandler.js';
+import { tournamentDisconnectHandler } from './TournamentDisconnectHandler.js';
 import { MatchTypes } from './BaseDisconnectHandler.js';
 import { gameStateManager } from '../../game/GameStateManager.js';
 
@@ -21,7 +22,7 @@ export class DisconnectionDetector {
    */
   setupHandlers() {
     this.handlers.set(MatchTypes.ONE_V_ONE, oneVOneDisconnectHandler);
-    // Future: this.handlers.set(MatchTypes.TOURNAMENT, tournamentDisconnectHandler);
+    this.handlers.set(MatchTypes.TOURNAMENT, tournamentDisconnectHandler);
   }
 
   /**

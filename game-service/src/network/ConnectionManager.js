@@ -4,6 +4,7 @@ import { disconnectionHandler } from '../server/disconnect/index.js';
 import { LogUtils, TimeUtils } from '../utils/helpers.js';
 import { playerManager } from '../player/PlayerManager.js';
 import { roomManager } from '../room/RoomManager.js';
+import { tournamentManager } from '../tournament/TournamentManager.js';
 
 /**
  * Manages player connections and disconnections
@@ -19,15 +20,55 @@ export class ConnectionManager {
    */
   handlePlayerConnection(ws, playerId, roomId) {
     const player = this._getOrCreatePlayer(ws, playerId);
-    const assignedRoomId = roomId || gameEngine.createOrJoinRoom(playerId, player, ws);
-
-    // Set connection metadata
-    this._setConnectionMetadata(ws, playerId, assignedRoomId);
     
-    LogUtils.logPlayerAction('connected', playerId, assignedRoomId);
-    console.log(`Player connected: ${playerId} in room ${assignedRoomId}, total rooms: ${gameStateManager.getGameState().gameRooms.size}`);
+    // Check if this is a tournament waiting room connection
+    const matchType = ws.matchType || '1v1';
+    
+    if (matchType === 'tournament' && roomId) {
+      // This is a tournament waiting room connection
+      console.log(`🏆 Tournament waiting room connection: player ${playerId} to room ${roomId}`);
+      
+      // Verify the room exists and is a tournament waiting room
+      const room = gameStateManager.getRoom(roomId);
+      console.log(`🏆 DEBUG: Room validation for ${roomId}:`, {
+        roomExists: !!room,
+        roomMetadata: room?.metadata,
+        roomType: room?.metadata?.roomType,
+        matchType: room?.matchType,
+        expectedRoomType: 'waiting',
+        expectedMatchType: 'tournament'
+      });
+      
+      if (room && room.metadata?.roomType === 'waiting' && room.matchType === 'tournament') {
+        // Update player's WebSocket connection
+        player.updateConnection(ws);
+        
+        // Set connection metadata
+        this._setConnectionMetadata(ws, playerId, roomId);
+        
+        LogUtils.logPlayerAction('connected', playerId, roomId);
+        console.log(`🏆 Tournament player connected: ${playerId} in waiting room ${roomId}`);
+        
+        // Notify tournament manager of WebSocket connection
+        tournamentManager.handlePlayerWebSocketConnected(playerId, roomId);
+        
+        return roomId;
+      } else {
+        console.error(`🏆 Invalid tournament waiting room: ${roomId}`);
+        return null;
+      }
+    } else {
+      // Regular 1v1 connection
+      const assignedRoomId = roomId || gameEngine.createOrJoinRoom(playerId, player, ws);
 
-    return assignedRoomId;
+      // Set connection metadata
+      this._setConnectionMetadata(ws, playerId, assignedRoomId);
+      
+      LogUtils.logPlayerAction('connected', playerId, assignedRoomId);
+      console.log(`Player connected: ${playerId} in room ${assignedRoomId}, total rooms: ${gameStateManager.getGameState().gameRooms.size}`);
+
+      return assignedRoomId;
+    }
   }
 
   /**
@@ -127,6 +168,28 @@ export class ConnectionManager {
     const metadata = this.connectionMetadata.get(playerId);
     if (metadata) {
       metadata.lastActivity = Date.now();
+    }
+  }
+
+  /**
+   * Send welcome message to tournament waiting room player
+   */
+  _sendTournamentWelcomeMessage(ws, player, room) {
+    try {
+      const message = {
+        type: 'tournamentWelcome',
+        playerId: player.id,
+        username: player.username,
+        roomId: room.id,
+        playerCount: room.players.length,
+        maxPlayers: 4,
+        message: `Welcome to tournament waiting room! You are player ${room.players.length} of 4.`
+      };
+      
+      ws.send(JSON.stringify(message));
+      console.log(`🏆 Sent welcome message to tournament player ${player.username} in room ${room.id}`);
+    } catch (error) {
+      console.error(`Failed to send tournament welcome message to player ${player.id}:`, error);
     }
   }
 }

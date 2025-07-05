@@ -131,7 +131,17 @@ async function setPlayerReady(playerId: string): Promise<boolean> {
 }
 
 // Function to initialize the game
-export function initializeGame(playerId: string): void {
+export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' = '1v1'): void {
+    console.log(`🎮 Initializing game for player ${playerId} with game type: ${gameType}`);
+    
+    // If tournament mode, just log and return without starting 1v1 game logic
+    if (gameType === 'tournament') {
+        console.log('🏆 Tournament mode detected - skipping 1v1 game initialization');
+        console.log('🏆 Tournament logic will be implemented later');
+        updateGameStatus('Tournament mode - waiting for implementation');
+        return;
+    }
+    
     if (clientConnection) {
         clientConnection.socket.close();
     }
@@ -859,7 +869,7 @@ function setupGameLoop(): void {
 }
 
 // Export function to setup join game button
-export function setupJoinGameButton(): void {
+export function setupJoinGameButton(gameType: '1v1' | 'tournament' = '1v1'): void {
     if ((window as any).joinGameButtonSetup) {
         return;
     }
@@ -890,7 +900,7 @@ export function setupJoinGameButton(): void {
                 const playerId = availablePlayers[0].id;
                 updateGameStatus('Joining game...');
                 
-                initializeGame(playerId);
+                initializeGame(playerId, gameType);
                 
                 await setPlayerReady(playerId);
                 updateGameStatus('Waiting for other player to join...');

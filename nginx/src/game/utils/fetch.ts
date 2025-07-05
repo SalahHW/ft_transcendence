@@ -90,3 +90,29 @@ export async function registerCurrentUserForGame(): Promise<{ id: string; userna
 	
 	return result.data;
 }
+
+export async function registerCurrentUserForTournament(): Promise<{ id: string; username: string; websocketUrl?: string; waitingRoomId?: string; playerCount?: number; maxPlayers?: number }> {
+	const username = await getUserResponseData('username');
+	// FIXED: Use current domain instead of localhost for game service API
+	// Game service is proxied through nginx, so use same domain as frontend
+	
+	const response = await fetch(`${host}/api/game/tournaments`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({ username }),
+	});
+	
+	if (!response.ok) {
+		const error = await response.text();
+		throw new Error(`Failed to register user for tournament: ${error}`);
+	}
+	
+	const result = await response.json();
+	if (!result.data || !result.data.id) {
+		throw new Error('Invalid response from game service');
+	}
+	
+	return result.data;
+}

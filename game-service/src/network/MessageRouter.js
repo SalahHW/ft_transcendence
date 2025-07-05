@@ -31,6 +31,7 @@ export class MessageRouter {
     this.messageHandlers.set(MESSAGE_TYPES.UPDATE_PLAYER_STATE, this._handleUpdatePlayerState.bind(this));
     this.messageHandlers.set(MESSAGE_TYPES.BROWSER_EVENT, this._handleBrowserEvent.bind(this));
     this.messageHandlers.set('powerupActivation', this._handlePowerupActivation.bind(this));
+    this.messageHandlers.set('leaveTournament', this._handleLeaveTournament.bind(this));
   }
 
   /**
@@ -307,6 +308,20 @@ export class MessageRouter {
   _handleBrowserEvent(msg, playerId, roomId, ws) {
     console.log(`🌐 Browser event from ${playerId}: ${msg.eventType} in room ${roomId}`);
     handleBrowserEvent(playerId, roomId, msg.eventType);
+  }
+
+  /**
+   * Handle tournament leave requests
+   */
+  _handleLeaveTournament(msg, playerId, roomId, ws) {
+    console.log(`🏆 Tournament leave request from player ${playerId} in room ${roomId}`);
+    
+    // Import tournament manager here to avoid circular dependencies
+    import('../tournament/TournamentManager.js').then(({ tournamentManager }) => {
+      tournamentManager.handlePlayerLeave(playerId, roomId);
+    }).catch(error => {
+      console.error('Failed to import tournament manager:', error);
+    });
   }
 }
 

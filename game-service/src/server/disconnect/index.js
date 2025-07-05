@@ -19,6 +19,7 @@ export {
 
 // Export specific handlers
 export { OneVOneDisconnectHandler, oneVOneDisconnectHandler } from './OneVOneDisconnectHandler.js';
+export { TournamentDisconnectHandler, tournamentDisconnectHandler } from './TournamentDisconnectHandler.js';
 
 // Export detector and router
 export { DisconnectionDetector, disconnectionDetector } from './DisconnectionDetector.js';

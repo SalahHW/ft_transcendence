@@ -5,6 +5,7 @@ import { playerManager } from '../player/PlayerManager.js';
 import { gameStateManager } from '../game/GameStateManager.js';
 import { gameEngine } from '../game/GameEngine.js';
 import { roomManager } from '../room/RoomManager.js';
+import { tournamentManager } from '../tournament/TournamentManager.js';
 
 // Constants for paddle movement
 const PADDLE_PULSE_DISTANCE = 1.0;
@@ -81,6 +82,293 @@ export async function registerApiRoutes(fastify) {
       return reply.status(status).send({
         status: 'error',
         message: error.message || 'Internal server error',
+      });
+    }
+  });
+
+  // POST /api/tournaments: Create a new player for tournament with a username
+  fastify.post('/api/tournaments', async (request, reply) => {
+    try {
+      console.log('🎯 TOURNAMENT BUTTON CLICKED: API request: POST /api/tournaments');
+      const { username } = request.body || {};
+      
+      console.log(`🏆 Player ${username} clicked the tournament button!`);
+      
+      // Register player first
+      const player = playerManager.registerPlayerWithUsername(username);
+      
+      // Add player to tournament waiting room
+      const tournamentData = await tournamentManager.addPlayerToTournament(player.id, username);
+      
+      console.log(`Created tournament player ${player.id} with username ${username}`);
+      console.log(`🏆 Player ${username} added to tournament waiting room ${tournamentData.waitingRoomId} (${tournamentData.playerCount}/4)`);
+      
+              // Return WebSocket connection information for the client
+        return reply.status(201).send({
+          status: 'success',
+          data: { 
+            id: player.id, 
+            username: player.username,
+            waitingRoomId: tournamentData.waitingRoomId,
+            playerCount: tournamentData.playerCount,
+            maxPlayers: tournamentData.maxPlayers,
+            websocketUrl: `/api/game/ws?playerId=${player.id}&roomId=${tournamentData.waitingRoomId}&matchType=tournament`
+          },
+        });
+    } catch (error) {
+      console.error('Error in POST /api/tournaments:', error);
+      const status = error.message.includes('Invalid username') ? HTTP_STATUS.BAD_REQUEST : 500;
+      return reply.status(status).send({
+        status: 'error',
+        message: error.message || 'Internal server error',
+      });
+    }
+  });
+
+  // GET /api/tournaments/waiting-rooms: Get all tournament waiting room information
+  fastify.get('/api/tournaments/waiting-rooms', async (reply) => {
+    try {
+      console.log('API request: GET /api/tournaments/waiting-rooms');
+      const waitingRoomCounts = tournamentManager.getAllWaitingRoomCounts();
+      const stats = tournamentManager.getTournamentStats();
+      
+      return reply.status(HTTP_STATUS.OK).send({
+        status: 'success',
+        data: {
+          waitingRooms: waitingRoomCounts,
+          stats: stats
+        },
+      });
+    } catch (error) {
+      console.error('Error in GET /api/tournaments/waiting-rooms:', error);
+      return reply.status(500).send({
+        status: 'error',
+        message: 'Internal server error',
+      });
+    }
+  });
+
+  // GET /api/tournaments/waiting-rooms/:id: Get specific tournament waiting room information
+  fastify.get('/api/tournaments/waiting-rooms/:id', async (request, reply) => {
+    try {
+      const { id } = request.params;
+      console.log(`API request: GET /api/tournaments/waiting-rooms/${id}`);
+      
+      const waitingRoomData = tournamentManager.getWaitingRoomPlayerCount(id);
+      if (!waitingRoomData) {
+        return reply.status(404).send({
+          status: 'error',
+          message: 'Tournament waiting room not found',
+        });
+      }
+      
+      return reply.status(HTTP_STATUS.OK).send({
+        status: 'success',
+        data: waitingRoomData,
+      });
+    } catch (error) {
+      console.error(`Error in GET /api/tournaments/waiting-rooms/${request.params.id}:`, error);
+      return reply.status(500).send({
+        status: 'error',
+        message: 'Internal server error',
+      });
+    }
+  });
+
+  // DELETE /api/tournaments/players/:id: Remove player from tournament waiting room
+  fastify.delete('/api/tournaments/players/:id', async (request, reply) => {
+    try {
+      const { id } = request.params;
+      const { username } = request.body || {};
+      
+      console.log(`API request: DELETE /api/tournaments/players/${id} (username: ${username})`);
+      
+      if (!username) {
+        return reply.status(HTTP_STATUS.BAD_REQUEST).send({
+          status: 'error',
+          message: 'Username is required in request body',
+        });
+      }
+      
+      const result = tournamentManager.removePlayerFromTournament(id, username);
+      
+      if (result.success) {
+        return reply.status(HTTP_STATUS.OK).send({
+          status: 'success',
+          data: result,
+        });
+      } else {
+        return reply.status(404).send({
+          status: 'error',
+          message: result.message,
+        });
+      }
+    } catch (error) {
+      console.error(`Error in DELETE /api/tournaments/players/${request.params.id}:`, error);
+      return reply.status(500).send({
+        status: 'error',
+        message: 'Internal server error',
+      });
+    }
+  });
+
+  // POST /api/tournaments/players/:id/leave: Explicitly leave tournament waiting room
+  fastify.post('/api/tournaments/players/:id/leave', async (request, reply) => {
+    try {
+      const { id } = request.params;
+      const { username } = request.body || {};
+      
+      console.log(`API request: POST /api/tournaments/players/${id}/leave (username: ${username})`);
+      
+      if (!username) {
+        return reply.status(HTTP_STATUS.BAD_REQUEST).send({
+          status: 'error',
+          message: 'Username is required in request body',
+        });
+      }
+      
+      // Find which waiting room the player is in
+      const waitingRoomCounts = tournamentManager.getAllWaitingRoomCounts();
+      let foundRoom = null;
+      
+      for (const [waitingRoomId, data] of Object.entries(waitingRoomCounts)) {
+        const player = data.players.find(p => p.id === id);
+        if (player) {
+          foundRoom = waitingRoomId;
+          break;
+        }
+      }
+      
+      if (!foundRoom) {
+        return reply.status(404).send({
+          status: 'error',
+          message: `Player ${username} not found in any tournament waiting room`,
+        });
+      }
+      
+      // Handle as explicit leave through disconnect handler
+      const { disconnectionDetector } = await import('../server/disconnect/DisconnectionDetector.js');
+      disconnectionDetector.handleExplicitLeave(id, foundRoom);
+      
+      return reply.status(HTTP_STATUS.OK).send({
+        status: 'success',
+        data: {
+          message: `Player ${username} left tournament waiting room`,
+          waitingRoomId: foundRoom
+        },
+      });
+    } catch (error) {
+      console.error(`Error in POST /api/tournaments/players/${request.params.id}/leave:`, error);
+      return reply.status(500).send({
+        status: 'error',
+        message: 'Internal server error',
+      });
+    }
+  });
+
+  // POST /api/tournaments/players/:id/browser-event: Handle browser events for tournament waiting rooms
+  fastify.post('/api/tournaments/players/:id/browser-event', async (request, reply) => {
+    try {
+      const { id } = request.params;
+      const { username, eventType } = request.body || {};
+      
+      console.log(`API request: POST /api/tournaments/players/${id}/browser-event (username: ${username}, event: ${eventType})`);
+      
+      if (!username || !eventType) {
+        return reply.status(HTTP_STATUS.BAD_REQUEST).send({
+          status: 'error',
+          message: 'Username and eventType are required in request body',
+        });
+      }
+      
+      // Find which waiting room the player is in
+      const waitingRoomCounts = tournamentManager.getAllWaitingRoomCounts();
+      let foundRoom = null;
+      
+      for (const [waitingRoomId, data] of Object.entries(waitingRoomCounts)) {
+        const player = data.players.find(p => p.id === id);
+        if (player) {
+          foundRoom = waitingRoomId;
+          break;
+        }
+      }
+      
+      if (!foundRoom) {
+        return reply.status(404).send({
+          status: 'error',
+          message: `Player ${username} not found in any tournament waiting room`,
+        });
+      }
+      
+      // Handle browser event through disconnect handler
+      const { disconnectionDetector } = await import('../server/disconnect/DisconnectionDetector.js');
+      disconnectionDetector.handleBrowserEvent(id, foundRoom, eventType);
+      
+      return reply.status(HTTP_STATUS.OK).send({
+        status: 'success',
+        data: {
+          message: `Browser event ${eventType} handled for player ${username}`,
+          waitingRoomId: foundRoom
+        },
+      });
+    } catch (error) {
+      console.error(`Error in POST /api/tournaments/players/${request.params.id}/browser-event:`, error);
+      return reply.status(500).send({
+        status: 'error',
+        message: 'Internal server error',
+      });
+    }
+  });
+
+  // POST /api/tournaments/players/:id/activity: Update player activity in tournament waiting room
+  fastify.post('/api/tournaments/players/:id/activity', async (request, reply) => {
+    try {
+      const { id } = request.params;
+      const { username } = request.body || {};
+      
+      console.log(`API request: POST /api/tournaments/players/${id}/activity (username: ${username})`);
+      
+      if (!username) {
+        return reply.status(HTTP_STATUS.BAD_REQUEST).send({
+          status: 'error',
+          message: 'Username is required in request body',
+        });
+      }
+      
+      // Find which waiting room the player is in
+      const waitingRoomCounts = tournamentManager.getAllWaitingRoomCounts();
+      let foundRoom = null;
+      
+      for (const [waitingRoomId, data] of Object.entries(waitingRoomCounts)) {
+        const player = data.players.find(p => p.id === id);
+        if (player) {
+          foundRoom = waitingRoomId;
+          break;
+        }
+      }
+      
+      if (!foundRoom) {
+        return reply.status(404).send({
+          status: 'error',
+          message: `Player ${username} not found in any tournament waiting room`,
+        });
+      }
+      
+      // Update player activity
+      tournamentManager.updatePlayerActivity(id, foundRoom);
+      
+      return reply.status(HTTP_STATUS.OK).send({
+        status: 'success',
+        data: {
+          message: `Activity updated for player ${username}`,
+          waitingRoomId: foundRoom
+        },
+      });
+    } catch (error) {
+      console.error(`Error in POST /api/tournaments/players/${id}/activity:`, error);
+      return reply.status(500).send({
+        status: 'error',
+        message: 'Internal server error',
       });
     }
   });

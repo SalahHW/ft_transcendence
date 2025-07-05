@@ -36,13 +36,24 @@ export class WebSocketHandler {
    */
   _handleNewConnection(ws, req, fastify) {
     const playerId = req.query.playerId || fastify.uuid();
-    const roomId = this.connectionManager.handlePlayerConnection(ws, playerId);
-
-    // Setup message handling
-    this._setupMessageHandling(ws, playerId, roomId);
+    const roomId = req.query.roomId || null;
+    const matchType = req.query.matchType || '1v1';
     
-    // Setup disconnect detection for unexpected disconnections
-    setupDisconnectDetection(ws, playerId, roomId);
+    // Set matchType on WebSocket for connection manager
+    ws.matchType = matchType;
+    
+    const assignedRoomId = this.connectionManager.handlePlayerConnection(ws, playerId, roomId);
+
+    if (assignedRoomId) {
+      // Setup message handling
+      this._setupMessageHandling(ws, playerId, assignedRoomId);
+      
+      // Setup disconnect detection for unexpected disconnections
+      setupDisconnectDetection(ws, playerId, assignedRoomId);
+    } else {
+      console.error(`Failed to establish connection for player ${playerId}`);
+      ws.close(1000, 'Connection failed');
+    }
   }
 
   /**

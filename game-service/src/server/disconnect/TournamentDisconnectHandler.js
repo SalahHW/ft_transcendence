@@ -1,6 +1,6 @@
 /**
- * 1v1 specific disconnect handler
- * Handles disconnections for 1v1 matches with state-based forfeit logic
+ * Tournament specific disconnect handler
+ * Handles disconnections for tournament matches with complex bracket logic
  */
 
 import { BaseDisconnectHandler, PlayerStates, DisconnectionReasons, MatchTypes } from './BaseDisconnectHandler.js';
@@ -9,22 +9,26 @@ import { gameEngine } from '../../game/GameEngine.js';
 import { LogUtils, TimeUtils } from '../../utils/helpers.js';
 import { playerManager } from '../../player/PlayerManager.js';
 import { reportMatchResultsToAPI } from '../api.js';
+import { tournamentManager } from '../../tournament/TournamentManager.js';
 
 /**
- * 1v1 specific disconnect handler
+ * Tournament specific disconnect handler
  */
-export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
+export class TournamentDisconnectHandler extends BaseDisconnectHandler {
   constructor() {
     super();
-    this.matchType = MatchTypes.ONE_V_ONE;
+    this.matchType = MatchTypes.TOURNAMENT;
   }
 
   /**
    * Handle unexpected disconnection
    */
   handleDisconnection(playerId, roomId, reason) {
+    console.log(`🏆 TOURNAMENT DISCONNECT: Player ${playerId} from room ${roomId} (${reason})`);
+    
     const room = gameStateManager.getRoom(roomId);
     if (!room || !this.shouldHandleDisconnection(room)) {
+      console.log(`Room ${roomId} not found or not in valid state for tournament disconnect handling`);
       this.removePlayerFromGame(playerId);
       return;
     }
@@ -52,7 +56,7 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
         this.handlePostGameDisconnect(playerId, roomId);
         break;
       default:
-        console.warn(`Unknown player state: ${playerState} for player ${playerId}`);
+        console.warn(`Unknown player state: ${playerState} for tournament player ${playerId}`);
         this.handleWaitingStateDisconnect(playerId, roomId, reason);
     }
   }
@@ -61,6 +65,8 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
    * Handle explicit leave game button click
    */
   handleExplicitLeave(playerId, roomId) {
+    console.log(`🏃 Tournament player ${playerId} explicitly leaving tournament in room ${roomId}`);
+    
     // Mark player as leaving
     playerManager.markPlayerLeaving(playerId);
     
@@ -72,37 +78,95 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
    * Handle disconnection during waiting state
    */
   handleWaitingStateDisconnect(playerId, roomId, reason) {
+    console.log(`⏳ Handling tournament waiting state disconnect for player ${playerId} (${reason})`);
+    
     const room = gameStateManager.getRoom(roomId);
-    if (!room) return;
-
-    // Check if game has started but is in animation phase
-    if (room.gameStarted && room.ready) {
-      this.handlePreGameDisconnect(playerId, roomId, reason);
+    if (!room) {
+      console.error(`Room ${roomId} not found for tournament waiting state disconnect`);
       return;
     }
-
-    // Remove player from room
-    room.players = room.players.filter(p => p.id !== playerId);
     
-    // Handle empty rooms
-    if (room.players.length === 0) {
-      gameStateManager.removeRoom(roomId);
+    // Check if this is a tournament waiting room
+    if (room.metadata?.roomType === 'waiting' && room.matchType === 'tournament') {
+      console.log(`🏆 Tournament waiting room disconnect detected for player ${playerId}`);
+      
+      // Delegate to tournament manager for waiting room disconnections
+      tournamentManager.handlePlayerDisconnect(playerId, roomId);
+      
+      // Notify remaining players about the disconnect
+      this.notifyWaitingRoomDisconnect(roomId, playerId, room.players.length);
     } else {
-      // Notify remaining player
-      this.notifyPlayerDisconnected(roomId, playerId, room.players.length);
+      // Handle as regular tournament room disconnect
+      console.log(`🏆 Regular tournament room disconnect for player ${playerId}`);
+      tournamentManager.handlePlayerDisconnect(playerId, roomId);
     }
+  }
+
+  /**
+   * Handle disconnection from tournament waiting room (no WebSocket connection yet)
+   */
+  handleWaitingRoomDisconnect(playerId, roomId, reason) {
+    console.log(`🏆 Handling tournament waiting room disconnect for player ${playerId} (${reason})`);
+    
+    const room = gameStateManager.getRoom(roomId);
+    if (!room || room.metadata?.roomType !== 'waiting' || room.matchType !== 'tournament') {
+      console.error(`Invalid tournament waiting room for disconnect: ${roomId}`);
+      return;
+    }
+    
+    // Delegate to tournament manager
+    tournamentManager.handlePlayerDisconnect(playerId, roomId);
+    
+    // Notify remaining players
+    this.notifyWaitingRoomDisconnect(roomId, playerId, room.players.length);
+  }
+
+  /**
+   * Notify remaining players in waiting room about a disconnect
+   */
+  notifyWaitingRoomDisconnect(roomId, disconnectedPlayerId, remainingPlayerCount) {
+    const room = gameStateManager.getRoom(roomId);
+    if (!room) return;
+    
+    // Get the disconnected player's username for the notification
+    const disconnectedPlayer = room.players.find(p => p.id === disconnectedPlayerId);
+    const playerUsername = disconnectedPlayer?.username || disconnectedPlayerId;
+    
+    console.log(`🏆 Notifying waiting room ${roomId} about disconnect: ${playerUsername} left (${remainingPlayerCount} players remaining)`);
+    
+    // Send notification to remaining players (if they have WebSocket connections)
+    const connectedPlayers = room.players.filter(p => p.id !== disconnectedPlayerId && p.ws && p.ws.readyState === 1);
+    
+    connectedPlayers.forEach(player => {
+      try {
+        player.ws.send(JSON.stringify({
+          type: 'tournamentPlayerLeft',
+          roomId,
+          disconnectedPlayer: {
+            id: disconnectedPlayerId,
+            username: playerUsername
+          },
+          remainingPlayers: remainingPlayerCount,
+          maxPlayers: 4
+        }));
+      } catch (error) {
+        console.error(`Failed to notify player ${player.id} about tournament disconnect:`, error);
+      }
+    });
   }
 
   /**
    * Handle disconnection during pre-game states (loading, announcement, launch animation)
    */
   handlePreGameDisconnect(playerId, roomId, reason) {
+    console.log(`🎬 Handling tournament pre-game disconnect for player ${playerId} (${reason})`);
+    
     const room = gameStateManager.getRoom(roomId);
     const remainingPlayer = room.players.find(p => p.id !== playerId);
     const disconnectedPlayer = room.players.find(p => p.id === playerId);
     
     if (!remainingPlayer || !disconnectedPlayer) {
-      console.error(`Could not find players in room ${roomId} for pre-game disconnect handling`);
+      console.error(`Could not find players in room ${roomId} for tournament pre-game disconnect handling`);
       return;
     }
 
@@ -114,12 +178,14 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
    * Handle disconnection during active gameplay
    */
   handleInGameDisconnect(playerId, roomId, reason) {
+    console.log(`🎮 Handling tournament in-game disconnect for player ${playerId} (${reason})`);
+    
     const room = gameStateManager.getRoom(roomId);
     const remainingPlayer = room.players.find(p => p.id !== playerId);
     const disconnectedPlayer = room.players.find(p => p.id === playerId);
     
     if (!remainingPlayer || !disconnectedPlayer) {
-      console.error(`Could not find players in room ${roomId} for in-game disconnect handling`);
+      console.error(`Could not find players in room ${roomId} for tournament in-game disconnect handling`);
       return;
     }
 
@@ -131,6 +197,8 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
    * Handle disconnection after game is over
    */
   handlePostGameDisconnect(playerId, roomId) {
+    console.log(`🏁 Handling tournament post-game disconnect for player ${playerId}`);
+    
     // Just clean up, no special handling needed
     this.removePlayerFromGame(playerId);
     
@@ -144,6 +212,8 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
    * Award forfeit win to remaining player
    */
   awardForfeitWin(room, roomId, winner, loser, reason, context) {
+    console.log(`🏆 Awarding tournament forfeit win to ${winner.id} (${winner.username || 'Anonymous'})`);
+    
     // Mark game as over immediately
     room.isGameOver = true;
     
@@ -193,9 +263,11 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
         lastHitBy: room.ball?.wasHitByPlayer || null,
         forfeitReason: this.getForfeitReasonText(reason, context),
         disconnectionType: reason,
-        context: context
+        context: context,
+        tournamentPhase: room.metadata?.tournamentPhase || 'unknown',
+        roomType: room.metadata?.roomType || 'unknown'
       },
-      matchType: 'forfeit',
+      matchType: 'tournament_forfeit',
       disconnectionReason: reason,
       serverTime: Date.now()
     };
@@ -209,19 +281,19 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
     
     switch (reason) {
       case DisconnectionReasons.PLAYER_LEFT:
-        return `Player left ${contextText}`;
+        return `Tournament player left ${contextText}`;
       case DisconnectionReasons.BROWSER_REFRESH:
-        return `Player refreshed browser ${contextText}`;
+        return `Tournament player refreshed browser ${contextText}`;
       case DisconnectionReasons.BROWSER_NAVIGATION:
-        return `Player navigated away ${contextText}`;
+        return `Tournament player navigated away ${contextText}`;
       case DisconnectionReasons.BROWSER_CLOSE:
-        return `Player closed browser ${contextText}`;
+        return `Tournament player closed browser ${contextText}`;
       case DisconnectionReasons.NETWORK_DISCONNECT:
-        return `Player lost connection ${contextText}`;
+        return `Tournament player lost connection ${contextText}`;
       case DisconnectionReasons.TIMEOUT:
-        return `Player timed out ${contextText}`;
+        return `Tournament player timed out ${contextText}`;
       default:
-        return `Player disconnected ${contextText}`;
+        return `Tournament player disconnected ${contextText}`;
     }
   }
 
@@ -245,7 +317,7 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
     try {
       await reportMatchResultsToAPI(matchData);
     } catch (error) {
-      console.error('❌ Failed to report forfeit results:', error);
+      console.error('❌ Failed to report tournament forfeit results:', error);
     }
   }
 
@@ -297,7 +369,7 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
     });
 
     ws.on('error', (error) => {
-      console.error(`🔥 WebSocket error for player ${playerId}:`, error);
+      console.error(`🔥 Tournament WebSocket error for player ${playerId}:`, error);
       this.handleDisconnection(playerId, roomId, DisconnectionReasons.NETWORK_DISCONNECT);
     });
 
@@ -313,10 +385,48 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
       this.setPlayerState(playerId, roomId, state);
       this.updatePlayerActivity(playerId);
     } else {
-      console.warn(`Invalid player state: ${state} for player ${playerId}`);
+      console.warn(`Invalid tournament player state: ${state} for player ${playerId}`);
+    }
+  }
+
+  /**
+   * Handle browser events for tournament waiting rooms
+   */
+  handleBrowserEvent(playerId, roomId, eventType) {
+    console.log(`🌐 Tournament browser event: ${eventType} for player ${playerId} in room ${roomId}`);
+    
+    const room = gameStateManager.getRoom(roomId);
+    if (!room) {
+      console.warn(`Room ${roomId} not found for tournament browser event handling`);
+      return;
+    }
+
+    let reason;
+    switch (eventType) {
+      case 'beforeunload':
+      case 'pagehide':
+      case 'unload':
+      case 'popstate':
+      case 'visibility_timeout':
+        reason = 'browser_navigation';
+        break;
+      case 'visibilitychange':
+        // Don't treat visibility change as disconnect
+        return;
+      default:
+        reason = 'browser_event';
+    }
+
+    // Check if this is a tournament waiting room
+    if (room.metadata?.roomType === 'waiting' && room.matchType === 'tournament') {
+      console.log(`🏆 Tournament waiting room browser event: ${eventType} for player ${playerId}`);
+      this.handleWaitingRoomDisconnect(playerId, roomId, reason);
+    } else {
+      // Handle as regular tournament disconnect
+      this.handleDisconnection(playerId, roomId, reason);
     }
   }
 }
 
 // Export singleton instance
-export const oneVOneDisconnectHandler = new OneVOneDisconnectHandler(); 
+export const tournamentDisconnectHandler = new TournamentDisconnectHandler(); 
