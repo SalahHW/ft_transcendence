@@ -334,6 +334,26 @@ export class MessageRouter {
    * Handle keep-alive ping messages (disabled - only explicit leave button)
    */
   _handleKeepAlive(msg, playerId, roomId, ws) {
+    const room = gameStateManager.getRoom(roomId);
+    
+    if (!room) {
+      console.log(`🏆 Keep-alive ping from ${playerId}: room ${roomId} no longer exists (tournament likely ended)`);
+      // Send a response to inform the client that the room no longer exists
+      if (ws && ws.readyState === 1) {
+        try {
+          ws.send(JSON.stringify({
+            type: 'error',
+            message: 'Tournament has ended. Please refresh the page to join a new game.'
+          }));
+          // Close the connection after sending the error message
+          ws.close(1000, 'Tournament ended');
+        } catch (error) {
+          console.error(`Failed to send error message to ${playerId}:`, error);
+        }
+      }
+      return;
+    }
+    
     console.log(`🏆 Keep-alive ping ignored from ${playerId}: ${msg.reason || 'no reason specified'}`);
     // Disabled - only explicit leave button handling
   }

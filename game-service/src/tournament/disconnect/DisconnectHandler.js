@@ -180,6 +180,29 @@ export class TournamentDisconnectHandler {
       return;
     }
     
+    // Close WebSocket connections for all players in all tournament rooms
+    const rooms = [
+      waitingRoomData.tournamentRooms.semiFinalA,
+      waitingRoomData.tournamentRooms.semiFinalB,
+      waitingRoomData.tournamentRooms.winnerFinal,
+      waitingRoomData.tournamentRooms.loserFinal
+    ];
+    
+    rooms.forEach(room => {
+      if (room && room.players) {
+        room.players.forEach(player => {
+          if (player.ws && player.ws.readyState === 1) {
+            try {
+              console.log(`🏆 Closing WebSocket connection for player ${player.username} (${player.id}) during tournament cleanup`);
+              player.ws.close(1000, 'Tournament cleanup');
+            } catch (error) {
+              console.error(`Failed to close WebSocket for player ${player.username}:`, error);
+            }
+          }
+        });
+      }
+    });
+    
     // Remove all tournament rooms
     const roomIds = [
       waitingRoomId,

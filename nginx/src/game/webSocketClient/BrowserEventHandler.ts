@@ -351,6 +351,13 @@ export class BrowserEventHandler {
   }
 
   /**
+   * Public method to stop heartbeat (for tournament completion)
+   */
+  stopHeartbeatPublic(): void {
+    this.stopHeartbeat();
+  }
+
+  /**
    * Update activity timestamp
    */
   private updateActivity(): void {

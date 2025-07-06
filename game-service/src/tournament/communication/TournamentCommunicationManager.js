@@ -69,6 +69,12 @@ export class TournamentCommunicationManager {
                 finalStandings: finalStandings,
                 message: `🏆 Tournament complete! You finished ${this._getPlacementText(playerPlacement)}!`
               }));
+              
+              // Close the WebSocket connection after sending completion message
+              // This prevents keep-alive messages from disconnected players
+              console.log(`🏆 Closing WebSocket connection for player ${player.username} (${player.id}) after tournament completion`);
+              player.ws.close(1000, 'Tournament completed');
+              
             } catch (error) {
               console.error(`Failed to send tournament completion to ${player.username}:`, error);
             }
@@ -135,6 +141,18 @@ export class TournamentCommunicationManager {
   }
 
   /**
+   * Get placement suffix for display
+   */
+  _getPlacementSuffix(placement) {
+    switch (placement) {
+      case 1: return 'st';
+      case 2: return 'nd';
+      case 3: return 'rd';
+      default: return 'th';
+    }
+  }
+
+  /**
    * Send individual final match completion message to players in the room
    */
   _sendIndividualFinalMatchCompletion(waitingRoomId, roomId, roomType, winner, loser) {
@@ -169,6 +187,14 @@ export class TournamentCommunicationManager {
             opponentName: isWinner ? loser.username : winner.username,
             message: `🏆 Final match complete! You finished ${this._getPlacementText(placement)}!`
           }));
+          
+          // Close WebSocket connection for players who are eliminated (3rd and 4th place)
+          // This prevents keep-alive messages from players who are no longer in the tournament
+          if (placement >= 3) {
+            console.log(`🏆 Closing WebSocket connection for eliminated player ${player.username} (${player.id}) - finished ${placement}${this._getPlacementSuffix(placement)}`);
+            player.ws.close(1000, 'Tournament placement determined');
+          }
+          
         } catch (error) {
           console.error(`Failed to send final match completion to ${player.username}:`, error);
         }

@@ -3,6 +3,9 @@
  * Client-side tournament management for game client
  */
 
+import { browserEventHandler } from "../../webSocketClient/BrowserEventHandler.js";
+import { stopForfeitWinnerPing } from "../../ui/waitingStatusHandler.js";
+
 export class TournamentClientHandler {
   /**
    * Handle tournament advancement messages
@@ -41,6 +44,13 @@ export class TournamentClientHandler {
       gameState.isGameOver = true;
       gameState.isGameLoopRunning = false;
       
+      // Stop the browser event handler heartbeat for eliminated players (3rd and 4th place)
+      if (message.playerPlacement && message.playerPlacement >= 3) {
+        browserEventHandler.stopHeartbeatPublic();
+        stopForfeitWinnerPing();
+        console.log(`💓 Stopped all keep-alive mechanisms for eliminated player (${message.playerPlacement}${message.playerPlacement === 3 ? 'rd' : 'th'} place)`);
+      }
+      
       // Show appropriate tournament end splash screen
       if (message.playerPlacement) {
         try {
@@ -57,6 +67,11 @@ export class TournamentClientHandler {
       // Tournament is complete (both finals finished)
       gameState.isGameOver = true;
       gameState.isGameLoopRunning = false;
+      
+      // Stop all keep-alive mechanisms to prevent keep-alive messages
+      browserEventHandler.stopHeartbeatPublic();
+      stopForfeitWinnerPing();
+      console.log('💓 Stopped all keep-alive mechanisms due to tournament completion');
       
       // The splash screen should already be shown from the individual final match completion
       // Just update the status if needed
