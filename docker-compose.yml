@@ -12,7 +12,7 @@ services:
     container_name: redis
     build: ./redis-service
     env_file:
-      - ./redis-service/.env
+      - ./.env
     networks:
       - transcendence
     volumes:
