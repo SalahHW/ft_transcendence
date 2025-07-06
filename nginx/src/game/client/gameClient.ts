@@ -265,7 +265,7 @@ export class GameClient {
         this.clientConnection.onGameEnd(this.handleGameEnd.bind(this));
 
         // Handle waiting status and tournament advancement
-        this.clientConnection.socket.addEventListener('message', (event) => {
+        this.clientConnection.socket.addEventListener('message', async (event) => {
             try {
                 const message = JSON.parse(event.data);
                 if (message.type === 'waitingForPlayers') {
@@ -274,7 +274,7 @@ export class GameClient {
                     // Handle waiting status and update player names
                     handleWaitingForPlayers(message, this.updateGameStatus.bind(this));
                 } else if (message.type === 'tournamentAdvancement') {
-                    TournamentClientHandler.handleTournamentAdvancement(message, this.updateGameStatus.bind(this), {
+                    await TournamentClientHandler.handleTournamentAdvancement(message, this.updateGameStatus.bind(this), {
                         isGameOver: this.isGameOver,
                         isGameLoopRunning: this.isGameLoopRunning,
                         map: this.map,
@@ -297,21 +297,22 @@ export class GameClient {
                         if (message.message) {
                             this.updateGameStatus(message.message);
                         }
-                    } else if (message.status === 'tournament_complete') {
-                        // Tournament is complete, show final results
+                    } else if (message.status === 'final_match_complete') {
+                        // Individual final match is complete
                         this.isGameOver = true;
                         this.isGameLoopRunning = false;
                         
+                        // The splash screen is now handled by TournamentClientHandler
+                        // No need to update game status here as the splash screen will be shown
+                    } else if (message.status === 'tournament_complete') {
+                        // Tournament is complete (both finals finished)
+                        this.isGameOver = true;
+                        this.isGameLoopRunning = false;
+                        
+                        // The splash screen should already be shown from the individual final match completion
+                        // Just update the status if needed
                         if (message.message) {
                             this.updateGameStatus(message.message);
-                        }
-                        
-                        if (message.winner) {
-                            const isWinner = message.winner.id === this.localPlayerId;
-                            const resultText = isWinner 
-                                ? `🏆 You won the tournament!`
-                                : `🏆 Tournament complete! Winner: ${message.winner.username}`;
-                            this.updateGameStatus(resultText);
                         }
                     }
                 } else if (message.type === 'hideGameElements') {

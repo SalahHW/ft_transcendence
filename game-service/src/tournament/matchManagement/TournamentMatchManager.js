@@ -151,6 +151,9 @@ export class TournamentMatchManager {
     }
     waitingRoomData.finalResults[roomType] = { winner, loser };
     
+    // Send individual final match completion message to players in this room
+    this.tournamentManager.communicationManager._sendIndividualFinalMatchCompletion(waitingRoomId, roomId, roomType, winner, loser);
+    
     // Check if both finals are complete
     const winnerFinalResult = waitingRoomData.finalResults['winner_final'];
     const loserFinalResult = waitingRoomData.finalResults['loser_final'];

@@ -7,7 +7,7 @@ export class TournamentClientHandler {
   /**
    * Handle tournament advancement messages
    */
-  static handleTournamentAdvancement(
+  static async handleTournamentAdvancement(
     message: any, 
     updateGameStatus: (status: string) => void,
     gameState: {
@@ -18,7 +18,7 @@ export class TournamentClientHandler {
       player1: any;
       player2: any;
     }
-  ): void {
+  ): Promise<void> {
     if (message.status === 'transferred_to_final') {
       // Reset game state for final match
       gameState.isGameOver = false;
@@ -36,11 +36,33 @@ export class TournamentClientHandler {
       } else {
         updateGameStatus('🎉 You advanced to the final!');
       }
-    } else if (message.status === 'tournament_complete') {
-      // Tournament is complete
+    } else if (message.status === 'final_match_complete') {
+      // Individual final match is complete
       gameState.isGameOver = true;
       gameState.isGameLoopRunning = false;
-      updateGameStatus('🏆 Tournament complete!');
+      
+      // Show appropriate tournament end splash screen
+      if (message.playerPlacement) {
+        try {
+          const { showTournamentEndSplashScreen } = await import('../../utils/tournamentSplashScreenUtils.js');
+          await showTournamentEndSplashScreen(message.playerPlacement);
+        } catch (error) {
+          console.error('Error showing tournament end splash screen:', error);
+          updateGameStatus('🏆 Final match complete!');
+        }
+      } else {
+        updateGameStatus('🏆 Final match complete!');
+      }
+    } else if (message.status === 'tournament_complete') {
+      // Tournament is complete (both finals finished)
+      gameState.isGameOver = true;
+      gameState.isGameLoopRunning = false;
+      
+      // The splash screen should already be shown from the individual final match completion
+      // Just update the status if needed
+      if (message.message) {
+        updateGameStatus(message.message);
+      }
     }
   }
 
