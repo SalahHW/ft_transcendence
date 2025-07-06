@@ -6,8 +6,8 @@ export const DB_PATH = isDev
   : process.env.USERS_DB_PATH;
 
 // Redis service
-export const REDIS_HOST = process.env.REDIS_HOST;
-export const REDIS_PORT = process.env.REDIS_PORT;
+export const REDIS_HOST = process.env.REDIS_SERVICE_HOST;
+export const REDIS_PORT = process.env.REDIS_SERVICE_PORT;
 export const REDIS_PASSWORD = process.env.REDIS_PASSWORD;
 
 if (!PORT) {
