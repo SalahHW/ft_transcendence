@@ -12,7 +12,7 @@ export const GAME_CONFIG = {
   MIN_USERNAME_LENGTH: 1,      // Minimum characters in username
   
   // Game Rules
-  WINNING_SCORE: 11,           // Points needed to win
+  WINNING_SCORE: 2,           // Points needed to win
   MAX_SCORE_DIFFERENCE: 1,     // Minimum score difference to win
   
   // Ball Physics

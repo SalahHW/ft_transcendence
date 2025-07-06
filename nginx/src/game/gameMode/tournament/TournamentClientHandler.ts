@@ -20,8 +20,26 @@ export class TournamentClientHandler {
     }
   ): void {
     if (message.status === 'transferred_to_final') {
-      updateGameStatus('🎉 You advanced to the final!');
+      // Reset game state for final match
+      gameState.isGameOver = false;
+      gameState.isGameLoopRunning = false;
+      gameState.map = null;
+      gameState.ball = null;
+      gameState.player1 = null;
+      gameState.player2 = null;
+      
+      // Update status with specific final type
+      if (message.finalType === 'winner') {
+        updateGameStatus('🥇 You advanced to the Winner Final!');
+      } else if (message.finalType === 'loser') {
+        updateGameStatus('🥉 You advanced to the Loser Final!');
+      } else {
+        updateGameStatus('🎉 You advanced to the final!');
+      }
     } else if (message.status === 'tournament_complete') {
+      // Tournament is complete
+      gameState.isGameOver = true;
+      gameState.isGameLoopRunning = false;
       updateGameStatus('🏆 Tournament complete!');
     }
   }
@@ -54,8 +72,25 @@ export class TournamentClientHandler {
     updateGameStatus: (status: string) => void,
     gameClient: any
   ): Promise<void> {
-    if (message.type === 'gameInit' && message.matchType === 'tournament_semi_final') {
-      updateGameStatus('🏆 Tournament Semi-Final starting...');
+    if (message.type === 'gameInit' && (
+      message.matchType === 'tournament_semi_final' ||
+      message.matchType === 'tournament_winner_final' ||
+      message.matchType === 'tournament_loser_final'
+    )) {
+      let matchTypeText = '';
+      switch (message.matchType) {
+        case 'tournament_semi_final':
+          matchTypeText = '🏆 Tournament Semi-Final';
+          break;
+        case 'tournament_winner_final':
+          matchTypeText = '🥇 Winner Final';
+          break;
+        case 'tournament_loser_final':
+          matchTypeText = '🥉 Loser Final';
+          break;
+      }
+      
+      updateGameStatus(`${matchTypeText} starting...`);
       
       // Show splash screen for tournament match
       try {

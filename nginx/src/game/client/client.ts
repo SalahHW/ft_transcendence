@@ -522,11 +522,8 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
             ball.respawnTime = 0;
             ball.hasValidPosition = true;
             
-            clientConnection!.send({
-                type: 'requestBallRespawn',
-                isInitial: true
-            });
-            console.log('Requested initial ball respawn');
+            // ⭐ FIX: Remove early ball respawn request - will be sent after animation completes
+            console.log('Ball created, waiting for animation to complete before requesting respawn');
             
             // Update state to playing when ball spawns
             stateTracker.setPlayingState();
@@ -650,11 +647,22 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
 
                 cameraManager.switchToFPSAfterAnimation();
                 
+                // ⭐ FIX: Send animationComplete FIRST, then request ball respawn (same as tournament)
                 if (clientConnection) {
                     clientConnection.send({
-                        type: 'requestBallRespawn',
-                        isInitial: true
+                        type: 'animationComplete',
+                        playerId: localPlayerId
                     });
+                    
+                    // Wait a moment for server to process animation complete, then request ball respawn
+                    setTimeout(() => {
+                        if (clientConnection) {
+                            clientConnection.send({
+                                type: 'requestBallRespawn',
+                                isInitial: true
+                            });
+                        }
+                    }, 100); // Small delay to ensure proper order
                 }
                 
                 setupGameLoop();
@@ -671,11 +679,22 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
                     ball.ballBody.isVisible = true;
                 }
                 
+                // ⭐ FIX: Send animationComplete FIRST, then request ball respawn (same as tournament)
                 if (clientConnection) {
                     clientConnection.send({
-                        type: 'requestBallRespawn',
-                        isInitial: true
+                        type: 'animationComplete',
+                        playerId: localPlayerId
                     });
+                    
+                    // Wait a moment for server to process animation complete, then request ball respawn
+                    setTimeout(() => {
+                        if (clientConnection) {
+                            clientConnection.send({
+                                type: 'requestBallRespawn',
+                                isInitial: true
+                            });
+                        }
+                    }, 100); // Small delay to ensure proper order
                 }
                 setupGameLoop();
             }

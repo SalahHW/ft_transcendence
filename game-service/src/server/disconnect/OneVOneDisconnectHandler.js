@@ -9,6 +9,7 @@ import { gameEngine } from '../../game/GameEngine.js';
 import { LogUtils, TimeUtils } from '../../utils/helpers.js';
 import { playerManager } from '../../player/PlayerManager.js';
 import { reportMatchResultsToAPI } from '../api.js';
+import { GAME_CONFIG } from '../../core/constants.js';
 
 /**
  * 1v1 specific disconnect handler
@@ -179,7 +180,7 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
       winner: {
         id: winner.id,
         username: winner.username || 'Anonymous',
-        score: 11 // Award full score for forfeit win
+        score: GAME_CONFIG.WINNING_SCORE // Award full score for forfeit win
       },
       loser: {
         id: loser.id,
@@ -188,7 +189,7 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
       },
       gameStats: {
         totalRebounds: room.ball?.rebounds || 0,
-        finalScore: `11-${room.ball?.player2?.playerScore || 0}`,
+        finalScore: `${GAME_CONFIG.WINNING_SCORE}-${room.ball?.player2?.playerScore || 0}`,
         ballSpeed: room.ball?.speed || 0,
         lastHitBy: room.ball?.wasHitByPlayer || null,
         forfeitReason: this.getForfeitReasonText(reason, context),

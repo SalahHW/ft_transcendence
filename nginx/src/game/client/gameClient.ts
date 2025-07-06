@@ -18,6 +18,7 @@ import { handleWaitingForPlayers } from '../ui/waitingStatusHandler.js';
 import { TournamentClientHandler } from '../gameMode/tournament/TournamentClientHandler.js';
 import { showSplashScreen } from '../ui/splashScreen.js';
 import { cameraManager } from '../camera/cameraManager.js';
+import { updatePlayerNamesVersus, updateScoresUIVersus } from '../playerUi/playerUi.js';
 import * as BABYLON from '@babylonjs/core';
 
 export class GameClient {
@@ -95,13 +96,16 @@ export class GameClient {
             this.map.createPlayground();
         }
 
-        // Create players with correct roles and positions
+        // ⭐ FIX: Create players with actual names (like 1v1 client)
+        const player1Name = matchData.role === 0 ? matchData.playerName : matchData.opponentName;
+        const player2Name = matchData.role === 0 ? matchData.opponentName : matchData.playerName;
+        
         if (matchData.role === 0) {
-            this.player1 = new playerPaddle('Player1', matchData.playerId, 0);
-            this.player2 = new playerPaddle('Player2', matchData.opponentId, 1);
+            this.player1 = new playerPaddle(player1Name, matchData.playerId, 0);
+            this.player2 = new playerPaddle(player2Name, matchData.opponentId, 1);
         } else {
-            this.player1 = new playerPaddle('Player1', matchData.opponentId, 0);
-            this.player2 = new playerPaddle('Player2', matchData.playerId, 1);
+            this.player1 = new playerPaddle(player1Name, matchData.opponentId, 0);
+            this.player2 = new playerPaddle(player2Name, matchData.playerId, 1);
         }
 
                     // Create paddles in the scene with correct positions
@@ -136,8 +140,9 @@ export class GameClient {
             cameraManager.initialize(this.map, this.player1, this.player2, this.localPlayerId);
         }
 
-        // Reset scores display
-        this.updateScores(0, 0);
+        // ⭐ FIX: Update player names in UI using proper styled functions
+        updateScoresUIVersus(0, 0, matchData.playerName || 'Player', matchData.opponentName || 'Opponent');
+        updatePlayerNamesVersus(matchData.playerName || 'Player', matchData.opponentName || 'Opponent');
 
         // Ensure all game elements are visible
         TournamentClientHandler.ensureTournamentElementsVisible({
@@ -287,6 +292,27 @@ export class GameClient {
                         this.ball = null;
                         this.player1 = null;
                         this.player2 = null;
+                        
+                        // Update game status with the message from server
+                        if (message.message) {
+                            this.updateGameStatus(message.message);
+                        }
+                    } else if (message.status === 'tournament_complete') {
+                        // Tournament is complete, show final results
+                        this.isGameOver = true;
+                        this.isGameLoopRunning = false;
+                        
+                        if (message.message) {
+                            this.updateGameStatus(message.message);
+                        }
+                        
+                        if (message.winner) {
+                            const isWinner = message.winner.id === this.localPlayerId;
+                            const resultText = isWinner 
+                                ? `🏆 You won the tournament!`
+                                : `🏆 Tournament complete! Winner: ${message.winner.username}`;
+                            this.updateGameStatus(resultText);
+                        }
                     }
                 } else if (message.type === 'hideGameElements') {
                     TournamentClientHandler.handleHideGameElements(message, this.updateGameStatus.bind(this), {
@@ -310,7 +336,9 @@ export class GameClient {
     private async handleGameInit(data: any): Promise<void> {
         
         // Check if this is a tournament match
-        const isTournamentMatch = data.matchType === 'tournament_semi_final';
+        const isTournamentMatch = data.matchType === 'tournament_semi_final' || 
+                                 data.matchType === 'tournament_winner_final' || 
+                                 data.matchType === 'tournament_loser_final';
         
         if (isTournamentMatch) {
             // For tournament matches, the splash screen is already shown by TournamentClientHandler
@@ -518,8 +546,13 @@ export class GameClient {
         this.player1.playerScore = player1Score;
         this.player2.playerScore = player2Score;
         
-        // Update UI scores
-        this.updateScores(player1Score, player2Score);
+        // ⭐ FIX: Update UI scores with proper player names
+        const currentPlayer = this.localPlayerId === this.player1.getPlayerId() ? this.player1 : this.player2;
+        const opponent = this.localPlayerId === this.player1.getPlayerId() ? this.player2 : this.player1;
+        const currentPlayerScore = msg.scores[currentPlayer.getPlayerId()] || 0;
+        const opponentScore = msg.scores[opponent.getPlayerId()] || 0;
+        
+        updateScoresUIVersus(currentPlayerScore, opponentScore, currentPlayer.playerName, opponent.playerName);
     }
 
     private handleGameEnd(gameEndData: any): void {
@@ -681,6 +714,8 @@ export class GameClient {
             player2Element.textContent = `Player 2: ${player2Score}`;
         }
     }
+
+
 
     public cleanup(): void {
         

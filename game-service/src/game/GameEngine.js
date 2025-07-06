@@ -5,6 +5,7 @@ import { gameStateManager } from './GameStateManager.js';
 import {  WebSocketUtils } from '../utils/helpers.js';
 import { roomMatchmaker } from '../room/RoomMatchmaker.js';
 import { createWaitingMessage } from '../player/playerStatus.js';
+import { GAME_CONFIG } from '../core/constants.js';
 
 /**
  * Core game engine responsible for game logic orchestration
@@ -121,23 +122,28 @@ export class GameEngine {
    * End game and report results
    */
   async endGame(room, roomId) {
-    if (room.ball.player1.playerScore >= 11 || room.ball.player2.playerScore >= 11) {
+    if (room.ball.player1.playerScore >= GAME_CONFIG.WINNING_SCORE || room.ball.player2.playerScore >= GAME_CONFIG.WINNING_SCORE) {
       room.isGameOver = true;
       
       const matchData = this._createMatchData(room, roomId);
       this._logMatchCompletion(matchData);
       
-      // Report to external services (async, don't wait for completion)
-      reportMatchResultsToAPI(matchData).catch(err => {
-        console.error('Failed to report match results to external services:', err.message);
-      });
-      
-      // Send game end message to players
-      console.log(`🎮 Regular game ended in room ${roomId}, sending standard gameEnd message`);
-      this.broadcastToRoom(roomId, {
-        type: 'gameEnd',
-        ...matchData
-      });
+      // Check if this is a tournament match and handle advancement
+      if (room.matchType === 'tournament') {
+        await this._handleTournamentMatchEnd(room, roomId, matchData);
+      } else {
+        // Report to external services (async, don't wait for completion)
+        reportMatchResultsToAPI(matchData).catch(err => {
+          console.error('Failed to report match results to external services:', err.message);
+        });
+        
+        // Send game end message to players
+        console.log(`🎮 Regular game ended in room ${roomId}, sending standard gameEnd message`);
+        this.broadcastToRoom(roomId, {
+          type: 'gameEnd',
+          ...matchData
+        });
+      }
     }
   }
 
@@ -254,16 +260,43 @@ export class GameEngine {
     };
   }
 
+  /**
+   * Handle tournament match end and advancement
+   */
+  async _handleTournamentMatchEnd(room, roomId, matchData) {
+    console.log(`🏆 Tournament match ended in room ${roomId}`);
+    
+    // Import tournament manager dynamically to avoid circular dependencies
+    const { tournamentManager } = await import('../tournament/TournamentManager.js');
+    
+    // Get the waiting room ID from the tournament room metadata
+    const waitingRoomId = room.metadata?.waitingRoomId;
+    if (!waitingRoomId) {
+      console.error(`🏆 No waiting room ID found for tournament room ${roomId}`);
+      return;
+    }
+    
+    // Handle tournament advancement based on room type
+    const roomType = room.metadata?.roomType;
+    if (roomType === 'semi_final_a' || roomType === 'semi_final_b') {
+      await tournamentManager.handleSemiFinalMatchEnd(waitingRoomId, roomId, matchData);
+    } else if (roomType === 'winner_final' || roomType === 'loser_final') {
+      await tournamentManager.handleFinalMatchEnd(waitingRoomId, roomId, matchData);
+    } else {
+      console.error(`🏆 Unknown tournament room type: ${roomType}`);
+    }
+  }
+
   _createMatchData(room, roomId) {
     const player1 = room.players[0];
     const player2 = room.players[1];
     const score1 = room.ball.player1.playerScore;
     const score2 = room.ball.player2.playerScore;
     
-    const winner = score1 >= 11 ? player1 : player2;
-    const loser = score1 >= 11 ? player2 : player1;
-    const winnerScore = score1 >= 11 ? score1 : score2;
-    const loserScore = score1 >= 11 ? score2 : score1;
+    const winner = score1 >= GAME_CONFIG.WINNING_SCORE ? player1 : player2;
+    const loser = score1 >= GAME_CONFIG.WINNING_SCORE ? player2 : player1;
+    const winnerScore = score1 >= GAME_CONFIG.WINNING_SCORE ? score1 : score2;
+    const loserScore = score1 >= GAME_CONFIG.WINNING_SCORE ? score2 : score1;
     
     const matchEndTime = new Date().toISOString();
     const matchStartTime = room.startTime || new Date().toISOString();

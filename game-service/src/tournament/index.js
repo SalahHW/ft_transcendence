@@ -22,4 +22,16 @@ export { TournamentDisconnectHandler } from './disconnect/DisconnectHandler.js';
 export { TournamentCleanupManager } from './cleanup/CleanupManager.js';
 
 // Broadcast management
-export { TournamentBroadcastManager } from './broadcast/BroadcastManager.js'; 
+export { TournamentBroadcastManager } from './broadcast/BroadcastManager.js';
+
+// Match management
+export { TournamentMatchManager } from './matchManagement/TournamentMatchManager.js';
+
+// Transfer management
+export { TournamentTransferManager } from './playerManagement/TournamentTransferManager.js';
+
+// Communication management
+export { TournamentCommunicationManager } from './communication/TournamentCommunicationManager.js';
+
+// Lifecycle management
+export { TournamentLifecycleManager } from './lifecycle/TournamentLifecycleManager.js'; 

@@ -6,6 +6,7 @@
 import { gameStateManager } from '../../game/GameStateManager.js';
 import { LogUtils } from '../../utils/helpers.js';
 import { TournamentRoomTypes } from '../constants.js';
+import { GAME_CONFIG } from '../../core/constants.js';
 
 export class TournamentDisconnectHandler {
   constructor(waitingRooms) {
@@ -120,15 +121,20 @@ export class TournamentDisconnectHandler {
       // Award forfeit win to remaining player
       console.log(`🏆 Awarding forfeit win to ${remainingPlayer.username} in semi-final ${roomId}`);
       
-      // TODO: Implement tournament progression logic
-      // For now, just log the forfeit
-      LogUtils.logMatchCompletion({
+      // Create match data for forfeit
+      const matchData = {
         roomId,
         matchType: 'tournament_semi_final',
-        winner: { id: remainingPlayer.id, username: remainingPlayer.username },
-        loser: { id: playerId, username: 'Disconnected Player' },
+        winner: { id: remainingPlayer.id, username: remainingPlayer.username, score: GAME_CONFIG.WINNING_SCORE },
+        loser: { id: playerId, username: 'Disconnected Player', score: 0 },
         forfeitReason: 'Player disconnected during semi-final'
-      });
+      };
+      
+      // Log the forfeit
+      LogUtils.logMatchCompletion(matchData);
+      
+      // Handle tournament advancement
+      this._handleSemiFinalForfeitAdvancement(waitingRoomId, roomId, matchData);
     }
   }
 
@@ -145,15 +151,20 @@ export class TournamentDisconnectHandler {
       // Award forfeit win to remaining player
       console.log(`🏆 Awarding forfeit win to ${remainingPlayer.username} in final ${roomId}`);
       
-      // TODO: Implement tournament completion logic
-      // For now, just log the forfeit
-      LogUtils.logMatchCompletion({
+      // Create match data for forfeit
+      const matchData = {
         roomId,
         matchType: 'tournament_final',
-        winner: { id: remainingPlayer.id, username: remainingPlayer.username },
-        loser: { id: playerId, username: 'Disconnected Player' },
+        winner: { id: remainingPlayer.id, username: remainingPlayer.username, score: GAME_CONFIG.WINNING_SCORE },
+        loser: { id: playerId, username: 'Disconnected Player', score: 0 },
         forfeitReason: 'Player disconnected during final'
-      });
+      };
+      
+      // Log the forfeit
+      LogUtils.logMatchCompletion(matchData);
+      
+      // Handle tournament completion
+      this._handleFinalForfeitCompletion(waitingRoomId, roomId, matchData);
     }
   }
 
@@ -187,5 +198,35 @@ export class TournamentDisconnectHandler {
     this.waitingRooms.delete(waitingRoomId);
     
     console.log(`🏆 Tournament cleanup completed for ${waitingRoomId}`);
+  }
+
+  /**
+   * Handle semi-final forfeit advancement
+   */
+  async _handleSemiFinalForfeitAdvancement(waitingRoomId, roomId, matchData) {
+    try {
+      // Import tournament manager dynamically to avoid circular dependencies
+      const { tournamentManager } = await import('../TournamentManager.js');
+      
+      // Handle the semi-final match end with forfeit data
+      await tournamentManager.handleSemiFinalMatchEnd(waitingRoomId, roomId, matchData);
+    } catch (error) {
+      console.error(`🏆 Error handling semi-final forfeit advancement:`, error);
+    }
+  }
+
+  /**
+   * Handle final forfeit completion
+   */
+  async _handleFinalForfeitCompletion(waitingRoomId, roomId, matchData) {
+    try {
+      // Import tournament manager dynamically to avoid circular dependencies
+      const { tournamentManager } = await import('../TournamentManager.js');
+      
+      // Handle the final match end with forfeit data
+      await tournamentManager.handleFinalMatchEnd(waitingRoomId, roomId, matchData);
+    } catch (error) {
+      console.error(`🏆 Error handling final forfeit completion:`, error);
+    }
   }
 } 
