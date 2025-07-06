@@ -70,6 +70,7 @@ export const MESSAGE_TYPES = {
   KEY_UP: 'keyUp',
   PADDLE_POSITION: 'paddlePosition',
   LEAVE_GAME: 'leaveGame',
+  LEAVE_TOURNAMENT: 'leaveTournament',
   REQUEST_BALL_RESPAWN: 'requestBallRespawn',
   ANIMATION_COMPLETE: 'animationComplete',
   KEEP_ALIVE: 'keepAlive',

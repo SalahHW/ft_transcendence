@@ -7,6 +7,7 @@ import { webSocketClient } from "../../webSocketClient/webSocketClient.js";
 import { webSocketClientDisconnect } from "../../webSocketClient/webSocketClientDisconnect.js";
 import { browserEventHandler } from "../../webSocketClient/BrowserEventHandler.js";
 import { TournamentUI } from "./TournamentUI.js";
+import { frontendAssetDisposalManager } from "../../assetManagement/FrontendAssetDisposalManager.js";
 
 export class TournamentWebSocket {
   private tournamentWs: webSocketClient | null = null;
@@ -94,12 +95,26 @@ export class TournamentWebSocket {
   /**
    * Cleanup tournament WebSocket
    */
-  cleanup(): void {
+  async cleanup(): Promise<void> {
     if ((window as any).leaveGame) {
       delete (window as any).leaveGame;
     }
     browserEventHandler.cleanup();
     webSocketClientDisconnect.cleanup();
+    
+    // Force dispose all assets
+    try {
+      await frontendAssetDisposalManager.forceDisposal({
+        ball: null,
+        player1: null,
+        player2: null,
+        map: null,
+        scene: undefined
+      });
+      console.log('🧹 Frontend: Assets force disposed during tournament cleanup');
+    } catch (error) {
+      console.error('🧹 Frontend: Error force disposing assets during tournament cleanup:', error);
+    }
     
     if (this.tournamentWs) {
       this.tournamentWs.socket.close();

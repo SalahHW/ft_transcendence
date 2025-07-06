@@ -5,6 +5,7 @@
 
 import { browserEventHandler } from "../../webSocketClient/BrowserEventHandler.js";
 import { stopForfeitWinnerPing } from "../../ui/waitingStatusHandler.js";
+import { frontendAssetDisposalManager } from "../../assetManagement/FrontendAssetDisposalManager.js";
 
 export class TournamentClientHandler {
   /**
@@ -23,6 +24,20 @@ export class TournamentClientHandler {
     }
   ): Promise<void> {
     if (message.status === 'transferred_to_final') {
+      // Dispose assets before transferring to final
+      try {
+        await frontendAssetDisposalManager.disposeBetweenMatches({
+          ball: gameState.ball,
+          player1: gameState.player1,
+          player2: gameState.player2,
+          map: gameState.map,
+          scene: gameState.map?.getScene
+        });
+        console.log('🧹 Frontend: Assets disposed before transfer to final');
+      } catch (error) {
+        console.error('🧹 Frontend: Error disposing assets before final transfer:', error);
+      }
+
       // Reset game state for final match
       gameState.isGameOver = false;
       gameState.isGameLoopRunning = false;
@@ -67,6 +82,20 @@ export class TournamentClientHandler {
       // Tournament is complete (both finals finished)
       gameState.isGameOver = true;
       gameState.isGameLoopRunning = false;
+      
+      // Dispose all assets at tournament end
+      try {
+        await frontendAssetDisposalManager.disposeAtTournamentEnd({
+          ball: gameState.ball,
+          player1: gameState.player1,
+          player2: gameState.player2,
+          map: gameState.map,
+          scene: gameState.map?.getScene
+        });
+        console.log('🧹 Frontend: Assets disposed at tournament end');
+      } catch (error) {
+        console.error('🧹 Frontend: Error disposing assets at tournament end:', error);
+      }
       
       // Stop all keep-alive mechanisms to prevent keep-alive messages
       browserEventHandler.stopHeartbeatPublic();

@@ -5,8 +5,10 @@
 
 import { oneVOneDisconnectHandler } from './OneVOneDisconnectHandler.js';
 import { tournamentDisconnectHandler } from './TournamentDisconnectHandler.js';
+import { tournamentMatchDisconnectHandler } from '../../tournament/disconnect/disconnectHandler.js';
 import { MatchTypes } from './BaseDisconnectHandler.js';
 import { gameStateManager } from '../../game/GameStateManager.js';
+import { TournamentRoomTypes } from '../../tournament/constants.js';
 
 /**
  * Disconnection detector and router
@@ -26,10 +28,37 @@ export class DisconnectionDetector {
   }
 
   /**
-   * Get appropriate handler for match type
+   * Get appropriate handler for match type and room
    */
-  getHandler(matchType) {
+  getHandler(matchType, roomId = null) {
+    // For tournament matches, we need to check the room type to determine the correct handler
+    if (matchType === MatchTypes.TOURNAMENT && roomId) {
+      const room = gameStateManager.getRoom(roomId);
+      if (room && this.isTournamentMatchRoom(room)) {
+        console.log(`🏆 Using tournament match handler for room ${roomId} (${room.metadata?.roomType})`);
+        return tournamentMatchDisconnectHandler;
+      } else {
+        console.log(`🏆 Using tournament waiting room handler for room ${roomId}`);
+        return tournamentDisconnectHandler;
+      }
+    }
+    
     return this.handlers.get(matchType) || oneVOneDisconnectHandler; // Default to 1v1
+  }
+
+  /**
+   * Check if room is a tournament match room (not waiting room)
+   */
+  isTournamentMatchRoom(room) {
+    if (!room || room.matchType !== 'tournament') {
+      return false;
+    }
+
+    const roomType = room.metadata?.roomType;
+    return roomType === TournamentRoomTypes.SEMI_FINAL_A ||
+           roomType === TournamentRoomTypes.SEMI_FINAL_B ||
+           roomType === TournamentRoomTypes.WINNER_FINAL ||
+           roomType === TournamentRoomTypes.LOSER_FINAL;
   }
 
   /**
@@ -45,18 +74,15 @@ export class DisconnectionDetector {
     }
 
     const matchType = room.matchType || MatchTypes.ONE_V_ONE;
-    const handler = this.getHandler(matchType);
+    const handler = this.getHandler(matchType, roomId);
 
-    // Setup WebSocket handlers
-    handler.setupWebSocketHandlers(ws, playerId, roomId);
-
-    // Set initial connection metadata
+    // Set initial connection metadata (don't set up duplicate WebSocket handlers)
     handler.setConnectionMetadata(playerId, roomId, {
       matchType,
       setupTime: Date.now()
     });
 
-    console.log(`🔍 Setup disconnect detection for player ${playerId} in ${matchType} match`);
+    console.log(`🔍 Setup disconnect detection metadata for player ${playerId} in ${matchType} match`);
   }
 
   /**
@@ -70,7 +96,7 @@ export class DisconnectionDetector {
     }
 
     const matchType = room.matchType || MatchTypes.ONE_V_ONE;
-    const handler = this.getHandler(matchType);
+    const handler = this.getHandler(matchType, roomId);
 
     handler.handleExplicitLeave(playerId, roomId);
   }
@@ -86,7 +112,7 @@ export class DisconnectionDetector {
     }
 
     const matchType = room.matchType || MatchTypes.ONE_V_ONE;
-    const handler = this.getHandler(matchType);
+    const handler = this.getHandler(matchType, roomId);
 
     handler.handlePlayerStateUpdate(playerId, roomId, state);
   }
@@ -102,7 +128,7 @@ export class DisconnectionDetector {
     }
 
     const matchType = room.matchType || MatchTypes.ONE_V_ONE;
-    const handler = this.getHandler(matchType);
+    const handler = this.getHandler(matchType, roomId);
 
     let reason;
     switch (eventType) {

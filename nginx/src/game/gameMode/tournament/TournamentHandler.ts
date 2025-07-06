@@ -60,8 +60,8 @@ export class TournamentHandler {
   /**
    * Cleanup function for tournament
    */
-  cleanup(): void {
-    this.webSocketManager.cleanup();
+  async cleanup(): Promise<void> {
+    await this.webSocketManager.cleanup();
   }
 }
 

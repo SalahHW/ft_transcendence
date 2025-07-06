@@ -19,6 +19,7 @@ import { TournamentClientHandler } from '../gameMode/tournament/TournamentClient
 import { showSplashScreen } from '../ui/splashScreen.js';
 import { cameraManager } from '../camera/cameraManager.js';
 import { updatePlayerNamesVersus, updateScoresUIVersus } from '../playerUi/playerUi.js';
+import { frontendAssetDisposalManager } from '../assetManagement/FrontendAssetDisposalManager.js';
 import * as BABYLON from '@babylonjs/core';
 
 export class GameClient {
@@ -251,9 +252,9 @@ export class GameClient {
             this.updateGameStatus('Connection error');
         });
 
-        this.clientConnection.socket.addEventListener('close', () => {
+        this.clientConnection.socket.addEventListener('close', async () => {
             this.updateGameStatus('Connection closed');
-            this.cleanup();
+            await this.cleanup();
         });
 
         // Set up game event handlers
@@ -262,7 +263,9 @@ export class GameClient {
         this.clientConnection.onBallUpdate(this.handleBallUpdate.bind(this));
         this.clientConnection.onSync(this.handleSync.bind(this));
         this.clientConnection.onScoreUpdate(this.handleScoreUpdate.bind(this));
-        this.clientConnection.onGameEnd(this.handleGameEnd.bind(this));
+        this.clientConnection.onGameEnd(async (gameEndData: any) => {
+            await this.handleGameEnd(gameEndData);
+        });
 
         // Handle waiting status and tournament advancement
         this.clientConnection.socket.addEventListener('message', async (event) => {
@@ -556,7 +559,7 @@ export class GameClient {
         updateScoresUIVersus(currentPlayerScore, opponentScore, currentPlayer.playerName, opponent.playerName);
     }
 
-    private handleGameEnd(gameEndData: any): void {
+    private async handleGameEnd(gameEndData: any): Promise<void> {
         this.isGameOver = true;
         this.isGameLoopRunning = false;
         this.isGameStarted = false; // Reset for next game
@@ -569,6 +572,22 @@ export class GameClient {
             : `😔 You Lost. Final Score: ${gameEndData.winner.score}-${gameEndData.loser.score}`;
         
         this.updateGameStatus(resultText);
+
+        // Dispose assets between tournament matches
+        if (gameEndData.isTournamentMatch) {
+            try {
+                await frontendAssetDisposalManager.disposeBetweenMatches({
+                    ball: this.ball,
+                    player1: this.player1,
+                    player2: this.player2,
+                    map: this.map,
+                    scene: this.map?.getScene
+                });
+                console.log('🧹 Frontend: Assets disposed after tournament match');
+            } catch (error) {
+                console.error('🧹 Frontend: Error disposing assets after match:', error);
+            }
+        }
     }
 
     private setupKeyboardControls(): void {
@@ -718,7 +737,7 @@ export class GameClient {
 
 
 
-    public cleanup(): void {
+    public async cleanup(): Promise<void> {
         
         if (this.isGameLoopRunning && this.map?.getEngine) {
             this.map.getEngine.stopRenderLoop();
@@ -729,9 +748,18 @@ export class GameClient {
             this.clientConnection.socket.close();
         }
 
-        // ⭐ CLEANUP: Properly dispose of map resources
-        if (this.map) {
-            this.map.dispose();
+        // Dispose all game assets
+        try {
+            await frontendAssetDisposalManager.disposeAtTournamentEnd({
+                ball: this.ball,
+                player1: this.player1,
+                player2: this.player2,
+                map: this.map,
+                scene: this.map?.getScene
+            });
+            console.log('🧹 Frontend: Assets disposed during cleanup');
+        } catch (error) {
+            console.error('🧹 Frontend: Error disposing assets during cleanup:', error);
         }
 
         this.clientConnection = null;
@@ -744,7 +772,7 @@ export class GameClient {
         this.isGameOver = false;
     }
 
-    public leaveGame(): void {
+    public async leaveGame(): Promise<void> {
         
         // Set game as over to stop input and rendering
         this.isGameOver = true;
@@ -758,6 +786,20 @@ export class GameClient {
         // Send leave game message to server
         if (this.clientConnection) {
             this.clientConnection.leaveGame();
+        }
+
+        // Force dispose all assets
+        try {
+            await frontendAssetDisposalManager.forceDisposal({
+                ball: this.ball,
+                player1: this.player1,
+                player2: this.player2,
+                map: this.map,
+                scene: this.map?.getScene
+            });
+            console.log('🧹 Frontend: Assets force disposed during leave game');
+        } catch (error) {
+            console.error('🧹 Frontend: Error force disposing assets during leave game:', error);
         }
 
         // Clean up remaining resources

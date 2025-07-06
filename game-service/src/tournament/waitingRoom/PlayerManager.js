@@ -6,11 +6,12 @@
 import { gameStateManager } from '../../game/GameStateManager.js';
 import { TournamentConfig, TournamentPhases } from '../constants.js';
 import { TournamentRoomFactory } from '../rooms/TournamentRoomFactory.js';
+import { tournamentDisconnectHandler } from '../../server/disconnect/TournamentDisconnectHandler.js';
 
 export class TournamentPlayerManager {
   constructor(waitingRooms, disconnectHandler) {
     this.waitingRooms = waitingRooms;
-    this.disconnectHandler = disconnectHandler;
+    this.disconnectHandler = tournamentDisconnectHandler;
   }
 
   /**
@@ -26,7 +27,7 @@ export class TournamentPlayerManager {
       console.log(`🏆 Old player ID: ${existingPlayer.playerId}, New player ID: ${playerId}`);
       
       // Remove the old player from the waiting room
-      this.disconnectHandler.handlePlayerDisconnect(existingPlayer.playerId, existingPlayer.waitingRoomId);
+      this.disconnectHandler.handleWaitingRoomDisconnect(existingPlayer.playerId, existingPlayer.waitingRoomId, 'player_replaced');
       
       // Wait a moment for the cleanup to complete
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -108,7 +109,7 @@ export class TournamentPlayerManager {
       const playerIndex = waitingRoomData.players.findIndex(p => p.id === playerId);
       if (playerIndex !== -1) {
         // Found the player, remove them
-        this.disconnectHandler.handleWaitingRoomDisconnect(playerId, waitingRoomId);
+        this.disconnectHandler.handleWaitingRoomDisconnect(playerId, waitingRoomId, 'player_left');
         return {
           success: true,
           waitingRoomId,

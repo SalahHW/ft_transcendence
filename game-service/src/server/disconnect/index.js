@@ -20,6 +20,7 @@ export {
 // Export specific handlers
 export { OneVOneDisconnectHandler, oneVOneDisconnectHandler } from './OneVOneDisconnectHandler.js';
 export { TournamentDisconnectHandler, tournamentDisconnectHandler } from './TournamentDisconnectHandler.js';
+export { TournamentMatchDisconnectHandler, tournamentMatchDisconnectHandler } from '../../tournament/disconnect/disconnectHandler.js';
 
 // Export detector and router
 export { DisconnectionDetector, disconnectionDetector } from './DisconnectionDetector.js';
@@ -33,7 +34,7 @@ export function handlePlayerDisconnect(playerId, roomId, reason) {
   if (!room) return;
 
   const matchType = room.matchType || MatchTypes.ONE_V_ONE;
-  const handler = disconnectionDetector.getHandler(matchType);
+  const handler = disconnectionDetector.getHandler(matchType, roomId);
   handler.handleDisconnection(playerId, roomId, reason);
 }
 

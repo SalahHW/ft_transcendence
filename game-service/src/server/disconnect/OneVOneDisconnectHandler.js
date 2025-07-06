@@ -287,26 +287,6 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
   }
 
   /**
-   * Setup WebSocket disconnect handlers for a connection
-   */
-  setupWebSocketHandlers(ws, playerId, roomId) {
-    if (!ws) return;
-
-    ws.on('close', (code, reason) => {
-      const disconnectReason = this.getDisconnectionReasonFromCloseCode(code);
-      this.handleDisconnection(playerId, roomId, disconnectReason);
-    });
-
-    ws.on('error', (error) => {
-      console.error(`🔥 WebSocket error for player ${playerId}:`, error);
-      this.handleDisconnection(playerId, roomId, DisconnectionReasons.NETWORK_DISCONNECT);
-    });
-
-    // Start heartbeat monitoring
-    this.startHeartbeat(playerId, roomId);
-  }
-
-  /**
    * Handle player state update from client
    */
   handlePlayerStateUpdate(playerId, roomId, state) {

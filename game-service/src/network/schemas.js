@@ -27,6 +27,9 @@ export const schemas = {
   [MESSAGE_TYPES.LEAVE_GAME]: z.object({
     type: z.literal(MESSAGE_TYPES.LEAVE_GAME),
   }),
+  [MESSAGE_TYPES.LEAVE_TOURNAMENT]: z.object({
+    type: z.literal(MESSAGE_TYPES.LEAVE_TOURNAMENT),
+  }),
   [MESSAGE_TYPES.REQUEST_BALL_RESPAWN]: z.object({
     type: z.literal(MESSAGE_TYPES.REQUEST_BALL_RESPAWN),
     isInitial: z.boolean().optional(),

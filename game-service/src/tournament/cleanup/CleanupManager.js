@@ -4,11 +4,14 @@
  */
 
 import { TournamentConfig } from '../constants.js';
+import { transferLockManager } from '../playerManagement/TournamentTransferLockManager.js';
+import { assetDisposalManager } from '../assetManagement/TournamentAssetDisposalManager.js';
+import { tournamentDisconnectHandler } from '../../server/disconnect/TournamentDisconnectHandler.js';
 
 export class TournamentCleanupManager {
   constructor(waitingRooms, disconnectHandler) {
     this.waitingRooms = waitingRooms;
-    this.disconnectHandler = disconnectHandler;
+    this.disconnectHandler = tournamentDisconnectHandler;
     this.cleanupInterval = null;
   }
 
@@ -49,7 +52,7 @@ export class TournamentCleanupManager {
         
         inactivePlayers.forEach(player => {
           console.log(`🏆 Removing inactive player ${player.username} (${player.id}) from waiting room ${waitingRoomId}`);
-          this.disconnectHandler.handlePlayerDisconnect(player.id, waitingRoomId);
+          this.disconnectHandler.handleWaitingRoomDisconnect(player.id, waitingRoomId, 'inactivity_timeout');
         });
       }
       
@@ -72,7 +75,7 @@ export class TournamentCleanupManager {
           
           playersToRemove.forEach(player => {
             console.log(`🏆 Removing duplicate player ${player.username} (${player.id}) from waiting room ${waitingRoomId}`);
-            this.disconnectHandler.handlePlayerDisconnect(player.id, waitingRoomId);
+            this.disconnectHandler.handleWaitingRoomDisconnect(player.id, waitingRoomId, 'duplicate_username');
           });
         });
       }
@@ -82,8 +85,23 @@ export class TournamentCleanupManager {
   /**
    * Clean up a specific waiting room
    */
-  cleanupWaitingRoom(waitingRoomId) {
+  async cleanupWaitingRoom(waitingRoomId) {
     console.log(`🏆 Cleaning up waiting room ${waitingRoomId}`);
+    
+    // Get waiting room data for asset disposal
+    const waitingRoomData = this.waitingRooms.get(waitingRoomId);
+    
+    // Clean up transfer locks for this tournament
+    transferLockManager.cleanupTournament(waitingRoomId);
+    
+    // Clean up all tournament assets
+    if (waitingRoomData) {
+      await assetDisposalManager.disposeAtTournamentEndWithData(waitingRoomId, waitingRoomData);
+    } else {
+      await assetDisposalManager.disposeAtTournamentEnd(waitingRoomId);
+    }
+    
+    // Clean up tournament rooms
     this.disconnectHandler.cleanupTournamentRooms(waitingRoomId);
   }
 } 
