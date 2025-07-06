@@ -397,7 +397,7 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
         // Reset any client-side player state tracking
     });
 
-    clientConnection.onInit(async ({ playerId, roomId: rId, role, opponentId, playerName, opponentName }) => {
+    clientConnection.onInit(async ({ playerId, roomId: rId, role, opponentId, playerName, opponentName, playerPositionZ, opponentPositionZ }) => {
         console.log('🎮 Game init received:', { playerId, roomId: rId, role, opponentId, playerName, opponentName });
         
         initTime = Date.now();
@@ -481,9 +481,15 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
             player1.createPaddle(map.getScene!, 19.5, 2, 20);
             player2.createPaddle(map.getScene!, -19.5, 2, 20);
             
-            // Reset paddle positions
-            player1.setZ(0);
-            player2.setZ(0);
+            // ⭐ FIX: Use server-provided initial positions to ensure synchronization
+            const player1PositionZ = playerPositionZ || 0;
+            const player2PositionZ = opponentPositionZ || 0;
+            
+            // Set paddle positions based on server data
+            player1.setZ(player1PositionZ);
+            player2.setZ(player2PositionZ);
+            
+            console.log(`🎮 Set initial paddle positions: player1=${player1PositionZ}, player2=${player2PositionZ}`);
             
             // Create powerup UI system for LOCAL player only
             if (map.getScene) {

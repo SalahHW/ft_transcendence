@@ -35,6 +35,12 @@ export class TournamentMatchManager {
       
       // Starting Semi-Final A
       
+      // ⭐ FIX: Update server-side roles to match client-side roles
+      console.log(`🏆 SEMI-FINAL A - Before role update - Player0 role: ${player0.role}, Player1 role: ${player1.role}`);
+      player0.assignToRoom(semiFinalA.id, 0); // Player0 gets role 0
+      player1.assignToRoom(semiFinalA.id, 1); // Player1 gets role 1
+      console.log(`🏆 SEMI-FINAL A - After role update - Player0 role: ${player0.role}, Player1 role: ${player1.role}`);
+      
       // Send game initialization to both players
       [player0, player1].forEach((player, index) => {
         if (player.ws && player.ws.readyState === 1) {
@@ -46,7 +52,10 @@ export class TournamentMatchManager {
             playerName: player.username,
             opponentName: index === 0 ? player1.username : player0.username,
             role: index, // 0 for player0, 1 for player1
-            matchType: 'tournament_semi_final'
+            matchType: 'tournament_semi_final',
+            // ⭐ FIX: Include initial paddle positions to ensure synchronization
+            playerPositionZ: player.positionZ || 0,
+            opponentPositionZ: index === 0 ? player1.positionZ || 0 : player0.positionZ || 0
           };
           
           try {
@@ -68,6 +77,12 @@ export class TournamentMatchManager {
       
       // Starting Semi-Final B
       
+      // ⭐ FIX: Update server-side roles to match client-side roles
+      console.log(`🏆 SEMI-FINAL B - Before role update - Player2 role: ${player2.role}, Player3 role: ${player3.role}`);
+      player2.assignToRoom(semiFinalB.id, 0); // Player2 gets role 0
+      player3.assignToRoom(semiFinalB.id, 1); // Player3 gets role 1
+      console.log(`🏆 SEMI-FINAL B - After role update - Player2 role: ${player2.role}, Player3 role: ${player3.role}`);
+      
       // Send game initialization to both players
       [player2, player3].forEach((player, index) => {
         if (player.ws && player.ws.readyState === 1) {
@@ -79,7 +94,10 @@ export class TournamentMatchManager {
             playerName: player.username,
             opponentName: index === 0 ? player3.username : player2.username,
             role: index, // 0 for player2, 1 for player3
-            matchType: 'tournament_semi_final'
+            matchType: 'tournament_semi_final',
+            // ⭐ FIX: Include initial paddle positions to ensure synchronization
+            playerPositionZ: player.positionZ || 0,
+            opponentPositionZ: index === 0 ? player3.positionZ || 0 : player2.positionZ || 0
           };
           
           try {
@@ -218,37 +236,47 @@ export class TournamentMatchManager {
     console.log(`🏆 Starting winner final: ${winnerA.username} vs ${winnerB.username}`);
     console.log(`🏆 Winner final room players: [${winnerFinal.players.map(p => `${p.username}(${p.id})`).join(', ')}]`);
     
-    // Find player objects
-    const playerA = this.tournamentManager.transferManager._findPlayerInRoom(winnerFinal.id, winnerA.id);
-    const playerB = this.tournamentManager.transferManager._findPlayerInRoom(winnerFinal.id, winnerB.id);
-    
-    console.log(`🏆 Found player A: ${playerA ? playerA.username : 'NOT FOUND'}`);
-    console.log(`🏆 Found player B: ${playerB ? playerB.username : 'NOT FOUND'}`);
-    
-    if (!playerA || !playerB) {
-      console.error(`🏆 Could not find winner final players`);
-      console.error(`🏆 Looking for: ${winnerA.username}(${winnerA.id}) and ${winnerB.username}(${winnerB.id})`);
-      console.error(`🏆 Available players in winner final: [${winnerFinal.players.map(p => `${p.username}(${p.id})`).join(', ')}]`);
+    // ⭐ FIX: Use room order to determine players and roles
+    if (winnerFinal.players.length !== 2) {
+      console.error(`🏆 Winner final room must have exactly 2 players, found ${winnerFinal.players.length}`);
       return;
     }
     
+    const player0 = winnerFinal.players[0]; // First player in room gets role 0
+    const player1 = winnerFinal.players[1]; // Second player in room gets role 1
+    
+    console.log(`🏆 Using room order - Player0: ${player0.username}(${player0.id}), Player1: ${player1.username}(${player1.id})`);
+    
     // ⭐ FIX: Reset both players for clean start
-    playerA.resetForNewGame();
-    playerB.resetForNewGame();
+    console.log(`🏆 WINNER FINAL - Before reset - Player0 positionZ: ${player0.positionZ}, Player1 positionZ: ${player1.positionZ}`);
+    player0.resetForNewGame();
+    player1.resetForNewGame();
+    console.log(`🏆 WINNER FINAL - After reset - Player0 positionZ: ${player0.positionZ}, Player1 positionZ: ${player1.positionZ}`);
+    
+    // ⭐ FIX: Update server-side roles to match room order
+    console.log(`🏆 WINNER FINAL - Before role update - Player0 role: ${player0.role}, Player1 role: ${player1.role}`);
+    player0.assignToRoom(winnerFinal.id, 0); // First player gets role 0
+    player1.assignToRoom(winnerFinal.id, 1); // Second player gets role 1
+    console.log(`🏆 WINNER FINAL - After role update - Player0 role: ${player0.role}, Player1 role: ${player1.role}`);
     
     // Send game initialization to both players
-    [playerA, playerB].forEach((player, index) => {
+    [player0, player1].forEach((player, index) => {
       if (player.ws && player.ws.readyState === 1) {
-        const gameInitData = {
-          type: 'gameInit',
-          roomId: winnerFinal.id,
-          playerId: player.id,
-          opponentId: index === 0 ? playerB.id : playerA.id,
-          playerName: player.username,
-          opponentName: index === 0 ? playerB.username : playerA.username,
-          role: index, // 0 for playerA, 1 for playerB
-          matchType: 'tournament_winner_final'
-        };
+                  const gameInitData = {
+            type: 'gameInit',
+            roomId: winnerFinal.id,
+            playerId: player.id,
+            opponentId: index === 0 ? player1.id : player0.id,
+            playerName: player.username,
+            opponentName: index === 0 ? player1.username : player0.username,
+            role: index, // 0 for player0, 1 for player1
+            matchType: 'tournament_winner_final',
+            // ⭐ FIX: Include initial paddle positions to ensure synchronization
+            playerPositionZ: player.positionZ || 0,
+            opponentPositionZ: index === 0 ? player1.positionZ || 0 : player0.positionZ || 0
+          };
+        
+        console.log(`🏆 WINNER FINAL - Sending gameInit to ${player.username}: playerPositionZ=${gameInitData.playerPositionZ}, opponentPositionZ=${gameInitData.opponentPositionZ}`);
         
         try {
           player.ws.send(JSON.stringify(gameInitData));
@@ -274,37 +302,47 @@ export class TournamentMatchManager {
     console.log(`🏆 Starting loser final: ${loserA.username} vs ${loserB.username}`);
     console.log(`🏆 Loser final room players: [${loserFinal.players.map(p => `${p.username}(${p.id})`).join(', ')}]`);
     
-    // Find player objects
-    const playerA = this.tournamentManager.transferManager._findPlayerInRoom(loserFinal.id, loserA.id);
-    const playerB = this.tournamentManager.transferManager._findPlayerInRoom(loserFinal.id, loserB.id);
-    
-    console.log(`🏆 Found player A: ${playerA ? playerA.username : 'NOT FOUND'}`);
-    console.log(`🏆 Found player B: ${playerB ? playerB.username : 'NOT FOUND'}`);
-    
-    if (!playerA || !playerB) {
-      console.error(`🏆 Could not find loser final players`);
-      console.error(`🏆 Looking for: ${loserA.username}(${loserA.id}) and ${loserB.username}(${loserB.id})`);
-      console.error(`🏆 Available players in loser final: [${loserFinal.players.map(p => `${p.username}(${p.id})`).join(', ')}]`);
+    // ⭐ FIX: Use room order to determine players and roles
+    if (loserFinal.players.length !== 2) {
+      console.error(`🏆 Loser final room must have exactly 2 players, found ${loserFinal.players.length}`);
       return;
     }
     
+    const player0 = loserFinal.players[0]; // First player in room gets role 0
+    const player1 = loserFinal.players[1]; // Second player in room gets role 1
+    
+    console.log(`🏆 Using room order - Player0: ${player0.username}(${player0.id}), Player1: ${player1.username}(${player1.id})`);
+    
     // ⭐ FIX: Reset both players for clean start
-    playerA.resetForNewGame();
-    playerB.resetForNewGame();
+    console.log(`🏆 LOSER FINAL - Before reset - Player0 positionZ: ${player0.positionZ}, Player1 positionZ: ${player1.positionZ}`);
+    player0.resetForNewGame();
+    player1.resetForNewGame();
+    console.log(`🏆 LOSER FINAL - After reset - Player0 positionZ: ${player0.positionZ}, Player1 positionZ: ${player1.positionZ}`);
+    
+    // ⭐ FIX: Update server-side roles to match room order
+    console.log(`🏆 LOSER FINAL - Before role update - Player0 role: ${player0.role}, Player1 role: ${player1.role}`);
+    player0.assignToRoom(loserFinal.id, 0); // First player gets role 0
+    player1.assignToRoom(loserFinal.id, 1); // Second player gets role 1
+    console.log(`🏆 LOSER FINAL - After role update - Player0 role: ${player0.role}, Player1 role: ${player1.role}`);
     
     // Send game initialization to both players
-    [playerA, playerB].forEach((player, index) => {
+    [player0, player1].forEach((player, index) => {
       if (player.ws && player.ws.readyState === 1) {
-        const gameInitData = {
-          type: 'gameInit',
-          roomId: loserFinal.id,
-          playerId: player.id,
-          opponentId: index === 0 ? playerB.id : playerA.id,
-          playerName: player.username,
-          opponentName: index === 0 ? playerB.username : playerA.username,
-          role: index, // 0 for playerA, 1 for playerB
-          matchType: 'tournament_loser_final'
-        };
+                  const gameInitData = {
+            type: 'gameInit',
+            roomId: loserFinal.id,
+            playerId: player.id,
+            opponentId: index === 0 ? player1.id : player0.id,
+            playerName: player.username,
+            opponentName: index === 0 ? player1.username : player0.username,
+            role: index, // 0 for player0, 1 for player1
+            matchType: 'tournament_loser_final',
+            // ⭐ FIX: Include initial paddle positions to ensure synchronization
+            playerPositionZ: player.positionZ || 0,
+            opponentPositionZ: index === 0 ? player1.positionZ || 0 : player0.positionZ || 0
+          };
+        
+        console.log(`🏆 LOSER FINAL - Sending gameInit to ${player.username}: playerPositionZ=${gameInitData.playerPositionZ}, opponentPositionZ=${gameInitData.opponentPositionZ}`);
         
         try {
           player.ws.send(JSON.stringify(gameInitData));

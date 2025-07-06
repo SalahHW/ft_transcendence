@@ -338,6 +338,7 @@ export class GameClient {
     }
 
     private async handleGameInit(data: any): Promise<void> {
+        const { playerId, roomId: rId, role, opponentId, playerName, opponentName, playerPositionZ, opponentPositionZ } = data;
         
         // Check if this is a tournament match
         const isTournamentMatch = data.matchType === 'tournament_semi_final' || 
@@ -362,14 +363,14 @@ export class GameClient {
         
         // Get player names for splash screen
         const currentPlayerName = data.playerName || 'You';
-        const opponentName = data.opponentName || 'Opponent';
+        const opponentNameForSplash = data.opponentName || 'Opponent';
         
         // 🎬 Show splash screen BEFORE creating any game elements
         this.updateGameStatus('Preparing match...');
         
         try {
             // Show splash screen for 3 seconds
-            await showSplashScreen(currentPlayerName, opponentName, 3000);
+            await showSplashScreen(currentPlayerName, opponentNameForSplash, 3000);
         } catch (error) {
             console.error('Error showing splash screen:', error);
             // Continue with game initialization even if splash screen fails
@@ -391,6 +392,25 @@ export class GameClient {
         } else {
             this.player1 = new playerPaddle('Player1', data.opponentId, 0);
             this.player2 = new playerPaddle('Player2', data.playerId, 1);
+        }
+
+        // ⭐ FIX: Create paddles with server-provided initial positions
+        try {
+            this.player1.createPaddle(this.map.getScene!, 19.5, 2, 20);
+            this.player2.createPaddle(this.map.getScene!, -19.5, 2, 20);
+            
+            // Use server-provided initial positions to ensure synchronization
+            const player1PositionZ = playerPositionZ || 0;
+            const player2PositionZ = opponentPositionZ || 0;
+            
+            // Set paddle positions based on server data
+            this.player1.setZ(player1PositionZ);
+            this.player2.setZ(player2PositionZ);
+            
+            console.log(`🎮 Tournament: Set initial paddle positions: player1=${player1PositionZ}, player2=${player2PositionZ}`);
+        } catch (e) {
+            console.error('Tournament paddle creation failed:', e);
+            return;
         }
 
         // ⭐ TOURNAMENT FIX: Reset scores display when game initializes

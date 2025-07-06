@@ -173,8 +173,11 @@ export class GameEngine {
             opponentId: otherPlayer.id,
             playerName: p.username || 'Anonymous',
             opponentName: otherPlayer.username || 'Anonymous',
+            // ⭐ FIX: Include initial paddle positions to ensure synchronization
+            playerPositionZ: p.positionZ || 0,
+            opponentPositionZ: otherPlayer.positionZ || 0,
           }));
-          console.log(`Sent init to player ${p.id} (${p.username}) in room ${roomId}`);
+          console.log(`Sent init to player ${p.id} (${p.username}) in room ${roomId} with positions: player=${p.positionZ}, opponent=${otherPlayer.positionZ}`);
         } catch (e) {
           console.error(`Failed to send init to player ${p.id}:`, e);
         }
