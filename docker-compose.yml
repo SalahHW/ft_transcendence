@@ -8,6 +8,16 @@ services:
     networks:
       - transcendence
 
+  redis:
+    container_name: redis
+    build: ./redis-service
+    env_file:
+      - ./redis-service/.env
+    networks:
+      - transcendence
+    volumes:
+      - ./redis-data:/data
+
   users:
     container_name: users
     build: ./users-service
