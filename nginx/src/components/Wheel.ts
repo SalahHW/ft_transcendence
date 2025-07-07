@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 16:41:12 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/04 20:09:14 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/05 15:18:20 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,7 +29,7 @@ interface Option {
 */
 
 export default class Wheel {
-		private _element: HTMLElement;
+	private _element: HTMLElement;
 	private _optionHistory: Option[][] = []; // Pour naviguer dans les sous-menus
 	private _selectedIndex: number = 0;
 	private _isVisible: boolean = false;
@@ -43,7 +43,6 @@ export default class Wheel {
 			onClick: () => {
 				console.log("API Test page clicked");
 				this._router.navigate("/api-test");
-				this._router.navigate("/api-test");
 			},
 		},
 		{
@@ -52,7 +51,7 @@ export default class Wheel {
 			onClick: () => {
 				this._router.navigate("/profile");
 			},
-			condition: () => this._userIsLoggedIn
+			condition: () => !this._userIsLoggedIn
 		},
 		{
 			label: "Login",
@@ -123,32 +122,32 @@ export default class Wheel {
 		this.render();
 	}
 
-    private _setupKeyboardEvents(): void {
-        document.addEventListener("keydown", async (event: KeyboardEvent) => {
-            const target = event.target as HTMLElement;
-            if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
-                return;
-            }
+	private _setupKeyboardEvents(): void {
+		document.addEventListener("keydown", async (event: KeyboardEvent) => {
+			const target = event.target as HTMLElement;
+			if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+				return;
+			}
 
-            if (event.key === 'Shift') {
-                if (this._isVisible) return;
-                event.preventDefault();
-                await this.showWheel();
-            }
-        });
+			if (event.key === 'Shift') {
+				if (this._isVisible) return;
+				event.preventDefault();
+				await this.showWheel();
+			}
+		});
 
-        document.addEventListener("keyup", (event: KeyboardEvent) => {
-            if (event.key === 'Shift') {
-                this.hideWheel();
-            }
-        });
-    }
+		document.addEventListener("keyup", (event: KeyboardEvent) => {
+			if (event.key === 'Shift') {
+				this.hideWheel();
+			}
+		});
+	}
 
-    private _setupMouseEvents(): void {
-        this._element.addEventListener("click", (event: MouseEvent) => {
+	private _setupMouseEvents(): void {
+		this._element.addEventListener("click", (event: MouseEvent) => {
 			event.stopPropagation();
 		});
-    }
+	}
 
 	private async _selectOption(): Promise<void> {
 		const selectedOption = this._wheelOptions[this._selectedIndex];
