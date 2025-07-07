@@ -103,8 +103,10 @@ export class TournamentDisconnectHandler extends BaseDisconnectHandler {
       console.log(`🏆 Remaining players: [${room.players.map(p => p.username || p.id).join(', ')}]`);
     }
     
-    // Notify remaining players about the disconnect
-    this.notifyWaitingRoomDisconnect(roomId, playerId, room.players.length);
+    // Instead of sending a tournamentPlayerLeft notification, just broadcast the updated waiting room status
+    if (tournamentManager.communicationManager && typeof tournamentManager.communicationManager.broadcastWaitingRoomStatus === 'function') {
+      tournamentManager.communicationManager.broadcastWaitingRoomStatus(roomId);
+    }
   }
 
   /**
@@ -160,40 +162,6 @@ export class TournamentDisconnectHandler extends BaseDisconnectHandler {
     tournamentManager.waitingRooms.delete(waitingRoomId);
     
     console.log(`🏆 Tournament cleanup completed for ${waitingRoomId}`);
-  }
-
-  /**
-   * Notify remaining players in waiting room about a disconnect
-   */
-  notifyWaitingRoomDisconnect(roomId, disconnectedPlayerId, remainingPlayerCount) {
-    const room = gameStateManager.getRoom(roomId);
-    if (!room) return;
-    
-    // Get the disconnected player's username for the notification
-    const disconnectedPlayer = room.players.find(p => p.id === disconnectedPlayerId);
-    const playerUsername = disconnectedPlayer?.username || disconnectedPlayerId;
-    
-    console.log(`🏆 Notifying waiting room ${roomId} about disconnect: ${playerUsername} left (${remainingPlayerCount} players remaining)`);
-    
-    // Send notification to remaining players (if they have WebSocket connections)
-    const connectedPlayers = room.players.filter(p => p.id !== disconnectedPlayerId && p.ws && p.ws.readyState === 1);
-    
-    connectedPlayers.forEach(player => {
-      try {
-        player.ws.send(JSON.stringify({
-          type: 'tournamentPlayerLeft',
-          roomId,
-          disconnectedPlayer: {
-            id: disconnectedPlayerId,
-            username: playerUsername
-          },
-          remainingPlayers: remainingPlayerCount,
-          maxPlayers: 4
-        }));
-      } catch (error) {
-        console.error(`Failed to notify player ${player.id} about tournament disconnect:`, error);
-      }
-    });
   }
 
   /**
