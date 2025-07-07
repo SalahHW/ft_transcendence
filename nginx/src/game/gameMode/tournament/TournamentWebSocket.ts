@@ -34,13 +34,14 @@ export class TournamentWebSocket {
     // Handle tournament-specific messages
     this.tournamentWs.onMessage = (msg) => {
       const data = JSON.parse(msg.data);
-      console.log('🏆 Tournament message received:', data);
+      // console.log('🏆 Tournament message received:', data);
       
       // Only handle waiting room status updates, not welcome messages
-      if (data.type === 'tournamentWaitingRoomStatus') {
-        console.log(`🏆 Waiting room status: ${data.playerCount}/${data.maxPlayers} players`);
-        TournamentUI.updateTournamentWaitingRoomUI(data);
-      }
+      // Commented out to prevent popup when players leave
+      // if (data.type === 'tournamentWaitingRoomStatus') {
+      //   console.log(`🏆 Waiting room status: ${data.playerCount}/${data.maxPlayers} players`);
+      //   TournamentUI.updateTournamentWaitingRoomUI(data);
+      // }
     };
     
     // Set up tournament leave functionality

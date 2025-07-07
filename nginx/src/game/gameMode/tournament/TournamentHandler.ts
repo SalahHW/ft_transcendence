@@ -25,7 +25,7 @@ export class TournamentHandler {
   async handleTournament(): Promise<void> {
     try {
       // Show loading state
-      TournamentUI.showTournamentLoading();
+      // TournamentUI.showTournamentLoading();
       
       const playerData = await registerCurrentUserForTournament();
       
