@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/22 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/07 23:40:38 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/08 00:28:19 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,7 +46,7 @@ export default class ProfileView extends ModalView {
 		if (!profileContainer) {
 			console.error('Profile container not found');
 			return;
-		}
+		};
 		profileContainer.innerHTML = /* HTML */`
 			<div class="flex gap-2 h-full">
 				<div class="flex-[1] rounded-lg p-4 aspect-square">
@@ -57,7 +57,7 @@ export default class ProfileView extends ModalView {
 					<p class="text-gray-500">${mockProfile.user.email}</p>
 				</div>
 				<div class="flex-[1] rounded-lg p-4">
-					<!-- Content 3 -->
+					${this.createWinRateDonutChart(mockProfile.matches.matches)}
 				</div>
 			</div>
 		`;
@@ -71,9 +71,41 @@ export default class ProfileView extends ModalView {
 		}
 		const matchesHtml = mockProfile.matches.matches.map(match => this.createMatchHistoryItem(match)).join('');
 		matchHistoryContainer.innerHTML = /* HTML */`
-			<div class="flex flex-col h-full p-4">
+			<div class="flex flex-col h-full">
 				<div class="overflow-auto flex-[1] [mask-image:linear-gradient(to_bottom,transparent,black_2%,black_98%,transparent)] pt-2">
 					${matchesHtml}
+				</div>
+			</div>
+		`;
+	}
+
+	private createWinRateDonutChart(matches: any[]): string {
+		const wins = matches.filter(m => m.score.user > m.score.opponent).length;
+		const losses = matches.length - wins;
+		const winRate = matches.length > 0 ? wins / matches.length : 0;
+
+		const circumference = 2 * Math.PI * 45;
+		const offset = circumference * (1 - winRate);
+
+		return /* HTML */`
+			<div class="relative w-full h-full flex items-center justify-center">
+				<svg viewBox="0 0 100 100" class="w-full h-full transform -rotate-90">
+					<circle cx="50" cy="50" r="45" fill="transparent" stroke="#EF4444" stroke-width="10"></circle>
+					<circle
+						cx="50"
+						cy="50"
+						r="45"
+						fill="transparent"
+						stroke="#10B981"
+						stroke-width="10"
+						stroke-dasharray="${circumference}"
+						stroke-dashoffset="${offset}"
+						stroke-linecap="round"
+					></circle>
+				</svg>
+				<div class="absolute flex flex-col items-center justify-center text-white">
+					<span class="font-bold text-xl">${wins} W</span>
+					<span class="text-gray-400">${losses} L</span>
 				</div>
 			</div>
 		`;
