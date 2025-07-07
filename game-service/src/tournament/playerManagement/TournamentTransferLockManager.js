@@ -207,9 +207,7 @@ export class TournamentTransferLockManager {
    * Clean up locks for a tournament (called when tournament ends)
    */
   cleanupTournament(waitingRoomId) {
-    console.log(`🧹 Cleaning up transfer locks for tournament ${waitingRoomId}`);
     
-    // Clear timeout
     if (this.lockTimeouts.has(waitingRoomId)) {
       clearTimeout(this.lockTimeouts.get(waitingRoomId));
       this.lockTimeouts.delete(waitingRoomId);

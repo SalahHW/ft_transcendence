@@ -23,22 +23,13 @@ export class BallPowerup {
         
         // Update ball velocity with boosted speed
         const currentVelocityLength = ball.velocity.length();
-        console.log(`🔧 BEFORE velocity scaling: velocity.length = ${currentVelocityLength}, ball.speed = ${ball.speed}`);
         
         if (currentVelocityLength > 0) {
             const scaleFactor = boostedSpeed / currentVelocityLength;
-            console.log(`🔧 Scale factor: ${scaleFactor} (${boostedSpeed} / ${currentVelocityLength})`);
             
             ball.velocity = ball.velocity.scale(scaleFactor);
-            console.log(`🔧 AFTER velocity scaling: velocity.length = ${ball.velocity.length()}`);
         }
         ball.speed = boostedSpeed;
-        console.log(`🔧 Final ball.speed property: ${ball.speed}`);
-        
-        console.log(`🚀 SPEED BOOST APPLIED: ${this.originalSpeed} → ${boostedSpeed} (${this.speedMultiplier}x) by player ${activatedByPlayerId}`);
-        console.log(`🚀 Ball velocity length after boost: ${ball.velocity.length()}`);
-        console.log(`🚀 Ball.speed property after boost: ${ball.speed}`);
-        
         return true;
     }
 

@@ -95,7 +95,6 @@ class Ball {
                 }
                 this.hasValidPosition = true;
                 this.handleAcceleration();
-                console.log('Respawn complete:', { position: this.position, velocity: this.velocity, speed: this.speed, rebounds: this.rebounds });
             }
             return;
         }

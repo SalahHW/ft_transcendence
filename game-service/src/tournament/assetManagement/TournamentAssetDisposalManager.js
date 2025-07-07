@@ -497,8 +497,6 @@ export class TournamentAssetDisposalManager {
    * Verify disposal completion
    */
   async _verifyDisposal(roomId, assetTypes) {
-    console.log(`🔍 Verifying disposal for room ${roomId}`);
-    
     try {
       const verificationPromise = new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {

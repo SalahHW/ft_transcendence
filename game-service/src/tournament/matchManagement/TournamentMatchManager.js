@@ -248,16 +248,12 @@ export class TournamentMatchManager {
     console.log(`🏆 Using room order - Player0: ${player0.username}(${player0.id}), Player1: ${player1.username}(${player1.id})`);
     
     // ⭐ FIX: Reset both players for clean start
-    console.log(`🏆 WINNER FINAL - Before reset - Player0 positionZ: ${player0.positionZ}, Player1 positionZ: ${player1.positionZ}`);
     player0.resetForNewGame();
     player1.resetForNewGame();
-    console.log(`🏆 WINNER FINAL - After reset - Player0 positionZ: ${player0.positionZ}, Player1 positionZ: ${player1.positionZ}`);
     
     // ⭐ FIX: Update server-side roles to match room order
-    console.log(`🏆 WINNER FINAL - Before role update - Player0 role: ${player0.role}, Player1 role: ${player1.role}`);
     player0.assignToRoom(winnerFinal.id, 0); // First player gets role 0
     player1.assignToRoom(winnerFinal.id, 1); // Second player gets role 1
-    console.log(`🏆 WINNER FINAL - After role update - Player0 role: ${player0.role}, Player1 role: ${player1.role}`);
     
     // Send game initialization to both players
     [player0, player1].forEach((player, index) => {
