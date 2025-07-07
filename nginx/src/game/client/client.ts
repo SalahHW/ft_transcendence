@@ -713,6 +713,22 @@ export function cleanup(): void {
     stopForfeitWinnerPing();
     (window as any).clientConnection = null;
 
+    // ✅ FIX: Clean up 1v1 keyboard event listeners that conflict with tournament mode
+    if ((window as any).gameKeydownHandler) {
+        document.removeEventListener('keydown', (window as any).gameKeydownHandler);
+        delete (window as any).gameKeydownHandler;
+        console.log('⌨️ 1v1 Keydown event listener removed');
+    }
+    
+    if ((window as any).gameKeyupHandler) {
+        document.removeEventListener('keyup', (window as any).gameKeyupHandler);
+        delete (window as any).gameKeyupHandler;
+        console.log('⌨️ 1v1 Keyup event listener removed');
+    }
+    
+    // Reset game control flags
+    (window as any).gameControlsInitialized = false;
+
     webSocketClientDisconnect.updateGameState({
         isGameOver,
         isGameLoopRunning,
@@ -749,6 +765,22 @@ export function cleanup(): void {
 export function leaveGame(): void {
     stopForfeitWinnerPing();
     (window as any).clientConnection = null;
+
+    // ✅ FIX: Clean up 1v1 keyboard event listeners that conflict with tournament mode
+    if ((window as any).gameKeydownHandler) {
+        document.removeEventListener('keydown', (window as any).gameKeydownHandler);
+        delete (window as any).gameKeydownHandler;
+        console.log('⌨️ 1v1 Keydown event listener removed');
+    }
+    
+    if ((window as any).gameKeyupHandler) {
+        document.removeEventListener('keyup', (window as any).gameKeyupHandler);
+        delete (window as any).gameKeyupHandler;
+        console.log('⌨️ 1v1 Keyup event listener removed');
+    }
+    
+    // Reset game control flags
+    (window as any).gameControlsInitialized = false;
 
     webSocketClientDisconnect.updateGameState({
         isGameOver,
