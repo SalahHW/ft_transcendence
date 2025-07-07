@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: Invalid Date        by              +#+  #+#    #+#             */
-/*   Updated: 2025/07/05 14:49:35 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/05 15:13:45 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,10 +42,7 @@ export default class Router {
 		{
 			path: "/api-test",
 			handler: async function() {
-				// Revenir à la page précédente dans l'historique
 				window.history.back();
-
-				// Afficher la vue API test
 				if (!this.cache) {
 					import('../views/apiTestPage/APITestPage.js').then(module => {
 						const APITestPage = module.default;
@@ -60,10 +57,7 @@ export default class Router {
 		{
 			path: "/login",
 			handler: async function() {
-				// Revenir à la page précédente dans l'historique
 				window.history.back();
-
-				// Afficher la popup de login
 				if (!this.cache) {
 					import('../components/LoginPopup.js').then(module => {
 						const LoginPopup = module.default;
@@ -78,10 +72,7 @@ export default class Router {
 		{
 			path: "/register",
 			handler: async function() {
-				// Revenir à la page précédente dans l'historique
 				window.history.back();
-
-				// Afficher la popup de register
 				if (!this.cache) {
 					import('../components/RegisterPopup.js').then(module => {
 						const RegisterPopup = module.default;
@@ -96,10 +87,7 @@ export default class Router {
 		{
 			path: "/register-wallet",
 			handler: function() {
-				// Revenir à la page précédente dans l'historique
 				window.history.back();
-
-				// Afficher la popup WalletConnect register
 				if (!this.cache) {
 					import('../components/WalletConnectRegisterPopup.js').then(module => {
 						const WalletConnectRegisterPopup = module.default;
@@ -114,10 +102,7 @@ export default class Router {
 		{
 			path: "/profile",
 			handler: async function() {
-				// Revenir à la page précédente dans l'historique
 				window.history.back();
-
-				// Afficher la vue de profil
 				if (!this.cache) {
 					import('../views/ProfileView.js').then(module => {
 						const ProfileView = module.default;
