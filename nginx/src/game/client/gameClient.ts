@@ -289,8 +289,11 @@ export class GameClient {
                     // Update instance variables after handler modifies them
                     if (message.status === 'transferred_to_final') {
                         // ⭐ CRITICAL FIX: Reset to false so final match can start
+                        if (this.isGameLoopRunning && this.map?.getEngine) {
+                            this.map.getEngine.stopRenderLoop();
+                            this.isGameLoopRunning = false;
+                        }
                         this.isGameOver = false;
-                        this.isGameLoopRunning = false;
                         this.map = null;
                         this.ball = null;
                         this.player1 = null;
@@ -504,9 +507,13 @@ export class GameClient {
         
         const movingPlayer = msg.playerId === this.player1.getPlayerId() ? this.player1 : this.player2;
         
-        // Only apply if the paddle belongs to the other player to avoid jitter
-        if (movingPlayer.getPlayerId() !== this.localPlayerId) {
-            movingPlayer.setZ(msg.positionZ || 0);
+        // ✅ FIX: Sync BOTH local and opponent paddle positions
+        // This ensures the camera follows the server-authoritative paddle position
+        movingPlayer.setZ(msg.positionZ || 0);
+        
+        // Debug logging to track sync
+        if (movingPlayer.getPlayerId() === this.localPlayerId) {
+            console.log(`🎮 Tournament: Synced local player paddle to server position: ${msg.positionZ}`);
         }
     }
 
@@ -550,8 +557,15 @@ export class GameClient {
         if (msg.playerPositions) {
             Object.entries(msg.playerPositions).forEach(([playerId, positionZ]: [string, any]) => {
                 const syncPlayer = playerId === this.player1!.getPlayerId() ? this.player1 : this.player2;
-                if (syncPlayer && syncPlayer.getPlayerId() !== this.localPlayerId) {
+                // ✅ FIX: Sync BOTH local and opponent paddle positions
+                // This ensures consistent synchronization between server and client
+                if (syncPlayer) {
                     syncPlayer.setZ(positionZ);
+                    
+                    // Debug logging for local player sync
+                    if (syncPlayer.getPlayerId() === this.localPlayerId) {
+                        console.log(`🎮 Tournament: Sync message updated local player paddle to: ${positionZ}`);
+                    }
                 }
             });
         }
@@ -699,27 +713,18 @@ export class GameClient {
 
             const deltaTime = this.map.getEngine!.getDeltaTime() / 1000;
             
-            // Handle local player movement
+            // Handle local player movement (client-side visual update only)
+            // ✅ FIX: Tournament mode now uses keyDown/keyUp messages (like 1v1)
+            // The server handles movement calculation based on key states
             const localPlayer = this.player1?.getPlayerId() === this.localPlayerId ? this.player1 : this.player2;
-            let paddleMoved = false;
 
             if (localPlayer) {
                 if (this.isUpPressed && !this.isDownPressed) {
                     localPlayer.move(-1, deltaTime);
-                    paddleMoved = true;
                 } else if (this.isDownPressed && !this.isUpPressed) {
                     localPlayer.move(1, deltaTime);
-                    paddleMoved = true;
                 }
-
-                // Send paddle position updates
-                if (paddleMoved && this.clientConnection && localPlayer.getPaddleBodyPos) {
-                    this.clientConnection.send({
-                        type: 'paddlePosition',
-                        playerId: this.localPlayerId,
-                        positionZ: localPlayer.getPaddleBodyPos.z,
-                    });
-                }
+                // ✅ REMOVED: No more paddlePosition messages - keyboard controls handle input
             }
 
             // Update camera system (CRITICAL for FPS mode)
@@ -754,8 +759,6 @@ export class GameClient {
             player2Element.textContent = `Player 2: ${player2Score}`;
         }
     }
-
-
 
     public async cleanup(): Promise<void> {
         

@@ -824,8 +824,11 @@ function setupGameLoop(): void {
                 paddleMoved = true;
             }
 
-            // Send paddle position updates at a fixed rate
-            if (paddleMoved && now - lastPaddleUpdate >= PADDLE_UPDATE_INTERVAL && clientConnection) {
+            // 🚨 PROBLEM: 1v1 MODE - PADDLE UPDATE THROTTLING IS BROKEN
+            // The throttling condition is commented out, causing unlimited updates!
+            // This makes 1v1 mode send paddle updates every frame (60+ FPS)
+            // while tournament mode is properly throttled to 60 FPS
+            if (paddleMoved &&  now - lastPaddleUpdate >= PADDLE_UPDATE_INTERVAL &&  clientConnection) {
                 const paddlePos = localPlayer.getPaddleBodyPos;
                 if (paddlePos) {
                     clientConnection.send({

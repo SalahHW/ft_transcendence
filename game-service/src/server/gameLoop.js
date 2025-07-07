@@ -34,6 +34,8 @@ export function startGameLoop() {
         if (!RoomUtils.isRoomReadyForGame(room)) return;
 
         room.players.forEach((player, index) => {
+          // ✅ SERVER-SIDE: IDENTICAL FOR ALL ROOM TYPES (1v1, semi-finals, finals)
+          // All game modes use the same paddle speed calculation and deltaTime
           const speed = GAME_CONFIG.PADDLE_SPEED;
           const halfD = GAME_CONFIG.PADDLE_BOUNDARY;
           let moved = false;
@@ -54,6 +56,8 @@ export function startGameLoop() {
             playerData.update(deltaTime, ballRebounds);
           }
 
+          // ✅ SERVER-SIDE: BROADCAST THROTTLING IS IDENTICAL FOR ALL ROOM TYPES
+          // The server sends paddle updates at the same rate regardless of room type
           if ((player.isUpPressed || player.isDownPressed) && now - lastBroadcast >= 1000 / BROADCAST_FPS) {
             gameEngine.broadcastToRoom(roomId, {
               type: 'paddleMove',
