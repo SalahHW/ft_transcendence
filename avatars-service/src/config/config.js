@@ -17,6 +17,17 @@ export const USERS_SERVICE_PORT = process.env.USERS_SERVICE_PORT;
 export const USERS_SERVICE_URL = `http://${USERS_SERVICE_HOST}:${USERS_SERVICE_PORT}`;
 export const USERS_SERVICE_TIMEOUT = process.env.USERS_SERVICE_TIMEOUT;
 
+// Redis service
+export const REDIS_HOST = process.env.REDIS_SERVICE_HOST;
+export const REDIS_PORT = process.env.REDIS_SERVICE_PORT;
+export const REDIS_PASSWORD = process.env.REDIS_PASSWORD;
+export const REDIS_STREAMS = {
+  USERS: process.env.USERS_SERVICE_STREAM,
+};
+export const REDIS_EVENTS = {
+  USER_DELETED: process.env.USER_DELETED_EVENT,
+};
+
 //! Variable formats are not validated
 
 if (!PORT) {
