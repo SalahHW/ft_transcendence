@@ -1,10 +1,8 @@
-const bigIntToString = require("../utils/bigIntToString");
-
 module.exports = async (fastify, opts) => {
   const contract = fastify.masterContract;
 
-  fastify.get(
-    "/match/player/:address",
+  fastify.delete(
+    "/remove/:address",
     {
       schema: {
         params: {
@@ -17,15 +15,16 @@ module.exports = async (fastify, opts) => {
       },
     },
     async (request, reply) => {
+      const { address } = request.params;
+
       if (!contract) {
         return reply.status(503).send({ error: "Contract not initialized" });
       }
 
       try {
-        const matches = await contract.getMatchesByPlayer(
-          request.params.address
-        );
-        reply.send(bigIntToString({ success: true, matches }));
+        const tx = await contract.removePlayer(address);
+        await tx.wait();
+        reply.send({ success: true, transactionHash: tx.hash });
       } catch (error) {
         request.log.error(error);
         reply.status(500).send({ success: false, error: error.message });

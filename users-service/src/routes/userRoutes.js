@@ -9,11 +9,27 @@ export default async function userRoutes(fastify) {
       description: "Creates a new user with a unique username and email.",
       body: {
         type: "object",
-        required: ["username", "password", "email"],
+        required: [
+          "username",
+          "password",
+          "email",
+          "authenticationMethod",
+          "wallet",
+        ],
         properties: {
           username: { type: "string", description: "The user's username." },
           password: { type: "string", description: "The user's password." },
-          email: { type: "string", format: "email", description: "The user's email address." },
+          email: {
+            type: "string",
+            format: "email",
+            description: "The user's email address.",
+          },
+          authenticationMethod: {
+            type: "string",
+            description: "The authentication method.",
+            enum: ["credentials"],
+          },
+          wallet: { type: "string", description: "The user's wallet address." },
         },
       },
       response: {
@@ -191,7 +207,7 @@ export default async function userRoutes(fastify) {
       response: {
         204: {
           description: "User deleted successfully. No content returned.",
-          type: "null"
+          type: "null",
         },
         404: {
           description: "User not found.",

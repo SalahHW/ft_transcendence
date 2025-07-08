@@ -44,7 +44,6 @@ export async function updatePassword(request, reply) {
     return reply.code(401).send({ error: "Password doesn't match" });
   }
   try {
-    // Old password check before modification
     const newHashedPassword = await encryptPassword(newPassword);
     const result = await passwordModels.updatePassword(
       userId,

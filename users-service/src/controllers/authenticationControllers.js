@@ -35,10 +35,10 @@ export const loginUser = async (request, reply) => {
       .setCookie("token", token, {
         httpOnly: true,
         // secure: process.env.NODE_ENV === "production",
-        secure: false, // TODO: Update .env to set production mode
+        secure: true, // TODO: Update .env to set production mode
         sameSite: "strict",
         path: "/",
-        maxAge: 60 * 60 * 24, // 1 day
+        maxAge: 300,
       })
       .code(200)
       .send({ message: "Login successful" });

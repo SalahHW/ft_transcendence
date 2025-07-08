@@ -1,20 +1,48 @@
 import { database } from "./database.js";
 import { translateSqliteError } from "./errors/translateSqliteError.js";
 
-export const createUser = async (user) => {
-  const { username, password, email } = user;
-
-  const query = `
-  INSERT INTO users (username, password, email)
-  VALUES (?, ?, ?);`;
+export const createUser = async ({
+  username,
+  password,
+  email,
+  wallet,
+  authenticationMethod,
+}) => {
+  const createUserQuery = `
+    INSERT INTO users (username, authenticationMethod, wallet)
+    VALUES (?, ?, ?);
+  `;
 
   try {
-    const result = await database.run(query, [username, password, email]);
-    return {
-      id: result.lastID,
+    const userResult = await database.run(createUserQuery, [
       username,
-      email,
-    };
+      authenticationMethod,
+      wallet,
+    ]);
+    const userId = userResult.lastID;
+
+    if (authenticationMethod === "credentials") {
+      await createCredentials(userId, email, password);
+    }
+
+    return { id: userId, username, email, wallet };
+  } catch (error) {
+    throw translateSqliteError(error);
+  }
+};
+
+export const createCredentials = async (id, email, password) => {
+  const createCredentialsQuery = `
+    INSERT INTO credentials_auth (id, email, password)
+    VALUES (?, ?, ?);
+  `;
+
+  try {
+    await database.run(createCredentialsQuery, [
+      id,
+      email.toLowerCase(),
+      password,
+    ]);
   } catch (error) {
     throw translateSqliteError(error);
   }
@@ -22,13 +50,13 @@ export const createUser = async (user) => {
 
 export const readUser = async (id) => {
   const query = `
-  SELECT *
-  FROM users
-  WHERE id = ?`;
-
+    SELECT u.id, u.username, u.wallet, u.authenticationMethod, c.email, c.password
+    FROM users u
+    LEFT JOIN credentials_auth c ON u.id = c.id
+    WHERE u.id = ?
+  `;
   try {
-    const user = await database.get(query, [id]);
-    return user;
+    return await database.get(query, [id]);
   } catch (error) {
     throw translateSqliteError(error);
   }
@@ -36,13 +64,13 @@ export const readUser = async (id) => {
 
 export const readUserByUsername = async (username) => {
   const query = `
-  SELECT *
-  FROM users
-  WHERE LOWER(username) = ?`;
-
+    SELECT u.id, u.username, u.wallet, u.authenticationMethod, c.email, c.password
+    FROM users u
+    LEFT JOIN credentials_auth c ON u.id = c.id
+    WHERE LOWER(u.username) = ?
+  `;
   try {
-    const user = await database.get(query, [username.toLowerCase()]);
-    return user;
+    return await database.get(query, [username.toLowerCase()]);
   } catch (error) {
     throw translateSqliteError(error);
   }
@@ -50,41 +78,40 @@ export const readUserByUsername = async (username) => {
 
 export const readAllUsers = async () => {
   const query = `
-  SELECT id, username, email
-  FROM users`;
-
+    SELECT u.id, u.username, u.wallet, u.authenticationMethod, c.email
+    FROM users u
+    LEFT JOIN credentials_auth c ON u.id = c.id
+  `;
   try {
-    const users = await database.all(query);
-    return users;
+    return await database.all(query);
   } catch (error) {
     throw translateSqliteError(error);
   }
 };
 
-export const updateUser = async (id, newUser) => {
-  const { username, password, email } = newUser;
-  const query = `
-  UPDATE users
-  SET username = ?,
-  password = ?,
-  email = ?
-  WHERE id = ?`;
-
+export const updateUser = async (id, { username, password, email }) => {
   try {
-    const result = await database.run(query, [username, password, email, id]);
-    return result.changes;
+    await database.run(`UPDATE users SET username = ? WHERE id = ?`, [
+      username,
+      id,
+    ]);
+    await database.run(
+      `UPDATE credentials_auth SET email = ?, password = ? WHERE id = ?`,
+      [email, password, id]
+    );
+    return { id, username, email };
   } catch (error) {
     throw translateSqliteError(error);
   }
 };
 
 export const deleteUser = async (id) => {
-  const query = `
-  DELETE FROM users
-  WHERE id = ?`;
+  const deleteCredentialsQuery = `DELETE FROM credentials_auth WHERE id = ?`;
+  const deleteUserQuery = `DELETE FROM users WHERE id = ?`;
 
   try {
-    const result = await database.run(query, [id]);
+    await database.run(deleteCredentialsQuery, [id]);
+    const result = await database.run(deleteUserQuery, [id]);
     return result.changes;
   } catch (error) {
     throw translateSqliteError(error);
@@ -93,10 +120,10 @@ export const deleteUser = async (id) => {
 
 export const userExists = async (username) => {
   const query = `
-    SELECT 1
-    FROM users
+    SELECT 1 FROM users
     WHERE LOWER(username) = ?
-    LIMIT 1`;
+    LIMIT 1
+  `;
   try {
     const user = await database.get(query, [username.toLowerCase()]);
     return !!user;
@@ -107,13 +134,40 @@ export const userExists = async (username) => {
 
 export const emailExists = async (email) => {
   const query = `
-  SELECT 1
-  FROM users
-  WHERE email = ?
-  LIMIT 1`;
+    SELECT 1 FROM credentials_auth
+    WHERE email = ?
+    LIMIT 1
+  `;
   try {
-    const user = await database.get(query, [email.toLowerCase()]);
-    return !!user;
+    const result = await database.get(query, [email.toLowerCase()]);
+    return !!result;
+  } catch (error) {
+    throw translateSqliteError(error);
+  }
+};
+
+export const walletExists = async (wallet) => {
+  const query = `
+    SELECT 1 FROM users
+    WHERE LOWER(wallet) = ?
+    LIMIT 1
+  `;
+  try {
+    const result = await database.get(query, [wallet.toLowerCase()]);
+    return !!result;
+  } catch (error) {
+    throw translateSqliteError(error);
+  }
+};
+
+export const findUserByWallet = async (wallet) => {
+  const query = `
+    SELECT id, username, wallet, authenticationMethod
+    FROM users
+    WHERE LOWER(wallet) = ?
+  `;
+  try {
+    return await database.get(query, [wallet.toLowerCase()]);
   } catch (error) {
     throw translateSqliteError(error);
   }
