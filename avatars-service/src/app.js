@@ -3,12 +3,16 @@ import Fastify from "fastify";
 import Multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import { initializeDatabase } from "./models/database.js";
+import { initializeFileStorage } from "./init/fileStorage.js";
 import registerRoutes from "./routes/index.js";
 import path from "path";
 
 const fastify = Fastify();
 
 async function main() {
+  await initializeDatabase();
+  await initializeFileStorage();
+
   await fastify.register(Multipart, {
     limits: {
       fieldNameSize: 100, // Max field name size in bytes
@@ -25,14 +29,6 @@ async function main() {
     root: path.resolve(AVATARS_PATH),
     prefix: "/avatars/",
   });
-
-  // Initialize the database
-  try {
-    await initializeDatabase();
-  } catch (error) {
-    console.error("Failed to initialize the database: ", error.message);
-    process.exit(1);
-  }
 
   await fastify.register(registerRoutes);
 

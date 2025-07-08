@@ -7,3 +7,4 @@
 *node_modules
 
 database
+redis-data

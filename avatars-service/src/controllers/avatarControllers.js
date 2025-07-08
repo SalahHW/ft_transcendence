@@ -1,47 +1,30 @@
 import * as avatarModels from "../models/avatarModels.js";
-import * as userServices from "../services/userServices.js";
+import { validateUserId } from "./userIdControllers.js";
 import { saveUploadedAvatar } from "../utils/uploadUtils.js";
 import { deleteFile } from "../utils/fileUtils.js";
 import path from "path";
 import { AVATARS_PATH } from "../config/config.js";
 import fs from "fs";
+import { extractFile } from "./multipartControllers.js";
+import { handleFileUpload } from "./uploadControllers.js";
 
-export const createAvatar = async (request, reply) => {
-  let fileName;
+export async function createAvatar(request, reply) {
+  let savedFile = null;
   try {
-    if (!request.isMultipart()) {
-      return reply
-        .code(406)
-        .send({ error: "Request is not multipart/form-data" });
-    }
+    const userId = await validateUserId(request);
+    const fileData = await extractFile(request);
+    savedFile = await handleFileUpload(fileData);
 
-    const userId = request.params.id;
-
-    await userServices.userExists(userId);
-
-    const fileData = await request.file();
-
-    if (!fileData) {
-      return reply.code(400).send({ error: "No file uploaded" });
-    }
-
-    ({ fileName } = await saveUploadedAvatar(fileData));
-
-    await avatarModels.createAvatar(userId, fileName);
+    await avatarModels.createAvatar(userId, savedFile.fileName);
 
     return reply.code(201).send({
       message: "Avatar uploaded successfully",
     });
   } catch (err) {
-    if (fileName) {
-      const filePath = path.join(AVATARS_PATH, fileName);
-      await deleteFile(filePath);
-    }
-    return reply.code(400).send({
-      error: err.message,
-    });
+    if (savedFile?.filePath) await deleteFile(savedFile.filePath);
+    return reply.code(err.statusCode ?? 400).send({ error: err.message });
   }
-};
+}
 
 export const readAvatar = async (request, reply) => {
   try {
