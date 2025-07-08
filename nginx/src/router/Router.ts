@@ -104,7 +104,7 @@ export default class Router {
 			handler: async function() {
 				window.history.back();
 				if (!this.cache) {
-					import('../views/ProfileView.js').then(module => {
+					import('../views/profile/ProfileView.js').then(module => {
 						const ProfileView = module.default;
 						this.cache = new ProfileView();
 						this.cache.show();
