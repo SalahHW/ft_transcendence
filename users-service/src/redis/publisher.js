@@ -4,8 +4,6 @@ import { isDev, REDIS_STREAMS, REDIS_EVENTS } from "../config/config.js";
 export async function publishUserDeleted(userId) {
   const stream = REDIS_STREAMS.USERS;
   const eventType = REDIS_EVENTS.USER_DELETED;
-
-  console.log(userId);
   const payload = {
     userId,
     deletedAt: Date.now(),

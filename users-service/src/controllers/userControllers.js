@@ -129,7 +129,6 @@ export async function deleteUser(request, reply) {
     if (!deletedUserId) {
       return reply.code(404).send({ error: "User not found" });
     }
-    console.log(userId);
     await publishUserDeleted(userId);
     return reply.code(204).send();
   } catch (error) {
