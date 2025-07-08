@@ -56,6 +56,12 @@ export class GameEngine {
       return;
     }
 
+    // ⭐ CRITICAL FIX: Prevent ball recreation if it has been disposed
+    if (room.ballDisposed) {
+      console.warn(`Cannot send forced ballUpdate for room ${roomId}: ball has been disposed and cannot be recreated`);
+      return;
+    }
+
     if (!room.ball) {
       this._initializeBall(room);
     }
@@ -123,10 +129,23 @@ export class GameEngine {
    * End game and report results
    */
   async endGame(room, roomId) {
+    // ⭐ CRITICAL FIX: Check if ball exists before accessing its properties
+    if (!room.ball) {
+      console.warn(`Cannot end game for room ${roomId}: ball has been disposed`);
+      return;
+    }
+    
     if (room.ball.player1.playerScore >= GAME_CONFIG.WINNING_SCORE || room.ball.player2.playerScore >= GAME_CONFIG.WINNING_SCORE) {
       room.isGameOver = true;
       
       const matchData = this._createMatchData(room, roomId);
+      
+      // ⭐ CRITICAL FIX: Handle case where match data creation fails
+      if (!matchData) {
+        console.warn(`Cannot end game for room ${roomId}: failed to create match data`);
+        return;
+      }
+      
       this._logMatchCompletion(matchData);
       
       // Check if this is a tournament match and handle advancement
@@ -230,6 +249,12 @@ export class GameEngine {
   }
 
   _initializeBall(room) {
+    // ⭐ CRITICAL FIX: Prevent ball recreation if it has been disposed
+    if (room.ballDisposed) {
+      console.warn(`Cannot initialize ball for room ${room.id}: ball has been disposed and cannot be recreated`);
+      return;
+    }
+    
     console.error(`Ball not initialized for room, creating new`);
     room.ball = new Ball(
       { playerId: room.players[0].id, playerScore: 0, username: room.players[0].username || 'Player 1' },
@@ -251,6 +276,12 @@ export class GameEngine {
   }
 
   _ensureBallRespawnState(room) {
+    // ⭐ CRITICAL FIX: Prevent ball state changes if it has been disposed
+    if (room.ballDisposed) {
+      console.warn(`Cannot ensure ball respawn state for room ${room.id}: ball has been disposed`);
+      return;
+    }
+    
     if (!room.ballUpdateSent) {
       room.ball.position = new BABYLON.Vector3(0, -2, 0);
       room.ball.velocity = new BABYLON.Vector3(0, 0, 0);
@@ -309,6 +340,13 @@ export class GameEngine {
   _createMatchData(room, roomId) {
     const player1 = room.players[0];
     const player2 = room.players[1];
+    
+    // ⭐ CRITICAL FIX: Check if ball exists before accessing its properties
+    if (!room.ball) {
+      console.warn(`Cannot create match data for room ${roomId}: ball has been disposed`);
+      return null;
+    }
+    
     const score1 = room.ball.player1.playerScore;
     const score2 = room.ball.player2.playerScore;
     

@@ -40,6 +40,7 @@ class Ball {
     public speed: number;
     public ballTrail: BallTrail;
     public ballPowerup: BallPowerup;
+    public isDisposed: boolean; // ⭐ NEW: Track disposal state
 
     constructor(player1: playerPaddle, player2: playerPaddle) {
         this.position = new BABYLON.Vector3(
@@ -67,6 +68,7 @@ class Ball {
         this.speed = BALL_CONSTANTS.INITIAL_SPEED;
         this.ballTrail = new BallTrail();
         this.ballPowerup = new BallPowerup(null as any);
+        this.isDisposed = false; // ⭐ NEW: Initialize disposal state
     }
 
     init(): void {
@@ -356,6 +358,7 @@ class Ball {
             this.ballMaterial.dispose();
             this.ballMaterial = null;
         }
+        this.isDisposed = true; // Mark as disposed
     }
 
     getSpeedTier(rebounds: number): number {

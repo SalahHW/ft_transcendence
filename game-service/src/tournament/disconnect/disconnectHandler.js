@@ -157,6 +157,9 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
 
     console.log(`🏆 Tournament match pre-game forfeit: ${remainingPlayer.username} wins, ${disconnectedPlayer.username} disconnected`);
 
+    // ⭐ CRITICAL FIX: Immediately dispose ball to prevent it from moving during finals
+    this.immediatelyDisposeBall(room, roomId);
+
     // Award forfeit win and handle tournament advancement
     this.awardTournamentForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'pre_game');
   }
@@ -177,6 +180,9 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     }
 
     console.log(`🏆 Tournament match in-game forfeit: ${remainingPlayer.username} wins, ${disconnectedPlayer.username} disconnected`);
+
+    // ⭐ CRITICAL FIX: Immediately dispose ball to prevent it from moving during finals
+    this.immediatelyDisposeBall(room, roomId);
 
     // Award forfeit win and handle tournament advancement
     this.awardTournamentForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'in_game');
@@ -524,6 +530,69 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     }
     
     return count;
+  }
+
+  /**
+   * ⭐ CRITICAL FIX: Immediately dispose ball to prevent movement during finals
+   */
+  immediatelyDisposeBall(room, roomId) {
+    console.log(`🏆 Immediately disposing ball for room ${roomId} due to disconnect`);
+    
+    if (room.ball) {
+      // Stop ball movement by setting velocity to zero
+      if (room.ball.velocity) {
+        room.ball.velocity.set(0, 0, 0);
+        console.log(`🏆 Ball velocity set to zero for room ${roomId}`);
+      }
+      if (room.ball.previousVelocity) {
+        room.ball.previousVelocity.set(0, 0, 0);
+      }
+      
+      // Reset ball state to prevent respawning
+      room.ball.isRespawning = false;
+      room.ball.respawnTime = 0;
+      room.ball.hasValidPosition = false;
+      
+      // Clear ball references to prevent memory leaks
+      room.ball.gameEngine = null;
+      room.ball.roomId = null;
+      
+      // ⭐ CRITICAL: Nullify the ball object to stop all movement immediately
+      room.ball = null;
+      
+      console.log(`🏆 Ball object immediately nullified for room ${roomId}`);
+    }
+    
+    // ⭐ CRITICAL FIX: Set flag to prevent ball recreation
+    room.ballDisposed = true;
+    console.log(`🏆 Ball disposal flag set for room ${roomId}`);
+    
+    // ⭐ CRITICAL FIX: Send final sync message with ballState: null to explicitly stop client processing
+    try {
+      const { gameEngine } = require('../../game/GameEngine.js');
+      gameEngine.broadcastToRoom(roomId, {
+        type: 'sync',
+        playerPositions: {},
+        ballState: null,
+        serverTime: Date.now(),
+        roomId: roomId,
+        isDelta: true,
+        ballDisposed: true // ⭐ NEW: Flag to indicate ball has been disposed
+      });
+      console.log(`🏆 Sent final sync message with ballState: null for room ${roomId}`);
+    } catch (error) {
+      console.error(`🏆 Error sending final sync message for room ${roomId}:`, error);
+    }
+    
+    // Clear ball update flags
+    room.ballUpdateSent = false;
+    if (room.ballUpdateTimeout) {
+      clearTimeout(room.ballUpdateTimeout);
+      room.ballUpdateTimeout = null;
+      console.log(`🏆 Ball update timeout cleared for room ${roomId}`);
+    }
+    
+    console.log(`🏆 Immediate ball disposal completed for room ${roomId}`);
   }
 }
 

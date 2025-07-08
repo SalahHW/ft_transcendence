@@ -24,6 +24,7 @@ export class Room {
     this.ball = null;
     this.ballUpdateSent = false;
     this.ballUpdateTimeout = null;
+    this.ballDisposed = false; // ⭐ NEW: Flag to prevent ball recreation after disposal
     
     // Match tracking
     this.matchData = {
@@ -179,6 +180,12 @@ export class Room {
   resetBall() {
     if (this.players.length < 2) {
       console.warn(`Cannot reset ball in room ${this.id}: insufficient players (${this.players.length}/2)`);
+      return;
+    }
+
+    // ⭐ CRITICAL FIX: Prevent ball recreation if it has been disposed
+    if (this.ballDisposed) {
+      console.warn(`Cannot reset ball in room ${this.id}: ball has been disposed and cannot be recreated`);
       return;
     }
 

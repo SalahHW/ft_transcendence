@@ -357,6 +357,52 @@ export class TournamentAssetDisposalManager {
       return true;
     }
     
+    // ⭐ CRITICAL FIX: Properly dispose the ball object to prevent it from moving during finals
+    if (room.ball) {
+      // Stop ball movement by setting velocity to zero
+      if (room.ball.velocity) {
+        room.ball.velocity.set(0, 0, 0);
+      }
+      if (room.ball.previousVelocity) {
+        room.ball.previousVelocity.set(0, 0, 0);
+      }
+      
+      // Reset ball state to prevent respawning
+      room.ball.isRespawning = false;
+      room.ball.respawnTime = 0;
+      room.ball.hasValidPosition = false;
+      
+      // Clear ball references to prevent memory leaks
+      room.ball.gameEngine = null;
+      room.ball.roomId = null;
+      
+      // ⭐ CRITICAL: Nullify the ball object to stop all movement
+      room.ball = null;
+      
+      console.log(`🗑️ Ball object nullified for room ${roomId}`);
+    }
+    
+    // ⭐ CRITICAL FIX: Set flag to prevent ball recreation
+    room.ballDisposed = true;
+    console.log(`🗑️ Ball disposal flag set for room ${roomId}`);
+    
+    // ⭐ CRITICAL FIX: Send final sync message with ballState: null to explicitly stop client processing
+    try {
+      const { gameEngine } = require('../../game/GameEngine.js');
+      gameEngine.broadcastToRoom(roomId, {
+        type: 'sync',
+        playerPositions: {},
+        ballState: null,
+        serverTime: Date.now(),
+        roomId: roomId,
+        isDelta: true,
+        ballDisposed: true // ⭐ NEW: Flag to indicate ball has been disposed
+      });
+      console.log(`🗑️ Sent final sync message with ballState: null for room ${roomId}`);
+    } catch (error) {
+      console.error(`🗑️ Error sending final sync message for room ${roomId}:`, error);
+    }
+    
     // Reset ball state for all players
     if (room.players) {
       room.players.forEach(player => {
@@ -364,6 +410,13 @@ export class TournamentAssetDisposalManager {
           player.resetForNewGame();
         }
       });
+    }
+    
+    // Clear ball update flags
+    room.ballUpdateSent = false;
+    if (room.ballUpdateTimeout) {
+      clearTimeout(room.ballUpdateTimeout);
+      room.ballUpdateTimeout = null;
     }
     
     console.log(`🗑️ Ball assets disposed for room ${roomId}`);
@@ -408,6 +461,11 @@ export class TournamentAssetDisposalManager {
       room.ball.powerup.reset();
     }
     
+    // ⭐ CRITICAL FIX: Clear powerup references even if ball is null
+    if (room.ball && room.ball.powerup) {
+      room.ball.powerup = null;
+    }
+    
     console.log(`🗑️ Ball powerup assets disposed for room ${roomId}`);
     return true;
   }
@@ -425,6 +483,11 @@ export class TournamentAssetDisposalManager {
     // Reset ball trail
     if (room.ball && room.ball.ballTrail && room.ball.ballTrail.dispose) {
       room.ball.ballTrail.dispose();
+    }
+    
+    // ⭐ CRITICAL FIX: Clear trail references even if ball is null
+    if (room.ball && room.ball.ballTrail) {
+      room.ball.ballTrail = null;
     }
     
     console.log(`🗑️ Ball trail assets disposed for room ${roomId}`);
@@ -449,6 +512,24 @@ export class TournamentAssetDisposalManager {
       }
       if (room.ball.isGlowing) {
         room.ball.isGlowing = false;
+      }
+      
+      // ⭐ CRITICAL FIX: Clear all ball effect references
+      if (room.ball.powerupEffects) {
+        room.ball.powerupEffects.forEach(effect => {
+          if (effect && effect.dispose) {
+            effect.dispose();
+          }
+        });
+        room.ball.powerupEffects = null;
+      }
+      
+      // Clear any other effect references
+      if (room.ball.trail) {
+        room.ball.trail = null;
+      }
+      if (room.ball.ballMaterial) {
+        room.ball.ballMaterial = null;
       }
     }
     

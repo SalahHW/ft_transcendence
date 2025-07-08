@@ -307,10 +307,29 @@ export class TournamentClientHandler {
         }
         
         console.log('🏆 Calling gameClient.initializeTournamentGame...');
-        await gameClient.initializeTournamentGame(message);
-        console.log('🏆 gameClient.initializeTournamentGame completed');
+        
+        // ⭐ CRITICAL FIX: Add error handling and retry logic for game initialization
+        try {
+          await gameClient.initializeTournamentGame(message);
+          console.log('🏆 gameClient.initializeTournamentGame completed successfully');
+        } catch (error) {
+          console.error('🏆 Error in initializeTournamentGame, attempting retry...', error);
+          
+          // ⭐ CRITICAL FIX: Retry game initialization after a short delay
+          setTimeout(async () => {
+            try {
+              console.log('🏆 Retrying gameClient.initializeTournamentGame...');
+              await gameClient.initializeTournamentGame(message);
+              console.log('🏆 gameClient.initializeTournamentGame completed on retry');
+            } catch (retryError) {
+              console.error('🏆 Failed to initialize tournament game on retry:', retryError);
+              updateGameStatus('Error starting match, please refresh the page');
+            }
+          }, 1000); // 1 second delay before retry
+        }
       } else {
         console.error('🏆 GameClient or initializeTournamentGame method not available');
+        updateGameStatus('Error: Game client not available');
       }
     } else {
       console.log('🏆 Message is not a tournament gameInit:', message);

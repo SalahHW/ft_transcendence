@@ -177,9 +177,26 @@ export class GameClient {
         
         // Create the game map if it doesn't exist
         if (!this.map) {
-            this.map = new gameMap();
-            this.map.createMap();
-            this.map.createPlayground();
+            console.log('🏆 Creating game map for tournament match...');
+            try {
+                this.map = new gameMap();
+                this.map.createMap();
+                this.map.createPlayground();
+                console.log('🏆 Game map created successfully');
+            } catch (mapError) {
+                console.error('🏆 Error creating game map:', mapError);
+                // ⭐ CRITICAL FIX: Retry map creation
+                try {
+                    console.log('🏆 Retrying game map creation...');
+                    this.map = new gameMap();
+                    this.map.createMap();
+                    this.map.createPlayground();
+                    console.log('🏆 Game map created successfully on retry');
+                } catch (retryError) {
+                    console.error('🏆 Failed to create game map on retry:', retryError);
+                    throw new Error('Failed to create game map');
+                }
+            }
         }
 
         // ⭐ FIX: Create players with actual names (like 1v1 client)
@@ -207,19 +224,38 @@ export class GameClient {
                 return;
             }
 
-        // Create fresh ball
-        if (!this.ball) {
-            this.ball = new Ball(this.player1, this.player2);
-            this.ball.createBall(this.map.getScene!);
-            if (this.ball.ballBody) {
-                this.ball.ballBody.metadata = { roomId: this.roomId };
-                this.ball.ballBody.position.set(0, -2, 0);
-                this.ball.ballBody.isVisible = true; 
-            }
-            this.ball.position.set(0, -2, 0);
-            this.ball.isRespawning = true;
-            this.ball.hasValidPosition = true;
+        // ⭐ CRITICAL FIX: Always dispose and recreate ball for clean state
+        if (this.ball) {
+            console.log('🏆 Disposing existing ball before creating new one for finals');
+            this.ball.dispose();
+            this.ball = null;
         }
+        
+        // Create fresh ball with proper initial state
+        this.ball = new Ball(this.player1, this.player2);
+        this.ball.createBall(this.map.getScene!);
+        if (this.ball.ballBody) {
+            this.ball.ballBody.metadata = { roomId: this.roomId };
+            this.ball.ballBody.position.set(0, -2, 0);
+            // ⭐ CRITICAL FIX: Ball should be invisible initially during animation
+            this.ball.ballBody.isVisible = false; 
+        }
+        this.ball.position.set(0, -2, 0);
+        this.ball.velocity.set(0, 0, 0); // ⭐ CRITICAL: Ensure velocity is zero
+        this.ball.previousVelocity.set(0, 0, 0); // ⭐ CRITICAL: Ensure previous velocity is zero
+        this.ball.isRespawning = true;
+        this.ball.hasValidPosition = true;
+        this.ball.isDisposed = false; // ⭐ CRITICAL: Reset disposal flag
+        
+        // ⭐ CRITICAL FIX: Reset all ball state to prevent any old state from persisting
+        this.ball.rebounds = 0;
+        this.ball.wasHitByPlayer = null;
+        this.ball.speed = 0;
+        this.ball.respawnTime = 0;
+        this.ball.lastPosition = new BABYLON.Vector3(0, -2, 0);
+        this.ball.lastUpdateTime = Date.now();
+        
+        console.log('🏆 Ball completely reset for finals match');
 
         // Initialize camera manager (CRITICAL for POV switching)
         if (this.map && this.player1 && this.player2 && this.localPlayerId) {
@@ -245,23 +281,32 @@ export class GameClient {
                     this.ball.ballBody.isVisible = false;
                 }
 
+                // ⭐ CRITICAL FIX: Ensure animation always runs for finals matches
+                console.log('🏆 Starting launchMatchAnimation for finals match...');
                 this.isIntroAnimationRunning = true;
-                await this.map.launchMatchAnimation();
+                
+                // Add timeout protection for animation
+                const animationPromise = this.map.launchMatchAnimation();
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Animation timeout')), 10000); // 10 second timeout
+                });
+                
+                await Promise.race([animationPromise, timeoutPromise]);
                 this.isIntroAnimationRunning = false;
+                console.log('🏆 launchMatchAnimation completed successfully');
                 
                 // CRITICAL: Switch to FPS perspective after animation
                 cameraManager.switchToFPSAfterAnimation();
                 
-                // Re-enforce visibility after animation completes
+                // Re-enforce visibility after animation completes (but NOT the ball)
                 if (this.player1?.paddleBody) {
                     this.player1.paddleBody.isVisible = true;
                 }
                 if (this.player2?.paddleBody) {
                     this.player2.paddleBody.isVisible = true;
                 }
-                if (this.ball?.ballBody) {
-                    this.ball.ballBody.isVisible = true;
-                }
+                // ⭐ CRITICAL FIX: Don't make ball visible here - let server control it through respawn
+                // The ball should only become visible when the server actually spawns it
                 
                 // CRITICAL: Send animationComplete FIRST, then request ball respawn
                 if (this.clientConnection) {
@@ -280,6 +325,36 @@ export class GameClient {
                         }
                     }, 100); // Small delay to ensure proper order
                 }
+            } else {
+                // ⭐ CRITICAL FIX: If map creation failed, create it and retry animation
+                console.error('🏆 Map not available for finals match, creating it...');
+                this.map = new gameMap();
+                this.map.createMap();
+                this.map.createPlayground();
+                
+                // Retry animation with new map
+                console.log('🏆 Retrying launchMatchAnimation with newly created map...');
+                this.isIntroAnimationRunning = true;
+                await this.map.launchMatchAnimation();
+                this.isIntroAnimationRunning = false;
+                console.log('🏆 launchMatchAnimation completed with retry');
+                
+                // Send animation complete even if map was recreated
+                if (this.clientConnection) {
+                    this.clientConnection.send({
+                        type: 'animationComplete',
+                        playerId: this.localPlayerId
+                    });
+                    
+                    setTimeout(() => {
+                        if (this.clientConnection) {
+                            this.clientConnection.send({
+                                type: 'requestBallRespawn',
+                                isInitial: true
+                            });
+                        }
+                    }, 100);
+                }
             }
             
             // Ensure all game elements are visible and ready
@@ -291,18 +366,34 @@ export class GameClient {
             
             this.startGameLoop();
         } catch (error) {
-            console.error('Error during tournament game initialization:', error);
+            console.error('🏆 Error during tournament game initialization:', error);
             
-            // Re-enforce visibility after error
+            // ⭐ CRITICAL FIX: Ensure animation still runs even after error
+            this.isIntroAnimationRunning = false;
+            
+            // Try to run animation even if there was an error
+            try {
+                if (this.map) {
+                    console.log('🏆 Attempting to run launchMatchAnimation after error...');
+                    this.isIntroAnimationRunning = true;
+                    await this.map.launchMatchAnimation();
+                    this.isIntroAnimationRunning = false;
+                    console.log('🏆 launchMatchAnimation completed after error recovery');
+                }
+            } catch (animationError) {
+                console.error('🏆 Failed to run animation after error recovery:', animationError);
+                // Continue anyway - the game should still work
+            }
+            
+            // Re-enforce visibility after error (but NOT the ball)
             if (this.player1?.paddleBody) {
                 this.player1.paddleBody.isVisible = true;
             }
             if (this.player2?.paddleBody) {
                 this.player2.paddleBody.isVisible = true;
             }
-            if (this.ball?.ballBody) {
-                this.ball.ballBody.isVisible = true;
-            }
+            // ⭐ CRITICAL FIX: Don't make ball visible here - let server control it through respawn
+            // The ball should only become visible when the server actually spawns it
             
             // Send animation complete first, then ball respawn request (after error)
             if (this.clientConnection) {
@@ -382,6 +473,13 @@ export class GameClient {
                             this.isGameLoopRunning = false;
                         }
                         this.isGameOver = false;
+                        
+                        // ⭐ CRITICAL FIX: Ensure ball is properly disposed before nullifying
+                        if (this.ball) {
+                            console.log('🏆 Disposing ball during tournament advancement');
+                            this.ball.dispose();
+                        }
+                        
                         this.map = null;
                         this.ball = null;
                         this.player1 = null;
@@ -472,9 +570,26 @@ export class GameClient {
         
         // Create the game map if it doesn't exist
         if (!this.map) {
-            this.map = new gameMap();
-            this.map.createMap();
-            this.map.createPlayground();
+            console.log('🏆 Creating game map for tournament match...');
+            try {
+                this.map = new gameMap();
+                this.map.createMap();
+                this.map.createPlayground();
+                console.log('🏆 Game map created successfully');
+            } catch (mapError) {
+                console.error('🏆 Error creating game map:', mapError);
+                // ⭐ CRITICAL FIX: Retry map creation
+                try {
+                    console.log('🏆 Retrying game map creation...');
+                    this.map = new gameMap();
+                    this.map.createMap();
+                    this.map.createPlayground();
+                    console.log('🏆 Game map created successfully on retry');
+                } catch (retryError) {
+                    console.error('🏆 Failed to create game map on retry:', retryError);
+                    throw new Error('Failed to create game map');
+                }
+            }
         }
 
         // ⭐ TOURNAMENT FIX: Always recreate players and game elements for clean start
@@ -537,9 +652,19 @@ export class GameClient {
                     this.ball.ballBody.isVisible = false;
                 }
 
+                // ⭐ CRITICAL FIX: Ensure animation always runs for tournament matches
+                console.log('🏆 Starting launchMatchAnimation for tournament match...');
                 this.isIntroAnimationRunning = true;
-                await this.map.launchMatchAnimation();
+                
+                // Add timeout protection for animation
+                const animationPromise = this.map.launchMatchAnimation();
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Animation timeout')), 10000); // 10 second timeout
+                });
+                
+                await Promise.race([animationPromise, timeoutPromise]);
                 this.isIntroAnimationRunning = false;
+                console.log('🏆 launchMatchAnimation completed successfully');
                 
                 // CRITICAL: Send animationComplete FIRST, then request ball respawn
                 if (this.clientConnection) {
@@ -558,6 +683,36 @@ export class GameClient {
                         }
                     }, 100); // Small delay to ensure proper order
                 }
+            } else {
+                // ⭐ CRITICAL FIX: If map creation failed, create it and retry animation
+                console.error('🏆 Map not available for tournament match, creating it...');
+                this.map = new gameMap();
+                this.map.createMap();
+                this.map.createPlayground();
+                
+                // Retry animation with new map
+                console.log('🏆 Retrying launchMatchAnimation with newly created map...');
+                this.isIntroAnimationRunning = true;
+                await this.map.launchMatchAnimation();
+                this.isIntroAnimationRunning = false;
+                console.log('🏆 launchMatchAnimation completed with retry');
+                
+                // Send animation complete even if map was recreated
+                if (this.clientConnection) {
+                    this.clientConnection.send({
+                        type: 'animationComplete',
+                        playerId: this.localPlayerId
+                    });
+                    
+                    setTimeout(() => {
+                        if (this.clientConnection) {
+                            this.clientConnection.send({
+                                type: 'requestBallRespawn',
+                                isInitial: true
+                            });
+                        }
+                    }, 100);
+                }
             }
             
             // ⭐ TOURNAMENT FIX: Ensure all game elements are visible and ready
@@ -569,7 +724,25 @@ export class GameClient {
             
             this.startGameLoop();
         } catch (error) {
-            console.error('Error during game initialization:', error);
+            console.error('🏆 Error during game initialization:', error);
+            
+            // ⭐ CRITICAL FIX: Ensure animation still runs even after error
+            this.isIntroAnimationRunning = false;
+            
+            // Try to run animation even if there was an error
+            try {
+                if (this.map) {
+                    console.log('🏆 Attempting to run launchMatchAnimation after error...');
+                    this.isIntroAnimationRunning = true;
+                    await this.map.launchMatchAnimation();
+                    this.isIntroAnimationRunning = false;
+                    console.log('🏆 launchMatchAnimation completed after error recovery');
+                }
+            } catch (animationError) {
+                console.error('🏆 Failed to run animation after error recovery:', animationError);
+                // Continue anyway - the game should still work
+            }
+            
             // Send animation complete first, then ball respawn request (after error)
             if (this.clientConnection) {
                 this.clientConnection.send({
@@ -609,6 +782,18 @@ export class GameClient {
     private handleBallUpdate(msg: any): void {
         if (!this.ball || !msg.ballState) {
             console.warn('Ball not initialized or no ball state in message');
+            return;
+        }
+
+        // ⭐ CRITICAL FIX: Prevent ball state processing if ball has been disposed
+        if (this.ball.isDisposed) {
+            console.warn('Ball has been disposed, ignoring ball update');
+            return;
+        }
+
+        // ⭐ CRITICAL FIX: Prevent ball state processing during animation phase
+        if (this.isIntroAnimationRunning) {
+            console.warn('Animation is running, ignoring ball update to prevent state corruption');
             return;
         }
 
@@ -659,7 +844,22 @@ export class GameClient {
             });
         }
 
-        if (msg.ballState && this.ball) {
+        // ⭐ CRITICAL FIX: Handle ball disposal flag from server
+        if (msg.ballDisposed && this.ball) {
+            console.log('🏆 Received ball disposal flag from server, disposing ball immediately');
+            this.ball.dispose();
+            this.ball = null;
+            return;
+        }
+
+        // ⭐ CRITICAL FIX: Prevent ball state processing if ball has been disposed
+        if (msg.ballState && this.ball && !this.ball.isDisposed) {
+            // ⭐ CRITICAL FIX: Prevent ball state processing during animation phase
+            if (this.isIntroAnimationRunning) {
+                console.warn('Animation is running, ignoring ball state in sync to prevent state corruption');
+                return;
+            }
+            
             this.ball.setState(msg.ballState);
         }
     }
