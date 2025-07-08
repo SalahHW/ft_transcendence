@@ -209,7 +209,7 @@ export default class AuthNanoService {
       try {
         const res = await fetch("https://elsalmajori.games:8443/refresh", {
           method: "POST",
-          credentials: "include", // 👈 indispensable pour que le cookie soit envoyé
+          credentials: "include",
         });
 
         if (res.status === 401) {
@@ -220,7 +220,6 @@ export default class AuthNanoService {
 
         if (!res.ok) {
           console.warn(`[REFRESH] Failed with status ${res.status}`);
-          // Ne pas logout tout de suite — peut être une erreur temporaire
           return;
         }
 
@@ -230,9 +229,8 @@ export default class AuthNanoService {
           "[REFRESH] Network or server error during token refresh:",
           err
         );
-        // Ne pas logout ici non plus. Attente du prochain intervalle
       }
-    }, 10_000); // 4 minutes
+    }, 240_000);
   }
 
   private _stopRefreshLoop() {
