@@ -514,12 +514,13 @@ async function notifyOtherServices(matchData) {
       name: 'users-service',
       url: process.env.USERS_SERVICE_URL || 'http://users:3000',
       endpoints: ['/api/matches/completed']
-    },
-    {
-      name: 'stats-service', 
-      url: process.env.STATS_SERVICE_URL || 'http://localhost:3002',
-      endpoints: ['/api/player-stats', '/api/match-history']
     }
+    // ⭐ FIX: Removed stats-service as it's not defined in docker-compose
+    // {
+    //   name: 'stats-service', 
+    //   url: process.env.STATS_SERVICE_URL || 'http://localhost:3002',
+    //   endpoints: ['/api/player-stats', '/api/match-history']
+    // }
   ];
 
   const notifications = services.flatMap(service => 
@@ -533,7 +534,7 @@ async function notifyOtherServices(matchData) {
 
 async function notifyService(serviceName, url, matchData) {
   try {
-
+    console.log(`📡 Notifying ${serviceName} at ${url}...`);
     
     const response = await fetch(url, {
       method: 'POST',
@@ -551,14 +552,14 @@ async function notifyService(serviceName, url, matchData) {
     }
 
     const responseData = await response.json();
-
+    console.log(`✅ Successfully notified ${serviceName}`);
     
     return responseData;
   } catch (error) {
-    console.error(`❌ Failed to notify ${serviceName}:`, error.message);
-    console.log('-'.repeat(60));
-    // Could implement retry logic here
-    throw error;
+    // ⭐ FIX: Make API communication failures less noisy
+    console.warn(`⚠️ Failed to notify ${serviceName}: ${error.message}`);
+    // Don't throw error to prevent match processing from failing
+    return null;
   }
 }
 
@@ -566,8 +567,15 @@ async function notifyService(serviceName, url, matchData) {
 export async function reportMatchResultsToAPI(matchData) {
   try {
     // Forward match data to external services only
-    await notifyOtherServices(matchData);
-    console.log('✅ Match results processing completed');
+    const results = await notifyOtherServices(matchData);
+    
+    // Check if any notifications succeeded
+    const successfulNotifications = results.filter(result => result !== null);
+    if (successfulNotifications.length > 0) {
+      console.log(`✅ Match results processing completed (${successfulNotifications.length} services notified)`);
+    } else {
+      console.warn('⚠️ Match results processing completed but no external services were notified');
+    }
   } catch (error) {
     console.error('❌ Failed to process match results:', error.message);
   }

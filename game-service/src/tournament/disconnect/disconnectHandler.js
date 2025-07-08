@@ -26,7 +26,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   /**
    * Handle unexpected disconnection in tournament matches
    */
-  handleDisconnection(playerId, roomId, reason) {
+  async handleDisconnection(playerId, roomId, reason) {
     console.log(`🏆 TOURNAMENT MATCH DISCONNECT: Player ${playerId} from room ${roomId} (${reason})`);
     
     const room = gameStateManager.getRoom(roomId);
@@ -58,10 +58,10 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       case PlayerStates.LOADING:
       case PlayerStates.ANNOUNCEMENT:
       case PlayerStates.LAUNCH_ANIMATION:
-        this.handlePreGameDisconnect(playerId, roomId, reason);
+        await this.handlePreGameDisconnect(playerId, roomId, reason);
         break;
       case PlayerStates.PLAYING:
-        this.handleInGameDisconnect(playerId, roomId, reason);
+        await this.handleInGameDisconnect(playerId, roomId, reason);
         break;
       case PlayerStates.GAME_OVER:
         this.handlePostGameDisconnect(playerId, roomId);
@@ -143,7 +143,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   /**
    * Handle disconnection during pre-game states in tournament matches
    */
-  handlePreGameDisconnect(playerId, roomId, reason) {
+  async handlePreGameDisconnect(playerId, roomId, reason) {
     console.log(`🏆 Tournament match pre-game disconnect: Player ${playerId} in room ${roomId} (${reason})`);
     
     const room = gameStateManager.getRoom(roomId);
@@ -158,7 +158,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     console.log(`🏆 Tournament match pre-game forfeit: ${remainingPlayer.username} wins, ${disconnectedPlayer.username} disconnected`);
 
     // ⭐ CRITICAL FIX: Immediately dispose ball to prevent it from moving during finals
-    this.immediatelyDisposeBall(room, roomId);
+    await this.immediatelyDisposeBall(room, roomId);
 
     // Award forfeit win and handle tournament advancement
     this.awardTournamentForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'pre_game');
@@ -167,7 +167,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   /**
    * Handle disconnection during active gameplay in tournament matches
    */
-  handleInGameDisconnect(playerId, roomId, reason) {
+  async handleInGameDisconnect(playerId, roomId, reason) {
     console.log(`🏆 Tournament match in-game disconnect: Player ${playerId} in room ${roomId} (${reason})`);
     
     const room = gameStateManager.getRoom(roomId);
@@ -182,7 +182,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     console.log(`🏆 Tournament match in-game forfeit: ${remainingPlayer.username} wins, ${disconnectedPlayer.username} disconnected`);
 
     // ⭐ CRITICAL FIX: Immediately dispose ball to prevent it from moving during finals
-    this.immediatelyDisposeBall(room, roomId);
+    await this.immediatelyDisposeBall(room, roomId);
 
     // Award forfeit win and handle tournament advancement
     this.awardTournamentForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'in_game');
@@ -535,7 +535,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   /**
    * ⭐ CRITICAL FIX: Immediately dispose ball to prevent movement during finals
    */
-  immediatelyDisposeBall(room, roomId) {
+  async immediatelyDisposeBall(room, roomId) {
     console.log(`🏆 Immediately disposing ball for room ${roomId} due to disconnect`);
     
     if (room.ball) {
@@ -569,7 +569,8 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     
     // ⭐ CRITICAL FIX: Send final sync message with ballState: null to explicitly stop client processing
     try {
-      const { gameEngine } = require('../../game/GameEngine.js');
+      // Import gameEngine dynamically to avoid circular dependencies
+      const { gameEngine } = await import('../../game/GameEngine.js');
       gameEngine.broadcastToRoom(roomId, {
         type: 'sync',
         playerPositions: {},

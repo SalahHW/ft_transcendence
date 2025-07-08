@@ -388,7 +388,8 @@ export class TournamentAssetDisposalManager {
     
     // ⭐ CRITICAL FIX: Send final sync message with ballState: null to explicitly stop client processing
     try {
-      const { gameEngine } = require('../../game/GameEngine.js');
+      // Import gameEngine dynamically to avoid circular dependencies
+      const { gameEngine } = await import('../../game/GameEngine.js');
       gameEngine.broadcastToRoom(roomId, {
         type: 'sync',
         playerPositions: {},
