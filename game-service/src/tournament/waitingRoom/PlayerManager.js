@@ -63,6 +63,8 @@ export class TournamentPlayerManager {
       this.waitingRooms.set(waitingRoomId, {
         id: waitingRoomId,
         players: [],
+        disconnectedPlayers: [], // Track disconnected players
+        playerStatus: new Map(), // Track player connection status
         tournamentRooms: tournamentRooms,
         createdAt: Date.now(),
         phase: TournamentPhases.WAITING
@@ -89,6 +91,15 @@ export class TournamentPlayerManager {
       id: playerId,
       username: username,
       joinedAt: Date.now(),
+      lastActivity: Date.now(),
+      connected: true, // Track connection status
+      disconnectedAt: null // Track when player disconnected
+    });
+    
+    // Initialize player status in the Map
+    waitingRoomData.playerStatus.set(playerId, {
+      connected: true,
+      disconnectedAt: null,
       lastActivity: Date.now()
     });
     
@@ -202,7 +213,24 @@ export class TournamentPlayerManager {
       if (player) {
         player.lastActivity = Date.now();
         player.hasWebSocket = true;
+        player.connected = true; // Mark as connected
+        player.disconnectedAt = null; // Clear disconnection timestamp
+        
+        // Update player status in the Map
+        const playerStatus = waitingRoomData.playerStatus.get(playerId);
+        if (playerStatus) {
+          playerStatus.connected = true;
+          playerStatus.disconnectedAt = null;
+          playerStatus.lastActivity = Date.now();
+        }
+
+        // Remove from disconnected players array if present
+        if (waitingRoomData.disconnectedPlayers.includes(playerId)) {
+          waitingRoomData.disconnectedPlayers = waitingRoomData.disconnectedPlayers.filter(id => id !== playerId);
+        }
+
         console.log(`🏆 Marked player ${player.username} as WebSocket connected in waiting room ${waitingRoomId}`);
+        console.log(`🏆 Tournament ${waitingRoomId} - Connected: ${waitingRoomData.players.filter(p => p.connected).length}, Disconnected: ${waitingRoomData.disconnectedPlayers.length}`);
       }
     }
   }

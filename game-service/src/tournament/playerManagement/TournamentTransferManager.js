@@ -273,33 +273,39 @@ export class TournamentTransferManager {
         console.log(`🏆 Transferred winner ${winnerPlayer.username} to winner final`);
       }
       
-      // Transfer loser to loser final
-      if (loserPlayer.ws && loserPlayer.ws.readyState === 1) {
-        // Remove player from semi-final room
-        const semiFinalRoom = gameStateManager.getRoom(semiFinalRoomId);
-        if (semiFinalRoom) {
-          semiFinalRoom.players = semiFinalRoom.players.filter(p => p.id !== loserPlayer.id);
+      // Check if forfeit loser final scenario should be handled
+      if (this.shouldHandleForfeitLoserFinalScenario(waitingRoomId, loser)) {
+        console.log(`🏆 Forfeit scenario detected for ${loserPlayer.username}, assigning 3rd place instead of transferring to loser final`);
+        await this.handleForfeitLoserFinalScenario(waitingRoomId, loser);
+      } else {
+        // Transfer loser to loser final (normal flow)
+        if (loserPlayer.ws && loserPlayer.ws.readyState === 1) {
+          // Remove player from semi-final room
+          const semiFinalRoom = gameStateManager.getRoom(semiFinalRoomId);
+          if (semiFinalRoom) {
+            semiFinalRoom.players = semiFinalRoom.players.filter(p => p.id !== loserPlayer.id);
+          }
+          
+          // ⭐ FIX: Reset player state for new game before transfer
+          loserPlayer.resetForNewGame();
+          
+          // Add player to loser final room
+          loserFinal.addPlayer(loserPlayer);
+          loserPlayer.assignToRoom(loserFinal.id, 0); // Role will be reassigned when finals start
+          loserPlayer.ws.roomId = loserFinal.id;
+          
+          console.log(`🏆 Added ${loserPlayer.username} to loser final room. Room now has ${loserFinal.players.length} players`);
+          
+          // Send advancement message
+          this.tournamentManager.communicationManager.sendToPlayer(loserFinal.id, loserPlayer.id, {
+            type: 'tournamentAdvancement',
+            status: 'transferred_to_final',
+            finalType: 'loser',
+            message: '🏆 You advanced to the Loser Final!'
+          });
+          
+          console.log(`🏆 Transferred loser ${loserPlayer.username} to loser final`);
         }
-        
-        // ⭐ FIX: Reset player state for new game before transfer
-        loserPlayer.resetForNewGame();
-        
-        // Add player to loser final room
-        loserFinal.addPlayer(loserPlayer);
-        loserPlayer.assignToRoom(loserFinal.id, 0); // Role will be reassigned when finals start
-        loserPlayer.ws.roomId = loserFinal.id;
-        
-        console.log(`🏆 Added ${loserPlayer.username} to loser final room. Room now has ${loserFinal.players.length} players`);
-        
-        // Send advancement message
-        this.tournamentManager.communicationManager.sendToPlayer(loserFinal.id, loserPlayer.id, {
-          type: 'tournamentAdvancement',
-          status: 'transferred_to_final',
-          finalType: 'loser',
-          message: '🏆 You advanced to the Loser Final!'
-        });
-        
-        console.log(`🏆 Transferred loser ${loserPlayer.username} to loser final`);
       }
       
       // Verify transfer completion
@@ -398,5 +404,174 @@ export class TournamentTransferManager {
     if (!room) return null;
     
     return room.players.find(p => p.id === playerId);
+  }
+
+  /**
+   * Update player disconnection status in waiting room data
+   */
+  updatePlayerDisconnectionStatus(waitingRoomId, playerId, disconnected = true) {
+    const waitingRoomData = this.tournamentManager.waitingRooms.get(waitingRoomId);
+    if (!waitingRoomData) return;
+
+    // Check if player is already in the correct state to prevent duplicate tracking
+    const player = waitingRoomData.players.find(p => p.id === playerId);
+    if (player && player.connected === !disconnected) {
+      console.log(`🏆 Player ${playerId} already has correct disconnection status (${disconnected}), skipping update`);
+      return;
+    }
+
+    if (player) {
+      player.connected = !disconnected;
+      player.disconnectedAt = disconnected ? Date.now() : null;
+    }
+
+    const playerStatus = waitingRoomData.playerStatus.get(playerId);
+    if (playerStatus) {
+      playerStatus.connected = !disconnected;
+      playerStatus.disconnectedAt = disconnected ? Date.now() : null;
+    }
+
+    // Update disconnected players array
+    if (disconnected && !waitingRoomData.disconnectedPlayers.includes(playerId)) {
+      waitingRoomData.disconnectedPlayers.push(playerId);
+    } else if (!disconnected) {
+      waitingRoomData.disconnectedPlayers = waitingRoomData.disconnectedPlayers.filter(id => id !== playerId);
+    }
+
+    console.log(`🏆 Updated disconnection status for player ${playerId}: disconnected=${disconnected}`);
+    console.log(`🏆 Tournament ${waitingRoomId} - Connected: ${this.getConnectedPlayerCount(waitingRoomId)}, Disconnected: ${waitingRoomData.disconnectedPlayers.length}`);
+  }
+
+  /**
+   * Get count of connected players in tournament
+   */
+  getConnectedPlayerCount(waitingRoomId) {
+    const waitingRoomData = this.tournamentManager.waitingRooms.get(waitingRoomId);
+    if (!waitingRoomData) return 0;
+
+    return waitingRoomData.players.filter(p => p.connected).length;
+  }
+
+  /**
+   * Check if forfeit loser final scenario should be handled
+   */
+  shouldHandleForfeitLoserFinalScenario(waitingRoomId, loser) {
+    const waitingRoomData = this.tournamentManager.waitingRooms.get(waitingRoomId);
+    if (!waitingRoomData) return false;
+
+    const winnerFinal = waitingRoomData.tournamentRooms.winnerFinal;
+    const loserFinal = waitingRoomData.tournamentRooms.loserFinal;
+
+    // Check conditions:
+    // 1. Winner final is full (2 players) OR has been played to completion
+    // 2. Disconnected players = 1 AND connected players = 3
+    // 3. Loser final has no active players
+    const isWinnerFinalFull = winnerFinal.players.length === 2;
+    const isWinnerFinalComplete = waitingRoomData.finalResults?.winner_final;
+    const disconnectedCount = waitingRoomData.disconnectedPlayers.length;
+    const connectedCount = this.getConnectedPlayerCount(waitingRoomId);
+    const isLoserFinalEmpty = loserFinal.players.length === 0;
+
+    const shouldAssignThirdPlace = Boolean(
+      (isWinnerFinalFull || isWinnerFinalComplete) &&
+      disconnectedCount === 1 &&
+      connectedCount === 3 &&
+      isLoserFinalEmpty
+    );
+
+    console.log(`🏆 Forfeit scenario check for ${loser.username}:`);
+    console.log(`  Winner final full: ${isWinnerFinalFull}, complete: ${isWinnerFinalComplete}`);
+    console.log(`  Disconnected: ${disconnectedCount}, Connected: ${connectedCount}`);
+    console.log(`  Loser final empty: ${isLoserFinalEmpty}`);
+    console.log(`  Should assign 3rd place: ${shouldAssignThirdPlace}`);
+    console.log(`  All players in waiting room: [${waitingRoomData.players.map(p => `${p.username}(${p.id}) - connected: ${p.connected}`).join(', ')}]`);
+    console.log(`  Disconnected players array: [${waitingRoomData.disconnectedPlayers.join(', ')}]`);
+
+    return shouldAssignThirdPlace;
+  }
+
+  /**
+   * Handle forfeit loser final scenario - assign 3rd place instead of transferring to loser final
+   */
+  async handleForfeitLoserFinalScenario(waitingRoomId, loser) {
+    console.log(`🏆 Handling forfeit loser final scenario for ${loser.username} in tournament ${waitingRoomId}`);
+
+    const waitingRoomData = this.tournamentManager.waitingRooms.get(waitingRoomId);
+    if (!waitingRoomData) {
+      console.error(`🏆 Waiting room data not found for forfeit scenario`);
+      return;
+    }
+
+    // Find the actual player object
+    const loserPlayer = this._findPlayerInAnyTournamentRoom(waitingRoomId, loser.id);
+    if (!loserPlayer) {
+      console.error(`🏆 Could not find loser player object for forfeit scenario`);
+      return;
+    }
+
+    // Remove player from their current room
+    const currentRoom = gameStateManager.getRoom(loserPlayer.ws?.roomId);
+    if (currentRoom) {
+      currentRoom.players = currentRoom.players.filter(p => p.id !== loserPlayer.id);
+    }
+
+    // Mark player as disconnected in waiting room data
+    this.updatePlayerDisconnectionStatus(waitingRoomId, loserPlayer.id, true);
+
+    // Send 3rd place completion message
+    if (loserPlayer.ws && loserPlayer.ws.readyState === 1) {
+      try {
+        loserPlayer.ws.send(JSON.stringify({
+          type: 'tournamentAdvancement',
+          status: 'final_match_complete',
+          playerPlacement: 3,
+          isWinner: false,
+          opponentName: 'Tournament',
+          message: '🏆 Tournament complete! You finished 3rd place!'
+        }));
+
+        // Close WebSocket connection for 3rd place player
+        console.log(`🏆 Closing WebSocket connection for 3rd place player ${loserPlayer.username} (${loserPlayer.id})`);
+        loserPlayer.ws.close(1000, 'Tournament placement determined - 3rd place');
+      } catch (error) {
+        console.error(`Failed to send 3rd place completion to ${loserPlayer.username}:`, error);
+      }
+    }
+
+    // Store the forfeit result for tournament completion
+    if (!waitingRoomData.finalResults) {
+      waitingRoomData.finalResults = {};
+    }
+    
+    // Create a forfeit result for the loser final
+    waitingRoomData.finalResults['loser_final'] = { 
+      winner: loser, // 3rd place
+      loser: loser, // 4th place (same player due to forfeit)
+      isForfeit: true 
+    };
+
+    console.log(`🏆 Assigned 3rd place to ${loserPlayer.username} due to forfeit scenario`);
+  }
+
+  /**
+   * Find a player in any tournament room
+   */
+  _findPlayerInAnyTournamentRoom(waitingRoomId, playerId) {
+    const waitingRoomData = this.tournamentManager.waitingRooms.get(waitingRoomId);
+    if (!waitingRoomData) return null;
+
+    const rooms = [
+      waitingRoomData.tournamentRooms.semiFinalA,
+      waitingRoomData.tournamentRooms.semiFinalB,
+      waitingRoomData.tournamentRooms.winnerFinal,
+      waitingRoomData.tournamentRooms.loserFinal
+    ];
+
+    for (const room of rooms) {
+      const player = room.players.find(p => p.id === playerId);
+      if (player) return player;
+    }
+
+    return null;
   }
 } 

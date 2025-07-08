@@ -161,7 +161,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     await this.immediatelyDisposeBall(room, roomId);
 
     // Award forfeit win and handle tournament advancement
-    this.awardTournamentForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'pre_game');
+    await this.awardTournamentForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'pre_game');
   }
 
   /**
@@ -185,7 +185,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     await this.immediatelyDisposeBall(room, roomId);
 
     // Award forfeit win and handle tournament advancement
-    this.awardTournamentForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'in_game');
+    await this.awardTournamentForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'in_game');
   }
 
   /**
@@ -207,11 +207,17 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   /**
    * Award forfeit win to remaining player in tournament matches
    */
-  awardTournamentForfeitWin(room, roomId, winner, loser, reason, context) {
+  async awardTournamentForfeitWin(room, roomId, winner, loser, reason, context) {
     console.log(`🏆 Awarding tournament forfeit win: ${winner.username} defeats ${loser.username} in ${room.metadata?.roomType}`);
     
     // Mark game as over immediately
     room.isGameOver = true;
+
+    // Update disconnection tracking in waiting room data
+    const waitingRoomId = room.metadata?.waitingRoomId;
+    if (waitingRoomId) {
+      await this.updateTournamentDisconnectionStatus(waitingRoomId, loser.id, true);
+    }
     
     // Create tournament match data
     const matchData = this.createTournamentForfeitMatchData(room, roomId, winner, loser, reason, context);
@@ -361,6 +367,49 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     }
     
     this.removePlayerFromGame(playerId);
+  }
+
+  /**
+   * Update disconnection status in tournament waiting room data
+   */
+  async updateTournamentDisconnectionStatus(waitingRoomId, playerId, disconnected = true) {
+    try {
+      // Import tournament manager dynamically to avoid circular dependencies
+      const { tournamentManager } = await import('../TournamentManager.js');
+      
+      const waitingRoomData = tournamentManager.waitingRooms.get(waitingRoomId);
+      if (!waitingRoomData) return;
+
+      // Check if player is already in the correct state to prevent duplicate tracking
+      const player = waitingRoomData.players.find(p => p.id === playerId);
+      if (player && player.connected === !disconnected) {
+        console.log(`🏆 Player ${playerId} already has correct disconnection status (${disconnected}), skipping update`);
+        return;
+      }
+
+      if (player) {
+        player.connected = !disconnected;
+        player.disconnectedAt = disconnected ? Date.now() : null;
+      }
+
+      const playerStatus = waitingRoomData.playerStatus.get(playerId);
+      if (playerStatus) {
+        playerStatus.connected = !disconnected;
+        playerStatus.disconnectedAt = disconnected ? Date.now() : null;
+      }
+
+      // Update disconnected players array
+      if (disconnected && !waitingRoomData.disconnectedPlayers.includes(playerId)) {
+        waitingRoomData.disconnectedPlayers.push(playerId);
+      } else if (!disconnected) {
+        waitingRoomData.disconnectedPlayers = waitingRoomData.disconnectedPlayers.filter(id => id !== playerId);
+      }
+
+      console.log(`🏆 Updated tournament disconnection status for player ${playerId}: disconnected=${disconnected}`);
+      console.log(`🏆 Tournament ${waitingRoomId} - Connected: ${waitingRoomData.players.filter(p => p.connected).length}, Disconnected: ${waitingRoomData.disconnectedPlayers.length}`);
+    } catch (error) {
+      console.error(`🏆 Error updating tournament disconnection status:`, error);
+    }
   }
 
   /**

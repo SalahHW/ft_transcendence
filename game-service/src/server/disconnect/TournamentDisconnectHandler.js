@@ -85,9 +85,25 @@ export class TournamentDisconnectHandler extends BaseDisconnectHandler {
     const removedPlayer = waitingRoomData.players.find(p => p.id === playerId);
     const playerUsername = removedPlayer?.username || playerId;
     
-    // Remove player from waiting room data
-    waitingRoomData.players = waitingRoomData.players.filter(p => p.id !== playerId);
-    
+    // Mark player as disconnected instead of removing them
+    const player = waitingRoomData.players.find(p => p.id === playerId);
+    if (player) {
+      player.connected = false;
+      player.disconnectedAt = Date.now();
+    }
+
+    // Update player status in the Map
+    const playerStatus = waitingRoomData.playerStatus.get(playerId);
+    if (playerStatus) {
+      playerStatus.connected = false;
+      playerStatus.disconnectedAt = Date.now();
+    }
+
+    // Add to disconnected players array
+    if (!waitingRoomData.disconnectedPlayers.includes(playerId)) {
+      waitingRoomData.disconnectedPlayers.push(playerId);
+    }
+
     // Remove player from room
     room.removePlayer(playerId);
     
