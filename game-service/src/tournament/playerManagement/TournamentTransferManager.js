@@ -168,6 +168,8 @@ export class TournamentTransferManager {
     
     const semiFinalA = waitingRoomData.tournamentRooms.semiFinalA;
     const semiFinalB = waitingRoomData.tournamentRooms.semiFinalB;
+    const winnerFinal = waitingRoomData.tournamentRooms.winnerFinal;
+    const loserFinal = waitingRoomData.tournamentRooms.loserFinal;
     
     // Check if both semi-final rooms are ready
     const roomAReady = semiFinalA.players.length === 2 && 
@@ -175,17 +177,23 @@ export class TournamentTransferManager {
     const roomBReady = semiFinalB.players.length === 2 && 
                       semiFinalB.players.every(p => p.ws && p.ws.readyState === 1);
     
+    // Check if any final rooms have players (indicating a forfeit scenario)
+    const hasPlayersInFinals = (winnerFinal.players.length > 0) || (loserFinal.players.length > 0);
+    
     console.log(`🏆 Room readiness check:`);
     console.log(`  Semi-Final A: ${semiFinalA.players.length}/2 players, ready: ${roomAReady}`);
     console.log(`  Semi-Final B: ${semiFinalB.players.length}/2 players, ready: ${roomBReady}`);
     console.log(`  Semi-Final A players: [${semiFinalA.players.map(p => `${p.username}(${p.id})`).join(', ')}]`);
     console.log(`  Semi-Final B players: [${semiFinalB.players.map(p => `${p.username}(${p.id})`).join(', ')}]`);
+    console.log(`  Players in finals: ${hasPlayersInFinals} (Winner: ${winnerFinal.players.length}, Loser: ${loserFinal.players.length})`);
     
-    if (roomAReady && roomBReady) {
-      console.log(`🏆 All semi-final rooms ready, starting matches`);
+    // Start matches if both semi-finals are ready OR if one is ready and there are players in finals (forfeit scenario)
+    if ((roomAReady && roomBReady) || 
+        ((roomAReady || roomBReady) && hasPlayersInFinals)) {
+      console.log(`🏆 Semi-final matches ready to start (${roomAReady && roomBReady ? 'both ready' : 'forfeit scenario'})`);
       this.tournamentManager.matchManager.startSemiFinalMatches(waitingRoomId);
     } else {
-      console.log(`🏆 Semi-final rooms not ready yet. A: ${roomAReady}, B: ${roomBReady}`);
+      console.log(`🏆 Semi-final rooms not ready yet. A: ${roomAReady}, B: ${roomBReady}, Finals: ${hasPlayersInFinals}`);
       // Retry after a delay
       setTimeout(() => {
         this.checkSemiFinalReadiness(waitingRoomId);
