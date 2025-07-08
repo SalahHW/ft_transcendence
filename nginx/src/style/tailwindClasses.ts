@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:41:14 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/08 18:14:45 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/08 21:38:32 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,12 +32,12 @@ export const UI_THEME = {
 			placeholder: 'text-gray-400',
 		},
 		green: {
-			light: '#30EF76',
-			dark: '#0FCB53'
+			light: '#0DCB53',
+			dark: '#258246'
 		},
 		red: {
-			light: '#F04249',
-			dark: '#D41018'
+			light: '#D40F17',
+			dark: '#862427'
 		}
 	},
 
