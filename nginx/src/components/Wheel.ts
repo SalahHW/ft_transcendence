@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 16:41:12 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/05 15:18:20 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/08 23:57:24 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,11 +15,11 @@ import { UI_THEME } from "../style/tailwindClasses.js";
 import AuthService from "../auth/AuthNanoService.js";
 
 interface Option {
-	label: string;
-	onClick?: () => void | Promise<void>;
-	subMenu?: Option[];
-	icon?: string;
-	condition?: () => boolean;
+  label: string;
+  onClick?: () => void | Promise<void>;
+  subMenu?: Option[];
+  icon?: string;
+  condition?: () => boolean;
 }
 
 /*
@@ -116,74 +116,74 @@ export default class Wheel {
 			throw new Error(`Element with id ${elementId} not found`);
 		}
 
-		this._setupKeyboardEvents();
-		this._setupMouseEvents();
+    this._setupKeyboardEvents();
+    this._setupMouseEvents();
 
-		this.render();
-	}
+    this.render();
+  }
 
-	private _setupKeyboardEvents(): void {
-		document.addEventListener("keydown", async (event: KeyboardEvent) => {
+  private _setupKeyboardEvents(): void {
+    document.addEventListener("keydown", async (event: KeyboardEvent) => {
 			const target = event.target as HTMLElement;
 			if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
 				return;
 			}
 
-			if (event.key === 'Shift') {
+      if (event.key === 'Shift') {
 				if (this._isVisible) return;
-				event.preventDefault();
-				await this.showWheel();
-			}
-		});
+        event.preventDefault();
+        await this.showWheel();
+      }
+    });
 
-		document.addEventListener("keyup", (event: KeyboardEvent) => {
-			if (event.key === 'Shift') {
-				this.hideWheel();
-			}
-		});
-	}
+    document.addEventListener("keyup", (event: KeyboardEvent) => {
+      if (event.key === 'Shift') {
+        this.hideWheel();
+      }
+    });
+  }
 
-	private _setupMouseEvents(): void {
-		this._element.addEventListener("click", (event: MouseEvent) => {
-			event.stopPropagation();
-		});
-	}
+  private _setupMouseEvents(): void {
+    this._element.addEventListener("click", (event: MouseEvent) => {
+      event.stopPropagation();
+    });
+  }
 
-	private async _selectOption(): Promise<void> {
-		const selectedOption = this._wheelOptions[this._selectedIndex];
-		if (!selectedOption) return;
+  private async _selectOption(): Promise<void> {
+    const selectedOption = this._wheelOptions[this._selectedIndex];
+    if (!selectedOption) return;
 
-		if (selectedOption.subMenu && selectedOption.subMenu.length > 0) {
-			// Naviguer vers le sous-menu
-			this._optionHistory.push(this._wheelOptions);
-			this._wheelOptions = selectedOption.subMenu;
-			this._selectedIndex = 0;
-			this._renderWheel();
-		} else if (selectedOption.onClick) {
-			// Exécuter l'action
-			await selectedOption.onClick();
-			this.hideWheel();
-		}
-	}
+    if (selectedOption.subMenu && selectedOption.subMenu.length > 0) {
+      // Naviguer vers le sous-menu
+      this._optionHistory.push(this._wheelOptions);
+      this._wheelOptions = selectedOption.subMenu;
+      this._selectedIndex = 0;
+      this._renderWheel();
+    } else if (selectedOption.onClick) {
+      // Exécuter l'action
+      await selectedOption.onClick();
+      this.hideWheel();
+    }
+  }
 
-	private _goBack(): void {
-		if (this._optionHistory.length > 0) {
-			this._wheelOptions = this._optionHistory.pop()!;
-			this._selectedIndex = 0;
-			this._renderWheel();
-		} else {
-			this.hideWheel();
-		}
-	}
+  private _goBack(): void {
+    if (this._optionHistory.length > 0) {
+      this._wheelOptions = this._optionHistory.pop()!;
+      this._selectedIndex = 0;
+      this._renderWheel();
+    } else {
+      this.hideWheel();
+    }
+  }
 
-	private _updateSelection(): void {
-		this._renderWheel();
-	}
+  private _updateSelection(): void {
+    this._renderWheel();
+  }
 
-	public async showWheel(): Promise<void> {
-		if (this._isVisible) return;
+  public async showWheel(): Promise<void> {
+    if (this._isVisible) return;
 
-		this._userIsLoggedIn = await this._authService.isLoggedIn();
+    this._userIsLoggedIn = await this._authService.isLoggedIn();
 
 		this._isVisible = true;
 		this._selectedIndex = 0;
@@ -192,62 +192,62 @@ export default class Wheel {
 		);
 		this._optionHistory = [];
 
-		this._element.classList.remove("hidden");
-		this._element.classList.add("flex");
-		this._renderWheel();
+    this._element.classList.remove("hidden");
+    this._element.classList.add("flex");
+    this._renderWheel();
 
-		// Animation d'entrée
-		requestAnimationFrame(() => {
-			this._element.classList.add("opacity-100", "scale-100");
-			this._element.classList.remove("opacity-0", "scale-95");
-		});
-	}
+    // Animation d'entrée
+    requestAnimationFrame(() => {
+      this._element.classList.add("opacity-100", "scale-100");
+      this._element.classList.remove("opacity-0", "scale-95");
+    });
+  }
 
-	public hideWheel(): void {
-		if (!this._isVisible) return;
+  public hideWheel(): void {
+    if (!this._isVisible) return;
 
-		this._isVisible = false;
+    this._isVisible = false;
 
-		// Animation de sortie
-		this._element.classList.add("opacity-0", "scale-95");
-		this._element.classList.remove("opacity-100", "scale-100");
+    // Animation de sortie
+    this._element.classList.add("opacity-0", "scale-95");
+    this._element.classList.remove("opacity-100", "scale-100");
 
-		setTimeout(() => {
-			this._element.classList.add("hidden");
-			this._element.classList.remove("flex");
-		}, 150);
-	}
+    setTimeout(() => {
+      this._element.classList.add("hidden");
+      this._element.classList.remove("flex");
+    }, 150);
+  }
 
-	public render(): void {
-		// Structure de base de la roue avec les styles centralisés
-		this._element.className = UI_THEME.components.overlay;
+  public render(): void {
+    // Structure de base de la roue avec les styles centralisés
+    this._element.className = UI_THEME.components.overlay;
 
-		this._element.innerHTML = `
+    this._element.innerHTML = `
 			<div class="wheel-content relative select-none">
 				<svg class="wheel-svg select-none" width="960" height="960" viewBox="0 0 960 960" style="user-select: none; -webkit-user-select: none; -moz-user-select: none;">
 					<!-- Le contenu sera généré dynamiquement -->
 				</svg>
 			</div>
 		`;
-	}
+  }
 
 	private _renderWheel(): void {
 		const svg = this._element.querySelector(".wheel-svg") as SVGElement;
 		if (!svg) return;
 
-		const centerX = 480;
-		const centerY = 480;
-		const radius = 360;
-		const innerRadius = 90; // Réduit de moitié (180 → 90)
-		const optionCount = this._wheelOptions.length;
+    const centerX = 480;
+    const centerY = 480;
+    const radius = 360;
+    const innerRadius = 90; // Réduit de moitié (180 → 90)
+    const optionCount = this._wheelOptions.length;
 
 		// Nettoyer le SVG
 		svg.innerHTML = "";
 
-		if (optionCount === 0) return;
+    if (optionCount === 0) return;
 
-		const angleStep = (2 * Math.PI) / optionCount;
-		const startAngle = -Math.PI / 2; // Commencer en haut
+    const angleStep = (2 * Math.PI) / optionCount;
+    const startAngle = -Math.PI / 2; // Commencer en haut
 
 		// Créer le cercle central avec les styles centralisés
 		const centerCircle = document.createElementNS(
@@ -270,23 +270,23 @@ export default class Wheel {
 			this._goBack();
 		});
 
-		svg.appendChild(centerCircle);
+    svg.appendChild(centerCircle);
 
-		this._wheelOptions.forEach((option, index) => {
-			const angle1 = startAngle + index * angleStep;
-			const angle2 = startAngle + (index + 1) * angleStep;
+    this._wheelOptions.forEach((option, index) => {
+      const angle1 = startAngle + index * angleStep;
+      const angle2 = startAngle + (index + 1) * angleStep;
 
-			const isSelected = index === this._selectedIndex;
+      const isSelected = index === this._selectedIndex;
 
-			// Calculer les points du segment
-			const x1 = centerX + Math.cos(angle1) * innerRadius;
-			const y1 = centerY + Math.sin(angle1) * innerRadius;
-			const x2 = centerX + Math.cos(angle1) * radius;
-			const y2 = centerY + Math.sin(angle1) * radius;
-			const x3 = centerX + Math.cos(angle2) * radius;
-			const y3 = centerY + Math.sin(angle2) * radius;
-			const x4 = centerX + Math.cos(angle2) * innerRadius;
-			const y4 = centerY + Math.sin(angle2) * innerRadius;
+      // Calculer les points du segment
+      const x1 = centerX + Math.cos(angle1) * innerRadius;
+      const y1 = centerY + Math.sin(angle1) * innerRadius;
+      const x2 = centerX + Math.cos(angle1) * radius;
+      const y2 = centerY + Math.sin(angle1) * radius;
+      const x3 = centerX + Math.cos(angle2) * radius;
+      const y3 = centerY + Math.sin(angle2) * radius;
+      const x4 = centerX + Math.cos(angle2) * innerRadius;
+      const y4 = centerY + Math.sin(angle2) * innerRadius;
 
 			// Créer le segment
 			const path = document.createElementNS(
@@ -337,13 +337,13 @@ export default class Wheel {
 				}
 			});
 
-			svg.appendChild(path);
+      svg.appendChild(path);
 
-			// Ajouter le texte et l'icône
-			const textAngle = angle1 + angleStep / 2;
-			const textRadius = (radius + innerRadius) / 2;
-			const textX = centerX + Math.cos(textAngle) * textRadius;
-			const textY = centerY + Math.sin(textAngle) * textRadius;
+      // Ajouter le texte et l'icône
+      const textAngle = angle1 + angleStep / 2;
+      const textRadius = (radius + innerRadius) / 2;
+      const textX = centerX + Math.cos(textAngle) * textRadius;
+      const textY = centerY + Math.sin(textAngle) * textRadius;
 
 			// Créer un groupe pour le texte et l'icône
 			const textGroup = document.createElementNS(
@@ -399,8 +399,8 @@ export default class Wheel {
 			label.textContent = option.label;
 			textGroup.appendChild(label);
 
-			svg.appendChild(textGroup);
-		});
+      svg.appendChild(textGroup);
+    });
 
 		// Ajouter un petit indicateur au centre si on est dans un sous-menu
 		if (this._optionHistory.length > 0) {

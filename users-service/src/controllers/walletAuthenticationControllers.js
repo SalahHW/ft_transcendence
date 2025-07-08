@@ -70,7 +70,8 @@ export async function registerWithWallet(request, reply) {
       path: "/",
       httpOnly: true,
       sameSite: "Strict",
-      secure: false,
+      secure: true,
+      maxAge: 300,
     });
 
     return reply.code(201).send({ id: user.id, username });
@@ -132,7 +133,8 @@ export async function loginWithWallet(request, reply) {
       path: "/",
       httpOnly: true,
       sameSite: "Strict",
-      secure: false,
+      secure: true,
+      maxAge: 300,
     });
 
     return reply.code(200).send({ id: user.id, username: user.username });

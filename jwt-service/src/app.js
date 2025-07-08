@@ -1,15 +1,17 @@
 import Fastify from "fastify";
 import jwt from "@fastify/jwt";
+import cookie from "@fastify/cookie";
+
 import { SECRETKEY, PORT } from "./config/config.js";
 import registerRoutes from "./routes/index.js";
 
 const fastify = Fastify();
+
+fastify.register(cookie);
 fastify.register(jwt, { secret: SECRETKEY });
 
-// Registers routes
 await fastify.register(registerRoutes);
 
-// Start the server
 fastify.listen(
   {
     port: PORT,

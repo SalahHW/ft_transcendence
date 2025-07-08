@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: Invalid Date        by              +#+  #+#    #+#             */
-/*   Updated: 2025/07/05 15:13:45 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/08 23:59:57 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,14 +15,14 @@
 // TODO: (opt) Mettre des views pour les differents forms de APITestPage
 
 interface Route {
-	path: string;
-	cache?: any;
-	handler: () => void | Promise<void>;
+  path: string;
+  cache?: any;
+  handler: () => void | Promise<void>;
 }
 
 export default class Router {
-	private constructor() {}
-	private static	_instance: Router;
+  private constructor() {}
+  private static _instance: Router;
 
 	private			_routes: Route[] = [
 		{
@@ -132,12 +132,12 @@ export default class Router {
 		}
 	];
 
-	public static getInstance(): Router {
-		if (!Router._instance) {
-			Router._instance = new Router();
-		}
-		return Router._instance;
-	}
+  public static getInstance(): Router {
+    if (!Router._instance) {
+      Router._instance = new Router();
+    }
+    return Router._instance;
+  }
 
 	private async _executeHandler(path: string): Promise<boolean> {
 		// **CRITICAL FIX**: Clean up ANY route when navigating away
@@ -204,9 +204,9 @@ export default class Router {
 		}
 	}
 
-	private _isValidRoute(path: string): boolean {
-		return this._routes.some(route => route.path === path);
-	}
+  private _isValidRoute(path: string): boolean {
+    return this._routes.some((route) => route.path === path);
+  }
 
 	private async _redirectToHome(): Promise<void> {
 		// **CRITICAL FIX**: Prevent recursive calls by checking if we're already redirecting
@@ -245,28 +245,26 @@ export default class Router {
 				else
 					window.history.pushState({ path }, '', path);
 
-				await this._executeHandler(path);
-				return true;
-			}
-			else {
-				console.warn(`Route not found: ${path}`);
-				if (path !== '/')
-					this._redirectToHome();
-				return false;
-			}
-		} catch (error) {
-			console.error(`Error navigating to ${path}:`, error);
-			return false;
-		} finally {
-			setTimeout(() => {
-				(window as any).navigationInProgress = false;
-			}, 100);
-		}
-	}
+        await this._executeHandler(path);
+        return true;
+      } else {
+        console.warn(`Route not found: ${path}`);
+        if (path !== "/") this._redirectToHome();
+        return false;
+      }
+    } catch (error) {
+      console.error(`Error navigating to ${path}:`, error);
+      return false;
+    } finally {
+      setTimeout(() => {
+        (window as any).navigationInProgress = false;
+      }, 100);
+    }
+  }
 
-	public getCurrentPath(): string {
-		return window.location.pathname;
-	}
+  public getCurrentPath(): string {
+    return window.location.pathname;
+  }
 
 	private _handlePopState = async (): Promise<void> => {
 		// **CRITICAL FIX**: Prevent recursive popstate handling
@@ -279,33 +277,31 @@ export default class Router {
 		try {
 			const path = this.getCurrentPath();
 
-			if (!this._executeHandler(path)) {
-				if (path !== '/') {
-					// **CRITICAL**: Use replaceState without calling _executeHandler to prevent recursion
-					window.history.replaceState({ path: '/' }, '', '/');
-					// Force a page reload instead of recursive navigation
-					window.location.pathname = '/';
-				}
-			}
-		} catch (error) {
-			console.error('Error in popstate handler:', error);
-			// Force navigation to home on error
-			window.location.pathname = '/';
-		} finally {
-			// Clear the flag after a short delay
-			setTimeout(() => {
-				(window as any).popstateInProgress = false;
-			}, 100);
-		}
-	}
+      if (!this._executeHandler(path)) {
+        if (path !== "/") {
+          // **CRITICAL**: Use replaceState without calling _executeHandler to prevent recursion
+          window.history.replaceState({ path: "/" }, "", "/");
+          // Force a page reload instead of recursive navigation
+          window.location.pathname = "/";
+        }
+      }
+    } catch (error) {
+      console.error("Error in popstate handler:", error);
+      // Force navigation to home on error
+      window.location.pathname = "/";
+    } finally {
+      // Clear the flag after a short delay
+      setTimeout(() => {
+        (window as any).popstateInProgress = false;
+      }, 100);
+    }
+  };
 
-	public init(): void {
-		window.addEventListener('popstate', this._handlePopState);
+  public init(): void {
+    window.addEventListener("popstate", this._handlePopState);
 
-		const currentPath = this.getCurrentPath();
-		if (!this._isValidRoute(currentPath))
-			this.navigate('/', true);
-		 else
-			this.navigate(currentPath, true);
-	}
+    const currentPath = this.getCurrentPath();
+    if (!this._isValidRoute(currentPath)) this.navigate("/", true);
+    else this.navigate(currentPath, true);
+  }
 }

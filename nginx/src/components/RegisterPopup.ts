@@ -6,14 +6,13 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/16 16:30:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/05 14:53:15 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/08 23:48:13 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 import AuthNanoService from "../auth/AuthNanoService.js";
 import { UI_THEME } from "../style/tailwindClasses.js";
 import { buttonHTML } from "./button.js";
-import { loadingSpinnerHTML } from "./loadingSpinner";
 import ModalView from "./ModalView.js";
 
 export default class RegisterPopup extends ModalView {
@@ -134,6 +133,9 @@ export default class RegisterPopup extends ModalView {
     const walletInput = document.getElementById(
       "popup-container-wallet-register"
     ) as HTMLInputElement;
+    const submitButton = document.getElementById(
+      "popup-container-submit-register"
+    ) as HTMLButtonElement;
 
     const username = usernameInput.value.trim();
     const email = emailInput.value.trim();

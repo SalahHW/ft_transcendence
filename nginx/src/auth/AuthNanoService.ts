@@ -5,6 +5,7 @@ export default class AuthNanoService {
   private _usersApi: UsersApi = new UsersApi();
   private _user: User | null = null;
   private _isLoggedIn: boolean | null = null; // null means we haven't checked yet
+  private _refreshInterval: ReturnType<typeof setInterval> | null = null;
 
   private constructor() {}
 
@@ -20,6 +21,7 @@ export default class AuthNanoService {
       try {
         this._user = await this._usersApi.getCurrentUser();
         this._isLoggedIn = !!this._user;
+        if (this._isLoggedIn) this._startRefreshLoop();
       } catch (error) {
         console.error("Failed to check auth status", error);
         this._user = null;
@@ -42,6 +44,7 @@ export default class AuthNanoService {
     const user = await this._usersApi.login(username, password);
     this._user = user;
     this._isLoggedIn = true;
+    this._startRefreshLoop();
     return user;
   }
 
@@ -50,6 +53,7 @@ export default class AuthNanoService {
       await this._usersApi.logout();
       this._user = null;
       this._isLoggedIn = false;
+      this._stopRefreshLoop();
     } catch (error) {
       console.error("Logout API call failed:", error);
       throw new Error("Logout failed. Please try again.");
@@ -78,7 +82,6 @@ export default class AuthNanoService {
       throw error;
     }
 
-    // Enchaîne avec login si tu veux auto-connecter après création
     return this.login(data.username, data.password);
   }
 
@@ -87,7 +90,6 @@ export default class AuthNanoService {
       const wallet = await this._getWalletAddress();
       if (!wallet) throw new Error("No wallet detected");
 
-      //️Récupérer le challenge (et le timestamp)
       const challengeRes = await fetch(
         `https://elsalmajori.games:8443/wallet/challenge?wallet=${wallet}`
       );
@@ -100,10 +102,8 @@ export default class AuthNanoService {
       if (!challenge || !timestamp)
         throw new Error("Invalid challenge response");
 
-      // Signature du challenge via MetaMask
       const signature = await this._signMessage(challenge, wallet);
 
-      // ️Envoi au backend
       const registerRes = await fetch(
         "https://elsalmajori.games:8443/register/wallet",
         {
@@ -125,6 +125,7 @@ export default class AuthNanoService {
 
       this._user = await this._usersApi.getCurrentUser();
       this._isLoggedIn = true;
+      this._startRefreshLoop();
     } catch (error) {
       console.error("registerWithWallet() error:", error);
       throw error;
@@ -160,7 +161,6 @@ export default class AuthNanoService {
       const wallet = await this._getWalletAddress();
       if (!wallet) throw new Error("No wallet detected");
 
-      // Récupérer le challenge à signer
       const challengeRes = await fetch(
         `https://elsalmajori.games:8443/wallet/challenge?wallet=${wallet}`
       );
@@ -173,10 +173,8 @@ export default class AuthNanoService {
       if (!challenge || !timestamp)
         throw new Error("Invalid challenge response");
 
-      // Signer le challenge avec MetaMask
       const signature = await this._signMessage(challenge, wallet);
 
-      // Envoyer la signature pour login
       const loginRes = await fetch(
         "https://elsalmajori.games:8443/login/wallet",
         {
@@ -194,11 +192,51 @@ export default class AuthNanoService {
         const errorText = await loginRes.text();
         throw new Error(`Wallet login failed: ${errorText}`);
       }
+
       this._user = await this._usersApi.getCurrentUser();
       this._isLoggedIn = true;
+      this._startRefreshLoop();
     } catch (error) {
       console.error("loginWithWallet() error:", error);
       throw error;
+    }
+  }
+
+  private _startRefreshLoop() {
+    if (this._refreshInterval) return;
+
+    this._refreshInterval = setInterval(async () => {
+      try {
+        const res = await fetch("https://elsalmajori.games:8443/refresh", {
+          method: "POST",
+          credentials: "include",
+        });
+
+        if (res.status === 401) {
+          console.warn("Token expired. Logging out...");
+          await this.logout();
+          return;
+        }
+
+        if (!res.ok) {
+          console.warn(`[REFRESH] Failed with status ${res.status}`);
+          return;
+        }
+
+        console.info("[REFRESH] Token refreshed successfully");
+      } catch (err) {
+        console.error(
+          "[REFRESH] Network or server error during token refresh:",
+          err
+        );
+      }
+    }, 240_000);
+  }
+
+  private _stopRefreshLoop() {
+    if (this._refreshInterval) {
+      clearInterval(this._refreshInterval);
+      this._refreshInterval = null;
     }
   }
 }

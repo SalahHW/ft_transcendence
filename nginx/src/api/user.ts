@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:41:03 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/04 20:04:04 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/08 23:40:01 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -189,21 +189,22 @@ export default class UsersApi {
       );
   }
 
-	/**
-	 * Logs out the current user
-	 * @returns A promise that resolves to the logged out user
-	*/
-	async logout(): Promise<void> {
-		const response = await fetch(`${this._host}${this._logoutPath}`, {
-			method: "POST",
-		});
-		const responseData = await response.json();
-		if (response.status === 200)
-			return responseData;
-		else {
-			throw new Error(`failed to logout:\n${JSON.stringify(responseData, null, 2)}`);
-		}
-	}
+  /**
+   * Logs out the current user
+   * @returns A promise that resolves to the logged out user
+   */
+  async logout(): Promise<void> {
+    const response = await fetch(`${this._host}${this._logoutPath}`, {
+      method: "POST",
+    });
+    const responseData = await response.json();
+    if (response.status === 200) return responseData;
+    else {
+      throw new Error(
+        `failed to logout:\n${JSON.stringify(responseData, null, 2)}`
+      );
+    }
+  }
 
   /**
    * Registers a new user

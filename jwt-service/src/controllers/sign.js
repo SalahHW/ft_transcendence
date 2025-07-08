@@ -16,7 +16,7 @@ export const signToken = async (request, reply) => {
   };
 
   try {
-    const token = await reply.jwtSign(payload);
+    const token = await reply.jwtSign(payload, { expiresIn: "5m" });
     return reply.code(200).send({ token });
   } catch (error) {
     console.error(error);
