@@ -71,3 +71,26 @@ if (!USERS_SERVICE_TIMEOUT) {
   );
   process.exit(1);
 }
+
+if (!REDIS_HOST) {
+  console.error("Unable to load redis host from environmet variables");
+  process.exit(1);
+}
+if (!REDIS_PORT) {
+  console.error("Unable to load redis port from environmet variables");
+  process.exit(1);
+}
+if (!REDIS_PASSWORD) {
+  console.error("Unable to load redis password from environmet variables");
+  process.exit(1);
+}
+
+if (!REDIS_STREAMS.USERS) {
+  console.error("Unable to load users service stream from environment variables");
+  process.exit(1);
+}
+
+if (!REDIS_EVENTS.USER_DELETED) {
+  console.error("Unable to load user deleted event from environment variables");
+  process.exit(1);
+}
