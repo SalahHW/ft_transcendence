@@ -301,6 +301,12 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
             isGameLoopRunning = false;
         }
         
+        // ⭐ FIX: Dispose ball assets before showing splash screen
+        if (ball && !ball.isDisposed) {
+            console.log('🧹 1v1: Disposing ball assets at game end');
+            ball.dispose();
+        }
+        
         // Show regular 1v1 game end splash screen
         const { showGameEndSplashScreen } = await import('../utils/splashScreenUtils.js');
         await showGameEndSplashScreen(gameEndData, localPlayerId);
@@ -748,6 +754,18 @@ export function cleanup(): void {
     browserEventHandler.cleanup();
     cameraManager.dispose();
     
+    // ⭐ FIX: Properly dispose ball assets before cleanup
+    if (ball && !ball.isDisposed) {
+        console.log('🧹 1v1: Disposing ball assets during cleanup');
+        ball.dispose();
+    }
+    
+    // ⭐ FIX: Dispose map assets
+    if (map && map.dispose) {
+        console.log('🧹 1v1: Disposing map assets during cleanup');
+        map.dispose();
+    }
+    
     isGameOver = true;
     isGameLoopRunning = false;
     clientConnection = null;
@@ -800,6 +818,18 @@ export function leaveGame(): void {
     stateTracker.cleanup();
     browserEventHandler.cleanup();
     cameraManager.dispose();
+    
+    // ⭐ FIX: Properly dispose ball assets before leaving game
+    if (ball && !ball.isDisposed) {
+        console.log('🧹 1v1: Disposing ball assets during leave game');
+        ball.dispose();
+    }
+    
+    // ⭐ FIX: Dispose map assets
+    if (map && map.dispose) {
+        console.log('🧹 1v1: Disposing map assets during leave game');
+        map.dispose();
+    }
     
     isGameOver = true;
     isGameLoopRunning = false;

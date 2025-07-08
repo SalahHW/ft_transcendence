@@ -97,7 +97,7 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
   /**
    * Handle disconnection during pre-game states (loading, announcement, launch animation)
    */
-  handlePreGameDisconnect(playerId, roomId, reason) {
+  async handlePreGameDisconnect(playerId, roomId, reason) {
     const room = gameStateManager.getRoom(roomId);
     const remainingPlayer = room.players.find(p => p.id !== playerId);
     const disconnectedPlayer = room.players.find(p => p.id === playerId);
@@ -107,6 +107,9 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
       return;
     }
 
+    // ⭐ FIX: Dispose ball assets to prevent memory leaks
+    await this.disposeBallAssets(room, roomId);
+
     // Award forfeit win
     this.awardForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'pre_game');
   }
@@ -114,7 +117,7 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
   /**
    * Handle disconnection during active gameplay
    */
-  handleInGameDisconnect(playerId, roomId, reason) {
+  async handleInGameDisconnect(playerId, roomId, reason) {
     const room = gameStateManager.getRoom(roomId);
     const remainingPlayer = room.players.find(p => p.id !== playerId);
     const disconnectedPlayer = room.players.find(p => p.id === playerId);
@@ -123,6 +126,9 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
       console.error(`Could not find players in room ${roomId} for in-game disconnect handling`);
       return;
     }
+
+    // ⭐ FIX: Dispose ball assets to prevent memory leaks
+    await this.disposeBallAssets(room, roomId);
 
     // Award forfeit win
     this.awardForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'in_game');
@@ -296,6 +302,68 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
     } else {
       console.warn(`Invalid player state: ${state} for player ${playerId}`);
     }
+  }
+
+  /**
+   * ⭐ FIX: Dispose ball assets to prevent memory leaks in 1v1 games
+   */
+  async disposeBallAssets(room, roomId) {
+    console.log(`🧹 1v1: Disposing ball assets for room ${roomId}`);
+    
+    if (room.ball) {
+      // Stop ball movement by setting velocity to zero
+      if (room.ball.velocity) {
+        room.ball.velocity.set(0, 0, 0);
+        console.log(`🧹 1v1: Ball velocity set to zero for room ${roomId}`);
+      }
+      if (room.ball.previousVelocity) {
+        room.ball.previousVelocity.set(0, 0, 0);
+      }
+      
+      // Reset ball state to prevent respawning
+      room.ball.isRespawning = false;
+      room.ball.respawnTime = 0;
+      room.ball.hasValidPosition = false;
+      
+      // Clear ball references to prevent memory leaks
+      room.ball.gameEngine = null;
+      room.ball.roomId = null;
+      
+      // ⭐ CRITICAL: Nullify the ball object to stop all movement
+      room.ball = null;
+      
+      console.log(`🧹 1v1: Ball object nullified for room ${roomId}`);
+    }
+    
+    // ⭐ FIX: Set flag to prevent ball recreation
+    room.ballDisposed = true;
+    console.log(`🧹 1v1: Ball disposal flag set for room ${roomId}`);
+    
+    // ⭐ FIX: Send final sync message with ballState: null to explicitly stop client processing
+    try {
+      gameEngine.broadcastToRoom(roomId, {
+        type: 'sync',
+        playerPositions: {},
+        ballState: null,
+        serverTime: Date.now(),
+        roomId: roomId,
+        isDelta: true,
+        ballDisposed: true // ⭐ NEW: Flag to indicate ball has been disposed
+      });
+      console.log(`🧹 1v1: Sent final sync message with ballState: null for room ${roomId}`);
+    } catch (error) {
+      console.error(`🧹 1v1: Error sending final sync message for room ${roomId}:`, error);
+    }
+    
+    // Clear ball update flags
+    room.ballUpdateSent = false;
+    if (room.ballUpdateTimeout) {
+      clearTimeout(room.ballUpdateTimeout);
+      room.ballUpdateTimeout = null;
+      console.log(`🧹 1v1: Ball update timeout cleared for room ${roomId}`);
+    }
+    
+    console.log(`🧹 1v1: Ball assets disposal completed for room ${roomId}`);
   }
 }
 

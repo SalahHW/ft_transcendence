@@ -177,6 +177,19 @@ export class MessageRouter {
     } else if (room && room.matchType === 'tournament' && room.metadata?.roomType === 'waiting') {
       console.log(`⚠️ WARNING: Player ${playerId} completed animation in WAITING room ${roomId} instead of semi-final room!`);
     }
+    
+    // ⭐ FIX: Trigger ball spawning when both players have completed animation
+    if (statusSize >= 2 && room && room.players.length >= 2) {
+      console.log(`🎮 Both players completed animation in room ${roomId}, triggering ball spawn`);
+      
+      // Import gameEngine dynamically to avoid circular dependencies
+      import('../game/GameEngine.js').then(({ gameEngine }) => {
+        // Send ball update to trigger spawning
+        gameEngine.sendBallUpdateForced(roomId);
+      }).catch(error => {
+        console.error(`❌ Error importing gameEngine for ball spawn in room ${roomId}:`, error);
+      });
+    }
   }
 
   /**
@@ -216,13 +229,16 @@ export class MessageRouter {
     room.players.forEach((p, i) => {
       if (p.ws && p.ws.readyState === 1) {
         try {
+          // ⭐ FIX: Send ballUpdate instead of ballRespawn to match client expectations
+          const ballState = this._createBallState(room.ball);
           p.ws.send(JSON.stringify({
-            type: 'ballRespawn',
-            ballPosition: room.ball.position,
-            ballVelocity: room.ball.velocity
+            type: 'ballUpdate',
+            ballState: ballState,
+            isInitialSpawn: msg.isInitial || false,
+            isScoreRespawn: false
           }));
         } catch (error) {
-          console.error(`❌ Error sending ball respawn to player ${p.id}:`, error);
+          console.error(`❌ Error sending ball update to player ${p.id}:`, error);
         }
       }
     });

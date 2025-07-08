@@ -152,6 +152,9 @@ export class GameEngine {
       if (room.matchType === 'tournament') {
         await this._handleTournamentMatchEnd(room, roomId, matchData);
       } else {
+        // ⭐ FIX: Dispose ball assets for 1v1 games to prevent memory leaks
+        await this._disposeBallAssets(room, roomId);
+        
         // Report to external services (async, don't wait for completion)
         reportMatchResultsToAPI(matchData).catch(err => {
           console.error('Failed to report match results to external services:', err.message);
@@ -209,6 +212,14 @@ export class GameEngine {
     // Initialize ball for the room
     room.initializeBall();
     console.log(`🎮 Ball initialized for room ${roomId}`);
+
+    // ⭐ FIX: Reset ball update flags to allow ball spawning after animation
+    room.ballUpdateSent = false;
+    room.ballUpdateTimeout = null;
+    
+    // Initialize animation status for the room
+    gameStateManager.initializeAnimationStatus(roomId);
+    console.log(`🎮 Animation status initialized for room ${roomId}`);
 
     // Set player states to LAUNCH_ANIMATION using disconnect handler
     console.log(`🎮 About to set player states to LAUNCH_ANIMATION for room ${roomId}`);
@@ -407,10 +418,21 @@ export class GameEngine {
     if (!room || room.ballUpdateSent || attempt > 5) return;
 
     console.log(`Attempting ball update for room ${roomId}, attempt ${attempt}`);
-    if (room.players.length === 2) {
-      // Regular 1v1 room - immediate ball update (will wait for animationComplete)
+    
+    // ⭐ FIX: Check if both players have completed animation before sending ball update
+    const animationStatus = gameStateManager.getAnimationStatusForRoom(roomId);
+    const animationCompleteCount = animationStatus.length;
+    
+    if (room.players.length === 2 && animationCompleteCount >= 2) {
+      // Both players have completed animation - send ball update
+      console.log(`🎮 Both players completed animation in room ${roomId}, sending ball update`);
       this.sendBallUpdateForced(roomId);
+    } else if (room.players.length === 2 && animationCompleteCount < 2) {
+      // Wait for animation completion
+      console.log(`🎮 Waiting for animation completion in room ${roomId} (${animationCompleteCount}/2 players ready)`);
+      setTimeout(() => this._attemptBallUpdate(roomId, attempt + 1), 100 * attempt);
     } else {
+      // Not enough players or other conditions
       setTimeout(() => this._attemptBallUpdate(roomId, attempt + 1), 100 * attempt);
     }
   }
@@ -418,6 +440,68 @@ export class GameEngine {
   _generateRoomId() {
     // Simple room ID generation - could be enhanced
     return Math.random().toString(36).substring(2, 15);
+  }
+
+  /**
+   * ⭐ FIX: Dispose ball assets to prevent memory leaks in 1v1 games
+   */
+  async _disposeBallAssets(room, roomId) {
+    console.log(`🧹 1v1: Disposing ball assets for room ${roomId}`);
+    
+    if (room.ball) {
+      // Stop ball movement by setting velocity to zero
+      if (room.ball.velocity) {
+        room.ball.velocity.set(0, 0, 0);
+        console.log(`🧹 1v1: Ball velocity set to zero for room ${roomId}`);
+      }
+      if (room.ball.previousVelocity) {
+        room.ball.previousVelocity.set(0, 0, 0);
+      }
+      
+      // Reset ball state to prevent respawning
+      room.ball.isRespawning = false;
+      room.ball.respawnTime = 0;
+      room.ball.hasValidPosition = false;
+      
+      // Clear ball references to prevent memory leaks
+      room.ball.gameEngine = null;
+      room.ball.roomId = null;
+      
+      // ⭐ CRITICAL: Nullify the ball object to stop all movement
+      room.ball = null;
+      
+      console.log(`🧹 1v1: Ball object nullified for room ${roomId}`);
+    }
+    
+    // ⭐ FIX: Set flag to prevent ball recreation
+    room.ballDisposed = true;
+    console.log(`🧹 1v1: Ball disposal flag set for room ${roomId}`);
+    
+    // ⭐ FIX: Send final sync message with ballState: null to explicitly stop client processing
+    try {
+      this.broadcastToRoom(roomId, {
+        type: 'sync',
+        playerPositions: {},
+        ballState: null,
+        serverTime: Date.now(),
+        roomId: roomId,
+        isDelta: true,
+        ballDisposed: true // ⭐ NEW: Flag to indicate ball has been disposed
+      });
+      console.log(`🧹 1v1: Sent final sync message with ballState: null for room ${roomId}`);
+    } catch (error) {
+      console.error(`🧹 1v1: Error sending final sync message for room ${roomId}:`, error);
+    }
+    
+    // Clear ball update flags
+    room.ballUpdateSent = false;
+    if (room.ballUpdateTimeout) {
+      clearTimeout(room.ballUpdateTimeout);
+      room.ballUpdateTimeout = null;
+      console.log(`🧹 1v1: Ball update timeout cleared for room ${roomId}`);
+    }
+    
+    console.log(`🧹 1v1: Ball assets disposal completed for room ${roomId}`);
   }
 }
 
