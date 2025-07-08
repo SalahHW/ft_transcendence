@@ -36,8 +36,77 @@ export class GameClient {
     private isGameLoopRunning: boolean = false;
     private isIntroAnimationRunning: boolean = false;
     private isGameStarted: boolean = false;
+    
+    // 🛑 NEW: Render loop state tracking
+    private renderLoopStopping: boolean = false;
+    private renderLoopStopped: boolean = false;
+    private renderLoopStopPromise: Promise<void> | null = null;
     constructor() {
         // Initialize the game client
+    }
+
+    // 🛑 NEW: Method to properly stop render loop with confirmation
+    private async stopRenderLoop(): Promise<void> {
+        if (this.renderLoopStopping || this.renderLoopStopped) {
+            return this.renderLoopStopPromise || Promise.resolve();
+        }
+
+        this.renderLoopStopping = true;
+        this.isGameLoopRunning = false;
+        
+        this.renderLoopStopPromise = new Promise<void>((resolve) => {
+            if (this.map?.getEngine) {
+                // Stop the render loop
+                this.map.getEngine.stopRenderLoop();
+                
+                // Clear the canvas to remove the last frame
+                this.clearCanvas();
+                
+                // Wait for the next frame to ensure the loop has stopped
+                requestAnimationFrame(() => {
+                    this.renderLoopStopped = true;
+                    this.renderLoopStopping = false;
+                    console.log('🛑 Render loop confirmed stopped and canvas cleared');
+                    resolve();
+                });
+            } else {
+                this.renderLoopStopped = true;
+                this.renderLoopStopping = false;
+                console.log('🛑 No engine to stop');
+                resolve();
+            }
+        });
+
+        return this.renderLoopStopPromise;
+    }
+
+    // 🛑 NEW: Method to clear the canvas
+    private clearCanvas(): void {
+        if (this.map?.canvas && this.map?.getEngine) {
+            const canvas = this.map.canvas;
+            const engine = this.map.getEngine;
+            
+            // Clear the WebGL canvas using BabylonJS engine
+            engine.clear(new BABYLON.Color4(0, 0, 0, 1), true, true, true);
+            console.log('🧹 WebGL canvas cleared');
+        }
+    }
+
+    // 🛑 NEW: Method to check render loop status
+    public getRenderLoopStatus(): {
+        isGameLoopRunning: boolean;
+        isGameOver: boolean;
+        renderLoopStopping: boolean;
+        renderLoopStopped: boolean;
+        hasEngine: boolean;
+    } {
+        return {
+            isGameLoopRunning: this.isGameLoopRunning,
+            isGameOver: this.isGameOver,
+            renderLoopStopping: this.renderLoopStopping,
+            renderLoopStopped: this.renderLoopStopped,
+            hasEngine: !!this.map?.getEngine
+        };
     }
 
     // Initialize the game with a registered player ID
@@ -594,8 +663,12 @@ export class GameClient {
     }
 
     private async handleGameEnd(gameEndData: any): Promise<void> {
+        console.log('🎮 Game end detected, stopping render loop...');
+        
+        // 🛑 NEW: Stop render loop first and wait for confirmation
+        await this.stopRenderLoop();
+        
         this.isGameOver = true;
-        this.isGameLoopRunning = false;
         this.isGameStarted = false; // Reset for next game
         
         console.log('Game Over!', gameEndData);
@@ -607,7 +680,7 @@ export class GameClient {
         
         this.updateGameStatus(resultText);
 
-        // Dispose assets between tournament matches
+        // 🛑 NEW: Only dispose assets after render loop is confirmed stopped
         if (gameEndData.isTournamentMatch) {
             try {
                 await frontendAssetDisposalManager.disposeBetweenMatches({
@@ -617,7 +690,7 @@ export class GameClient {
                     map: this.map,
                     scene: this.map?.getScene
                 });
-                console.log('🧹 Frontend: Assets disposed after tournament match');
+                console.log('🧹 Frontend: Assets disposed after tournament match (render loop stopped)');
             } catch (error) {
                 console.error('🧹 Frontend: Error disposing assets after match:', error);
             }
@@ -698,13 +771,15 @@ export class GameClient {
     }
 
     private startGameLoop(): void {
-        if (this.isGameLoopRunning || !this.map) return;
+        if (this.isGameLoopRunning || !this.map || this.renderLoopStopping) return;
 
         this.isGameLoopRunning = true;
+        this.renderLoopStopped = false; // Reset stopped state
 
         const renderLoop = () => {
-            if (this.isGameOver || !this.map) {
-                if (this.map?.getEngine) {
+            // 🛑 NEW: Check all stopping conditions
+            if (this.isGameOver || !this.map || this.renderLoopStopping) {
+                if (this.map?.getEngine && !this.renderLoopStopping) {
                     this.map.getEngine.stopRenderLoop();
                 }
                 this.isGameLoopRunning = false;
@@ -761,11 +836,10 @@ export class GameClient {
     }
 
     public async cleanup(): Promise<void> {
+        console.log('🧹 Starting game client cleanup...');
         
-        if (this.isGameLoopRunning && this.map?.getEngine) {
-            this.map.getEngine.stopRenderLoop();
-            this.isGameLoopRunning = false;
-        }
+        // 🛑 NEW: Use proper render loop stopping
+        await this.stopRenderLoop();
 
         if (this.clientConnection?.socket.readyState === WebSocket.OPEN) {
             this.clientConnection.socket.close();
@@ -780,7 +854,7 @@ export class GameClient {
                 map: this.map,
                 scene: this.map?.getScene
             });
-            console.log('🧹 Frontend: Assets disposed during cleanup');
+            console.log('🧹 Frontend: Assets disposed during cleanup (render loop stopped)');
         } catch (error) {
             console.error('🧹 Frontend: Error disposing assets during cleanup:', error);
         }
@@ -793,18 +867,18 @@ export class GameClient {
         this.roomId = null;
         this.localPlayerId = null;
         this.isGameOver = false;
+        this.renderLoopStopped = false;
+        this.renderLoopStopPromise = null;
     }
 
     public async leaveGame(): Promise<void> {
+        console.log('🚪 Leaving game, stopping render loop...');
         
         // Set game as over to stop input and rendering
         this.isGameOver = true;
         
-        // Stop the game loop immediately
-        if (this.isGameLoopRunning && this.map?.getEngine) {
-            this.map.getEngine.stopRenderLoop();
-            this.isGameLoopRunning = false;
-        }
+        // 🛑 NEW: Use proper render loop stopping
+        await this.stopRenderLoop();
 
         // Send leave game message to server
         if (this.clientConnection) {
@@ -820,7 +894,7 @@ export class GameClient {
                 map: this.map,
                 scene: this.map?.getScene
             });
-            console.log('🧹 Frontend: Assets force disposed during leave game');
+            console.log('🧹 Frontend: Assets force disposed during leave game (render loop stopped)');
         } catch (error) {
             console.error('🧹 Frontend: Error force disposing assets during leave game:', error);
         }
@@ -832,5 +906,7 @@ export class GameClient {
         this.map = null;
         this.roomId = null;
         this.localPlayerId = null;
+        this.renderLoopStopped = false;
+        this.renderLoopStopPromise = null;
     }
 } 

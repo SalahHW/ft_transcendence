@@ -3,6 +3,7 @@
  * Client-side tournament management for game client
  */
 
+import * as BABYLON from '@babylonjs/core';
 import { browserEventHandler } from "../../webSocketClient/BrowserEventHandler.js";
 import { stopForfeitWinnerPing } from "../../ui/waitingStatusHandler.js";
 import { frontendAssetDisposalManager } from "../../assetManagement/FrontendAssetDisposalManager.js";
@@ -24,6 +25,24 @@ export class TournamentClientHandler {
     }
   ): Promise<void> {
     if (message.status === 'transferred_to_final') {
+      console.log('🏆 Tournament advancement detected, stopping render loop...');
+      
+      // 🛑 NEW: Stop render loop before asset disposal
+      if (gameState.map?.getEngine) {
+        gameState.map.getEngine.stopRenderLoop();
+        
+        // Clear the canvas to remove the last frame
+        if (gameState.map.canvas && gameState.map.getEngine) {
+          const engine = gameState.map.getEngine;
+          engine.clear(new BABYLON.Color4(0, 0, 0, 1), true, true, true);
+          console.log('🧹 WebGL canvas cleared for tournament advancement');
+        }
+        
+        // Wait for render loop to stop
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        console.log('🛑 Render loop stopped for tournament advancement');
+      }
+      
       // Dispose assets before transferring to final
       try {
         await frontendAssetDisposalManager.disposeBetweenMatches({
@@ -33,7 +52,7 @@ export class TournamentClientHandler {
           map: gameState.map,
           scene: gameState.map?.getScene
         });
-        console.log('🧹 Frontend: Assets disposed before transfer to final');
+        console.log('🧹 Frontend: Assets disposed before transfer to final (render loop stopped)');
       } catch (error) {
         console.error('🧹 Frontend: Error disposing assets before final transfer:', error);
       }
@@ -56,6 +75,23 @@ export class TournamentClientHandler {
       }
     } else if (message.status === 'final_match_complete') {
       // Individual final match is complete
+      console.log('🏆 Final match complete, stopping render loop...');
+      
+      // 🛑 NEW: Stop render loop before cleanup
+      if (gameState.map?.getEngine) {
+        gameState.map.getEngine.stopRenderLoop();
+        
+        // Clear the canvas to remove the last frame
+        if (gameState.map.canvas && gameState.map.getEngine) {
+          const engine = gameState.map.getEngine;
+          engine.clear(new BABYLON.Color4(0, 0, 0, 1), true, true, true);
+          console.log('🧹 WebGL canvas cleared for final match completion');
+        }
+        
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        console.log('🛑 Render loop stopped for final match completion');
+      }
+      
       gameState.isGameOver = true;
       gameState.isGameLoopRunning = false;
       
@@ -80,6 +116,23 @@ export class TournamentClientHandler {
       }
     } else if (message.status === 'tournament_complete') {
       // Tournament is complete (both finals finished)
+      console.log('🏆 Tournament complete, stopping render loop...');
+      
+      // 🛑 NEW: Stop render loop before final cleanup
+      if (gameState.map?.getEngine) {
+        gameState.map.getEngine.stopRenderLoop();
+        
+        // Clear the canvas to remove the last frame
+        if (gameState.map.canvas && gameState.map.getEngine) {
+          const engine = gameState.map.getEngine;
+          engine.clear(new BABYLON.Color4(0, 0, 0, 1), true, true, true);
+          console.log('🧹 WebGL canvas cleared for tournament completion');
+        }
+        
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        console.log('🛑 Render loop stopped for tournament completion');
+      }
+      
       gameState.isGameOver = true;
       gameState.isGameLoopRunning = false;
       
@@ -92,7 +145,7 @@ export class TournamentClientHandler {
           map: gameState.map,
           scene: gameState.map?.getScene
         });
-        console.log('🧹 Frontend: Assets disposed at tournament end');
+        console.log('🧹 Frontend: Assets disposed at tournament end (render loop stopped)');
       } catch (error) {
         console.error('🧹 Frontend: Error disposing assets at tournament end:', error);
       }
