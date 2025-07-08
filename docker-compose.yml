@@ -29,6 +29,8 @@ services:
       - transcendence
     volumes:
       - ./users-service/database:/app/database
+    depends_on:
+      - redis
 
   jwt:
     container_name: jwt
@@ -71,6 +73,8 @@ services:
     volumes:
       - ./avatars-service/database:/app/database
       - ./avatars-service/avatars:/app/avatars
+    depends_on:
+      - redis
 
   friends:
     container_name: friends
@@ -81,6 +85,8 @@ services:
       - transcendence
     volumes:
       - ./friends-service/database:/app/database
+    depends_on:
+      - redis
 
 networks:
   transcendence:
