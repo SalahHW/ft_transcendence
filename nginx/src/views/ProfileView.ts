@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/22 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/08 19:07:49 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/08 21:14:13 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -93,7 +93,6 @@ export default class ProfileView extends ModalView {
 		const friendsHtml = mockProfile.friends.map(friend => this.createFriendListItem(friend)).join('');
 		friendListContainer.innerHTML = /* HTML */`
 			<div class="flex flex-col gap-2 h-full">
-				<h3 class="text-2xl font-bold text-white text-center">Friends</h3>
 				<div class="overflow-auto flex-[1] [mask-image:linear-gradient(to_bottom,transparent,black_2%,black_98%,transparent)] pt-2">
 					${friendsHtml}
 				</div>
