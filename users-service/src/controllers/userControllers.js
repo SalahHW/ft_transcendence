@@ -2,6 +2,8 @@ import * as userModels from "../models/userModels.js";
 import { createUsername } from "./usernameControllers.js";
 import { createEmail } from "./emailControllers.js";
 import { createPassword } from "./passwordControllers.js";
+import { publishUserDeleted } from "../redis/publisher.js";
+import { redisClient } from "../redis/init.js";
 
 export async function createUser(request, reply) {
   const { username, password, email } = request.body;
@@ -13,10 +15,12 @@ export async function createUser(request, reply) {
   }
   try {
     const usernameExists = await userModels.userExists(username);
-    if (usernameExists) return reply.code(409).send({ error: "User already exists" });
+    if (usernameExists)
+      return reply.code(409).send({ error: "User already exists" });
     const emailLower = createEmail(email).toLowerCase();
     const emailExists = await userModels.emailExists(emailLower);
-    if (emailExists) return reply.code(409).send({ error: "Email already used" });
+    if (emailExists)
+      return reply.code(409).send({ error: "Email already used" });
     const newUsername = createUsername(username);
     const hashedPassword = await createPassword(password);
     const newUser = await userModels.createUser({
@@ -120,10 +124,13 @@ export async function deleteUser(request, reply) {
     return reply.code(400).send({ error: "UserId is required" });
   }
   try {
+    await redisClient.ping();
     const deletedUserId = await userModels.deleteUser(userId);
     if (!deletedUserId) {
       return reply.code(404).send({ error: "User not found" });
     }
+    console.log(userId);
+    await publishUserDeleted(userId);
     return reply.code(204).send();
   } catch (error) {
     return reply.code(500).send({
