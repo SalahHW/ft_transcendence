@@ -9,11 +9,9 @@ export const DB_PATH = isDev
 export const REDIS_HOST = process.env.REDIS_SERVICE_HOST;
 export const REDIS_PORT = process.env.REDIS_SERVICE_PORT;
 export const REDIS_PASSWORD = process.env.REDIS_PASSWORD;
-
 export const REDIS_STREAMS = {
   USERS: process.env.USERS_SERVICE_STREAM,
 };
-
 export const REDIS_EVENTS = {
   USER_DELETED: process.env.USER_DELETED_EVENT,
 };
