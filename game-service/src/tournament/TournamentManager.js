@@ -58,8 +58,8 @@ export class TournamentManager {
   /**
    * Remove player from tournament waiting room (explicit leave)
    */
-  removePlayerFromTournament(playerId, username) {
-    return this.playerManager.removePlayerFromTournament(playerId, username);
+  async removePlayerFromTournament(playerId, username) {
+    return await this.playerManager.removePlayerFromTournament(playerId, username);
   }
 
   /**

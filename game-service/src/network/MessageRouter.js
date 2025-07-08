@@ -5,7 +5,8 @@ import { gameEngine } from '../game/GameEngine.js';
 import { MESSAGE_TYPES } from '../core/constants.js';
 import { playerManager } from '../player/PlayerManager.js';
 import { playerInput } from '../player/PlayerInput.js';
-import { disconnectionHandler, handlePlayerStateUpdate, handleBrowserEvent } from '../server/disconnect/index.js';
+import { handlePlayerDisconnect, handleExplicitLeave, handlePlayerStateUpdate, handleBrowserEvent } from '../server/disconnect/index.js';
+import { PlayerStates } from '../server/disconnect/BaseDisconnectHandler.js';
 import { schemas, messageTypeSchema } from './schemas.js';
 
 /**
@@ -38,7 +39,7 @@ export class MessageRouter {
   /**
    * Route a message to the appropriate handler
    */
-  routeMessage(data, playerId, roomId, ws) {
+  async routeMessage(data, playerId, roomId, ws) {
     let msg;
     try {
       msg = JSON.parse(data);
@@ -75,7 +76,7 @@ export class MessageRouter {
 
     const handler = this.messageHandlers.get(msg.type);
     if (handler) {
-      handler(msg, playerId, roomId, ws);
+      await handler(msg, playerId, roomId, ws);
     } else {
       console.warn(`Unknown message type: ${msg.type}`);
     }
@@ -150,7 +151,7 @@ export class MessageRouter {
    */
   _handleLeaveGame(msg, playerId, roomId, ws) {
     // Handle explicit leave game button click
-    return disconnectionHandler.handleExplicitLeave(playerId, roomId);
+    return handleExplicitLeave(playerId, roomId);
   }
 
   /**
@@ -181,79 +182,68 @@ export class MessageRouter {
   /**
    * Handle ball respawn requests
    */
-  _handleBallRespawn(msg, playerId, roomId) {
+  async _handleBallRespawn(msg, playerId, roomId) {
     const room = gameStateManager.getRoom(roomId);
-    if (!room) return;
+    if (!room) {
+      console.warn(`Ball respawn request from ${playerId}: room ${roomId} not found`);
+      return;
+    }
 
-    // For initial spawn, check if both players have completed animation
-    if (msg.isInitial) {
-      const animationStatus = gameStateManager.getAnimationStatus().get(roomId);
-      const statusSize = animationStatus ? animationStatus.size : 0;
+    // Check if we have enough players before proceeding
+    if (room.players.length < 2) {
+      console.warn(`Ball respawn request from ${playerId}: not enough players (${room.players.length}/2) in room ${roomId}`);
+      return;
+    }
+
+    // Set player states to PLAYING when ball respawns
+    try {
+      const { disconnectionDetector } = await import('../server/disconnect/DisconnectionDetector.js');
+      const matchType = room.matchType || '1v1';
+      const handler = disconnectionDetector.getHandler(matchType, roomId);
       
-      // Check if this is a tournament room (semi-finals, finals)
-      const isTournamentRoom = room.matchType === 'tournament' || 
-                               room.metadata?.roomType?.includes('semi_final') ||
-                               room.metadata?.roomType?.includes('final');
-      
-      const requiredPlayers = 2; // Both tournament and 1v1 need 2 players
-      
-      if (statusSize < requiredPlayers) {
-        const currentPlayers = gameStateManager.getAnimationStatusForRoom(roomId);
-        console.log(`Ball spawn: waiting for opponent in ${isTournamentRoom ? 'tournament' : '1v1'} room (${statusSize}/${requiredPlayers}) - Current: [${currentPlayers.join(', ')}]`);
-        
-        // Debug: Check if we're waiting in the wrong room
-        if (isTournamentRoom && room.metadata?.roomType?.includes('semi_final')) {
-          console.log(`🏆 Waiting for opponent in semi-final room ${roomId}`);
-        } else if (room && room.matchType === 'tournament' && room.metadata?.roomType === 'waiting') {
-          console.log(`⚠️ WARNING: Waiting for opponent in WAITING room ${roomId} instead of semi-final room!`);
+      room.players.forEach((player, index) => {
+        console.log(`🎮 Setting player ${player.id} (${player.username}) to PLAYING state during ball respawn`);
+        handler.setPlayerState(player.id, roomId, PlayerStates.PLAYING);
+      });
+    } catch (error) {
+      console.error(`❌ Error setting player states to PLAYING during ball respawn:`, error);
+    }
+
+    // Reset ball for respawn
+    room.resetBall();
+    
+    // Send ball update to all players
+    room.players.forEach((p, i) => {
+      if (p.ws && p.ws.readyState === 1) {
+        try {
+          p.ws.send(JSON.stringify({
+            type: 'ballRespawn',
+            ballPosition: room.ball.position,
+            ballVelocity: room.ball.velocity
+          }));
+        } catch (error) {
+          console.error(`❌ Error sending ball respawn to player ${p.id}:`, error);
         }
-        
-        return; // Wait for the other player to complete animation
       }
-      console.log(`Ball spawn: all players ready in ${isTournamentRoom ? 'tournament' : '1v1'} room ${roomId}`);
+    });
+  }
+
+  /**
+   * Set player states to PLAYING using dynamic import to avoid circular dependencies
+   */
+  async _setPlayerStatesToPlaying(room, roomId) {
+    try {
+      const { disconnectionDetector } = await import('../server/disconnect/DisconnectionDetector.js');
+      const matchType = room.matchType || '1v1';
+      const handler = disconnectionDetector.getHandler(matchType, roomId);
       
       // Set both players to PLAYING state when ball spawns
       room.players.forEach(p => {
-        if (room.metadata && room.metadata.playerStates) {
-          room.metadata.playerStates[p.id] = {
-            state: 'playing',
-            timestamp: Date.now(),
-            previousState: room.metadata.playerStates[p.id]?.state || 'launch_animation'
-          };
-        }
+        handler.setPlayerState(p.id, roomId, PlayerStates.PLAYING);
       });
+    } catch (error) {
+      console.error('Error setting player states to playing:', error);
     }
-
-    if (!room.ball) {
-      room.ball = new Ball(
-        { playerId: room.players[0]?.id || playerId, playerScore: 0, username: room.players[0]?.username || 'Player 1' },
-        { playerId: room.players[1]?.id || playerId, playerScore: 0, username: room.players[1]?.username || 'Player 2' },
-        gameEngine,
-        roomId
-      );
-    }
-
-    if (msg.isInitial) {
-      room.ball.position = new BABYLON.Vector3(0, -2, 0);
-      room.ball.isRespawning = true;
-      room.ball.respawnTime = 0;
-      room.ball.hasValidPosition = true;
-    } else {
-      room.ball.init();
-    }
-
-    room.ball.isRespawning = true;
-    const ballState = this._createBallState(room.ball);
-
-    console.log(`Ball update sent for room ${roomId}`);
-    gameEngine.broadcastToRoom(roomId, {
-      type: 'ballUpdate',
-      ballState,
-      isInitialSpawn: msg.isInitial || false,
-      isScoreRespawn: !msg.isInitial
-    });
-    
-    room.ballUpdateSent = true;
   }
 
   /**

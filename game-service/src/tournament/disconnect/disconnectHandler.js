@@ -97,11 +97,32 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     const room = gameStateManager.getRoom(roomId);
     if (!room) return;
 
+    // DEBUG: Log room state to understand what's happening
+    console.log(`🏆 DEBUG: Room ${roomId} state - gameStarted: ${room.gameStarted}, ready: ${room.ready}, players: ${room.players.length}`);
+    console.log(`🏆 DEBUG: Room ${roomId} metadata:`, room.metadata);
+
     // Check if game has started but is in animation phase
     if (room.gameStarted && room.ready) {
       console.log(`🏆 Tournament match game started but in animation phase, handling as pre-game disconnect`);
       this.handlePreGameDisconnect(playerId, roomId, reason);
       return;
+    }
+
+    // Check if this is a tournament match room with both players assigned
+    // Even if the game hasn't started yet, if both players were assigned to the match,
+    // a disconnect should result in a forfeit win for the remaining player
+    if (room.metadata?.roomType && 
+        (room.metadata.roomType.includes('semi_final') || 
+         room.metadata.roomType.includes('final'))) {
+      
+      const remainingPlayer = room.players.find(p => p.id !== playerId);
+      const disconnectedPlayer = room.players.find(p => p.id === playerId);
+      
+      if (remainingPlayer && disconnectedPlayer) {
+        console.log(`🏆 Tournament match waiting state forfeit: ${remainingPlayer.username} wins, ${disconnectedPlayer.username} disconnected before game start`);
+        this.handlePreGameDisconnect(playerId, roomId, reason);
+        return;
+      }
     }
 
     // Remove player from room
@@ -354,14 +375,33 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   notifyTournamentForfeitWin(roomId, matchData) {
     console.log(`🏆 Notifying tournament forfeit win in room ${roomId}`);
     
-    const message = {
-      type: 'gameEnd',
-      ...matchData,
-      reason: 'opponent_disconnect',
-      isTournamentMatch: true
+    const room = gameStateManager.getRoom(roomId);
+    if (!room) {
+      console.error(`🏆 Room ${roomId} not found for forfeit win notification`);
+      return;
+    }
+
+    const remainingPlayer = room.players.find(p => p.id !== matchData.loser.id);
+    if (!remainingPlayer || !remainingPlayer.ws || remainingPlayer.ws.readyState !== 1) {
+      console.error(`🏆 Remaining player not found or not connected for forfeit win notification`);
+      return;
+    }
+
+    // Send tournament advancement message to trigger proper frontend cleanup
+    const advancementMessage = {
+      type: 'tournamentAdvancement',
+      status: 'transferred_to_final',
+      finalType: room.metadata?.roomType === 'semi_final_a' || room.metadata?.roomType === 'semi_final_b' ? 'winner' : 'loser',
+      message: '🎉 You advanced to the final due to opponent disconnect!',
+      matchData: matchData
     };
 
-    gameEngine.broadcastToRoom(roomId, message);
+    try {
+      remainingPlayer.ws.send(JSON.stringify(advancementMessage));
+      console.log(`🏆 Sent tournament advancement message to ${remainingPlayer.username} for forfeit win`);
+    } catch (error) {
+      console.error(`🏆 Failed to send tournament advancement message to ${remainingPlayer.username}:`, error);
+    }
   }
 
   /**

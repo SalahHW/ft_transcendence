@@ -177,6 +177,11 @@ export class Room {
    * Reset ball for respawn
    */
   resetBall() {
+    if (this.players.length < 2) {
+      console.warn(`Cannot reset ball in room ${this.id}: insufficient players (${this.players.length}/2)`);
+      return;
+    }
+
     if (!this.ball) {
       this.initializeBall();
       return;

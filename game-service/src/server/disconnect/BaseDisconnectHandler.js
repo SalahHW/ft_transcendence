@@ -95,22 +95,29 @@ export class BaseDisconnectHandler {
   }
 
   /**
-   * Get player state from room metadata
+   * Get player state for a specific room
    */
   getPlayerState(playerId, roomId) {
     const room = gameStateManager.getRoom(roomId);
     if (!room || !room.metadata || !room.metadata.playerStates) {
+      console.log(`🔍 DEBUG: No player states found for player ${playerId} in room ${roomId}`);
       return PlayerStates.WAITING;
     }
-    return room.metadata.playerStates[playerId]?.state || PlayerStates.WAITING;
+
+    const playerState = room.metadata.playerStates[playerId];
+    console.log(`🔍 DEBUG: Player ${playerId} state in room ${roomId}: ${playerState || 'undefined'}`);
+    return playerState || PlayerStates.WAITING;
   }
 
   /**
-   * Set player state in room metadata
+   * Set player state for a specific room
    */
   setPlayerState(playerId, roomId, state) {
     const room = gameStateManager.getRoom(roomId);
-    if (!room) return false;
+    if (!room) {
+      console.error(`❌ Room ${roomId} not found for setting player state`);
+      return;
+    }
 
     if (!room.metadata) {
       room.metadata = {};
@@ -119,20 +126,9 @@ export class BaseDisconnectHandler {
       room.metadata.playerStates = {};
     }
 
-    const previousState = room.metadata.playerStates[playerId]?.state;
-    room.metadata.playerStates[playerId] = {
-      state,
-      timestamp: Date.now(),
-      previousState
-    };
-
-    // Log state transition
-    if (previousState !== state) {
-      console.log(`🔄 Player ${playerId} state: ${previousState} → ${state} in room ${roomId}`);
-      this.logStateTransition(playerId, roomId, previousState, state);
-    }
-
-    return true;
+    console.log(`🔧 Setting player ${playerId} state to ${state} in room ${roomId}`);
+    room.metadata.playerStates[playerId] = state;
+    console.log(`✅ Player ${playerId} state set to ${state} in room ${roomId}`);
   }
 
   /**

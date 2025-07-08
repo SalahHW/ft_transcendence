@@ -191,6 +191,51 @@ export class TournamentMatchManager {
       }, 10000); // 10 seconds delay to allow players to see results
     } else {
       console.log(`🏆 Waiting for other final to complete. Winner final: ${!!winnerFinalResult}, Loser final: ${!!loserFinalResult}`);
+      
+      // ⭐ FIX: Handle case where loser final cannot be played due to disconnections
+      if (winnerFinalResult && !loserFinalResult) {
+        const loserFinal = waitingRoomData.tournamentRooms.loserFinal;
+        if (loserFinal && loserFinal.players.length === 0) {
+          console.log(`🏆 Loser final room is empty, checking if we can complete tournament with only winner final`);
+          
+          // Check if we have semi-final results to determine 3rd and 4th place
+          const semiFinalAResult = waitingRoomData.semiFinalResults?.[waitingRoomData.tournamentRooms.semiFinalA.id];
+          const semiFinalBResult = waitingRoomData.semiFinalResults?.[waitingRoomData.tournamentRooms.semiFinalB.id];
+          
+          if (semiFinalAResult && semiFinalBResult) {
+            console.log(`🏆 Both semi-finals have results, completing tournament with forfeit for loser final`);
+            
+            // Create a forfeit result for the loser final
+            const loserA = semiFinalAResult.loser;
+            const loserB = semiFinalBResult.loser;
+            
+            // Determine 3rd and 4th place based on who disconnected first
+            // For now, we'll assume the first loser gets 3rd place
+            const thirdPlace = loserA;
+            const fourthPlace = loserB;
+            
+            // Store the forfeit result
+            waitingRoomData.finalResults['loser_final'] = { 
+              winner: thirdPlace, 
+              loser: fourthPlace,
+              isForfeit: true 
+            };
+            
+            console.log(`🏆 Tournament completed with forfeit: ${thirdPlace.username} gets 3rd place, ${fourthPlace.username} gets 4th place`);
+            
+            // Send tournament completion message to all players
+            this.tournamentManager.communicationManager._sendTournamentCompletionMessage(waitingRoomId, matchData);
+            
+            // Mark tournament as finished
+            waitingRoomData.phase = 'FINISHED';
+            
+            // Schedule cleanup
+            setTimeout(() => {
+              this.tournamentManager.cleanupManager.cleanupWaitingRoom(waitingRoomId);
+            }, 10000); // 10 seconds delay to allow players to see results
+          }
+        }
+      }
     }
   }
 

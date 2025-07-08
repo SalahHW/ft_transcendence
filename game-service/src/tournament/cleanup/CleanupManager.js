@@ -6,21 +6,37 @@
 import { TournamentConfig } from '../constants.js';
 import { transferLockManager } from '../playerManagement/TournamentTransferLockManager.js';
 import { assetDisposalManager } from '../assetManagement/TournamentAssetDisposalManager.js';
-import { tournamentDisconnectHandler } from '../../server/disconnect/TournamentDisconnectHandler.js';
 
 export class TournamentCleanupManager {
   constructor(waitingRooms, disconnectHandler) {
     this.waitingRooms = waitingRooms;
-    this.disconnectHandler = tournamentDisconnectHandler;
+    this.disconnectHandler = null; // Will be set dynamically
     this.cleanupInterval = null;
+  }
+
+  /**
+   * Get disconnect handler dynamically to avoid circular dependencies
+   */
+  async getDisconnectHandler() {
+    if (!this.disconnectHandler) {
+      const { tournamentDisconnectHandler } = await import('../../server/disconnect/TournamentDisconnectHandler.js');
+      this.disconnectHandler = tournamentDisconnectHandler;
+    }
+    return this.disconnectHandler;
   }
 
   /**
    * Start periodic cleanup of inactive players in waiting rooms
    */
   startInactivityCleanup() {
-    this.cleanupInterval = setInterval(() => {
-      this.cleanupInactivePlayers();
+    this.cleanupInterval = setInterval(async () => {
+      try {
+        await this.cleanupInactivePlayers();
+        // ⭐ NEW: Also check for stuck tournaments
+        await this.forceCleanupStuckTournaments();
+      } catch (error) {
+        console.error('🏆 Error during tournament inactivity cleanup:', error);
+      }
     }, TournamentConfig.CLEANUP_INTERVAL);
   }
 
@@ -37,8 +53,9 @@ export class TournamentCleanupManager {
   /**
    * Clean up inactive players from waiting rooms
    */
-  cleanupInactivePlayers() {
+  async cleanupInactivePlayers() {
     const now = Date.now();
+    const disconnectHandler = await this.getDisconnectHandler();
     
     for (const [waitingRoomId, waitingRoomData] of this.waitingRooms) {
       // Check for inactive players
@@ -52,7 +69,7 @@ export class TournamentCleanupManager {
         
         inactivePlayers.forEach(player => {
           console.log(`🏆 Removing inactive player ${player.username} (${player.id}) from waiting room ${waitingRoomId}`);
-          this.disconnectHandler.handleWaitingRoomDisconnect(player.id, waitingRoomId, 'inactivity_timeout');
+          disconnectHandler.handleWaitingRoomDisconnect(player.id, waitingRoomId, 'inactivity_timeout');
         });
       }
       
@@ -75,7 +92,7 @@ export class TournamentCleanupManager {
           
           playersToRemove.forEach(player => {
             console.log(`🏆 Removing duplicate player ${player.username} (${player.id}) from waiting room ${waitingRoomId}`);
-            this.disconnectHandler.handleWaitingRoomDisconnect(player.id, waitingRoomId, 'duplicate_username');
+            disconnectHandler.handleWaitingRoomDisconnect(player.id, waitingRoomId, 'duplicate_username');
           });
         });
       }
@@ -102,6 +119,40 @@ export class TournamentCleanupManager {
     }
     
     // Clean up tournament rooms
-    this.disconnectHandler.cleanupTournamentRooms(waitingRoomId);
+    const disconnectHandler = await this.getDisconnectHandler();
+    disconnectHandler.cleanupTournamentRooms(waitingRoomId);
+    
+    console.log(`🏆 Tournament cleanup completed for ${waitingRoomId}`);
+  }
+  
+  /**
+   * ⭐ NEW: Force cleanup of stuck tournaments
+   */
+  async forceCleanupStuckTournaments() {
+    console.log(`🏆 Checking for stuck tournaments...`);
+    
+    const now = Date.now();
+    const stuckTournaments = [];
+    
+    for (const [waitingRoomId, waitingRoomData] of this.waitingRooms.entries()) {
+      // Check if tournament has been running for more than 30 minutes
+      const tournamentAge = now - waitingRoomData.createdAt;
+      const maxTournamentAge = 30 * 60 * 1000; // 30 minutes
+      
+      if (tournamentAge > maxTournamentAge && waitingRoomData.phase !== 'FINISHED') {
+        console.log(`🏆 Found stuck tournament ${waitingRoomId} (age: ${Math.round(tournamentAge / 1000)}s)`);
+        stuckTournaments.push(waitingRoomId);
+      }
+    }
+    
+    // Clean up stuck tournaments
+    for (const waitingRoomId of stuckTournaments) {
+      console.log(`🏆 Force cleaning up stuck tournament ${waitingRoomId}`);
+      await this.cleanupWaitingRoom(waitingRoomId);
+    }
+    
+    if (stuckTournaments.length > 0) {
+      console.log(`🏆 Force cleaned up ${stuckTournaments.length} stuck tournaments`);
+    }
   }
 } 

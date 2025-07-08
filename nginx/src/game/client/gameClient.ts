@@ -37,7 +37,10 @@ export class GameClient {
     private isIntroAnimationRunning: boolean = false;
     private isGameStarted: boolean = false;
     
-    // 🛑 NEW: Render loop state tracking
+    // ⭐ NEW: Track if tournament advancement has been received to prevent race conditions
+    private tournamentAdvancementReceived: boolean = false;
+    
+    // Render loop management
     private renderLoopStopping: boolean = false;
     private renderLoopStopped: boolean = false;
     private renderLoopStopPromise: Promise<void> | null = null;
@@ -113,6 +116,9 @@ export class GameClient {
     public async initializeGame(playerId: string, isTournamentMode: boolean = false): Promise<void> {
         this.localPlayerId = playerId;
         
+        // ⭐ NEW: Reset tournament advancement flag for new game
+        this.tournamentAdvancementReceived = false;
+        
         // Check if canvas exists
         const canvasElement = document.getElementById('renderCanvas');
         if (!canvasElement || !(canvasElement instanceof HTMLCanvasElement)) {
@@ -146,6 +152,16 @@ export class GameClient {
 
     // Initialize tournament game with provided match data
     public async initializeTournamentGame(matchData: any): Promise<void> {
+        console.log('🏆 initializeTournamentGame called with matchData:', matchData);
+        
+        // ⭐ CRITICAL FIX: Check if tournament advancement has been received to prevent race conditions
+        if (this.tournamentAdvancementReceived) {
+            console.log('🏆 Tournament advancement already received, skipping game initialization to prevent race condition');
+            return;
+        }
+        
+        console.log('🏆 Tournament game initialization starting...');
+        
         // Tournament game initialization
         
         // Reset game state for clean start
@@ -346,6 +362,9 @@ export class GameClient {
                     // Handle waiting status and update player names
                     handleWaitingForPlayers(message, this.updateGameStatus.bind(this));
                 } else if (message.type === 'tournamentAdvancement') {
+                    // ⭐ CRITICAL FIX: Set flag to prevent race conditions with game initialization
+                    this.tournamentAdvancementReceived = true;
+                    
                     await TournamentClientHandler.handleTournamentAdvancement(message, this.updateGameStatus.bind(this), {
                         isGameOver: this.isGameOver,
                         isGameLoopRunning: this.isGameLoopRunning,
@@ -400,6 +419,7 @@ export class GameClient {
                     // Handle match assignment for tournament
                     TournamentClientHandler.handleMatchAssignment(message, this.updateGameStatus.bind(this));
                 } else if (message.type === 'gameInit') {
+                    console.log('🏆 Received gameInit message:', message);
                     // Handle game initialization for tournament matches
                     TournamentClientHandler.handleGameInit(message, this.updateGameStatus.bind(this), this);
                 }
@@ -837,6 +857,9 @@ export class GameClient {
 
     public async cleanup(): Promise<void> {
         console.log('🧹 Starting game client cleanup...');
+        
+        // ⭐ NEW: Reset tournament advancement flag
+        this.tournamentAdvancementReceived = false;
         
         // 🛑 NEW: Use proper render loop stopping
         await this.stopRenderLoop();

@@ -18,57 +18,23 @@ export class ConnectionManager {
   /**
    * Handle new player connection
    */
-  handlePlayerConnection(ws, playerId, roomId) {
-    const player = this._getOrCreatePlayer(ws, playerId);
+  async handlePlayerConnection(ws, playerId, roomId) {
+    console.log(`🔌 New player connection: ${playerId} to room ${roomId}`);
     
-    // Check if this is a tournament waiting room connection
-    const matchType = ws.matchType || '1v1';
+    // Create or get player
+    const player = playerManager.getOrCreatePlayer(playerId, ws);
     
-    if (matchType === 'tournament' && roomId) {
-      // This is a tournament waiting room connection
-      console.log(`🏆 Tournament waiting room connection: player ${playerId} to room ${roomId}`);
-      
-      // Verify the room exists and is a tournament waiting room
-      const room = gameStateManager.getRoom(roomId);
-      console.log(`🏆 DEBUG: Room validation for ${roomId}:`, {
-        roomExists: !!room,
-        roomMetadata: room?.metadata,
-        roomType: room?.metadata?.roomType,
-        matchType: room?.matchType,
-        expectedRoomType: 'waiting',
-        expectedMatchType: 'tournament'
-      });
-      
-      if (room && room.metadata?.roomType === 'waiting' && room.matchType === 'tournament') {
-        // Update player's WebSocket connection
-        player.updateConnection(ws);
-        
-        // Set connection metadata
-        this._setConnectionMetadata(ws, playerId, roomId);
-        
-        LogUtils.logPlayerAction('connected', playerId, roomId);
-        console.log(`🏆 Tournament player connected: ${playerId} in waiting room ${roomId}`);
-        
-        // Notify tournament manager of WebSocket connection
-        tournamentManager.handlePlayerWebSocketConnected(playerId, roomId);
-        
-        return roomId;
-      } else {
-        console.error(`🏆 Invalid tournament waiting room: ${roomId}`);
-        return null;
-      }
-    } else {
-      // Regular 1v1 connection
-      const assignedRoomId = roomId || gameEngine.createOrJoinRoom(playerId, player, ws);
-
-      // Set connection metadata
-      this._setConnectionMetadata(ws, playerId, assignedRoomId);
-      
-      LogUtils.logPlayerAction('connected', playerId, assignedRoomId);
-      console.log(`Player connected: ${playerId} in room ${assignedRoomId}, total rooms: ${gameStateManager.getGameState().gameRooms.size}`);
-
-      return assignedRoomId;
-    }
+    // Assign room
+    const assignedRoomId = roomId || await gameEngine.createOrJoinRoom(playerId, player, ws);
+    
+    // Update player's room assignment
+    player.assignToRoom(assignedRoomId);
+    
+    // Update WebSocket room ID for disconnect handling
+    ws.roomId = assignedRoomId;
+    
+    console.log(`🔌 Player ${playerId} assigned to room ${assignedRoomId}`);
+    return assignedRoomId;
   }
 
   /**

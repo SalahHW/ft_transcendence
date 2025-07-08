@@ -190,7 +190,7 @@ export async function registerApiRoutes(fastify) {
         });
       }
       
-      const result = tournamentManager.removePlayerFromTournament(id, username);
+      const result = await tournamentManager.removePlayerFromTournament(id, username);
       
       if (result.success) {
         return reply.status(HTTP_STATUS.OK).send({

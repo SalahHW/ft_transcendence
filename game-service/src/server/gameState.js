@@ -21,8 +21,8 @@ export async function endGame(room, roomId) {
   return gameEngine.endGame(room, roomId);
 }
 
-export function createOrJoinRoom(playerId, player, ws) {
-  return gameEngine.createOrJoinRoom(playerId, player, ws);
+export async function createOrJoinRoom(playerId, player, ws) {
+  return await gameEngine.createOrJoinRoom(playerId, player, ws);
 }
 
 export function getGameState() {

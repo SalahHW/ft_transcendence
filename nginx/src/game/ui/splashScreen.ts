@@ -2,6 +2,10 @@
  * Splash screen utilities for displaying game start information
  */
 
+let currentSplashScreenPromise: Promise<void> | null = null;
+let currentSplashScreenResolve: (() => void) | null = null;
+let currentSplashScreenTimeout: NodeJS.Timeout | null = null;
+
 /**
  * Create and display a splash screen showing opponent information
  * @param currentPlayerName - Current player's name
@@ -14,7 +18,15 @@ export function showSplashScreen(
     opponentName: string, 
     duration: number = 3000
 ): Promise<void> {
+    // If there's already a splash screen running, interrupt it
+    if (currentSplashScreenPromise) {
+        removeSplashScreen();
+    }
+
     return new Promise((resolve) => {
+        currentSplashScreenPromise = Promise.resolve();
+        currentSplashScreenResolve = resolve;
+        
         // Create splash screen overlay
         const splashOverlay = document.createElement('div');
         splashOverlay.id = 'game-splash-screen';
@@ -133,10 +145,8 @@ export function showSplashScreen(
         // Add to DOM
         document.body.appendChild(splashOverlay);
 
-    
-
         // Remove splash screen after duration
-        setTimeout(() => {
+        currentSplashScreenTimeout = setTimeout(() => {
             // Fade out animation
             splashOverlay.style.animation = 'fadeOut 0.5s ease-in-out';
             
@@ -149,6 +159,11 @@ export function showSplashScreen(
                 if (styleSheet.parentNode) {
                     styleSheet.parentNode.removeChild(styleSheet);
                 }
+                
+                // Clean up references
+                currentSplashScreenPromise = null;
+                currentSplashScreenResolve = null;
+                currentSplashScreenTimeout = null;
         
                 resolve();
             }, 500); // Wait for fade out animation
@@ -163,6 +178,37 @@ export function removeSplashScreen(): void {
     const splashScreen = document.getElementById('game-splash-screen');
     if (splashScreen && splashScreen.parentNode) {
         splashScreen.parentNode.removeChild(splashScreen);
-
     }
+    
+    // Remove any associated styles
+    const styleSheets = document.querySelectorAll('style');
+    styleSheets.forEach(style => {
+        if (style.textContent && style.textContent.includes('fadeIn') && style.textContent.includes('slideInUp')) {
+            if (style.parentNode) {
+                style.parentNode.removeChild(style);
+            }
+        }
+    });
+    
+    // Clear timeout and resolve promise if it exists
+    if (currentSplashScreenTimeout) {
+        clearTimeout(currentSplashScreenTimeout);
+        currentSplashScreenTimeout = null;
+    }
+    
+    if (currentSplashScreenResolve) {
+        currentSplashScreenResolve();
+        currentSplashScreenResolve = null;
+    }
+    
+    currentSplashScreenPromise = null;
+    
+    console.log('🧹 Splash screen removed immediately');
+}
+
+/**
+ * Check if a splash screen is currently active
+ */
+export function isSplashScreenActive(): boolean {
+    return currentSplashScreenPromise !== null;
 } 

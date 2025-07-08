@@ -34,7 +34,7 @@ export class WebSocketHandler {
   /**
    * Handle new WebSocket connection
    */
-  _handleNewConnection(ws, req, fastify) {
+  async _handleNewConnection(ws, req, fastify) {
     const playerId = req.query.playerId || fastify.uuid();
     const roomId = req.query.roomId || null;
     const matchType = req.query.matchType || '1v1';
@@ -42,7 +42,7 @@ export class WebSocketHandler {
     // Set matchType on WebSocket for connection manager
     ws.matchType = matchType;
     
-    const assignedRoomId = this.connectionManager.handlePlayerConnection(ws, playerId, roomId);
+    const assignedRoomId = await this.connectionManager.handlePlayerConnection(ws, playerId, roomId);
 
     if (assignedRoomId) {
       // Setup message handling
@@ -65,7 +65,7 @@ export class WebSocketHandler {
   _setupMessageHandling(ws, playerId, roomId) {
     let messageCount = 0;
     
-    ws.on('message', (data) => {
+    ws.on('message', async (data) => {
       messageCount++;
       
       // Update player activity
@@ -75,7 +75,7 @@ export class WebSocketHandler {
       const currentRoomId = ws.roomId || roomId;
       
       // Route the message
-      this.messageRouter.routeMessage(
+      await this.messageRouter.routeMessage(
         data, 
         playerId, 
         currentRoomId,

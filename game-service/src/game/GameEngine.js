@@ -6,6 +6,7 @@ import {  WebSocketUtils } from '../utils/helpers.js';
 import { roomMatchmaker } from '../room/RoomMatchmaker.js';
 import { createWaitingMessage } from '../player/playerStatus.js';
 import { GAME_CONFIG } from '../core/constants.js';
+import { PlayerStates } from '../server/disconnect/BaseDisconnectHandler.js';
 
 /**
  * Core game engine responsible for game logic orchestration
@@ -18,12 +19,12 @@ export class GameEngine {
   /**
    * Check if room is ready and start game if conditions are met
    */
-  checkRoomReady(roomId) {
+  async checkRoomReady(roomId) {
     const room = this.stateManager.getRoom(roomId);
     if (!room || room.ready) return;
 
     if (room.isReadyForGame()) {
-      this._startGame(room, roomId);
+      await this._startGame(room, roomId);
     } else {
       this._notifyWaitingStatus(room);
     }
@@ -150,15 +151,17 @@ export class GameEngine {
   /**
    * Create or join a room for a player
    */
-  createOrJoinRoom(playerId, player, ws) {
+  async createOrJoinRoom(playerId, player, ws) {
     const result = roomMatchmaker.findOrCreateRoom(player);
-    this.checkRoomReady(result.roomId);
+    await this.checkRoomReady(result.roomId);
     return result.roomId;
   }
 
   // Private helper methods
-  _startGame(room, roomId) {
+  async _startGame(room, roomId) {
+    console.log(`🎮 Starting game for room ${roomId}`);
     room.setReady();
+    console.log(`🎮 Room ${roomId} set ready, gameStarted: ${room.gameStarted}`);
     
     // Set player states to LAUNCH_ANIMATION when game starts
     room.players.forEach((p, i) => {
@@ -175,33 +178,46 @@ export class GameEngine {
             opponentName: otherPlayer.username || 'Anonymous',
             // ⭐ FIX: Include initial paddle positions to ensure synchronization
             playerPositionZ: p.positionZ || 0,
-            opponentPositionZ: otherPlayer.positionZ || 0,
+            opponentPositionZ: otherPlayer.positionZ || 0
           }));
-          console.log(`Sent init to player ${p.id} (${p.username}) in room ${roomId} with positions: player=${p.positionZ}, opponent=${otherPlayer.positionZ}`);
-        } catch (e) {
-          console.error(`Failed to send init to player ${p.id}:`, e);
+          console.log(`🎮 Sent game init to ${p.username}(${p.id}) in room ${roomId}`);
+        } catch (error) {
+          console.error(`❌ Error sending game init to player ${p.id}:`, error);
         }
       }
     });
 
-    // Initialize animation status
-    this.stateManager.initializeAnimationStatus(roomId);
+    // Initialize ball for the room
+    room.initializeBall();
+    console.log(`🎮 Ball initialized for room ${roomId}`);
+
+    // Set player states to LAUNCH_ANIMATION using disconnect handler
+    console.log(`🎮 About to set player states to LAUNCH_ANIMATION for room ${roomId}`);
+    await this._setPlayerStatesToLaunchAnimation(room, roomId);
+    console.log(`🎮 Finished setting player states to LAUNCH_ANIMATION for room ${roomId}`);
+  }
+
+  /**
+   * Set player states to LAUNCH_ANIMATION using disconnect handler
+   */
+  async _setPlayerStatesToLaunchAnimation(room, roomId) {
+    console.log(`🎮 Setting player states to LAUNCH_ANIMATION for room ${roomId}`);
     
-    // Set player states to LAUNCH_ANIMATION
-    room.players.forEach(p => {
-      if (room.metadata && room.metadata.playerStates) {
-        room.metadata.playerStates[p.id] = {
-          state: 'launch_animation',
-          timestamp: Date.now(),
-          previousState: room.metadata.playerStates[p.id]?.state || 'waiting'
-        };
-      }
-    });
-    
-    // ⭐ ANIMATION FIX: Do NOT send the ball update here.
-    // The ball update will be triggered by MessageRouter._handleAnimationComplete
-    // after both clients have confirmed their intro animations are done.
-    console.log(`Game started for room ${roomId}. Waiting for clients to complete animations.`);
+    try {
+      const { disconnectionDetector } = await import('../server/disconnect/DisconnectionDetector.js');
+      const matchType = room.matchType || '1v1';
+      const handler = disconnectionDetector.getHandler(matchType, roomId);
+      
+      // Set player states to LAUNCH_ANIMATION
+      room.players.forEach((player, index) => {
+        console.log(`🎮 Setting player ${player.id} (${player.username}) to LAUNCH_ANIMATION state`);
+        handler.setPlayerState(player.id, roomId, PlayerStates.LAUNCH_ANIMATION);
+      });
+      
+      console.log(`✅ Successfully set all players to LAUNCH_ANIMATION state in room ${roomId}`);
+    } catch (error) {
+      console.error(`❌ Error setting player states to LAUNCH_ANIMATION for room ${roomId}:`, error);
+    }
   }
 
   _notifyWaitingStatus(room) {

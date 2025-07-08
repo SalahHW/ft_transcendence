@@ -82,6 +82,50 @@ export class TournamentCommunicationManager {
         });
       }
     });
+    
+    // ⭐ FIX: Also close any remaining WebSocket connections that might be lingering
+    // This ensures all connections are properly closed even if players are not in rooms
+    console.log(`🏆 Tournament completion cleanup: Ensuring all WebSocket connections are closed`);
+    
+    // Force cleanup of any remaining connections
+    setTimeout(() => {
+      this._forceCleanupRemainingConnections(waitingRoomId, finalStandings);
+    }, 5000); // 5 second delay to allow normal completion messages to be sent
+  }
+  
+  /**
+   * Force cleanup of any remaining WebSocket connections
+   */
+  _forceCleanupRemainingConnections(waitingRoomId, finalStandings) {
+    const waitingRoomData = this.tournamentManager.waitingRooms.get(waitingRoomId);
+    if (!waitingRoomData) return;
+    
+    // Get all players from all tournament rooms
+    const allPlayers = [];
+    const rooms = [
+      waitingRoomData.tournamentRooms.semiFinalA,
+      waitingRoomData.tournamentRooms.semiFinalB,
+      waitingRoomData.tournamentRooms.winnerFinal,
+      waitingRoomData.tournamentRooms.loserFinal
+    ];
+    
+    rooms.forEach(room => {
+      if (room && room.players) {
+        allPlayers.push(...room.players);
+      }
+    });
+    
+    // Close any remaining WebSocket connections
+    allPlayers.forEach(player => {
+      if (player.ws && player.ws.readyState === 1) {
+        try {
+          console.log(`🏆 Force closing remaining WebSocket connection for player ${player.username} (${player.id})`);
+          player.ws.close(1000, 'Tournament cleanup');
+        } catch (error) {
+          console.error(`Failed to force close WebSocket for player ${player.username}:`, error);
+        }
+      }
+    });
   }
 
   /**
@@ -109,14 +153,14 @@ export class TournamentCommunicationManager {
         placement: 2
       });
       
-      // 3rd place: Winner of loser final
+      // 3rd place: Winner of loser final (or first loser if forfeit)
       standings.push({
         id: loserFinalResult.winner.id,
         username: loserFinalResult.winner.username,
         placement: 3
       });
       
-      // 4th place: Loser of loser final
+      // 4th place: Loser of loser final (or second loser if forfeit)
       standings.push({
         id: loserFinalResult.loser.id,
         username: loserFinalResult.loser.username,
