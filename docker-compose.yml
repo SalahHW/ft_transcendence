@@ -17,6 +17,7 @@ services:
       - transcendence
     volumes:
       - ./redis-data:/data
+    restart: always
 
   users:
     container_name: users
