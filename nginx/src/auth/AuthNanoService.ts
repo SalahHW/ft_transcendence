@@ -1,64 +1,101 @@
 import UsersApi, { User } from "../api/user.js";
+import PresenceSocketService from "./presencesService.js";
+import axios from "axios";
 
 export default class AuthNanoService {
-    private static _instance: AuthNanoService;
-    private _usersApi: UsersApi = new UsersApi();
-    private _user: User | null = null;
-    private _isLoggedIn: boolean | null = null; // null means we haven't checked yet
+  private static _instance: AuthNanoService;
+  private _usersApi: UsersApi = new UsersApi();
+  private _user: User | null = null;
+  private _isLoggedIn: boolean | null = null; // null means we haven't checked yet
 
-    private constructor() {}
+  private constructor() {}
 
-    public static getInstance(): AuthNanoService {
-        if (!AuthNanoService._instance) {
-            AuthNanoService._instance = new AuthNanoService();
-        }
-        return AuthNanoService._instance;
+  public static getInstance(): AuthNanoService {
+    if (!AuthNanoService._instance) {
+      AuthNanoService._instance = new AuthNanoService();
+    }
+    return AuthNanoService._instance;
+  }
+
+  private async _ensureAuthStatusChecked(): Promise<void> {
+    if (this._isLoggedIn === null) {
+      try {
+        this._user = await this._usersApi.getCurrentUser();
+        this._isLoggedIn = !!this._user;
+      } catch (error) {
+        console.error("Failed to check auth status", error);
+        this._user = null;
+        this._isLoggedIn = false;
+      }
+    }
+  }
+
+  public async isLoggedIn(): Promise<boolean> {
+    await this._ensureAuthStatusChecked();
+    return this._isLoggedIn!;
+  }
+
+  public async getUser(): Promise<User | null> {
+    await this._ensureAuthStatusChecked();
+    return this._user;
+  }
+
+  public async login(username: string, password: string): Promise<User> {
+    const user = await this._usersApi.login(username, password);
+    this._user = user;
+    this._isLoggedIn = true;
+    PresenceSocketService.getInstance().connect(
+      (await getUserIdByUsername(username)).toString()
+    );
+
+    return user;
+  }
+
+  public async logout(): Promise<void> {
+    try {
+      await this._usersApi.logout();
+      this._user = null;
+      this._isLoggedIn = false;
+    } catch (error) {
+      console.error("Logout API call failed:", error);
+      throw new Error("Logout failed. Please try again.");
+    }
+  }
+
+  public async register(
+    username: string,
+    password: string,
+    email: string
+  ): Promise<User> {
+    await this._usersApi.register(username, password, email);
+    // After successful registration, log the user in.
+    return this.login(username, password);
+  }
+}
+
+export async function getUserIdByUsername(username: string): Promise<number> {
+  try {
+    const response = await axios.get(
+      `https://elsalmajori.games:8443/users/username/${encodeURIComponent(
+        username
+      )}`
+    );
+    const user = response.data;
+
+    if (typeof user.id !== "number") {
+      throw new Error("Invalid response format: missing or invalid 'id'");
     }
 
-    private async _ensureAuthStatusChecked(): Promise<void> {
-        if (this._isLoggedIn === null) {
-            try {
-                this._user = await this._usersApi.getCurrentUser();
-                this._isLoggedIn = !!this._user;
-            } catch (error) {
-                console.error("Failed to check auth status", error);
-                this._user = null;
-                this._isLoggedIn = false;
-            }
-        }
+    return user.id;
+  } catch (err: any) {
+    if (err.response?.status === 404) {
+      throw new Error(`User '${username}' not found`);
     }
 
-    public async isLoggedIn(): Promise<boolean> {
-        await this._ensureAuthStatusChecked();
-        return this._isLoggedIn!;
-    }
-
-    public async getUser(): Promise<User | null> {
-        await this._ensureAuthStatusChecked();
-        return this._user;
-    }
-
-    public async login(username: string, password: string): Promise<User> {
-        const user = await this._usersApi.login(username, password);
-        this._user = user;
-        this._isLoggedIn = true;
-        return user;
-    }
-
-    public async logout(): Promise<void> {
-        try {
-            await this._usersApi.logout();
-            this._user = null;
-            this._isLoggedIn = false;
-        } catch (error) {
-            console.error("Logout API call failed:", error);
-            throw new Error("Logout failed. Please try again.");
-        }
-    }
-
-    public async register(username: string, password: string, email: string): Promise<User> {
-        await this._usersApi.register(username, password, email);
-        // After successful registration, log the user in.
-        return this.login(username, password);
-    }
+    console.error(
+      `[getUserIdByUsername] Failed to fetch user ID for '${username}'`,
+      err
+    );
+    throw new Error("Failed to retrieve user ID");
+  }
 }

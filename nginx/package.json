@@ -14,17 +14,18 @@
   },
   "dependencies": {
     "@babylonjs/core": "^7.54.3",
+    "axios": "^1.10.0",
     "tailwindcss": "^4.1.8",
     "typescript": "^5.8.3",
     "ws": "^8.18.1"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.8",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^11.1.6",
     "@types/ws": "^8.18.1",
     "rollup": "^4.21.0",
-    "@rollup/plugin-typescript": "^11.1.6",
-    "@rollup/plugin-node-resolve": "^15.2.3",
-    "@rollup/plugin-commonjs": "^25.0.8",
-    "@rollup/plugin-terser": "^0.4.4",
     "tslib": "^2.6.2"
   }
 }
