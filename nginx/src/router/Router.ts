@@ -2,14 +2,14 @@
 /*                                                                            */
 /*                                                        :::      ::::::::   */
 /*   Router.ts                                          :+:      :+:    :+:   */
-/*   Router.ts                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/26 20:40:51 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/23 15:31:20 by edelarbr         ###   ########.fr       */
+/*   Created: Invalid Date        by              +#+  #+#    #+#             */
+/*   Updated: 2025/07/09 18:24:46 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
 
 // TODO: Mettre cette classe ça au propre
 // TODO: (opt) Mettre des views pour les differents forms de APITestPage

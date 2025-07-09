@@ -70,12 +70,12 @@ export default class GamePage {
 		if (confirmLeave) {
 			// Set flag to prevent double cleanup during navigation
 			(window as any).gameCleanupInProgress = true;
-			
+
 			// Notify the game client to clean up properly
 			if ((window as any).leaveGame) {
 				(window as any).leaveGame();
 			}
-			
+
 			// Navigate back to home or API test page
 			window.history.back();
 		}
@@ -121,7 +121,7 @@ export default class GamePage {
 	public cleanup(): void {
 		// Remove splash screen if it exists
 		removeSplashScreen();
-		
+
 		// Remove leave game button handler
 		if (this._leaveGameHandler) {
 			const leaveButton = document.getElementById("leave-game-button");
@@ -137,4 +137,4 @@ export default class GamePage {
 			this._resizeHandler = undefined;
 		}
 	}
-} 
+}

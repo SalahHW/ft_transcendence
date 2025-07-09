@@ -1,4 +1,4 @@
-import UsersApi, { User } from "../../../api/user.js";
+import UsersApi from "../../../api/user.js";
 import { buttonHTML } from "../../../components/button.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 
@@ -52,7 +52,7 @@ export default class CreateUserForm {
 				return;
 			}
 
-			const userData: User = {
+			const userData = {
 				username: nameInput.value,
 				email: emailInput.value,
 				password: passwordInput.value,
