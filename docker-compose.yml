@@ -81,5 +81,13 @@ services:
     volumes:
       - ./friends-service/database:/app/database
 
+  presences:
+    container_name: presences
+    build: ./presences-service
+    env_file:
+      - ./.env
+    networks:
+      - transcendence
+
 networks:
   transcendence:
