@@ -167,18 +167,20 @@ This document outlines all the available REST API routes, their purposes, expect
 
 ### POST `/report-tournament`
 
-**Purpose**: Submit a tournament result.
+**Purpose**: Submit a tournament result. Each tournament always consists of exactly 4 matches.
 
 #### Request Body:
 
 ```json
 {
   "endTimestamp": 1620000000,
-  "matchIds": [1, 2],
+  "matchIds": [1, 2, 3, 4],
   "winner": "0x...",
   "tournamentTokenId": 123
 }
 ```
+
+> ⚠️ `matchIds` must always include **exactly 4** match IDs that were part of the tournament.
 
 #### Success Response:
 
