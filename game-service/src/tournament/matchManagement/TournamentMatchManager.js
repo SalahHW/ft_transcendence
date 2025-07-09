@@ -128,13 +128,11 @@ export class TournamentMatchManager {
     const nb_players_in_waiting_room = waitingRoomData.players.length;
     const disconnectedCount = waitingRoomData.disconnectedPlayers.length;
     const connectedCount = waitingRoomData.players.filter(p => p.connected).length;
-    
-    console.log(`########## Connected: ${connectedCount}, Disconnected: ${disconnectedCount}`);
-    console.log(`########## Waiting room data: ${nb_players_in_waiting_room}`);
-    
-    // ⭐ FIX: Check if both remaining players are from the same semi-final (which triggers the single semi-final edge case)
-    const connectedPlayers = waitingRoomData.players.filter(p => p.connected);
-    const player1 = connectedPlayers[0];
+    let shouldHandleTwoPlayerFinalScenario = false;
+
+    if (connectedCount === 2 && disconnectedCount === 2) {
+      const connectedPlayers = waitingRoomData.players.filter(p => p.connected);
+      const player1 = connectedPlayers[0];
       const player2 = connectedPlayers[1];
       
       // Check which semi-final rooms they were in
@@ -146,17 +144,16 @@ export class TournamentMatchManager {
       const player2InSemiFinalA = semiFinalA.players.some(p => p.id === player2.id);
       const player2InSemiFinalB = semiFinalB.players.some(p => p.id === player2.id);
       
-    
-      const shouldHandleTwoPlayerFinalScenario = Boolean(
+      shouldHandleTwoPlayerFinalScenario = Boolean(
         (connectedCount === 2) &&
         (disconnectedCount === 2) && ((player1InSemiFinalA && player2InSemiFinalA) || (player1InSemiFinalB && player2InSemiFinalB))
       );
-
+    }
+    
     if (!shouldHandleTwoPlayerFinalScenario) {
       return false;
     }
-    console.log(`########## HANDLING SINGLE SEMI-FINAL EDGE CASE OK ##########`);
-
+    
     // Find the actual player objects
     const winnerPlayer = this._findPlayerInRoom(roomId, winner.id);
     const loserPlayer = this._findPlayerInRoom(roomId, loser.id);
