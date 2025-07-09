@@ -74,7 +74,8 @@ export const mockProfile = {
 			wins: 15,
 			losses: 10,
 			authenticationMethod: 'credentials',
-			mail: 'alice@example.com'
+			mail: 'alice@example.com',
+			wallet: '0xabcdef1234567890abcdef1234567890abcdef12'
 		},
 		{
 			username: 'bob',
@@ -92,7 +93,8 @@ export const mockProfile = {
 			wins: 20,
 			losses: 20,
 			authenticationMethod: 'credentials',
-			mail: 'charlie@example.com'
+			mail: 'charlie@example.com',
+			wallet: '0xabcdef1234567890abcdef1234567890abcdef12'
 		},
 		{
 			username: 'dave',
