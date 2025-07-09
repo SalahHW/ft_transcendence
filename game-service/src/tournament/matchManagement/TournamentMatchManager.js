@@ -114,6 +114,158 @@ export class TournamentMatchManager {
   }
 
   /**
+   * Handle single semi-final edge case where only 2 players remain connected
+   * This occurs when 2 players are connected and 2 are disconnected
+   * Also handles forfeit winner scenarios
+   */
+  async handleSingleSemiFinal(waitingRoomId, roomId, winner, loser, matchData) {
+    const waitingRoomData = this.tournamentManager.waitingRooms.get(waitingRoomId);
+    if (!waitingRoomData) {
+      console.error(`🏆 Waiting room data not found for single semi-final handling`);
+      return false;
+    }
+
+    const nb_players_in_waiting_room = waitingRoomData.players.length;
+    const disconnectedCount = waitingRoomData.disconnectedPlayers.length;
+    const connectedCount = waitingRoomData.players.filter(p => p.connected).length;
+    
+    const shouldHandleTwoPlayerFinalScenario = Boolean(
+      (connectedCount === 2) &&
+      (disconnectedCount === 2)
+    );
+
+    if (!shouldHandleTwoPlayerFinalScenario) {
+      return false;
+    }
+
+    console.log(`🔴🔴 HANDLING SINGLE SEMI-FINAL EDGE CASE 🔴🔴`);
+    console.log(`🔴🔴 Two player final scenario detected 🔴🔴`);
+    console.log(`🔴🔴 Tournament state: 2 disconnected, 2 connected, winner final ready, loser final empty 🔴🔴`);
+    console.log(`🔴🔴 Semi-final ${roomId} ended with winner: ${winner.username}, loser: ${loser.username} 🔴🔴`);
+    console.log(`🔴🔴 EDGE CASE CHECK 🔴🔴`);
+    console.log(`🔴🔴 DISCONNECTED COUNT: ${disconnectedCount} 🔴🔴`);
+    console.log(`🔴🔴 CONNECTED COUNT: ${connectedCount} 🔴🔴`);
+    console.log(`🔴🔴 NB_PLAYERS_IN_WAITING_ROOM: ${nb_players_in_waiting_room} 🔴🔴`);
+
+    // Find the actual player objects
+    const winnerPlayer = this._findPlayerInRoom(roomId, winner.id);
+    const loserPlayer = this._findPlayerInRoom(roomId, loser.id);
+
+    if (!winnerPlayer || !loserPlayer) {
+      console.error(`🏆 Could not find winner or loser player objects for single semi-final handling`);
+      return false;
+    }
+
+    // Check if this is a forfeit winner scenario
+    const isForfeitWinner = matchData?.gameStats?.forfeitReason || matchData?.matchType === 'tournament_forfeit';
+    
+    if (isForfeitWinner) {
+      console.log(`🏆 Forfeit winner detected: ${winner.username} wins by forfeit`);
+    }
+
+    // Store the match result
+    if (!waitingRoomData.semiFinalResults) {
+      waitingRoomData.semiFinalResults = {};
+    }
+    waitingRoomData.semiFinalResults[roomId] = { winner, loser };
+
+    // Create final results to complete the tournament
+    if (!waitingRoomData.finalResults) {
+      waitingRoomData.finalResults = {};
+    }
+
+    // Set winner as tournament winner (1st place)
+    waitingRoomData.finalResults['winner_final'] = { 
+      winner: winner, 
+      loser: loser,
+      isSingleSemiFinal: true,
+      isForfeitWinner: isForfeitWinner
+    };
+
+    // Set loser as 2nd place (no loser final needed)
+    waitingRoomData.finalResults['loser_final'] = { 
+      winner: loser, 
+      loser: loser, // Same player since no actual loser final
+      isSingleSemiFinal: true,
+      isForfeitWinner: isForfeitWinner
+    };
+
+    console.log(`🏆 Single semi-final scenario: ${winner.username} gets 1st place, ${loser.username} gets 2nd place`);
+
+    // Send completion messages to both players
+    if (winnerPlayer.ws && winnerPlayer.ws.readyState === 1) {
+      try {
+        const winnerMessage = isForfeitWinner 
+          ? '🏆 Tournament complete! You finished 1st place (forfeit win)!'
+          : '🏆 Tournament complete! You finished 1st place!';
+          
+        winnerPlayer.ws.send(JSON.stringify({
+          type: 'tournamentAdvancement',
+          status: 'final_match_complete',
+          playerPlacement: 1,
+          isWinner: true,
+          opponentName: loser.username,
+          message: winnerMessage,
+          isForfeitWinner: isForfeitWinner
+        }));
+
+        // Close WebSocket connection for 1st place player
+        console.log(`🏆 Closing WebSocket connection for 1st place player ${winnerPlayer.username} (${winnerPlayer.id})`);
+        winnerPlayer.ws.close(1000, 'Tournament completed - 1st place');
+      } catch (error) {
+        console.error(`Failed to send 1st place completion to ${winnerPlayer.username}:`, error);
+      }
+    }
+
+    if (loserPlayer.ws && loserPlayer.ws.readyState === 1) {
+      try {
+        const loserMessage = isForfeitWinner 
+          ? '🏆 Tournament complete! You finished 2nd place (opponent forfeit)!'
+          : '🏆 Tournament complete! You finished 2nd place!';
+          
+        loserPlayer.ws.send(JSON.stringify({
+          type: 'tournamentAdvancement',
+          status: 'final_match_complete',
+          playerPlacement: 2,
+          isWinner: false,
+          opponentName: winner.username,
+          message: loserMessage,
+          isForfeitWinner: isForfeitWinner
+        }));
+
+        // Close WebSocket connection for 2nd place player
+        console.log(`🏆 Closing WebSocket connection for 2nd place player ${loserPlayer.username} (${loserPlayer.id})`);
+        loserPlayer.ws.close(1000, 'Tournament completed - 2nd place');
+      } catch (error) {
+        console.error(`Failed to send 2nd place completion to ${loserPlayer.username}:`, error);
+      }
+    }
+
+    // Mark tournament as finished
+    waitingRoomData.phase = 'FINISHED';
+
+    // Send tournament completion message to all players
+    this.tournamentManager.communicationManager._sendTournamentCompletionMessage(waitingRoomId, { winner, loser });
+
+    // Schedule cleanup
+    setTimeout(() => {
+      this.tournamentManager.cleanupManager.cleanupWaitingRoom(waitingRoomId);
+    }, 10000); // 10 seconds delay to allow players to see results
+
+    console.log(`🔴🔴 SINGLE SEMI-FINAL EDGE CASE HANDLED SUCCESSFULLY 🔴🔴`);
+    return true;
+  }
+
+  /**
+   * Find player in a specific room
+   */
+  _findPlayerInRoom(roomId, playerId) {
+    const room = gameStateManager.getRoom(roomId);
+    if (!room || !room.players) return null;
+    return room.players.find(p => p.id === playerId);
+  }
+
+  /**
    * Handle semi-final match end and advance players to finals
    */
   async handleSemiFinalMatchEnd(waitingRoomId, roomId, matchData) {
@@ -139,6 +291,37 @@ export class TournamentMatchManager {
       waitingRoomData.semiFinalResults = {};
     }
     waitingRoomData.semiFinalResults[roomId] = { winner, loser };
+    
+    // TODO : ⭐ ENTRY POINT FOR HANDLING 2 REMAINING PLAYERS EDGE CASE
+    const nb_players_in_waiting_room = waitingRoomData.players.length;
+    const disconnectedCount = waitingRoomData.disconnectedPlayers.length;
+    const connectedCount = waitingRoomData.players.filter(p => p.connected).length;
+    
+    const shouldHandleTwoPlayerFinalScenario = Boolean(
+      (connectedCount === 2) &&
+      (disconnectedCount === 2)
+    );
+    
+    if (shouldHandleTwoPlayerFinalScenario) {
+      console.log(`🔴🔴 HANDLED EDGE CASE DETECTED 🔴🔴`);
+      console.log(`🔴🔴 Two player final scenario detected 🔴🔴`);
+      console.log(`🔴🔴 Tournament state: 2 disconnected, 2 connected, winner final ready, loser final empty 🔴🔴`);
+      console.log(`🔴🔴 Semi-final ${roomId} ended with winner: ${winner.username}, loser: ${loser.username} 🔴🔴`);
+      console.log(`🔴🔴 EDGE CASE CHECK 🔴🔴`);
+      console.log(`🔴🔴 DISCONNECTED COUNT: ${disconnectedCount} 🔴🔴`);
+      console.log(`🔴🔴 CONNECTED COUNT: ${connectedCount} 🔴🔴`);
+      console.log(`🔴🔴 NB_PLAYERS_IN_WAITING_ROOM: ${nb_players_in_waiting_room} 🔴🔴`);
+      console.log(`🔴🔴 Semi-final ${roomId} ended with winner: ${winner.username}, loser: ${loser.username} 🔴🔴`);
+    }
+
+    // Handle single semi-final edge case
+    const singleSemiFinalHandled = await this.handleSingleSemiFinal(waitingRoomId, roomId, winner, loser, matchData);
+    
+    // If single semi-final was handled, don't proceed with normal transfer
+    if (singleSemiFinalHandled) {
+      console.log(`🏆 Single semi-final edge case handled, skipping normal transfer to finals`);
+      return;
+    }
     
     // Transfer players to their respective final rooms
     await this.tournamentManager.transferManager._transferPlayersToFinals(waitingRoomId, roomId, winner, loser);

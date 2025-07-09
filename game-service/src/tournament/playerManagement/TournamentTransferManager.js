@@ -479,13 +479,20 @@ export class TournamentTransferManager {
       isLoserFinalEmpty
     );
 
-    console.log(`🏆 Forfeit scenario check for ${loser.username}:`);
+       console.log(`🏆 Forfeit scenario check for ${loser.username}:`);
     console.log(`  Winner final full: ${isWinnerFinalFull}, complete: ${isWinnerFinalComplete}`);
     console.log(`  Disconnected: ${disconnectedCount}, Connected: ${connectedCount}`);
     console.log(`  Loser final empty: ${isLoserFinalEmpty}`);
     console.log(`  Should assign 3rd place: ${shouldAssignThirdPlace}`);
     console.log(`  All players in waiting room: [${waitingRoomData.players.map(p => `${p.username}(${p.id}) - connected: ${p.connected}`).join(', ')}]`);
     console.log(`  Disconnected players array: [${waitingRoomData.disconnectedPlayers.join(', ')}]`);
+
+    // ⭐ EDGE CASE DETECTION: Add red squares when the specific edge case is detected
+    if (shouldAssignThirdPlace) {
+      console.log(`🔴🔴🔴 HANDLED EDGE CASE DETECTED 🔴🔴🔴`);
+      console.log(`🔴🔴🔴 SemiA disconnect -> opponent to winner final, SemiB ends -> loser gets 3rd place 🔴🔴🔴`);
+      console.log(`🔴🔴🔴 Tournament state: 1 disconnected, 3 connected, winner final ready, loser final empty 🔴🔴🔴`);
+    }
 
     return shouldAssignThirdPlace;
   }
@@ -494,7 +501,9 @@ export class TournamentTransferManager {
    * Handle forfeit loser final scenario - assign 3rd place instead of transferring to loser final
    */
   async handleForfeitLoserFinalScenario(waitingRoomId, loser) {
-    console.log(`🏆 Handling forfeit loser final scenario for ${loser.username} in tournament ${waitingRoomId}`);
+    console.log(`🔴🔴🔴 PROCESSING HANDLED EDGE CASE 🔴🔴🔴`);
+    console.log(`🔴🔴🔴 Assigning 3rd place to ${loser.username} due to forfeit scenario 🔴🔴🔴`);
+    console.log(`🔴🔴🔴 Tournament ${waitingRoomId}: SemiA disconnect -> winner final, SemiB loser -> 3rd place 🔴🔴🔴`);
 
     const waitingRoomData = this.tournamentManager.waitingRooms.get(waitingRoomId);
     if (!waitingRoomData) {
@@ -550,6 +559,8 @@ export class TournamentTransferManager {
       isForfeit: true 
     };
 
+    console.log(`🔴🔴🔴 HANDLED EDGE CASE COMPLETED 🔴🔴🔴`);
+    console.log(`🔴🔴🔴 ${loserPlayer.username} assigned 3rd place, tournament can proceed with winner final only 🔴🔴🔴`);
     console.log(`🏆 Assigned 3rd place to ${loserPlayer.username} due to forfeit scenario`);
   }
 

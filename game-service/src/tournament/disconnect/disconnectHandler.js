@@ -42,6 +42,24 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       return;
     }
 
+    // ⭐ FIX: Check if player is already being processed for disconnection to prevent duplicates
+    const waitingRoomId = room.metadata?.waitingRoomId;
+    if (waitingRoomId) {
+      try {
+        const { tournamentManager } = await import('../TournamentManager.js');
+        const waitingRoomData = tournamentManager.waitingRooms.get(waitingRoomId);
+        if (waitingRoomData) {
+          const player = waitingRoomData.players.find(p => p.id === playerId);
+          if (player && !player.connected) {
+            console.log(`🏆 Player ${playerId} already disconnected, skipping duplicate disconnection processing`);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error(`🏆 Error checking player disconnection status:`, error);
+      }
+    }
+
     // Clean up player connection first
     this.cleanupPlayerConnection(playerId);
     
@@ -53,7 +71,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     // Handle based on current state
     switch (playerState) {
       case PlayerStates.WAITING:
-        this.handleWaitingStateDisconnect(playerId, roomId, reason);
+        await this.handleWaitingStateDisconnect(playerId, roomId, reason);
         break;
       case PlayerStates.LOADING:
       case PlayerStates.ANNOUNCEMENT:
@@ -64,11 +82,11 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
         await this.handleInGameDisconnect(playerId, roomId, reason);
         break;
       case PlayerStates.GAME_OVER:
-        this.handlePostGameDisconnect(playerId, roomId);
+        await this.handlePostGameDisconnect(playerId, roomId);
         break;
       default:
         console.warn(`🏆 Unknown tournament player state: ${playerState} for player ${playerId}`);
-        this.handleWaitingStateDisconnect(playerId, roomId, reason);
+        await this.handleWaitingStateDisconnect(playerId, roomId, reason);
     }
   }
 
@@ -91,7 +109,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   /**
    * Handle disconnection during waiting state in tournament matches
    */
-  handleWaitingStateDisconnect(playerId, roomId, reason) {
+  async handleWaitingStateDisconnect(playerId, roomId, reason) {
     console.log(`🏆 Tournament match waiting state disconnect: Player ${playerId} in room ${roomId} (${reason})`);
     
     const room = gameStateManager.getRoom(roomId);
@@ -100,6 +118,12 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     // DEBUG: Log room state to understand what's happening
     console.log(`🏆 DEBUG: Room ${roomId} state - gameStarted: ${room.gameStarted}, ready: ${room.ready}, players: ${room.players.length}`);
     console.log(`🏆 DEBUG: Room ${roomId} metadata:`, room.metadata);
+
+    // ⭐ FIX: Update tournament disconnection status for WebSocket disconnections
+    const waitingRoomId = room.metadata?.waitingRoomId;
+    if (waitingRoomId) {
+      await this.updateTournamentDisconnectionStatus(waitingRoomId, playerId, true);
+    }
 
     // Check if game has started but is in animation phase
     if (room.gameStarted && room.ready) {
@@ -191,13 +215,19 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   /**
    * Handle disconnection after game is over in tournament matches
    */
-  handlePostGameDisconnect(playerId, roomId) {
+  async handlePostGameDisconnect(playerId, roomId) {
     console.log(`🏆 Tournament match post-game disconnect: Player ${playerId} in room ${roomId}`);
+    
+    // ⭐ FIX: Update tournament disconnection status for WebSocket disconnections
+    const room = gameStateManager.getRoom(roomId);
+    const waitingRoomId = room?.metadata?.waitingRoomId;
+    if (waitingRoomId) {
+      await this.updateTournamentDisconnectionStatus(waitingRoomId, playerId, true);
+    }
     
     // Just clean up, no special handling needed
     this.removePlayerFromGame(playerId);
     
-    const room = gameStateManager.getRoom(roomId);
     if (room && room.players.length === 0) {
       console.log(`🏆 Tournament match room ${roomId} is empty after post-game disconnect, removing room`);
       gameStateManager.removeRoom(roomId);
@@ -384,6 +414,12 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       const player = waitingRoomData.players.find(p => p.id === playerId);
       if (player && player.connected === !disconnected) {
         console.log(`🏆 Player ${playerId} already has correct disconnection status (${disconnected}), skipping update`);
+        return;
+      }
+
+      // ⭐ FIX: Additional check for duplicate disconnection processing
+      if (disconnected && waitingRoomData.disconnectedPlayers.includes(playerId)) {
+        console.log(`🏆 Player ${playerId} already in disconnected players array, skipping duplicate update`);
         return;
       }
 
