@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/16 18:20:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/09 18:19:26 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/09 20:57:22 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -105,9 +105,6 @@ export default class LoginPopup extends ModalView {
     const submitBtn = document.getElementById(
       "popup-container-submit-login"
     ) as HTMLButtonElement;
-    const messageElement = document.getElementById(
-      "popup-container-message-login"
-    );
 
     if (!usernameInput.value || !passwordInput.value) {
       this._showError("Please fill in all fields.");

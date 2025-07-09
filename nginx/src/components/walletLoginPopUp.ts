@@ -62,11 +62,6 @@ export default class WalletLoginPopup extends ModalView {
   }
 
   private async _handleSubmit(): Promise<void> {
-    const spinner = document.getElementById("wallet-login-spinner");
-    const button = document.getElementById(
-      "wallet-login-button"
-    ) as HTMLButtonElement;
-
     this._setLoading(true);
 
     try {

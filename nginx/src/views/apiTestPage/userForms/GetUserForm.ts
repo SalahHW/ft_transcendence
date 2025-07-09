@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 21:08:25 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/03 23:08:53 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/09 20:59:22 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -69,7 +69,7 @@ export default class GetUserForm {
 					console.log(`User found by id:\n${JSON.stringify(response, null, 2)}`);
 				}
 				else if (nameInput.value) {
-					const response = await this._userService.getUserByUsername(nameInput.value);
+					const response = await this._userService.getUsersByUsername(nameInput.value);
 					form.reset();
 					console.log(`User found by name:\n${JSON.stringify(response, null, 2)}`);
 				}

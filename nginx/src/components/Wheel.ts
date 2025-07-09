@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 16:41:12 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/09 18:23:54 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/09 21:09:37 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,7 +52,7 @@ export default class Wheel {
       onClick: () => {
         this._router.navigate("/profile");
       },
-      condition: () => this._userIsLoggedIn,
+      condition: () => !this._userIsLoggedIn,
     },
     {
       label: "Login",
