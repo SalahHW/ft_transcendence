@@ -14,7 +14,8 @@ export const mockProfile = {
 				score : {
 					user : 11,
 					opponent : 7
-				}
+				},
+				date: "2024-03-15T10:30:00Z"
 			},
 			{
 				opponent : {
@@ -24,7 +25,8 @@ export const mockProfile = {
 				score : {
 					user : 9,
 					opponent : 10
-				}
+				},
+				date: "2024-03-14T15:00:00Z"
 			},
 			{
 				opponent : {
@@ -34,7 +36,8 @@ export const mockProfile = {
 				score : {
 					user : 8,
 					opponent : 11
-				}
+				},
+				date: "2024-03-13T18:45:00Z"
 			},
 			{
 				opponent : {
@@ -44,7 +47,8 @@ export const mockProfile = {
 				score : {
 					user : 11,
 					opponent : 9
-				}
+				},
+				date: "2024-03-12T20:00:00Z"
 			},
 			{
 				opponent : {
@@ -54,7 +58,8 @@ export const mockProfile = {
 				score : {
 					user : 11,
 					opponent : 10
-				}
+				},
+				date: "2024-03-11T11:20:00Z"
 			}
 		]
 	},
