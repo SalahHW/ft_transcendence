@@ -1,125 +1,269 @@
-👀 Blockchain Backend – API Fastify pour MasterContract
+# API Documentation - Blockchain Game Backend
 
-Ce projet expose une API HTTP basée sur Fastify (Node.js), permettant d’interagir avec un contrat intelligent principal (MasterContract) déployé sur la blockchain (Avalanche C-Chain, ou autre EVM-compatible).
+This document outlines all the available REST API routes, their purposes, expected request payloads, and response structures.
 
-🧱 Architecture
+---
 
-backend-blockchain/
-├── abi/                    ← Fichier ABI du contrat MasterContract
-│   └── ContractABI.json
-├── routes/                 ← Dossier contenant les routes Fastify
-│   ├── addPlayer.js        ← Route POST /add-player
-│   ├── reportMatch.js      ← Route POST /report-match
-│   ├── reportTournament.js ← Route POST /report-tournament
-│   ├── getPlayer.js        ← Route GET /player/:name
-│   ├── getMatchByPlayer.js← Route GET /match/player/:name
-│   ├── getMatchByWinner.js← Route GET /match/winner/:address
-│   ├── getMatchById.js     ← Route GET /match/:id
-│   ├── getTournamentById.js← Route GET /tournament/:id
-│   └── getTournamentByWinner.js ← Route GET /tournament/winner/:address
-├── .env                    ← Variables d’environnement (clé privée, RPC, etc.)
-├── index.js                ← Point d’entrée du serveur
-└── README.md               ← Documentation
+## Player Routes
 
-🚀 Démarrage rapide
+### POST `/add-player`
 
-1. Installer les dépendances
+**Purpose**: Register a new player and mint 100 PONG tokens.
 
-npm install
+#### Request Body:
 
-2. Créer un fichier .env
-
-PRIVATE_KEY=0x...votre_clé_privée...
-RPC_URL=https://api.avax.network/ext/bc/C/rpc
-CONTRACT_ADDRESS=0x...adresse_du_contrat_MasterContract...
-
-⚠️ Ne versionnez jamais ce fichier. Ajoutez-le à .gitignore.
-
-3. Fournir l’ABI
-
-Copiez l’ABI de votre contrat dans abi/ContractABI.json.
-
-4. Lancer le serveur
-
-node index.js
-
-📌 Routes disponibles
-
-POST /add-player
-
-Ajoute un joueur à la blockchain via MasterContract.addPlayer.
-
-Requête :
-
+```json
 {
-  "name": "Platon",
-  "address": "0x1234567890abcdef1234567890abcdef12345678"
+  "name": "PlayerName",
+  "address": "0xabc123..."
 }
+```
 
-Réponse :
+#### Success Response:
 
+```json
 {
   "success": true,
   "transactionHash": "0x..."
 }
+```
 
-POST /report-match
+#### Failure Responses:
 
-Rapporte un match via MasterContract.reportMatch.
+- `503` if contract is uninitialized.
+- `422` if contract call fails (e.g., player already exists).
 
-Requête :
+---
 
+### GET `/player/:address`
+
+**Purpose**: Fetch a player name by wallet address.
+
+#### Params:
+
+`address`: Ethereum address (string)
+
+#### Success Response:
+
+```json
 {
-  "player1": "Platon",
-  "player2": "Aristote",
+  "success": true,
+  "name": "PlayerName"
+}
+```
+
+#### Failure:
+
+- `503` or `500` if error during fetch.
+
+---
+
+### DELETE `/remove/:address`
+
+**Purpose**: Remove a registered player. Transfers GOAT NFT if applicable.
+
+#### Params:
+
+`address`: Ethereum address (string)
+
+#### Success Response:
+
+```json
+{
+  "success": true,
+  "transactionHash": "0x..."
+}
+```
+
+#### Failure:
+
+- `503` or `500` with error message.
+
+---
+
+## Match Routes
+
+### POST `/report-match`
+
+**Purpose**: Submit a match result.
+
+#### Request Body:
+
+```json
+{
+  "player1": "0x...",
+  "player2": "0x...",
   "matchId": 1,
-  "player1Score": 5,
-  "player2Score": 3,
-  "winner": "0x...winnerAddress"
+  "player1Score": 10,
+  "player2Score": 5,
+  "winner": "0x..."
 }
+```
 
-POST /report-tournament
+#### Success Response:
 
-Rapporte un tournoi via MasterContract.reportTournament.
-
-Requête :
-
+```json
 {
-  "endTimestamp": 1712451200,
-  "matchIds": [1, 2, 3],
-  "winner": "0x...winnerAddress"
+  "success": true,
+  "transactionHash": "0x..."
 }
+```
 
-GET /player/:name
+#### Failure Responses:
 
-Retourne l’adresse du joueur enregistré par nom.
+- `403`, `404`, `409`, `422`, `502`
 
-GET /match/player/:name
+---
 
-Retourne les matchs joués par un joueur donné.
+### GET `/match/:id`
 
-GET /match/winner/:address
+**Purpose**: Retrieve match data by ID.
 
-Retourne les matchs gagnés par l’adresse donnée.
+#### Params:
 
-GET /match/:id
+`id`: Integer
 
-Retourne les détails du match avec l’identifiant donné.
+#### Success Response:
 
-GET /tournament/:id
+```json
+{
+  "success": true,
+  "match": { ... }
+}
+```
 
-Retourne les détails d’un tournoi par identifiant.
+#### Failure:
 
-GET /tournament/winner/:address
+- `503` or `500`
 
-Retourne les tournois gagnés par une adresse donnée.
+---
 
-👨‍💻 Technologies utilisées
+### GET `/match/player/:address`
 
-Node.js
+**Purpose**: Get all matches involving a player.
 
-Fastify
+#### Success Response:
 
-Ethers.js
+```json
+{
+  "success": true,
+  "matches": [ ... ]
+}
+```
 
-Solidity (MasterContract)
+---
+
+### GET `/match/winner/:address`
+
+**Purpose**: Get all matches won by a player.
+
+#### Failure:
+
+- `404` if none found
+
+---
+
+## Tournament Routes
+
+### POST `/report-tournament`
+
+**Purpose**: Submit a tournament result.
+
+#### Request Body:
+
+```json
+{
+  "endTimestamp": 1620000000,
+  "matchIds": [1, 2],
+  "winner": "0x...",
+  "tournamentTokenId": 123
+}
+```
+
+#### Success Response:
+
+```json
+{
+  "success": true,
+  "transactionHash": "0x..."
+}
+```
+
+#### Failure Responses:
+
+- `403`, `404`, `409`, `422`, `502`
+
+---
+
+### GET `/tournament/:id`
+
+**Purpose**: Retrieve tournament data by ID.
+
+#### Success Response:
+
+```json
+{
+  "success": true,
+  "tournament": { ... }
+}
+```
+
+---
+
+### GET `/tournament/winner/:address`
+
+**Purpose**: Get all tournaments won by a specific address.
+
+#### Success Response:
+
+```json
+{
+  "success": true,
+  "tournaments": [ ... ]
+}
+```
+
+---
+
+## NFT Routes
+
+### GET `/nft/goat/:tokenId`
+
+**Purpose**: Get owner of GOAT token (tokenId = 299)
+
+#### Success Response:
+
+```json
+{
+  "success": true,
+  "tokenId": 299,
+  "owner": "0x..."
+}
+```
+
+#### Failure:
+
+- `404` if not found
+
+---
+
+### GET `/nft/tournament/:tokenId`
+
+**Purpose**: Get owner of a Tournament NFT by ID.
+
+#### Success Response:
+
+```json
+{
+  "success": true,
+  "tokenId": "123",
+  "owner": "0x..."
+}
+```
+
+---
+
+## Notes
+
+- All Ethereum addresses must match `^0x[a-fA-F0-9]{40}$`
+- Error handling is detailed and specific to blockchain conditions (e.g., unauthorized, already reported, not found).
