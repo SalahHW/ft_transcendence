@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/22 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/08 22:51:56 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/09 21:44:34 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,6 +52,7 @@ export default class ProfileView extends ModalView {
 		}
 
 		profileContainer.innerHTML = UserProfile.render();
+		UserProfile.addEventListeners();
 	}
 
 	public updateMatchHistory(): void {
