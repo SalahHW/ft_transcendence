@@ -59,7 +59,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
         console.error(`🏆 Error checking player disconnection status:`, error);
       }
     }
-
+    //TODO: CHECK 3 DISCONNECTED PLAYERS AND 1 CONNECTED PLAYER
     // Clean up player connection first
     this.cleanupPlayerConnection(playerId);
     

@@ -129,23 +129,33 @@ export class TournamentMatchManager {
     const disconnectedCount = waitingRoomData.disconnectedPlayers.length;
     const connectedCount = waitingRoomData.players.filter(p => p.connected).length;
     
-    const shouldHandleTwoPlayerFinalScenario = Boolean(
-      (connectedCount === 2) &&
-      (disconnectedCount === 2)
-    );
+    console.log(`########## Connected: ${connectedCount}, Disconnected: ${disconnectedCount}`);
+    console.log(`########## Waiting room data: ${nb_players_in_waiting_room}`);
+    
+    // ⭐ FIX: Check if both remaining players are from the same semi-final (which triggers the single semi-final edge case)
+    const connectedPlayers = waitingRoomData.players.filter(p => p.connected);
+    const player1 = connectedPlayers[0];
+      const player2 = connectedPlayers[1];
+      
+      // Check which semi-final rooms they were in
+      const semiFinalA = waitingRoomData.tournamentRooms.semiFinalA;
+      const semiFinalB = waitingRoomData.tournamentRooms.semiFinalB;
+      
+      const player1InSemiFinalA = semiFinalA.players.some(p => p.id === player1.id);
+      const player1InSemiFinalB = semiFinalB.players.some(p => p.id === player1.id);
+      const player2InSemiFinalA = semiFinalA.players.some(p => p.id === player2.id);
+      const player2InSemiFinalB = semiFinalB.players.some(p => p.id === player2.id);
+      
+    
+      const shouldHandleTwoPlayerFinalScenario = Boolean(
+        (connectedCount === 2) &&
+        (disconnectedCount === 2) && ((player1InSemiFinalA && player2InSemiFinalA) || (player1InSemiFinalB && player2InSemiFinalB))
+      );
 
     if (!shouldHandleTwoPlayerFinalScenario) {
       return false;
     }
-
-    console.log(`🔴🔴 HANDLING SINGLE SEMI-FINAL EDGE CASE 🔴🔴`);
-    console.log(`🔴🔴 Two player final scenario detected 🔴🔴`);
-    console.log(`🔴🔴 Tournament state: 2 disconnected, 2 connected, winner final ready, loser final empty 🔴🔴`);
-    console.log(`🔴🔴 Semi-final ${roomId} ended with winner: ${winner.username}, loser: ${loser.username} 🔴🔴`);
-    console.log(`🔴🔴 EDGE CASE CHECK 🔴🔴`);
-    console.log(`🔴🔴 DISCONNECTED COUNT: ${disconnectedCount} 🔴🔴`);
-    console.log(`🔴🔴 CONNECTED COUNT: ${connectedCount} 🔴🔴`);
-    console.log(`🔴🔴 NB_PLAYERS_IN_WAITING_ROOM: ${nb_players_in_waiting_room} 🔴🔴`);
+    console.log(`########## HANDLING SINGLE SEMI-FINAL EDGE CASE OK ##########`);
 
     // Find the actual player objects
     const winnerPlayer = this._findPlayerInRoom(roomId, winner.id);
@@ -155,14 +165,10 @@ export class TournamentMatchManager {
       console.error(`🏆 Could not find winner or loser player objects for single semi-final handling`);
       return false;
     }
-
-    // Check if this is a forfeit winner scenario
-    const isForfeitWinner = matchData?.gameStats?.forfeitReason || matchData?.matchType === 'tournament_forfeit';
     
-    if (isForfeitWinner) {
-      console.log(`🏆 Forfeit winner detected: ${winner.username} wins by forfeit`);
-    }
-
+    // ⭐ FIX: Determine if this is a forfeit winner scenario
+    const isForfeitWinner = matchData && matchData.matchType === 'tournament_forfeit';
+    
     // Store the match result
     if (!waitingRoomData.semiFinalResults) {
       waitingRoomData.semiFinalResults = {};
@@ -189,8 +195,6 @@ export class TournamentMatchManager {
       isSingleSemiFinal: true,
       isForfeitWinner: isForfeitWinner
     };
-
-    console.log(`🏆 Single semi-final scenario: ${winner.username} gets 1st place, ${loser.username} gets 2nd place`);
 
     // Send completion messages to both players
     if (winnerPlayer.ws && winnerPlayer.ws.readyState === 1) {
@@ -251,8 +255,6 @@ export class TournamentMatchManager {
     setTimeout(() => {
       this.tournamentManager.cleanupManager.cleanupWaitingRoom(waitingRoomId);
     }, 10000); // 10 seconds delay to allow players to see results
-
-    console.log(`🔴🔴 SINGLE SEMI-FINAL EDGE CASE HANDLED SUCCESSFULLY 🔴🔴`);
     return true;
   }
 
@@ -292,34 +294,10 @@ export class TournamentMatchManager {
     }
     waitingRoomData.semiFinalResults[roomId] = { winner, loser };
     
-    // TODO : ⭐ ENTRY POINT FOR HANDLING 2 REMAINING PLAYERS EDGE CASE
-    const nb_players_in_waiting_room = waitingRoomData.players.length;
-    const disconnectedCount = waitingRoomData.disconnectedPlayers.length;
-    const connectedCount = waitingRoomData.players.filter(p => p.connected).length;
-    
-    const shouldHandleTwoPlayerFinalScenario = Boolean(
-      (connectedCount === 2) &&
-      (disconnectedCount === 2)
-    );
-    
-    if (shouldHandleTwoPlayerFinalScenario) {
-      console.log(`🔴🔴 HANDLED EDGE CASE DETECTED 🔴🔴`);
-      console.log(`🔴🔴 Two player final scenario detected 🔴🔴`);
-      console.log(`🔴🔴 Tournament state: 2 disconnected, 2 connected, winner final ready, loser final empty 🔴🔴`);
-      console.log(`🔴🔴 Semi-final ${roomId} ended with winner: ${winner.username}, loser: ${loser.username} 🔴🔴`);
-      console.log(`🔴🔴 EDGE CASE CHECK 🔴🔴`);
-      console.log(`🔴🔴 DISCONNECTED COUNT: ${disconnectedCount} 🔴🔴`);
-      console.log(`🔴🔴 CONNECTED COUNT: ${connectedCount} 🔴🔴`);
-      console.log(`🔴🔴 NB_PLAYERS_IN_WAITING_ROOM: ${nb_players_in_waiting_room} 🔴🔴`);
-      console.log(`🔴🔴 Semi-final ${roomId} ended with winner: ${winner.username}, loser: ${loser.username} 🔴🔴`);
-    }
-
-    // Handle single semi-final edge case
+     // Handle single semi-final edge case
     const singleSemiFinalHandled = await this.handleSingleSemiFinal(waitingRoomId, roomId, winner, loser, matchData);
-    
     // If single semi-final was handled, don't proceed with normal transfer
     if (singleSemiFinalHandled) {
-      console.log(`🏆 Single semi-final edge case handled, skipping normal transfer to finals`);
       return;
     }
     
