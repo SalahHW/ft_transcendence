@@ -45,8 +45,6 @@ services:
       - ./game-service/.env
     networks:
       - transcendence
-    ports:
-      - "8081:8081"
 
   avatars:
     container_name: avatars
