@@ -2,31 +2,24 @@
 /*                                                                            */
 /*                                                        :::      ::::::::   */
 /*   Router.ts                                          :+:      :+:    :+:   */
-/*   Router.ts                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/26 20:40:51 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/23 15:31:20 by edelarbr         ###   ########.fr       */
+/*   Created: Invalid Date        by              +#+  #+#    #+#             */
+/*   Updated: 2025/07/09 20:59:47 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
 
 // TODO: Mettre cette classe ça au propre
 // TODO: (opt) Mettre des views pour les differents forms de APITestPage
 
-import APITestPage from "../views/apiTestPage/APITestPage.js";
-import HomePage from "../views/homePage.js";
-import LoginPopup from "../components/LoginPopup.js";
-import RegisterPopup from "../components/RegisterPopup.js";
-import ProfileView from "../views/ProfileView.js";
-import { handleSimpleMatch } from "../game/gameMode/1v1Handler.js";
-import { handleTournament } from "../game/gameMode/tournamentHandler.js";
-import WalletRegisterPopup from "../components/walletRegisterPopUp.js";
+// All imports are now dynamic below, remove static imports
 
 interface Route {
   path: string;
   cache?: any;
-  handler: () => void;
+  handler: () => void | Promise<void>;
 }
 
 export default class Router {
@@ -36,72 +29,82 @@ export default class Router {
   private _routes: Route[] = [
     {
       path: "/",
-      handler: function () {
-        if (!this.cache) this.cache = new HomePage("app-container");
+      handler: async function () {
+        if (!this.cache) {
+          const module = await import("../views/homePage.js");
+          this.cache = new module.default("app-container");
+        }
         this.cache.render();
       },
     },
     {
       path: "/api-test",
-      handler: function () {
-        // Revenir à la page précédente dans l'historique
+      handler: async function () {
         window.history.back();
-
-        // Afficher la vue API test
-        if (!this.cache) this.cache = new APITestPage();
+        if (!this.cache) {
+          const module = await import("../views/apiTestPage/APITestPage.js");
+          this.cache = new module.default();
+        }
         this.cache.show();
       },
     },
     {
       path: "/login",
-      handler: function () {
-        // Revenir à la page précédente dans l'historique
+      handler: async function () {
         window.history.back();
-
-        // Afficher la popup de login
-        if (!this.cache) this.cache = new LoginPopup();
+        if (!this.cache) {
+          const module = await import("../components/LoginPopup.js");
+          this.cache = new module.default();
+        }
         this.cache.show();
       },
     },
     {
       path: "/register",
-      handler: function () {
-        // Revenir à la page précédente dans l'historique
+      handler: async function () {
         window.history.back();
-
-        // Afficher la popup de register
-        if (!this.cache) this.cache = new RegisterPopup();
+        if (!this.cache) {
+          const module = await import("../components/RegisterPopup.js");
+          this.cache = new module.default();
+        }
         this.cache.show();
       },
     },
     {
       path: "/profile",
-      handler: function () {
-        // Revenir à la page précédente dans l'historique
+      handler: async function () {
         window.history.back();
-
-        // Afficher la vue de profil
-        if (!this.cache) this.cache = new ProfileView();
+        if (!this.cache) {
+          const module = await import("../views/profile/ProfileView.js");
+          this.cache = new module.default();
+        }
         this.cache.show();
       },
     },
     {
       path: "/1v1",
       handler: async function () {
+        // @ts-ignore
+        const { handleSimpleMatch } = await import("/js/game.bundle.js");
         await handleSimpleMatch(this);
       },
     },
     {
       path: "/tournament",
       handler: async function () {
+        // @ts-ignore
+        const { handleTournament } = await import("/js/game.bundle.js");
         await handleTournament(this);
       },
     },
     {
       path: "/wallet-register",
-      handler: function () {
+      handler: async function () {
         window.history.back();
-        if (!this.cache) this.cache = new WalletRegisterPopup();
+        if (!this.cache) {
+          const module = await import("../components/walletRegisterPopUp.js");
+          this.cache = new module.default();
+        }
         this.cache.show();
       },
     },

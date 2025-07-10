@@ -6,11 +6,11 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:42:45 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/28 16:14:51 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/03 13:16:22 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-import MatchServiceAPI from "../../../api/matche.js";
+import MatchServiceAPI from "../../../api/match.js";
 import { buttonHTML } from "../../../components/button.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 
@@ -31,7 +31,6 @@ export default class GetMatchForm {
 				<div>
 					<input type="number" id="getform-match-id" placeholder="Match ID" class="${UI_THEME.components.input}">
 				</div>
-
 				${buttonHTML({
 					type: "submit",
 					label: "Get Match"
@@ -45,20 +44,20 @@ export default class GetMatchForm {
 	private _attachEventListeners(): void {
 		const form = document.getElementById("get-match-form") as HTMLFormElement;
 
-		form.addEventListener("submit", async (element) => {
-			element.preventDefault();
+		form.addEventListener("submit", async (event) => {
+			event.preventDefault();
 
 			const idInput = document.getElementById("getform-match-id") as HTMLInputElement;
 
 			if (!idInput.value) {
-				console.warn("Please provide an ID to get a match");
+				console.warn("Please provide a match ID");
 				return;
 			}
 
 			try {
 				const matchId = parseInt(idInput.value);
-				const response = await this._matchService.getMatchById(matchId);
-				console.log(`Match found by id: ${response}`);
+				const match = await this._matchService.getMatchById(matchId);
+				console.log(`Match found by id:`, match);
 			}
 			catch (error) {
 				if (error instanceof Error) {

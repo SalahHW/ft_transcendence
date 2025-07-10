@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:42:38 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/23 16:04:43 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/05 14:55:23 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,7 +65,13 @@ export default class RegisterUserForm {
 			}
 
 			try {
-				const response = await this._authService.register(usernameInput.value, passwordInput.value, emailInput.value);
+				const response = await this._authService.register({
+					username: usernameInput.value,
+					password: passwordInput.value,
+					email: emailInput.value,
+					authenticationMethod: "local",
+					wallet: ""
+				});
 				console.log(response);
 			}
 			catch (error) {

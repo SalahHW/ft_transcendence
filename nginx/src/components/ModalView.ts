@@ -42,8 +42,18 @@ export default class ModalView {
     private _setupEventListeners(): void {
 		document.addEventListener("keydown", (event: KeyboardEvent) => {
 			if (event.key === "Escape" && this._isVisible) {
-				event.preventDefault();
-				this.hide();
+				// Ne pas fermer la modal si l'utilisateur est dans un champ input
+				const activeElement = document.activeElement as HTMLElement;
+				const isInInputField = activeElement && (
+					activeElement.tagName === 'INPUT' ||
+					activeElement.tagName === 'TEXTAREA' ||
+					activeElement.isContentEditable
+				);
+
+				if (!isInInputField) {
+					event.preventDefault();
+					this.hide();
+				}
 			}
 		});
 

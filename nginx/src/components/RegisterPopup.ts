@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/16 16:30:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/23 16:03:37 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/09 20:57:29 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -134,9 +134,6 @@ export default class RegisterPopup extends ModalView {
     const walletInput = document.getElementById(
       "popup-container-wallet-register"
     ) as HTMLInputElement;
-    const submitButton = document.getElementById(
-      "popup-container-submit-register"
-    ) as HTMLButtonElement;
 
     const username = usernameInput.value.trim();
     const email = emailInput.value.trim();

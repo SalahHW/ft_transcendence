@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 16:41:12 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/24 16:46:12 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/10 14:24:00 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,7 +42,6 @@ export default class Wheel {
       icon: "🔧",
       onClick: () => {
         console.log("API Test page clicked");
-        this._router.navigate("/api-test");
         this._router.navigate("/api-test");
       },
     },
@@ -111,11 +110,11 @@ export default class Wheel {
   ];
   private _wheelOptions: Option[] = [];
 
-  constructor(elementId: string) {
-    this._element = document.getElementById(elementId)!;
-    if (!this._element) {
-      throw new Error(`Element with id ${elementId} not found`);
-    }
+	constructor(elementId: string) {
+		this._element = document.getElementById(elementId)!;
+		if (!this._element) {
+			throw new Error(`Element with id ${elementId} not found`);
+		}
 
     this._setupKeyboardEvents();
     this._setupMouseEvents();
@@ -123,20 +122,26 @@ export default class Wheel {
     this.render();
   }
 
-  private _setupKeyboardEvents(): void {
-    document.addEventListener("keydown", async (event: KeyboardEvent) => {
-      if (event.key === "Shift") {
-        event.preventDefault();
-        await this.showWheel();
-      }
-    });
+	private _setupKeyboardEvents(): void {
+		document.addEventListener("keydown", async (event: KeyboardEvent) => {
+			const target = event.target as HTMLElement;
+			if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+				return;
+			}
 
-    document.addEventListener("keyup", (event: KeyboardEvent) => {
-      if (event.key === "Shift") {
-        this.hideWheel();
-      }
-    });
-  }
+			if (event.key === 'Shift') {
+				if (this._isVisible) return;
+				event.preventDefault();
+				await this.showWheel();
+			}
+		});
+
+		document.addEventListener("keyup", (event: KeyboardEvent) => {
+			if (event.key === 'Shift') {
+				this.hideWheel();
+			}
+		});
+	}
 
   private _setupMouseEvents(): void {
     this._element.addEventListener("click", (event: MouseEvent) => {
@@ -180,12 +185,12 @@ export default class Wheel {
 
     this._userIsLoggedIn = await this._authService.isLoggedIn();
 
-    this._isVisible = true;
-    this._selectedIndex = 0;
-    this._wheelOptions = this._baseWheelOptions.filter(
-      (option) => option.condition === undefined || option.condition()
-    );
-    this._optionHistory = [];
+		this._isVisible = true;
+		this._selectedIndex = 0;
+		this._wheelOptions = this._baseWheelOptions.filter(
+			(option) => option.condition === undefined || option.condition()
+		);
+		this._optionHistory = [];
 
     this._element.classList.remove("hidden");
     this._element.classList.add("flex");
@@ -226,9 +231,9 @@ export default class Wheel {
 		`;
   }
 
-  private _renderWheel(): void {
-    const svg = this._element.querySelector(".wheel-svg") as SVGElement;
-    if (!svg) return;
+	private _renderWheel(): void {
+		const svg = this._element.querySelector(".wheel-svg") as SVGElement;
+		if (!svg) return;
 
     const centerX = 480;
     const centerY = 480;
@@ -236,34 +241,34 @@ export default class Wheel {
     const innerRadius = 90; // Réduit de moitié (180 → 90)
     const optionCount = this._wheelOptions.length;
 
-    // Nettoyer le SVG
-    svg.innerHTML = "";
+		// Nettoyer le SVG
+		svg.innerHTML = "";
 
     if (optionCount === 0) return;
 
     const angleStep = (2 * Math.PI) / optionCount;
     const startAngle = -Math.PI / 2; // Commencer en haut
 
-    // Créer le cercle central avec les styles centralisés
-    const centerCircle = document.createElementNS(
-      "http://www.w3.org/2000/svg",
-      "circle"
-    );
-    centerCircle.setAttribute("cx", centerX.toString());
-    centerCircle.setAttribute("cy", centerY.toString());
-    centerCircle.setAttribute("r", innerRadius.toString());
-    centerCircle.setAttribute("fill", UI_THEME.wheel.svg.fill.center);
-    centerCircle.setAttribute("stroke", UI_THEME.wheel.svg.stroke.normal);
-    centerCircle.setAttribute("stroke-width", "1");
-    centerCircle.setAttribute(
-      "class",
-      "cursor-pointer transition-all duration-200 hover:fill-gray-600/90"
-    );
+		// Créer le cercle central avec les styles centralisés
+		const centerCircle = document.createElementNS(
+			"http://www.w3.org/2000/svg",
+			"circle"
+		);
+		centerCircle.setAttribute("cx", centerX.toString());
+		centerCircle.setAttribute("cy", centerY.toString());
+		centerCircle.setAttribute("r", innerRadius.toString());
+		centerCircle.setAttribute("fill", UI_THEME.wheel.svg.fill.center);
+		centerCircle.setAttribute("stroke", UI_THEME.wheel.svg.stroke.normal);
+		centerCircle.setAttribute("stroke-width", "1");
+		centerCircle.setAttribute(
+			"class",
+			"cursor-pointer transition-all duration-200 hover:fill-gray-600/90"
+		);
 
-    // Gestionnaire de clic pour revenir en arrière
-    centerCircle.addEventListener("click", () => {
-      this._goBack();
-    });
+		// Gestionnaire de clic pour revenir en arrière
+		centerCircle.addEventListener("click", () => {
+			this._goBack();
+		});
 
     svg.appendChild(centerCircle);
 
@@ -283,54 +288,54 @@ export default class Wheel {
       const x4 = centerX + Math.cos(angle2) * innerRadius;
       const y4 = centerY + Math.sin(angle2) * innerRadius;
 
-      // Créer le segment
-      const path = document.createElementNS(
-        "http://www.w3.org/2000/svg",
-        "path"
-      );
-      const largeArcFlag = angleStep > Math.PI ? 1 : 0;
+			// Créer le segment
+			const path = document.createElementNS(
+				"http://www.w3.org/2000/svg",
+				"path"
+			);
+			const largeArcFlag = angleStep > Math.PI ? 1 : 0;
 
-      const pathData = [
-        `M ${x1} ${y1}`,
-        `L ${x2} ${y2}`,
-        `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x3} ${y3}`,
-        `L ${x4} ${y4}`,
-        `A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${x1} ${y1}`,
-        "Z",
-      ].join(" ");
+			const pathData = [
+				`M ${x1} ${y1}`,
+				`L ${x2} ${y2}`,
+				`A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x3} ${y3}`,
+				`L ${x4} ${y4}`,
+				`A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${x1} ${y1}`,
+				"Z",
+			].join(" ");
 
-      path.setAttribute("d", pathData);
-      path.setAttribute(
-        "fill",
-        isSelected
-          ? UI_THEME.wheel.svg.fill.selected
-          : UI_THEME.wheel.svg.fill.normal
-      );
-      path.setAttribute(
-        "stroke",
-        isSelected
-          ? UI_THEME.wheel.svg.stroke.selected
-          : UI_THEME.wheel.svg.stroke.normal
-      );
-      path.setAttribute("stroke-width", "1");
-      path.setAttribute(
-        "class",
-        "cursor-pointer transition-all duration-200 hover:fill-gray-600/90"
-      );
+			path.setAttribute("d", pathData);
+			path.setAttribute(
+				"fill",
+				isSelected
+					? UI_THEME.wheel.svg.fill.selected
+					: UI_THEME.wheel.svg.fill.normal
+			);
+			path.setAttribute(
+				"stroke",
+				isSelected
+					? UI_THEME.wheel.svg.stroke.selected
+					: UI_THEME.wheel.svg.stroke.normal
+			);
+			path.setAttribute("stroke-width", "1");
+			path.setAttribute(
+				"class",
+				"cursor-pointer transition-all duration-200 hover:fill-gray-600/90"
+			);
 
-      // Gestionnaire de clic
-      path.addEventListener("click", async () => {
-        this._selectedIndex = index;
-        await this._selectOption();
-      });
+			// Gestionnaire de clic
+			path.addEventListener("click", async () => {
+				this._selectedIndex = index;
+				await this._selectOption();
+			});
 
-      // Gestionnaire de survol
-      path.addEventListener("mouseenter", () => {
-        if (!isSelected) {
-          this._selectedIndex = index;
-          this._updateSelection();
-        }
-      });
+			// Gestionnaire de survol
+			path.addEventListener("mouseenter", () => {
+				if (!isSelected) {
+					this._selectedIndex = index;
+					this._updateSelection();
+				}
+			});
 
       svg.appendChild(path);
 
@@ -340,82 +345,82 @@ export default class Wheel {
       const textX = centerX + Math.cos(textAngle) * textRadius;
       const textY = centerY + Math.sin(textAngle) * textRadius;
 
-      // Créer un groupe pour le texte et l'icône
-      const textGroup = document.createElementNS(
-        "http://www.w3.org/2000/svg",
-        "g"
-      );
-      textGroup.setAttribute("class", "pointer-events-none");
-      textGroup.style.userSelect = "none";
-      textGroup.style.webkitUserSelect = "none";
-      (textGroup.style as any).MozUserSelect = "none";
+			// Créer un groupe pour le texte et l'icône
+			const textGroup = document.createElementNS(
+				"http://www.w3.org/2000/svg",
+				"g"
+			);
+			textGroup.setAttribute("class", "pointer-events-none");
+			textGroup.style.userSelect = "none";
+			textGroup.style.webkitUserSelect = "none";
+			(textGroup.style as any).MozUserSelect = "none";
 
-      // Icône
-      if (option.icon) {
-        const iconText = document.createElementNS(
-          "http://www.w3.org/2000/svg",
-          "text"
-        );
-        iconText.setAttribute("x", textX.toString());
-        iconText.setAttribute("y", (textY - 20).toString());
-        iconText.setAttribute("text-anchor", "middle");
-        iconText.setAttribute("dominant-baseline", "middle");
-        iconText.setAttribute(
-          "fill",
-          isSelected
-            ? UI_THEME.wheel.svg.text.selected
-            : UI_THEME.wheel.svg.text.normal
-        );
-        iconText.setAttribute("font-size", "32");
-        iconText.setAttribute("font-family", UI_THEME.wheel.svg.text.font);
-        iconText.setAttribute("font-weight", "300");
-        iconText.textContent = option.icon;
-        textGroup.appendChild(iconText);
-      }
+			// Icône
+			if (option.icon) {
+				const iconText = document.createElementNS(
+					"http://www.w3.org/2000/svg",
+					"text"
+				);
+				iconText.setAttribute("x", textX.toString());
+				iconText.setAttribute("y", (textY - 20).toString());
+				iconText.setAttribute("text-anchor", "middle");
+				iconText.setAttribute("dominant-baseline", "middle");
+				iconText.setAttribute(
+					"fill",
+					isSelected
+						? UI_THEME.wheel.svg.text.selected
+						: UI_THEME.wheel.svg.text.normal
+				);
+				iconText.setAttribute("font-size", "32");
+				iconText.setAttribute("font-family", UI_THEME.wheel.svg.text.font);
+				iconText.setAttribute("font-weight", "300");
+				iconText.textContent = option.icon;
+				textGroup.appendChild(iconText);
+			}
 
-      // Label
-      const label = document.createElementNS(
-        "http://www.w3.org/2000/svg",
-        "text"
-      );
-      label.setAttribute("x", textX.toString());
-      label.setAttribute("y", (textY + 20).toString());
-      label.setAttribute("text-anchor", "middle");
-      label.setAttribute("dominant-baseline", "middle");
-      label.setAttribute(
-        "fill",
-        isSelected
-          ? UI_THEME.wheel.svg.text.selected
-          : UI_THEME.wheel.svg.text.normal
-      );
-      label.setAttribute("font-size", "24");
-      label.setAttribute("font-weight", isSelected ? "500" : "400");
-      label.setAttribute("font-family", UI_THEME.wheel.svg.text.font);
-      label.textContent = option.label;
-      textGroup.appendChild(label);
+			// Label
+			const label = document.createElementNS(
+				"http://www.w3.org/2000/svg",
+				"text"
+			);
+			label.setAttribute("x", textX.toString());
+			label.setAttribute("y", (textY + 20).toString());
+			label.setAttribute("text-anchor", "middle");
+			label.setAttribute("dominant-baseline", "middle");
+			label.setAttribute(
+				"fill",
+				isSelected
+					? UI_THEME.wheel.svg.text.selected
+					: UI_THEME.wheel.svg.text.normal
+			);
+			label.setAttribute("font-size", "24");
+			label.setAttribute("font-weight", isSelected ? "500" : "400");
+			label.setAttribute("font-family", UI_THEME.wheel.svg.text.font);
+			label.textContent = option.label;
+			textGroup.appendChild(label);
 
       svg.appendChild(textGroup);
     });
 
-    // Ajouter un petit indicateur au centre si on est dans un sous-menu
-    if (this._optionHistory.length > 0) {
-      const backIndicator = document.createElementNS(
-        "http://www.w3.org/2000/svg",
-        "text"
-      );
-      backIndicator.setAttribute("x", centerX.toString());
-      backIndicator.setAttribute("y", centerY.toString());
-      backIndicator.setAttribute("text-anchor", "middle");
-      backIndicator.setAttribute("dominant-baseline", "middle");
-      backIndicator.setAttribute("fill", "rgb(156, 163, 175)");
-      backIndicator.setAttribute("font-size", "20");
-      backIndicator.setAttribute(
-        "font-family",
-        "SF Pro Display, system-ui, -apple-system, sans-serif"
-      );
-      backIndicator.setAttribute("font-weight", "400");
-      backIndicator.textContent = "← ESC";
-      svg.appendChild(backIndicator);
-    }
-  }
+		// Ajouter un petit indicateur au centre si on est dans un sous-menu
+		if (this._optionHistory.length > 0) {
+			const backIndicator = document.createElementNS(
+				"http://www.w3.org/2000/svg",
+				"text"
+			);
+			backIndicator.setAttribute("x", centerX.toString());
+			backIndicator.setAttribute("y", centerY.toString());
+			backIndicator.setAttribute("text-anchor", "middle");
+			backIndicator.setAttribute("dominant-baseline", "middle");
+			backIndicator.setAttribute("fill", "rgb(156, 163, 175)");
+			backIndicator.setAttribute("font-size", "20");
+			backIndicator.setAttribute(
+				"font-family",
+				"SF Pro Display, system-ui, -apple-system, sans-serif"
+			);
+			backIndicator.setAttribute("font-weight", "400");
+			backIndicator.textContent = "← ESC";
+			svg.appendChild(backIndicator);
+		}
+	}
 }
