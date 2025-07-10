@@ -85,7 +85,36 @@ export class TournamentDisconnectHandler extends BaseDisconnectHandler {
     const removedPlayer = waitingRoomData.players.find(p => p.id === playerId);
     const playerUsername = removedPlayer?.username || playerId;
     
-    // Mark player as disconnected instead of removing them
+    // ⭐ CRITICAL FIX: Don't add to disconnected players array if player is being replaced
+    if (reason === 'player_replaced') {
+      // Remove player from waiting room data completely
+      waitingRoomData.players = waitingRoomData.players.filter(p => p.id !== playerId);
+      waitingRoomData.playerStatus.delete(playerId);
+      
+      // Remove player from room
+      room.removePlayer(playerId);
+      
+      console.log(`🏆 Player ${playerUsername} removed from waiting room ${roomId} (${room.players.length}/4)`);
+      
+      // If waiting room is empty, clean up all tournament rooms
+      if (room.players.length === 0) {
+        console.log(`🏆 Waiting room ${roomId} is empty, cleaning up tournament rooms`);
+        this.cleanupTournamentRooms(roomId);
+      } else if (room.players.length < 4) {
+        // If we had 4 players and now have fewer, log that tournament won't start
+        console.log(`🏆 Tournament ${roomId} cannot start: only ${room.players.length}/4 players remaining`);
+        console.log(`🏆 Remaining players: [${room.players.map(p => p.username || p.id).join(', ')}]`);
+      }
+      
+      // Instead of sending a tournamentPlayerLeft notification, just broadcast the updated waiting room status
+      if (tournamentManager.communicationManager && typeof tournamentManager.communicationManager.broadcastWaitingRoomStatus === 'function') {
+        tournamentManager.communicationManager.broadcastWaitingRoomStatus(roomId);
+      }
+      
+      return;
+    }
+    
+    // Mark player as disconnected instead of removing them (for non-replacement disconnections)
     const player = waitingRoomData.players.find(p => p.id === playerId);
     if (player) {
       player.connected = false;

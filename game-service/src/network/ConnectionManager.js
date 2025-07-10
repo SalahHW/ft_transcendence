@@ -33,6 +33,15 @@ export class ConnectionManager {
     // Update WebSocket room ID for disconnect handling
     ws.roomId = assignedRoomId;
     
+    // ⭐ CRITICAL FIX: Handle tournament WebSocket connection
+    if (ws.matchType === 'tournament' && assignedRoomId) {
+      try {
+        await tournamentManager.handlePlayerWebSocketConnected(playerId, assignedRoomId);
+      } catch (error) {
+        console.error(`🏆 Error handling tournament WebSocket connection for player ${playerId}:`, error);
+      }
+    }
+    
     console.log(`🔌 Player ${playerId} assigned to room ${assignedRoomId}`);
     return assignedRoomId;
   }

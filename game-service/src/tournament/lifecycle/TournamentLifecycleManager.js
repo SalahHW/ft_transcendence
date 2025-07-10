@@ -14,8 +14,8 @@ export class TournamentLifecycleManager {
   /**
    * Handle tournament player WebSocket connection established
    */
-  handlePlayerWebSocketConnected(playerId, waitingRoomId) {
-    this.tournamentManager.playerManager.handlePlayerWebSocketConnected(playerId, waitingRoomId);
+  async handlePlayerWebSocketConnected(playerId, waitingRoomId) {
+    await this.tournamentManager.playerManager.handlePlayerWebSocketConnected(playerId, waitingRoomId);
     
     // Check if tournament has already started and this is a late-connecting player
     const waitingRoomData = this.tournamentManager.waitingRooms.get(waitingRoomId);

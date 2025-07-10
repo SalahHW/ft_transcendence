@@ -199,8 +199,8 @@ export class TournamentManager {
   /**
    * Handle tournament player WebSocket connection established
    */
-  handlePlayerWebSocketConnected(playerId, waitingRoomId) {
-    this.lifecycleManager.handlePlayerWebSocketConnected(playerId, waitingRoomId);
+  async handlePlayerWebSocketConnected(playerId, waitingRoomId) {
+    await this.lifecycleManager.handlePlayerWebSocketConnected(playerId, waitingRoomId);
   }
 
   /**

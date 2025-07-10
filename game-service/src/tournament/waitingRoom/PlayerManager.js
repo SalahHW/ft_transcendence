@@ -36,6 +36,13 @@ export class TournamentPlayerManager {
       console.log(`🏆 Player ${username} already exists in waiting room ${existingPlayer.waitingRoomId}. Removing old player.`);
       console.log(`🏆 Old player ID: ${existingPlayer.playerId}, New player ID: ${playerId}`);
       
+      // ⭐ CRITICAL FIX: Clean up disconnected players array before removing old player
+      const waitingRoomData = this.waitingRooms.get(existingPlayer.waitingRoomId);
+      if (waitingRoomData) {
+        // Remove the old player ID from disconnected players array
+        waitingRoomData.disconnectedPlayers = waitingRoomData.disconnectedPlayers.filter(id => id !== existingPlayer.playerId);
+      }
+      
       // Remove the old player from the waiting room
       const disconnectHandler = await this.getDisconnectHandler();
       disconnectHandler.handleWaitingRoomDisconnect(existingPlayer.playerId, existingPlayer.waitingRoomId, 'player_replaced');
@@ -204,7 +211,7 @@ export class TournamentPlayerManager {
   /**
    * Handle tournament player WebSocket connection established
    */
-  handlePlayerWebSocketConnected(playerId, waitingRoomId) {
+  async handlePlayerWebSocketConnected(playerId, waitingRoomId) {
     console.log(`🏆 Tournament player ${playerId} WebSocket connected to waiting room ${waitingRoomId}`);
     
     const waitingRoomData = this.waitingRooms.get(waitingRoomId);
@@ -227,6 +234,18 @@ export class TournamentPlayerManager {
         // Remove from disconnected players array if present
         if (waitingRoomData.disconnectedPlayers.includes(playerId)) {
           waitingRoomData.disconnectedPlayers = waitingRoomData.disconnectedPlayers.filter(id => id !== playerId);
+        }
+
+        // ⭐ CRITICAL FIX: Update disconnection status through TournamentTransferManager
+        // This ensures proper synchronization of connected/disconnected counts
+        try {
+          // Import tournament manager dynamically to avoid circular dependencies
+          const { tournamentManager } = await import('../../tournament/TournamentManager.js');
+          if (tournamentManager && tournamentManager.transferManager) {
+            tournamentManager.transferManager.updatePlayerDisconnectionStatus(waitingRoomId, playerId, false); // false = connected
+          }
+        } catch (error) {
+          console.error(`🏆 Error updating disconnection status for reconnected player ${playerId}:`, error);
         }
 
         console.log(`🏆 Marked player ${player.username} as WebSocket connected in waiting room ${waitingRoomId}`);
