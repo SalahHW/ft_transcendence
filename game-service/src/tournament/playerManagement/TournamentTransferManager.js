@@ -187,10 +187,9 @@ export class TournamentTransferManager {
     console.log(`  Semi-Final B players: [${semiFinalB.players.map(p => `${p.username}(${p.id})`).join(', ')}]`);
     console.log(`  Players in finals: ${hasPlayersInFinals} (Winner: ${winnerFinal.players.length}, Loser: ${loserFinal.players.length})`);
     
-    // Start matches if both semi-finals are ready OR if one is ready and there are players in finals (forfeit scenario)
-    if ((roomAReady && roomBReady) || 
-        ((roomAReady || roomBReady) && hasPlayersInFinals)) {
-      console.log(`🏆 Semi-final matches ready to start (${roomAReady && roomBReady ? 'both ready' : 'forfeit scenario'})`);
+    // Start matches if both semi-finals are ready OR if one is ready (allow single semi-final to start)
+    if ((roomAReady || roomBReady)) {
+      console.log(`🏆 Semi-final matches ready to start (${roomAReady && roomBReady ? 'both ready' : 'single semi-final ready'})`);
       this.tournamentManager.matchManager.startSemiFinalMatches(waitingRoomId);
     } else {
       console.log(`🏆 Semi-final rooms not ready yet. A: ${roomAReady}, B: ${roomBReady}, Finals: ${hasPlayersInFinals}`);
@@ -420,6 +419,11 @@ export class TournamentTransferManager {
       return;
     }
 
+    // ⭐ CRITICAL FIX: Additional check to prevent marking new players as disconnected
+    if (disconnected && !player) {
+      return;
+    }
+
     if (player) {
       player.connected = !disconnected;
       player.disconnectedAt = disconnected ? Date.now() : null;
@@ -478,22 +482,6 @@ export class TournamentTransferManager {
       connectedCount === 3 &&
       isLoserFinalEmpty
     );
-
-       console.log(`🏆 Forfeit scenario check for ${loser.username}:`);
-    console.log(`  Winner final full: ${isWinnerFinalFull}, complete: ${isWinnerFinalComplete}`);
-    console.log(`  Disconnected: ${disconnectedCount}, Connected: ${connectedCount}`);
-    console.log(`  Loser final empty: ${isLoserFinalEmpty}`);
-    console.log(`  Should assign 3rd place: ${shouldAssignThirdPlace}`);
-    console.log(`  All players in waiting room: [${waitingRoomData.players.map(p => `${p.username}(${p.id}) - connected: ${p.connected}`).join(', ')}]`);
-    console.log(`  Disconnected players array: [${waitingRoomData.disconnectedPlayers.join(', ')}]`);
-
-    // ⭐ EDGE CASE DETECTION: Add red squares when the specific edge case is detected
-    if (shouldAssignThirdPlace) {
-      console.log(`🔴🔴🔴 HANDLED EDGE CASE DETECTED 🔴🔴🔴`);
-      console.log(`🔴🔴🔴 SemiA disconnect -> opponent to winner final, SemiB ends -> loser gets 3rd place 🔴🔴🔴`);
-      console.log(`🔴🔴🔴 Tournament state: 1 disconnected, 3 connected, winner final ready, loser final empty 🔴🔴🔴`);
-    }
-
     return shouldAssignThirdPlace;
   }
 
@@ -501,10 +489,6 @@ export class TournamentTransferManager {
    * Handle forfeit loser final scenario - assign 3rd place instead of transferring to loser final
    */
   async handleForfeitLoserFinalScenario(waitingRoomId, loser) {
-    console.log(`🔴🔴🔴 PROCESSING HANDLED EDGE CASE 🔴🔴🔴`);
-    console.log(`🔴🔴🔴 Assigning 3rd place to ${loser.username} due to forfeit scenario 🔴🔴🔴`);
-    console.log(`🔴🔴🔴 Tournament ${waitingRoomId}: SemiA disconnect -> winner final, SemiB loser -> 3rd place 🔴🔴🔴`);
-
     const waitingRoomData = this.tournamentManager.waitingRooms.get(waitingRoomId);
     if (!waitingRoomData) {
       console.error(`🏆 Waiting room data not found for forfeit scenario`);
@@ -558,10 +542,6 @@ export class TournamentTransferManager {
       loser: loser, // 4th place (same player due to forfeit)
       isForfeit: true 
     };
-
-    console.log(`🔴🔴🔴 HANDLED EDGE CASE COMPLETED 🔴🔴🔴`);
-    console.log(`🔴🔴🔴 ${loserPlayer.username} assigned 3rd place, tournament can proceed with winner final only 🔴🔴🔴`);
-    console.log(`🏆 Assigned 3rd place to ${loserPlayer.username} due to forfeit scenario`);
   }
 
   /**
