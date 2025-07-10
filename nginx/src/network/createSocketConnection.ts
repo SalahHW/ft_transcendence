@@ -6,7 +6,7 @@ export function createWebSocketConnection(
   onClose?: () => void,
   onError?: (error: Event) => void
 ): WebSocket {
-  const wsUrl = "wss://elsalmajori.games:8443";
+  const wsUrl = "wss://elsalmatjori.com:8443";
   const ws = new WebSocket(wsUrl);
 
   ws.onopen = () => {

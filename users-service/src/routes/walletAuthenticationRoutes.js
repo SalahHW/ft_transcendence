@@ -71,7 +71,7 @@ export default async function walletAuthenticationRoutes(fastify) {
     handler: async (req, reply) => {
       const { wallet } = req.query;
       const timestamp = new Date().toISOString();
-      const challenge = `Sign this message to login to elsalmajori.games:\n${timestamp}`;
+      const challenge = `Sign this message to login to elsalmatjori.com:\n${timestamp}`;
       return { challenge, timestamp };
     },
   });

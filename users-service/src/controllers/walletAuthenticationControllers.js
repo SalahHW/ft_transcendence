@@ -3,7 +3,7 @@ import { signToken } from "../plugins/jwt.js";
 import { recoverPersonalSignature } from "@metamask/eth-sig-util";
 import axios from "axios";
 
-const CHALLENGE_PREFIX = "Sign this message to login to elsalmajori.games";
+const CHALLENGE_PREFIX = "Sign this message to login to elsalmatjori.com";
 
 export async function registerWithWallet(request, reply) {
   const { wallet, username, signature, timestamp } = request.body;

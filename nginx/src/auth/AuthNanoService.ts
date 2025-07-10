@@ -67,7 +67,7 @@ export default class AuthNanoService {
     authenticationMethod: string;
     wallet: string;
   }): Promise<User> {
-    const response = await fetch("https://elsalmajori.games:8443/users", {
+    const response = await fetch("https://elsalmatjori.com:8443/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -91,7 +91,7 @@ export default class AuthNanoService {
       if (!wallet) throw new Error("No wallet detected");
 
       const challengeRes = await fetch(
-        `https://elsalmajori.games:8443/wallet/challenge?wallet=${wallet}`
+        `https://elsalmatjori.com:8443/wallet/challenge?wallet=${wallet}`
       );
       if (!challengeRes.ok) {
         const errorText = await challengeRes.text();
@@ -105,7 +105,7 @@ export default class AuthNanoService {
       const signature = await this._signMessage(challenge, wallet);
 
       const registerRes = await fetch(
-        "https://elsalmajori.games:8443/register/wallet",
+        "https://elsalmatjori.com:8443/register/wallet",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -162,7 +162,7 @@ export default class AuthNanoService {
       if (!wallet) throw new Error("No wallet detected");
 
       const challengeRes = await fetch(
-        `https://elsalmajori.games:8443/wallet/challenge?wallet=${wallet}`
+        `https://elsalmatjori.com:8443/wallet/challenge?wallet=${wallet}`
       );
       if (!challengeRes.ok) {
         const errorText = await challengeRes.text();
@@ -176,7 +176,7 @@ export default class AuthNanoService {
       const signature = await this._signMessage(challenge, wallet);
 
       const loginRes = await fetch(
-        "https://elsalmajori.games:8443/login/wallet",
+        "https://elsalmatjori.com:8443/login/wallet",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -207,7 +207,7 @@ export default class AuthNanoService {
 
     this._refreshInterval = setInterval(async () => {
       try {
-        const res = await fetch("https://elsalmajori.games:8443/refresh", {
+        const res = await fetch("https://elsalmatjori.com:8443/refresh", {
           method: "POST",
           credentials: "include",
         });
