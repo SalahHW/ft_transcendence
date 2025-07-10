@@ -6,7 +6,7 @@ RUN apk update && apk add --no-cache nginx npm
 RUN mkdir -p /var/log/nginx
 RUN rm -rf /etc/nginx/http.d/*
 COPY ./nginx-config/default.conf /etc/nginx/http.d/
-COPY ./ssl/* /etc/ssl/elsalmajori/
+COPY ./ssl/* /etc/ssl/elsalmatjori/
 
 WORKDIR /app
 COPY package.json .
