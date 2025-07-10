@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/10 00:21:40 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/10 00:35:42 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -67,8 +67,8 @@ export class MatchHistory {
                         </div>
                     </div>
                 </div>
-                <div class="flex items-center justify-center w-6" style="background-color: ${resultColor};">
-                    <span class="text-white font-semibold text-xs" style="writing-mode: vertical-rl; text-orientation: mixed;">${formattedDate}</span>
+                <div class="flex items-center justify-center w-6" style="background-color: ${bgColor};">
+                    <span class="text-white font-semibold text-xs opacity-80" style="writing-mode: vertical-rl; text-orientation: mixed;">${formattedDate}</span>
                 </div>
             </div>
         `;
