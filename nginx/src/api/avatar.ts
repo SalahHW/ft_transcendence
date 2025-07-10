@@ -14,7 +14,7 @@ export interface Avatar {
  * Avatar service API.
  */
 export default class AvatarServiceAPI {
-  private _host: string = "https://elsalmatjori.com:8443";
+  private _host: string = "https://elsalmatjori.com:16443";
   private _avatarsBaseUrl: string = `${this._host}/avatars`;
 
   /**

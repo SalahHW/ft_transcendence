@@ -46,7 +46,7 @@ export const SERVER_CONFIG = {
     "https://localhost",
     "http://localhost:80",
     "https://localhost:80",
-    "https://elsalmatjori.com:8443",
+    "https://elsalmatjori.com:16443",
     "https://elsalmatjori.com",
   ],
   ALLOWED_METHODS: ["GET", "POST"],
