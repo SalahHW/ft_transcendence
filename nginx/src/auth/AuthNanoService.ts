@@ -1,6 +1,4 @@
 import UsersApi, { User } from "../api/user.js";
-import PresenceSocketService from "./presencesService.js";
-import axios from "axios";
 
 export default class AuthNanoService {
   private static _instance: AuthNanoService;
