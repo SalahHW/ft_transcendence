@@ -6,11 +6,11 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:42:42 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/28 16:14:51 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/03 13:16:22 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-import MatchServiceAPI, { Match } from "../../../api/matche.js";
+import MatchServiceAPI from "../../../api/match.js";
 import { buttonHTML } from "../../../components/button.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 
@@ -29,64 +29,70 @@ export default class CreateMatchForm {
 		this._container.innerHTML = /* HTML */ `
 			<form id="create-match-form" class="${UI_THEME.components.form}">
 				<div>
-					<input type="number" id="createform-user-id1" placeholder="User 1 ID" class="${UI_THEME.components.input}">
+					<input type="text" id="createform-player1" placeholder="Player 1 name" class="${UI_THEME.components.input}">
 				</div>
-
 				<div>
-					<input type="number" id="createform-user-id2" placeholder="User 2 ID" class="${UI_THEME.components.input}">
+					<input type="text" id="createform-player2" placeholder="Player 2 name" class="${UI_THEME.components.input}">
 				</div>
-
 				<div>
-					<input type="number" id="createform-user-score1" placeholder="User 1 score" class="${UI_THEME.components.input}">
+					<input type="number" id="createform-match-id" placeholder="Match ID" class="${UI_THEME.components.input}">
 				</div>
-
 				<div>
-					<input type="number" id="createform-user-score2" placeholder="User 2 score" class="${UI_THEME.components.input}">
+					<input type="number" id="createform-player1-score" placeholder="Player 1 score" class="${UI_THEME.components.input}">
 				</div>
-
+				<div>
+					<input type="number" id="createform-player2-score" placeholder="Player 2 score" class="${UI_THEME.components.input}">
+				</div>
+				<div>
+					<input type="text" id="createform-winner" placeholder="Winner address (0x...)" class="${UI_THEME.components.input}">
+				</div>
 				${buttonHTML({
 					type: "submit",
-					label: "Create Match"
+					label: "Report Match"
 				})}
 			</form>
 		`;
-
 		this._attachEventListeners();
 	}
 
 	private _attachEventListeners(): void {
 		const form = document.getElementById("create-match-form") as HTMLFormElement;
 
-		form.addEventListener("submit", async (element) => {
-			element.preventDefault();
+		form.addEventListener("submit", async (event) => {
+			event.preventDefault();
 
-			const id1Input = document.getElementById("createform-user-id1") as HTMLInputElement;
-			const id2Input = document.getElementById("createform-user-id2") as HTMLInputElement;
-			const score1Input = document.getElementById("createform-user-score1") as HTMLInputElement;
-			const score2Input = document.getElementById("createform-user-score2") as HTMLInputElement;
+			const player1Input = document.getElementById("createform-player1") as HTMLInputElement;
+			const player2Input = document.getElementById("createform-player2") as HTMLInputElement;
+			const matchIdInput = document.getElementById("createform-match-id") as HTMLInputElement;
+			const player1ScoreInput = document.getElementById("createform-player1-score") as HTMLInputElement;
+			const player2ScoreInput = document.getElementById("createform-player2-score") as HTMLInputElement;
+			const winnerInput = document.getElementById("createform-winner") as HTMLInputElement;
 
-			if (!id1Input.value || !id2Input.value || !score1Input.value || !score2Input.value) {
-				console.warn("Please provide both id1, id2, score1 and score2");
+			if (!player1Input.value || !player2Input.value || !matchIdInput.value || !player1ScoreInput.value || !player2ScoreInput.value || !winnerInput.value) {
+				console.warn("Please provide all fields: player1, player2, matchId, player1Score, player2Score, winner");
 				return;
 			}
 
-			const matchData: Match = {
-				userId1: parseInt(id1Input.value),
-				userId2: parseInt(id2Input.value),
-				userScore1: parseInt(score1Input.value),
-				userScore2: parseInt(score2Input.value),
+			const matchData = {
+				player1: player1Input.value,
+				player2: player2Input.value,
+				matchId: parseInt(matchIdInput.value),
+				player1Score: parseInt(player1ScoreInput.value),
+				player2Score: parseInt(player2ScoreInput.value),
+				winner: winnerInput.value
 			};
 
 			try {
-				const response = await this._matchService.createMatch(matchData);
-				console.log(`Match created: ${response}`);
+				const txHash = await this._matchService.reportMatch(matchData);
+				console.log(`Match reported! Tx hash: ${txHash}`);
+				form.reset();
 			}
 			catch (error) {
 				if (error instanceof Error) {
-					console.error(`Failed to create match ${matchData}:`, error.message);
+					console.error(`Failed to report match:`, error.message);
 				}
 				else {
-					console.error(`Failed to create match ${matchData}:`, error);
+					console.error(`Failed to report match:`, error);
 				}
 			}
 		});

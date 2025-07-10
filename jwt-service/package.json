@@ -6,7 +6,8 @@
     "start": "node src/app.js"
   },
   "dependencies": {
-    "fastify": "5.0.0",
-    "@fastify/jwt": "9.1.0"
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/jwt": "9.1.0",
+    "fastify": "5.0.0"
   }
 }
