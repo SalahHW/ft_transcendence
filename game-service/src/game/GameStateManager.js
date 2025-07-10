@@ -82,7 +82,6 @@ export class GameStateManager {
   initializeAnimationStatus(roomId) {
     if (!this.animationStatus.has(roomId)) {
       this.animationStatus.set(roomId, new Set());
-      console.log(`Initialized animationStatus for room ${roomId}`);
     }
     return this.animationStatus.get(roomId);
   }
@@ -94,10 +93,28 @@ export class GameStateManager {
     const roomAnimStatus = this.animationStatus.get(roomId);
     if (roomAnimStatus) {
       roomAnimStatus.add(playerId);
-      console.log(`Player ${playerId} completed animation in room ${roomId}, status size: ${roomAnimStatus.size}`);
       return roomAnimStatus.size;
     }
     return 0;
+  }
+
+  /**
+   * Clear animation status for a room (useful when players are transferred)
+   */
+  clearAnimationStatus(roomId) {
+    if (this.animationStatus.has(roomId)) {
+      this.animationStatus.delete(roomId);
+      this.initializeAnimationStatus(roomId); // Re-initialize with empty set
+      console.log(`Cleared animation status for room ${roomId}`);
+    }
+  }
+
+  /**
+   * Get animation status for debugging
+   */
+  getAnimationStatusForRoom(roomId) {
+    const roomAnimStatus = this.animationStatus.get(roomId);
+    return roomAnimStatus ? Array.from(roomAnimStatus) : [];
   }
 
   /**

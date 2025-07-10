@@ -1,6 +1,9 @@
 import * as BABYLON from '@babylonjs/core';
 import { createExplosion } from './ballEffects.js';
 import { playerPaddle } from '../player/player.js';
+import { BallTrail } from './ballTrail.js';
+import { BALL_CONSTANTS } from './ballConstants.js';
+import { BallPowerup } from './ballPowerup.js';
 
 interface BallState {
     position: { x: number; y: number; z: number };
@@ -35,12 +38,19 @@ class Ball {
     public lastUpdateTime: number;
     public hasValidPosition: boolean;
     public speed: number;
+    public ballTrail: BallTrail;
+    public ballPowerup: BallPowerup;
+    public isDisposed: boolean; // ⭐ NEW: Track disposal state
 
     constructor(player1: playerPaddle, player2: playerPaddle) {
-        this.position = new BABYLON.Vector3(0, -2, 0);
+        this.position = new BABYLON.Vector3(
+            BALL_CONSTANTS.INITIAL_POSITION.x,
+            BALL_CONSTANTS.INITIAL_POSITION.y,
+            BALL_CONSTANTS.INITIAL_POSITION.z
+        );
         this.velocity = new BABYLON.Vector3(0, 0, 0);
         this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
-        this.radius = 0.75;
+        this.radius = BALL_CONSTANTS.RADIUS;
         this.rebounds = 0;
         this.wasHitByPlayer = undefined;
         this.ballBody = null;
@@ -55,29 +65,47 @@ class Ball {
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
         this.hasValidPosition = true;
-        this.speed = 25;
+        this.speed = BALL_CONSTANTS.INITIAL_SPEED;
+        this.ballTrail = new BallTrail();
+        this.ballPowerup = new BallPowerup(null as any);
+        this.isDisposed = false; // ⭐ NEW: Initialize disposal state
     }
 
     init(): void {
-        this.position = new BABYLON.Vector3(0, -2, 0);
+        this.position = new BABYLON.Vector3(
+            BALL_CONSTANTS.INITIAL_POSITION.x,
+            BALL_CONSTANTS.INITIAL_POSITION.y,
+            BALL_CONSTANTS.INITIAL_POSITION.z
+        );
         this.velocity = new BABYLON.Vector3(0, 0, 0);
         this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
         this.rebounds = 0;
         this.isRespawning = false;
         this.respawnTime = 0;
         this.hasValidPosition = true;
-        this.speed = 25;
+        this.speed = BALL_CONSTANTS.INITIAL_SPEED;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
         if (this.ballBody) {
-            this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
+            this.ballBody.position = new BABYLON.Vector3(
+                BALL_CONSTANTS.INITIAL_POSITION.x,
+                BALL_CONSTANTS.INITIAL_POSITION.y,
+                BALL_CONSTANTS.INITIAL_POSITION.z
+            );
             this.ballBody.isVisible = false;
+        }
+        
+        // Reset trail on initialization
+        if (this.ballTrail) {
+            this.ballTrail.updateTrail(0); // Force remove trail at speed tier 0
         }
     }
 
     createBall(scene: BABYLON.Scene): void {
-        this.ballBody = BABYLON.MeshBuilder.CreateSphere("ball", { diameter: 1.5, 
-            segments: 42 }, scene);
+        this.ballBody = BABYLON.MeshBuilder.CreateSphere("ball", { 
+            diameter: BALL_CONSTANTS.DIAMETER, 
+            segments: BALL_CONSTANTS.SEGMENTS 
+        }, scene);
         this.ballMaterial = new BABYLON.StandardMaterial("glowMat", scene);
         
         // Enhanced material setup for glowing effects
@@ -91,6 +119,13 @@ class Ball {
         this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
         this.ballBody.material = this.ballMaterial;
         this.ballBody.isVisible = false;
+        
+        // Initialize trail system
+        this.ballTrail.initialize(scene, this.ballBody);
+        
+        // Initialize powerup system
+        this.ballPowerup = new BallPowerup(scene);
+        this.ballPowerup.initialize(this.ballBody, this.ballMaterial);
     }
 
     updateClient(scene: BABYLON.Scene): void {
@@ -111,19 +146,28 @@ class Ball {
 
     setState(state: BallState): void {
         if (state.isInitialSpawn) {
-            this.position = new BABYLON.Vector3(0, -2, 0);
+            this.position = new BABYLON.Vector3(
+                BALL_CONSTANTS.INITIAL_POSITION.x,
+                BALL_CONSTANTS.INITIAL_POSITION.y,
+                BALL_CONSTANTS.INITIAL_POSITION.z
+            );
             this.velocity = new BABYLON.Vector3(0, 0, 0);
             this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
             this.isRespawning = true;
             this.respawnTime = 0;
             this.hasValidPosition = true;
             if (this.ballBody) {
-                this.ballBody.position = new BABYLON.Vector3(0, -2, 0);
+                this.ballBody.position = new BABYLON.Vector3(
+                    BALL_CONSTANTS.INITIAL_POSITION.x,
+                    BALL_CONSTANTS.INITIAL_POSITION.y,
+                    BALL_CONSTANTS.INITIAL_POSITION.z
+                );
                 this.ballBody.isVisible = true;
             }
             return;
         }
 
+        const previousRebounds = this.rebounds;
         this.position = new BABYLON.Vector3(
             state.position.x,
             state.position.y,
@@ -142,13 +186,12 @@ class Ball {
             state.previousVelocity.z
         );
 
-        const previousRebounds = this.rebounds;
         this.rebounds = state.rebounds || 0;
         this.isRespawning = state.isRespawning || false;
         this.respawnTime = state.respawnTime || 0;
         this.wasHitByPlayer = state.wasHitByPlayer;
         this.hasValidPosition = true;
-        this.speed = state.speed || 25;
+        this.speed = state.speed || BALL_CONSTANTS.INITIAL_SPEED;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
 
@@ -189,6 +232,13 @@ class Ball {
             this.ballBody.position.copyFrom(this.position);
             this.ballBody.isVisible = this.isRespawning || this.position.y >= -2;
         }
+
+        // Update trail based on speed tier
+        const currentSpeedTier = this.getSpeedTier(this.rebounds);
+        const currentGlowColor = state.currentGlowColor ? 
+            new BABYLON.Color3(state.currentGlowColor.r, state.currentGlowColor.g, state.currentGlowColor.b) : 
+            undefined;
+        this.ballTrail.updateTrail(currentSpeedTier, currentGlowColor);
     }
 
     startGlowTransition(targetColor: BABYLON.Color3, duration: number): void {
@@ -281,10 +331,41 @@ class Ball {
         });
     }
 
+    updatePowerupState(powerupState: any): void {
+        if (this.ballPowerup) {
+            this.ballPowerup.updateState(powerupState);
+        }
+    }
+
+    dispose(): void {
+        // Clean up trail resources
+        if (this.ballTrail) {
+            this.ballTrail.dispose();
+        }
+        
+        // Clean up powerup resources
+        if (this.ballPowerup) {
+            this.ballPowerup.dispose();
+        }
+        
+        // Clean up ball mesh and material
+        if (this.ballBody) {
+            this.ballBody.dispose();
+            this.ballBody = null;
+        }
+        
+        if (this.ballMaterial) {
+            this.ballMaterial.dispose();
+            this.ballMaterial = null;
+        }
+        this.isDisposed = true; // Mark as disposed
+    }
+
     getSpeedTier(rebounds: number): number {
-        if (rebounds < 10) return 0;
-        else if (rebounds < 20) return 1;
-        else return 2;
+        if (rebounds >= BALL_CONSTANTS.SPEED_TIERS.TIER_1_THRESHOLD) {
+            return 1;
+        }
+        return 0;
     }
 }
 

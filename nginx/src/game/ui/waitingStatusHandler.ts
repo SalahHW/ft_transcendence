@@ -4,17 +4,15 @@
 
 import { updatePlayerNamesVersus } from '../playerUi/playerUi.js';
 
+// Global variables for ping management
+let forfeitPingInterval: number | null = null;
+
 /**
  * Handle waiting for players message and update UI accordingly
  * @param message - The waitingForPlayers message from server
  * @param updateGameStatus - Function to update game status display
  */
 export function handleWaitingForPlayers(message: any, updateGameStatus: (msg: string) => void): void {
-    // Check if this is a tournament advancement message
-    if (message.tournamentAdvancement) {
-        handleTournamentAdvancement(message, updateGameStatus);
-        return;
-    }
     
     // Regular waiting for players message
     updateGameStatus(`Waiting for players... (${message.readyCount}/${message.totalNeeded} ready)`);
@@ -31,35 +29,38 @@ export function handleWaitingForPlayers(message: any, updateGameStatus: (msg: st
 }
 
 /**
- * Handle tournament advancement waiting messages
- * @param message - The tournament advancement message from server
- * @param updateGameStatus - Function to update game status display
+ * Start keep-alive pinging to prevent timeout during waiting
  */
-function handleTournamentAdvancement(message: any, updateGameStatus: (msg: string) => void): void {
-    const advancement = message.tournamentAdvancement;
+function startForfeitWinnerPing(): void {
+    // Clear any existing interval
+    if (forfeitPingInterval) {
+        clearInterval(forfeitPingInterval);
+    }
     
-    if (advancement.status === 'waiting_for_final') {
-        // Player has been transferred to final room, waiting for opponent
-        updateGameStatus(advancement.message);
+    // Send ping every 30 seconds
+    forfeitPingInterval = window.setInterval(() => {
+        const clientConnection = (window as any).clientConnection;
         
-        // Update player names - show current player vs "waiting for opponent"
-        updatePlayerNamesVersus(
-            message.currentPlayerName || 'You',
-            message.opponentName === 'Nobody' ? 'Waiting for opponent...' : message.opponentName
-        );
-        
-        console.log(`🏆 Tournament advancement: ${advancement.playerType} in ${advancement.finalRoomType}`);
-    } else if (advancement.status === 'final_ready') {
-        // Both players are in final room, ready to start
-        updateGameStatus(advancement.message);
-        
-        // Update player names with actual opponent
-        updatePlayerNamesVersus(
-            message.currentPlayerName || 'You',
-            message.opponentName || 'Opponent'
-        );
-        
-        console.log(`🏆 Final room ready: ${advancement.finalRoomType}`);
+        if (clientConnection?.socket?.readyState === WebSocket.OPEN) {
+            const pingMessage = {
+                type: 'keepAlive',
+                reason: 'waiting_for_opponent',
+                timestamp: Date.now()
+            };
+            clientConnection.send(pingMessage);
+        } else {
+            stopForfeitWinnerPing();
+        }
+    }, 30000); // 30 seconds
+}
+
+/**
+ * Stop keep-alive pinging
+ */
+export function stopForfeitWinnerPing(): void {
+    if (forfeitPingInterval) {
+        clearInterval(forfeitPingInterval);
+        forfeitPingInterval = null;
     }
 }
 

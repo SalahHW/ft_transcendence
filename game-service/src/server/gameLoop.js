@@ -4,6 +4,7 @@ import { GAME_CONFIG } from '../core/constants.js';
 import { RoomUtils } from '../utils/helpers.js';
 import { gameStateManager } from '../game/GameStateManager.js';
 import { gameEngine } from '../game/GameEngine.js';
+import { playerManager } from '../player/PlayerManager.js';
 
 export function startGameLoop() {
   const FPS = GAME_CONFIG.FPS;
@@ -13,6 +14,9 @@ export function startGameLoop() {
   let lastSync = Date.now();
   let frameCount = 0;
   let lastFrameTime = Date.now();
+
+  // Track previous states for delta compression
+  const previousStates = new Map();
 
   const { gameRooms } = gameStateManager.getGameState();
 
@@ -29,7 +33,52 @@ export function startGameLoop() {
       gameRooms.forEach((room, roomId) => {
         if (!RoomUtils.isRoomReadyForGame(room)) return;
 
+        // ⭐ CRITICAL FIX: Skip rooms that have disposed balls to prevent any ball processing
+        if (room.ballDisposed) {
+          console.log(`🏆 Skipping game loop processing for room ${roomId}: ball has been disposed`);
+          
+          // ⭐ CRITICAL FIX: Clear previous ball state to prevent any ball state from being sent
+          const prevState = previousStates.get(roomId);
+          if (prevState && prevState.ballState) {
+            console.log(`🏆 Clearing previous ball state for room ${roomId} due to disposal`);
+            previousStates.set(roomId, {
+              ...prevState,
+              ballState: null
+            });
+          }
+          
+          return;
+        }
+
+        // ⭐ CRITICAL FIX: Check if room is in animation phase and skip ball updates
+        const animationStatus = gameStateManager.getAnimationStatusForRoom(roomId);
+        const isInAnimationPhase = animationStatus.length < 2; // Less than 2 players completed animation
+        
+        if (isInAnimationPhase) {
+          // Skip ball processing during animation phase to prevent state corruption
+          // Only process player movements during animation
+          const changedPlayerPositions = {};
+          room.players.forEach((player, index) => {
+            if (player.ws && player.ws.readyState === 1) {
+              // Process player input during animation (for visual feedback)
+              if (player.inputState) {
+                const moveDirection = player.inputState.up ? -1 : player.inputState.down ? 1 : 0;
+                if (moveDirection !== 0) {
+                  const newPosition = player.positionZ + (moveDirection * GAME_CONFIG.PADDLE_SPEED * deltaTime);
+                  player.positionZ = Math.max(-GAME_CONFIG.PADDLE_BOUNDARY, Math.min(GAME_CONFIG.PADDLE_BOUNDARY, newPosition));
+                  changedPlayerPositions[player.id] = player.positionZ;
+                }
+              }
+            }
+          });
+          
+          // Skip ball updates during animation phase
+          return;
+        }
+
         room.players.forEach((player, index) => {
+          // ✅ SERVER-SIDE: IDENTICAL FOR ALL ROOM TYPES (1v1, semi-finals, finals)
+          // All game modes use the same paddle speed calculation and deltaTime
           const speed = GAME_CONFIG.PADDLE_SPEED;
           const halfD = GAME_CONFIG.PADDLE_BOUNDARY;
           let moved = false;
@@ -44,6 +93,14 @@ export function startGameLoop() {
           }
           player.positionZ = Number(player.positionZ.toFixed(3));
 
+          const playerData = playerManager.getPlayer(player.id);
+          if (playerData && playerData.powerup) {
+            const ballRebounds = room.ball ? room.ball.rebounds : 0;
+            playerData.update(deltaTime, ballRebounds);
+          }
+
+          // ✅ SERVER-SIDE: BROADCAST THROTTLING IS IDENTICAL FOR ALL ROOM TYPES
+          // The server sends paddle updates at the same rate regardless of room type
           if ((player.isUpPressed || player.isDownPressed) && now - lastBroadcast >= 1000 / BROADCAST_FPS) {
             gameEngine.broadcastToRoom(roomId, {
               type: 'paddleMove',
@@ -53,6 +110,26 @@ export function startGameLoop() {
             });
           }
         });
+
+        if (now - lastBroadcast >= 1000 / BROADCAST_FPS) {
+          const powerupStates = {};
+          let hasPowerupUpdates = false;
+          
+          room.players.forEach(player => {
+            const playerData = playerManager.getPlayer(player.id);
+            if (playerData && playerData.powerup) {
+              powerupStates[player.id] = playerData.getPowerupState();
+              hasPowerupUpdates = true;
+            }
+          });
+          
+          if (hasPowerupUpdates) {
+            gameEngine.broadcastToRoom(roomId, {
+              type: 'powerupStateUpdate',
+              powerupStates: powerupStates
+            });
+          }
+        }
 
         if (room.ball) {
           // Ensure ball has sound context (for existing balls)
@@ -65,6 +142,8 @@ export function startGameLoop() {
           const paddle2Pos = new BABYLON.Vector3(-19.5, 2, room.players[1].positionZ);
           const prevScore1 = room.ball.player1.playerScore;
           const prevScore2 = room.ball.player2.playerScore;
+          
+
           
           // Handle ball state
           if (room.ball.isRespawning) {
@@ -143,36 +222,41 @@ export function startGameLoop() {
             });
           }
 
-          if (room.ball.player1.playerScore !== prevScore1 || room.ball.player2.playerScore !== prevScore2) {
-            // Use the ball's player objects directly for accurate mapping
-            const ballPlayer1Name = room.ball.player1.username || 'Player 1';
-            const ballPlayer2Name = room.ball.player2.username || 'Player 2';
-            
-            if (room.ball.player1.playerScore > prevScore1) {
-              console.log(`💥 ${ballPlayer1Name} scored! ${ballPlayer2Name} lost a point!`);
-              console.log(`🏓 Current Score: ${ballPlayer1Name}: ${room.ball.player1.playerScore} - ${ballPlayer2Name}: ${room.ball.player2.playerScore}`);
+          // ⭐ CRITICAL FIX: Check if room.ball exists before accessing its properties
+          if (room.ball && room.ball.player1 && room.ball.player2) {
+            if (room.ball.player1.playerScore !== prevScore1 || room.ball.player2.playerScore !== prevScore2) {
+              // Use the ball's player objects directly for accurate mapping
+              const ballPlayer1Name = room.ball.player1.username || 'Player 1';
+              const ballPlayer2Name = room.ball.player2.username || 'Player 2';
+              
+              if (room.ball.player1.playerScore > prevScore1) {
+                console.log(`💥 ${ballPlayer1Name} scored! ${ballPlayer2Name} lost a point!`);
+                console.log(`🏓 Current Score: ${ballPlayer1Name}: ${room.ball.player1.playerScore} - ${ballPlayer2Name}: ${room.ball.player2.playerScore}`);
+              }
+              if (room.ball.player2.playerScore > prevScore2) {
+                console.log(`💥 ${ballPlayer2Name} scored! ${ballPlayer1Name} lost a point!`);
+                console.log(`🏓 Current Score: ${ballPlayer1Name}: ${room.ball.player1.playerScore} - ${ballPlayer2Name}: ${room.ball.player2.playerScore}`);
+              }
+              gameEngine.broadcastToRoom(roomId, {
+                type: 'scoreUpdate',
+                scores: {
+                  [room.players[0].id]: room.ball.player1.playerScore,
+                  [room.players[1].id]: room.ball.player2.playerScore,
+                },
+                roomId: roomId
+              });
+              gameEngine.endGame(room, roomId);
             }
-            if (room.ball.player2.playerScore > prevScore2) {
-              console.log(`💥 ${ballPlayer2Name} scored! ${ballPlayer1Name} lost a point!`);
-              console.log(`🏓 Current Score: ${ballPlayer1Name}: ${room.ball.player1.playerScore} - ${ballPlayer2Name}: ${room.ball.player2.playerScore}`);
-            }
-            gameEngine.broadcastToRoom(roomId, {
-              type: 'scoreUpdate',
-              scores: {
-                [room.players[0].id]: room.ball.player1.playerScore,
-                [room.players[1].id]: room.ball.player2.playerScore,
-              },
-              roomId: roomId
-            });
-            gameEngine.endGame(room, roomId);
           }
         }
 
         if (now - lastSync >= SYNC_INTERVAL) {
+          // Create current state objects
           const playerPositions = {};
           room.players.forEach(player => {
             playerPositions[player.id] = player.positionZ;
           });
+
           const ballState = room.ball ? {
             position: { x: room.ball.position.x, y: room.ball.position.y, z: room.ball.position.z },
             velocity: { x: room.ball.velocity.x, y: room.ball.velocity.y, z: room.ball.velocity.z },
@@ -185,13 +269,89 @@ export function startGameLoop() {
             currentGlowColor: { r: room.ball.currentGlowColor.r, g: room.ball.currentGlowColor.g, b: room.ball.currentGlowColor.b },
             shouldGlow: room.ball.shouldGlow
           } : null;
+
+          // Get previous state or initialize
+          const prevState = previousStates.get(roomId) || { playerPositions: {}, ballState: null };
+          
+          // Calculate delta for player positions
+          const changedPlayerPositions = {};
+          let hasPlayerChanges = false;
+          
+          Object.entries(playerPositions).forEach(([playerId, position]) => {
+            const prevPosition = prevState.playerPositions[playerId];
+            if (prevPosition === undefined || Math.abs(position - prevPosition) >= 0.01) {
+              changedPlayerPositions[playerId] = position;
+              hasPlayerChanges = true;
+            }
+          });
+          
+          // Check if ball state has meaningful changes
+          let hasBallChanges = false;
+          let deltaballState = null;
+          
+          if (ballState && prevState.ballState) {
+            // Check position changes (most important for visual smoothness)
+            const posChanged = 
+              Math.abs(ballState.position.x - prevState.ballState.position.x) >= 0.01 ||
+              Math.abs(ballState.position.y - prevState.ballState.position.y) >= 0.01 ||
+              Math.abs(ballState.position.z - prevState.ballState.position.z) >= 0.01;
+              
+            // Check velocity changes (important for prediction)
+            const velChanged = 
+              Math.abs(ballState.velocity.x - prevState.ballState.velocity.x) >= 0.01 ||
+              Math.abs(ballState.velocity.y - prevState.ballState.velocity.y) >= 0.01 ||
+              Math.abs(ballState.velocity.z - prevState.ballState.velocity.z) >= 0.01;
+              
+            // Check other critical state changes
+            const stateChanged = 
+              ballState.rebounds !== prevState.ballState.rebounds ||
+              ballState.isRespawning !== prevState.ballState.isRespawning ||
+              ballState.speed !== prevState.ballState.speed ||
+              ballState.shouldGlow !== prevState.ballState.shouldGlow;
+              
+            // Check glow color changes (important for visual effects)
+            const glowChanged = 
+              ballState.shouldGlow && (
+                Math.abs(ballState.currentGlowColor.r - prevState.ballState.currentGlowColor.r) >= 0.01 ||
+                Math.abs(ballState.currentGlowColor.g - prevState.ballState.currentGlowColor.g) >= 0.01 ||
+                Math.abs(ballState.currentGlowColor.b - prevState.ballState.currentGlowColor.b) >= 0.01
+              );
+              
+            hasBallChanges = posChanged || velChanged || stateChanged || glowChanged;
+            
+            // During respawn, always send updates to ensure smooth animation
+            if (ballState.isRespawning) {
+              hasBallChanges = true;
+            }
+            
+            if (hasBallChanges) {
+              deltaballState = ballState;
+            }
+          } else if (ballState !== prevState.ballState) {
+            // One is null and the other isn't, or first update
+            hasBallChanges = true;
+            deltaballState = ballState;
+          }
+          
+          // Only send sync if we have changes to report
+          if (hasPlayerChanges || hasBallChanges) {
           gameEngine.broadcastToRoom(roomId, {
             type: 'sync',
-            playerPositions,
-            ballState,
+              playerPositions: changedPlayerPositions,
+              ballState: deltaballState,
             serverTime: now,
-            roomId: roomId
-          });
+              roomId: roomId,
+              // Flag to indicate this is a delta update
+              isDelta: true
+            });
+            
+            // Update previous state
+            previousStates.set(roomId, {
+              playerPositions: {...playerPositions},
+              ballState: ballState ? {...ballState} : null
+            });
+          }
+          
           lastSync = now;
         }
       });

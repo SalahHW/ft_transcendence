@@ -19,6 +19,9 @@ class SoundManager {
             wallHit: `${window.location.protocol}//${window.location.host}/sounds/matchSounds/laser_low.mp3`,
             lostPoint: `${window.location.protocol}//${window.location.host}/sounds/matchSounds/lost_point.mp3`,
             playerScored: `${window.location.protocol}//${window.location.host}/sounds/matchSounds/player_scored.mp3`,
+            // ⭐ POWERUP INTEGRATION: Use specific powerup success sounds
+            powerUpHit: `${window.location.protocol}//${window.location.host}/sounds/matchSounds/powerUpsSounds/bat_hit.mp3`,
+            defensivePowerUp: `${window.location.protocol}//${window.location.host}/sounds/matchSounds/powerUpsSounds/pelle.mp3`,
             // 1v1 sounds
             winnerSound: `${window.location.protocol}//${window.location.host}/sounds/endGameSounds/winner_sound.mp3`,
             loserSound: `${window.location.protocol}//${window.location.host}/sounds/endGameSounds/looser_sound.mp3`,
@@ -32,8 +35,6 @@ class SoundManager {
             fourthPlace: `${window.location.protocol}//${window.location.host}/sounds/finalSounds/fourth-place.mp3`
         };
 
-        console.log('Preloading sounds...');
-        
         for (const [name, path] of Object.entries(soundFiles)) {
             try {
                 const audio = new Audio(path);
@@ -48,14 +49,12 @@ class SoundManager {
                 });
                 
                 this.sounds[name] = audio;
-                console.log(`✓ Loaded sound: ${name}`);
             } catch (error) {
                 console.warn(`Failed to load sound: ${name}`, error);
             }
         }
         
         this.isInitialized = true;
-        console.log('Sound manager initialized');
     }
 
     /**
@@ -95,7 +94,6 @@ class SoundManager {
      */
     setEnabled(enabled: boolean): void {
         this.isEnabled = enabled;
-        console.log(`Sounds ${enabled ? 'enabled' : 'disabled'}`);
     }
 
     /**

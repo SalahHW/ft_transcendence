@@ -4,8 +4,8 @@ import { ValidationUtils, LogUtils } from '../utils/helpers.js';
 import { playerManager } from '../player/PlayerManager.js';
 import { gameStateManager } from '../game/GameStateManager.js';
 import { gameEngine } from '../game/GameEngine.js';
-import { tournamentManager } from '../room/tournamentManager.js';
 import { roomManager } from '../room/RoomManager.js';
+import { tournamentManager } from '../tournament/TournamentManager.js';
 
 // Constants for paddle movement
 const PADDLE_PULSE_DISTANCE = 1.0;
@@ -67,14 +67,14 @@ export async function registerApiRoutes(fastify) {
   fastify.post('/api/players', async (request, reply) => {
     try {
       console.log('API request: POST /api/players');
-      const { username, tournament = false } = request.body || {};
+      const { username } = request.body || {};
       
-      const player = playerManager.registerPlayerWithUsername(username, { tournament });
+      const player = playerManager.registerPlayerWithUsername(username);
       
-      console.log(`Created player ${player.id} with username ${username}, tournament: ${tournament}`);
+      console.log(`Created player ${player.id} with username ${username}`);
       return reply.status(201).send({
         status: 'success',
-        data: { id: player.id, username: player.username, tournament: player.tournament },
+        data: { id: player.id, username: player.username },
       });
     } catch (error) {
       console.error('Error in POST /api/players:', error);
@@ -82,6 +82,293 @@ export async function registerApiRoutes(fastify) {
       return reply.status(status).send({
         status: 'error',
         message: error.message || 'Internal server error',
+      });
+    }
+  });
+
+  // POST /api/tournaments: Create a new player for tournament with a username
+  fastify.post('/api/tournaments', async (request, reply) => {
+    try {
+      console.log('🎯 TOURNAMENT BUTTON CLICKED: API request: POST /api/tournaments');
+      const { username } = request.body || {};
+      
+      console.log(`🏆 Player ${username} clicked the tournament button!`);
+      
+      // Register player first
+      const player = playerManager.registerPlayerWithUsername(username);
+      
+      // Add player to tournament waiting room
+      const tournamentData = await tournamentManager.addPlayerToTournament(player.id, username);
+      
+      console.log(`Created tournament player ${player.id} with username ${username}`);
+      console.log(`🏆 Player ${username} added to tournament waiting room ${tournamentData.waitingRoomId} (${tournamentData.playerCount}/4)`);
+      
+              // Return WebSocket connection information for the client
+        return reply.status(201).send({
+          status: 'success',
+          data: { 
+            id: player.id, 
+            username: player.username,
+            waitingRoomId: tournamentData.waitingRoomId,
+            playerCount: tournamentData.playerCount,
+            maxPlayers: tournamentData.maxPlayers,
+            websocketUrl: `/api/game/ws?playerId=${player.id}&roomId=${tournamentData.waitingRoomId}&matchType=tournament`
+          },
+        });
+    } catch (error) {
+      console.error('Error in POST /api/tournaments:', error);
+      const status = error.message.includes('Invalid username') ? HTTP_STATUS.BAD_REQUEST : 500;
+      return reply.status(status).send({
+        status: 'error',
+        message: error.message || 'Internal server error',
+      });
+    }
+  });
+
+  // GET /api/tournaments/waiting-rooms: Get all tournament waiting room information
+  fastify.get('/api/tournaments/waiting-rooms', async (reply) => {
+    try {
+      console.log('API request: GET /api/tournaments/waiting-rooms');
+      const waitingRoomCounts = tournamentManager.getAllWaitingRoomCounts();
+      const stats = tournamentManager.getTournamentStats();
+      
+      return reply.status(HTTP_STATUS.OK).send({
+        status: 'success',
+        data: {
+          waitingRooms: waitingRoomCounts,
+          stats: stats
+        },
+      });
+    } catch (error) {
+      console.error('Error in GET /api/tournaments/waiting-rooms:', error);
+      return reply.status(500).send({
+        status: 'error',
+        message: 'Internal server error',
+      });
+    }
+  });
+
+  // GET /api/tournaments/waiting-rooms/:id: Get specific tournament waiting room information
+  fastify.get('/api/tournaments/waiting-rooms/:id', async (request, reply) => {
+    try {
+      const { id } = request.params;
+      console.log(`API request: GET /api/tournaments/waiting-rooms/${id}`);
+      
+      const waitingRoomData = tournamentManager.getWaitingRoomPlayerCount(id);
+      if (!waitingRoomData) {
+        return reply.status(404).send({
+          status: 'error',
+          message: 'Tournament waiting room not found',
+        });
+      }
+      
+      return reply.status(HTTP_STATUS.OK).send({
+        status: 'success',
+        data: waitingRoomData,
+      });
+    } catch (error) {
+      console.error(`Error in GET /api/tournaments/waiting-rooms/${request.params.id}:`, error);
+      return reply.status(500).send({
+        status: 'error',
+        message: 'Internal server error',
+      });
+    }
+  });
+
+  // DELETE /api/tournaments/players/:id: Remove player from tournament waiting room
+  fastify.delete('/api/tournaments/players/:id', async (request, reply) => {
+    try {
+      const { id } = request.params;
+      const { username } = request.body || {};
+      
+      console.log(`API request: DELETE /api/tournaments/players/${id} (username: ${username})`);
+      
+      if (!username) {
+        return reply.status(HTTP_STATUS.BAD_REQUEST).send({
+          status: 'error',
+          message: 'Username is required in request body',
+        });
+      }
+      
+      const result = await tournamentManager.removePlayerFromTournament(id, username);
+      
+      if (result.success) {
+        return reply.status(HTTP_STATUS.OK).send({
+          status: 'success',
+          data: result,
+        });
+      } else {
+        return reply.status(404).send({
+          status: 'error',
+          message: result.message,
+        });
+      }
+    } catch (error) {
+      console.error(`Error in DELETE /api/tournaments/players/${request.params.id}:`, error);
+      return reply.status(500).send({
+        status: 'error',
+        message: 'Internal server error',
+      });
+    }
+  });
+
+  // POST /api/tournaments/players/:id/leave: Explicitly leave tournament waiting room
+  fastify.post('/api/tournaments/players/:id/leave', async (request, reply) => {
+    try {
+      const { id } = request.params;
+      const { username } = request.body || {};
+      
+      console.log(`API request: POST /api/tournaments/players/${id}/leave (username: ${username})`);
+      
+      if (!username) {
+        return reply.status(HTTP_STATUS.BAD_REQUEST).send({
+          status: 'error',
+          message: 'Username is required in request body',
+        });
+      }
+      
+      // Find which waiting room the player is in
+      const waitingRoomCounts = tournamentManager.getAllWaitingRoomCounts();
+      let foundRoom = null;
+      
+      for (const [waitingRoomId, data] of Object.entries(waitingRoomCounts)) {
+        const player = data.players.find(p => p.id === id);
+        if (player) {
+          foundRoom = waitingRoomId;
+          break;
+        }
+      }
+      
+      if (!foundRoom) {
+        return reply.status(404).send({
+          status: 'error',
+          message: `Player ${username} not found in any tournament waiting room`,
+        });
+      }
+      
+      // Handle as explicit leave through disconnect handler
+      const { disconnectionDetector } = await import('../server/disconnect/DisconnectionDetector.js');
+      disconnectionDetector.handleExplicitLeave(id, foundRoom);
+      
+      return reply.status(HTTP_STATUS.OK).send({
+        status: 'success',
+        data: {
+          message: `Player ${username} left tournament waiting room`,
+          waitingRoomId: foundRoom
+        },
+      });
+    } catch (error) {
+      console.error(`Error in POST /api/tournaments/players/${request.params.id}/leave:`, error);
+      return reply.status(500).send({
+        status: 'error',
+        message: 'Internal server error',
+      });
+    }
+  });
+
+  // POST /api/tournaments/players/:id/browser-event: Handle browser events for tournament waiting rooms
+  fastify.post('/api/tournaments/players/:id/browser-event', async (request, reply) => {
+    try {
+      const { id } = request.params;
+      const { username, eventType } = request.body || {};
+      
+      console.log(`API request: POST /api/tournaments/players/${id}/browser-event (username: ${username}, event: ${eventType})`);
+      
+      if (!username || !eventType) {
+        return reply.status(HTTP_STATUS.BAD_REQUEST).send({
+          status: 'error',
+          message: 'Username and eventType are required in request body',
+        });
+      }
+      
+      // Find which waiting room the player is in
+      const waitingRoomCounts = tournamentManager.getAllWaitingRoomCounts();
+      let foundRoom = null;
+      
+      for (const [waitingRoomId, data] of Object.entries(waitingRoomCounts)) {
+        const player = data.players.find(p => p.id === id);
+        if (player) {
+          foundRoom = waitingRoomId;
+          break;
+        }
+      }
+      
+      if (!foundRoom) {
+        return reply.status(404).send({
+          status: 'error',
+          message: `Player ${username} not found in any tournament waiting room`,
+        });
+      }
+      
+      // Handle browser event through disconnect handler
+      const { disconnectionDetector } = await import('../server/disconnect/DisconnectionDetector.js');
+      disconnectionDetector.handleBrowserEvent(id, foundRoom, eventType);
+      
+      return reply.status(HTTP_STATUS.OK).send({
+        status: 'success',
+        data: {
+          message: `Browser event ${eventType} handled for player ${username}`,
+          waitingRoomId: foundRoom
+        },
+      });
+    } catch (error) {
+      console.error(`Error in POST /api/tournaments/players/${request.params.id}/browser-event:`, error);
+      return reply.status(500).send({
+        status: 'error',
+        message: 'Internal server error',
+      });
+    }
+  });
+
+  // POST /api/tournaments/players/:id/activity: Update player activity in tournament waiting room
+  fastify.post('/api/tournaments/players/:id/activity', async (request, reply) => {
+    try {
+      const { id } = request.params;
+      const { username } = request.body || {};
+      
+      console.log(`API request: POST /api/tournaments/players/${id}/activity (username: ${username})`);
+      
+      if (!username) {
+        return reply.status(HTTP_STATUS.BAD_REQUEST).send({
+          status: 'error',
+          message: 'Username is required in request body',
+        });
+      }
+      
+      // Find which waiting room the player is in
+      const waitingRoomCounts = tournamentManager.getAllWaitingRoomCounts();
+      let foundRoom = null;
+      
+      for (const [waitingRoomId, data] of Object.entries(waitingRoomCounts)) {
+        const player = data.players.find(p => p.id === id);
+        if (player) {
+          foundRoom = waitingRoomId;
+          break;
+        }
+      }
+      
+      if (!foundRoom) {
+        return reply.status(404).send({
+          status: 'error',
+          message: `Player ${username} not found in any tournament waiting room`,
+        });
+      }
+      
+      // Update player activity
+      tournamentManager.updatePlayerActivity(id, foundRoom);
+      
+      return reply.status(HTTP_STATUS.OK).send({
+        status: 'success',
+        data: {
+          message: `Activity updated for player ${username}`,
+          waitingRoomId: foundRoom
+        },
+      });
+    } catch (error) {
+      console.error(`Error in POST /api/tournaments/players/${id}/activity:`, error);
+      return reply.status(500).send({
+        status: 'error',
+        message: 'Internal server error',
       });
     }
   });
@@ -218,11 +505,6 @@ export async function registerApiRoutes(fastify) {
       });
     }
   });
-
-  /**
-   * Diagnostic endpoint for monitoring parallel tournaments
-   */
-  fastify.get('/api/tournament-diagnostics', getTournamentDiagnostics);
 }
 
 // Service-to-service notification functions
@@ -232,17 +514,13 @@ async function notifyOtherServices(matchData) {
       name: 'users-service',
       url: process.env.USERS_SERVICE_URL || 'http://users:3000',
       endpoints: ['/api/matches/completed']
-    },
-    {
-      name: 'stats-service', 
-      url: process.env.STATS_SERVICE_URL || 'http://localhost:3002',
-      endpoints: ['/api/player-stats', '/api/match-history']
-    },
-    {
-      name: 'tournament-service',
-      url: process.env.TOURNAMENT_SERVICE_URL || 'http://localhost:3003',
-      endpoints: ['/api/tournament/match-result']
     }
+    // ⭐ FIX: Removed stats-service as it's not defined in docker-compose
+    // {
+    //   name: 'stats-service', 
+    //   url: process.env.STATS_SERVICE_URL || 'http://localhost:3002',
+    //   endpoints: ['/api/player-stats', '/api/match-history']
+    // }
   ];
 
   const notifications = services.flatMap(service => 
@@ -256,7 +534,7 @@ async function notifyOtherServices(matchData) {
 
 async function notifyService(serviceName, url, matchData) {
   try {
-
+    console.log(`📡 Notifying ${serviceName} at ${url}...`);
     
     const response = await fetch(url, {
       method: 'POST',
@@ -274,14 +552,14 @@ async function notifyService(serviceName, url, matchData) {
     }
 
     const responseData = await response.json();
-
+    console.log(`✅ Successfully notified ${serviceName}`);
     
     return responseData;
   } catch (error) {
-    console.error(`❌ Failed to notify ${serviceName}:`, error.message);
-    console.log('-'.repeat(60));
-    // Could implement retry logic here
-    throw error;
+    // ⭐ FIX: Make API communication failures less noisy
+    console.warn(`⚠️ Failed to notify ${serviceName}: ${error.message}`);
+    // Don't throw error to prevent match processing from failing
+    return null;
   }
 }
 
@@ -289,95 +567,16 @@ async function notifyService(serviceName, url, matchData) {
 export async function reportMatchResultsToAPI(matchData) {
   try {
     // Forward match data to external services only
-    await notifyOtherServices(matchData);
-    console.log('✅ Match results processing completed');
+    const results = await notifyOtherServices(matchData);
+    
+    // Check if any notifications succeeded
+    const successfulNotifications = results.filter(result => result !== null);
+    if (successfulNotifications.length > 0) {
+      console.log(`✅ Match results processing completed (${successfulNotifications.length} services notified)`);
+    } else {
+      console.warn('⚠️ Match results processing completed but no external services were notified');
+    }
   } catch (error) {
     console.error('❌ Failed to process match results:', error.message);
   }
 }
-
-/**
- * Diagnostic endpoint for monitoring parallel tournaments
- */
-export const getTournamentDiagnostics = async (request, reply) => {
-  try {
-    console.log('🏆 Tournament diagnostics requested');
-    
-    const tournamentStats = tournamentManager.getTournamentStats();
-    const allRooms = roomManager.getAllRooms();
-    
-    // Group rooms by tournament ID
-    const tournamentGroups = {};
-    const tournamentRooms = allRooms.filter(room => room.metadata?.isTournament);
-    
-    tournamentRooms.forEach(room => {
-      const tournamentId = room.metadata.tournamentId || 'unknown';
-      if (!tournamentGroups[tournamentId]) {
-        tournamentGroups[tournamentId] = {
-          tournamentId,
-          rooms: [],
-          totalPlayers: 0,
-          roomTypes: { waiting: 0, semifinal: 0, final: 0 },
-          status: 'unknown'
-        };
-      }
-      
-      tournamentGroups[tournamentId].rooms.push({
-        roomId: room.id,
-        type: room.metadata.tournamentType || 'unknown',
-        players: room.players.length,
-        maxPlayers: room.maxPlayers,
-        gameStarted: room.gameStarted,
-        isGameOver: room.isGameOver,
-        ready: room.ready
-      });
-      
-      tournamentGroups[tournamentId].totalPlayers += room.players.length;
-      
-      const roomType = room.metadata.tournamentType || 'waiting';
-      if (tournamentGroups[tournamentId].roomTypes[roomType] !== undefined) {
-        tournamentGroups[tournamentId].roomTypes[roomType]++;
-      }
-    });
-    
-    // Determine tournament status
-    Object.values(tournamentGroups).forEach(tournament => {
-      if (tournament.roomTypes.final > 0) {
-        tournament.status = 'finals';
-      } else if (tournament.roomTypes.semifinal > 0) {
-        tournament.status = 'semifinals';
-      } else {
-        tournament.status = 'waiting';
-      }
-    });
-    
-    const diagnostics = {
-      timestamp: new Date().toISOString(),
-      tournamentStats,
-      parallelTournaments: Object.keys(tournamentGroups).length,
-      tournaments: tournamentGroups,
-      totalTournamentRooms: tournamentRooms.length,
-      totalPlayers: Object.values(tournamentGroups).reduce((sum, t) => sum + t.totalPlayers, 0),
-      roomManager: {
-        totalRooms: allRooms.length,
-        roomCounter: roomManager._roomCounter || 0
-      },
-      playerManager: {
-        totalPlayers: playerManager.getAllPlayers().length,
-        playerCounter: playerManager._playerCounter || 0
-      }
-    };
-    
-    reply.send({
-      success: true,
-      diagnostics
-    });
-  } catch (error) {
-    console.error('Tournament diagnostics error:', error.message);
-    reply.status(500).send({
-      success: false,
-      error: 'Failed to get tournament diagnostics',
-      details: error.message
-    });
-  }
-};

@@ -16,15 +16,15 @@ export default class GamePage {
 
 	render(): void {
 		this._container.innerHTML = /* HTML */ `
-			<div class="w-full h-screen bg-black relative">
+			<div class="w-full h-screen bg-black relative font-sans">
 				<!-- Game Status Bar -->
-				<div class="absolute top-0 left-0 right-0 z-10 bg-black bg-opacity-75 p-4">
+				<div class="absolute top-0 left-0 right-0 z-10 bg-black bg-opacity-80 p-6 border-b border-gray-700">
 					<div class="flex justify-between items-center text-white">
-						<div class="flex items-center space-x-4">
-							<h1 class="text-xl font-bold">Pong Game</h1>
-							<div id="gameStatus" class="text-sm">Initializing...</div>
+						<div class="flex items-center space-x-6">
+							<h1 class="text-4xl font-bold font-mono tracking-wider bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">PONG</h1>
+							<div id="gameStatus" class="text-lg font-medium text-gray-300">Initializing...</div>
 						</div>
-						<div class="flex space-x-2">
+						<div class="flex space-x-3">
 							${buttonHTML({id: "leave-game-button", label: "Leave Game", type: "button"})}
 						</div>
 					</div>
@@ -34,13 +34,36 @@ export default class GamePage {
 				<canvas id="renderCanvas" class="w-full h-full"></canvas>
 
 				<!-- Game Controls Overlay -->
-				<div class="absolute bottom-0 left-0 right-0 z-10 bg-black bg-opacity-75 p-4">
-					<div class="text-white text-center">
-						<div class="text-sm mb-2">Controls: Use ↑ and ↓ arrow keys to move your paddle</div>
-						<div class="flex justify-center items-center space-x-8">
-							<div id="player1Score" class="text-lg">Waiting: 0</div>
-							<div class="text-xs">vs</div>
-							<div id="player2Score" class="text-lg">Nobody: 0</div>
+				<div class="absolute bottom-0 left-0 right-0 z-10 bg-black bg-opacity-80 p-6 border-t border-gray-700">
+					<div class="text-white">
+						<div class="text-xl mb-6 font-medium text-gray-300 text-center">Controls: Use <span class="font-mono text-blue-400">←</span> and <span class="font-mono text-blue-400">→</span> arrow keys to move your paddle</div>
+						
+						<!-- Scores and Controls Section - Same Line -->
+						<div class="flex justify-between items-center">
+							<!-- Hypershot Control - Left Side -->
+							<div class="text-xl font-medium text-gray-300">
+								<span class="text-yellow-400 font-mono">hypershot</span>
+								<span class="text-white mx-2">:</span>
+								<span class="font-mono text-yellow-300">D</span>
+							</div>
+
+							<!-- Scores Section - Center -->
+							<div class="flex justify-center items-center space-x-8">
+								<div id="player1Score" class="text-2xl font-bold font-mono tracking-wide">
+									<span class="text-cyan-400">Waiting</span>
+									<span class="text-white mx-3">:</span>
+									<span class="text-cyan-300">0</span>
+								</div>
+								<div class="text-2xl font-bold text-gray-400 mx-12 px-4">VS</div>
+								<div id="player2Score" class="text-2xl font-bold font-mono tracking-wide">
+									<span class="text-red-400">Nobody</span>
+									<span class="text-white mx-3">:</span>
+									<span class="text-red-300">0</span>
+								</div>
+							</div>
+
+							<!-- Right Side - Empty for balance -->
+							<div class="text-xl opacity-0">placeholder</div>
 						</div>
 					</div>
 				</div>
@@ -82,11 +105,11 @@ export default class GamePage {
 	}
 
 	private _handleResize(): void {
-		const canvas = document.getElementById('renderCanvas') as HTMLCanvasElement;
-		if (canvas) {
+		const canvasElement = document.getElementById('renderCanvas');
+		if (canvasElement && canvasElement instanceof HTMLCanvasElement) {
 			// Force canvas to resize to full window
-			canvas.width = window.innerWidth;
-			canvas.height = window.innerHeight;
+			canvasElement.width = window.innerWidth;
+			canvasElement.height = window.innerHeight;
 		}
 	}
 

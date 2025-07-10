@@ -1,10 +1,10 @@
 // Game Configuration Constants
 export const GAME_CONFIG = {
   // Performance Settings
-  FPS: 240, // Server game loop FPS
-  BROADCAST_FPS: 60, // Network broadcast FPS
-  SYNC_INTERVAL: 5, // Milliseconds between sync messages
-
+  FPS: 240,                    // Server game loop FPS
+  BROADCAST_FPS: 60,           // Network broadcast FPS
+  SYNC_INTERVAL: 16,           // Milliseconds between sync messages (60Hz)
+  
   // Player Settings
   PADDLE_SPEED: 20, // Units per second
   PADDLE_BOUNDARY: 7.5, // Half of playable area depth (-7.5 to +7.5)
@@ -12,12 +12,12 @@ export const GAME_CONFIG = {
   MIN_USERNAME_LENGTH: 1, // Minimum characters in username
 
   // Game Rules
-  WINNING_SCORE: 11, // Points needed to win
-  MAX_SCORE_DIFFERENCE: 1, // Minimum score difference to win
-
+  WINNING_SCORE: 2,           // Points needed to win
+  MAX_SCORE_DIFFERENCE: 1,     // Minimum score difference to win
+  
   // Ball Physics
-  INITIAL_BALL_SPEED: 20, // Starting ball velocity
-  FIRST_SPEED_BOOST: 37.5, // Speed after 10-19 rebounds
+  INITIAL_BALL_SPEED: 17,      // Starting ball velocity
+  FIRST_SPEED_BOOST: 27,     // Speed after 10-19 rebounds
   SPEED_BOOST_THRESHOLD_1: 10, // First speed boost point
   SPEED_BOOST_THRESHOLD_2: 20, // Second speed boost point
   MAX_BALL_SPEED: 45, // Maximum ball speed
@@ -65,24 +65,29 @@ export const HTTP_STATUS = {
 // WebSocket Message Types
 export const MESSAGE_TYPES = {
   // Client to Server
-  SET_USERNAME: "setUsername",
-  KEY_DOWN: "keyDown",
-  KEY_UP: "keyUp",
-  PADDLE_POSITION: "paddlePosition",
-  LEAVE_GAME: "leaveGame",
-  REQUEST_BALL_RESPAWN: "requestBallRespawn",
-  ANIMATION_COMPLETE: "animationComplete",
-
-  // Server to Client
-  INIT: "init",
-  PADDLE_MOVE: "paddleMove",
-  BALL_UPDATE: "ballUpdate",
-  SCORE_UPDATE: "scoreUpdate",
-  GAME_END: "gameEnd",
-  WAITING_FOR_PLAYERS: "waitingForPlayers",
-  SYNC: "sync",
-  SOUND_EVENT: "soundEvent",
-  ERROR: "error",
+  SET_USERNAME: 'setUsername',
+  KEY_DOWN: 'keyDown', 
+  KEY_UP: 'keyUp',
+  PADDLE_POSITION: 'paddlePosition',
+  LEAVE_GAME: 'leaveGame',
+  LEAVE_TOURNAMENT: 'leaveTournament',
+  REQUEST_BALL_RESPAWN: 'requestBallRespawn',
+  ANIMATION_COMPLETE: 'animationComplete',
+  KEEP_ALIVE: 'keepAlive',
+  UPDATE_PLAYER_STATE: 'updatePlayerState',
+  BROWSER_EVENT: 'browserEvent',
+  
+  // Server to Client  
+  INIT: 'init',
+  PADDLE_MOVE: 'paddleMove',
+  BALL_UPDATE: 'ballUpdate',
+  SCORE_UPDATE: 'scoreUpdate',
+  GAME_END: 'gameEnd',
+  WAITING_FOR_PLAYERS: 'waitingForPlayers',
+  SYNC: 'sync',
+  SOUND_EVENT: 'soundEvent',
+  ERROR: 'error',
+  KEEP_ALIVE_ACK: 'keepAliveAck',
 };
 
 // Game States

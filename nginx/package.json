@@ -24,9 +24,9 @@
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^11.1.6",
+    "@types/babylonjs": "^2.3.31",
     "@types/ws": "^8.18.1",
     "rollup": "^4.21.0",
-    "rollup-plugin-copy": "^3.5.0",
     "tslib": "^2.6.2"
   }
 }

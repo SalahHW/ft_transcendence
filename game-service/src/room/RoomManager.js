@@ -85,13 +85,20 @@ export class RoomManager {
   /**
    * Get available rooms (not full, not finished)
    */
-  getAvailableRooms() {
+  getAvailableRooms(matchType = null) {
     const rooms = this.getAllRooms();
-    return rooms.filter(room => 
+    let filteredRooms = rooms.filter(room => 
       !room.isFull() && 
       !room.isGameOver && 
       !room.ready
     );
+    
+    // 🏆 CRITICAL FIX: Filter by match type if specified
+    if (matchType) {
+      filteredRooms = filteredRooms.filter(room => room.matchType === matchType);
+    }
+    
+    return filteredRooms;
   }
 
   /**
@@ -114,6 +121,20 @@ export class RoomManager {
    */
   getWaitingRooms() {
     return this.getRoomsByStatus('waiting_for_players');
+  }
+
+  /**
+   * Get available tournament rooms
+   */
+  getAvailableTournamentRooms() {
+    return this.getAvailableRooms('tournament');
+  }
+
+  /**
+   * Get available 1v1 rooms
+   */
+  getAvailableOneVOneRooms() {
+    return this.getAvailableRooms('1v1');
   }
 
   /**
@@ -262,10 +283,25 @@ export class RoomManager {
     const rooms = this.getAllRooms();
     let cleanedPlayersCount = 0;
 
+    console.log(`🧹 Starting cleanup of ${rooms.length} rooms`);
+
     rooms.forEach(room => {
+      console.log(`🧹 Checking room ${room.id}: roomType=${room.metadata?.roomType}, matchType=${room.matchType}, players=${room.players.length}`);
+      
+      // Skip cleanup for tournament waiting rooms - they are managed by tournament disconnect handler
+      if (room.metadata?.roomType === 'waiting' && room.matchType === 'tournament') {
+        console.log(`🏆 Skipping cleanup for tournament waiting room ${room.id} (${room.players.length} players)`);
+        return;
+      }
+
       const originalCount = room.players.length;
+      const disconnectedPlayers = room.players.filter(player => !player.isConnected());
       room.players = room.players.filter(player => player.isConnected());
       cleanedPlayersCount += originalCount - room.players.length;
+      
+      if (disconnectedPlayers.length > 0) {
+        console.log(`🧹 Removed ${disconnectedPlayers.length} disconnected players from room ${room.id}: [${disconnectedPlayers.map(p => p.username || p.id).join(', ')}]`);
+      }
       
       // Remove empty rooms
       if (room.isEmpty() && !room.gameStarted) {
@@ -273,7 +309,7 @@ export class RoomManager {
       }
     });
 
-    console.log(`Cleaned up ${cleanedPlayersCount} disconnected players`);
+    console.log(`🧹 Cleanup completed: cleaned up ${cleanedPlayersCount} disconnected players`);
     return cleanedPlayersCount;
   }
 
