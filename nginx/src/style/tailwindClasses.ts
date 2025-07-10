@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:41:14 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/08 21:38:32 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/10 12:15:56 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -85,6 +85,12 @@ export const UI_THEME = {
 			header: `flex justify-between items-center px-3 py-2 border-b border-custom-gray`,
 			clearButton: `bg-white/10 text-gray-300 border-0 rounded px-2 py-1 text-xs cursor-pointer hover:bg-white/20 transition-colors`,
 			output: `flex-1 p-3 overflow-y-auto font-mono text-sm leading-6`
+		},
+		friendList: {
+			addFriendContainer: `flex items-center gap-2 mt-2`,
+			addFriendInput: `flex-1 bg-black/20 border border-white/20 rounded-lg focus:outline-none focus:bg-black/30 transition-all duration-200 p-2 text-white placeholder-gray-400`,
+			addFriendButton: `w-16 h-8 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center text-white transition-colors duration-200`,
+			addFriendButtonCollapsed: `w-16 h-8 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center text-white transition-colors duration-200`
 		}
 	},
 

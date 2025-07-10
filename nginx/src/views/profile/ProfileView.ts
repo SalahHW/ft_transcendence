@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/22 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/09 21:44:34 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/10 12:17:05 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -73,5 +73,6 @@ export default class ProfileView extends ModalView {
 		}
 
 		friendListContainer.innerHTML = FriendList.render();
+		FriendList.addEventListeners();
 	}
 }
