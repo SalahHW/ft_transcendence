@@ -202,9 +202,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       console.error(`🏆 Could not find players in tournament room ${roomId} for in-game disconnect handling`);
       return;
     }
-
-    console.log(`🏆 Tournament match in-game forfeit: ${remainingPlayer.username} wins, ${disconnectedPlayer.username} disconnected`);
-
+    console.log(`🔴 Tournament match in-game forfeit: ${remainingPlayer.username} wins, ${disconnectedPlayer.username} disconnected`);
     // ⭐ CRITICAL FIX: Immediately dispose ball to prevent it from moving during finals
     await this.immediatelyDisposeBall(room, roomId);
 
@@ -238,19 +236,15 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
    * Award forfeit win to remaining player in tournament matches
    */
   async awardTournamentForfeitWin(room, roomId, winner, loser, reason, context) {
-    console.log(`🏆 Awarding tournament forfeit win: ${winner.username} defeats ${loser.username} in ${room.metadata?.roomType}`);
-    
-    // Mark game as over immediately
-    room.isGameOver = true;
-
-    // Update disconnection tracking in waiting room data
+    console.log(`🏆 Awarding tournament forfeit win: ${winner.username} defeats ${loser.username} in ${room.metadata?.roomType}`);// Update disconnection tracking in waiting room data
     const waitingRoomId = room.metadata?.waitingRoomId;
     if (waitingRoomId) {
       await this.updateTournamentDisconnectionStatus(waitingRoomId, loser.id, true);
     }
-    
+    // Mark game as over immediately
+    room.isGameOver = true;
     // Create tournament match data
-    const matchData = this.createTournamentForfeitMatchData(room, roomId, winner, loser, reason, context);
+    const matchData = await this.createTournamentForfeitMatchData(room, roomId, winner, loser, reason, context);
     
     // Log the tournament forfeit
     LogUtils.logMatchCompletion(matchData);
@@ -271,15 +265,38 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   /**
    * Create match data for tournament forfeit scenarios
    */
-  createTournamentForfeitMatchData(room, roomId, winner, loser, reason, context) {
+  async createTournamentForfeitMatchData(room, roomId, winner, loser, reason, context) {
+    // Get tournament waiting room data for accurate player counts
+    const waitingRoomId = room.metadata?.waitingRoomId;
+    let numberOfDisconnectedPlayers = 0;
+    let numberOfConnectedPlayers = 0;
+    
+    if (waitingRoomId) {
+      try {
+        const { tournamentManager } = await import('../TournamentManager.js');
+        const waitingRoomData = tournamentManager.waitingRooms.get(waitingRoomId);
+        if (waitingRoomData) {
+          numberOfDisconnectedPlayers = waitingRoomData.disconnectedPlayers.length;
+          numberOfConnectedPlayers = waitingRoomData.players.filter(p => p.connected).length;
+        }
+      } catch (error) {
+        console.error(`🏆 Error getting tournament player counts:`, error);
+      }
+    }
+    
     const matchEndTime = TimeUtils.getCurrentTimestamp();
+    const isSinglePlayerForfeitSemi = Boolean(numberOfDisconnectedPlayers === 3 && numberOfConnectedPlayers === 1);
+    if (isSinglePlayerForfeitSemi) {
+      room.metadata.tournamentPhase = 'winner_final';
+      room.metadata.roomType = 'winner_final';
+    }
     const matchStartTime = room.startTime || matchEndTime;
     
     return {
       roomId,
       matchType: this.matchType,
-      tournamentPhase: room.metadata?.tournamentPhase,
-      tournamentRoomType: room.metadata?.roomType,
+      tournamentPhase: isSinglePlayerForfeitSemi ? 'winner_final' : room.metadata?.tournamentPhase,
+      tournamentRoomType: isSinglePlayerForfeitSemi ? 'winner_final' : room.metadata?.tournamentPhase,
       waitingRoomId: room.metadata?.waitingRoomId,
       matchStartTime,
       matchEndTime,
@@ -302,7 +319,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
         forfeitReason: this.getTournamentForfeitReasonText(reason, context, room.metadata?.roomType),
         disconnectionType: reason,
         context: context,
-        tournamentPhase: room.metadata?.tournamentPhase
+        tournamentPhase: isSinglePlayerForfeitSemi ? 'winner_final' : room.metadata?.tournamentPhase,
       },
       matchType: 'tournament_forfeit',
       disconnectionReason: reason,
@@ -441,8 +458,8 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
         waitingRoomData.disconnectedPlayers = waitingRoomData.disconnectedPlayers.filter(id => id !== playerId);
       }
 
-      console.log(`🏆 Updated tournament disconnection status for player ${playerId}: disconnected=${disconnected}`);
-      console.log(`🏆 Tournament ${waitingRoomId} - Connected: ${waitingRoomData.players.filter(p => p.connected).length}, Disconnected: ${waitingRoomData.disconnectedPlayers.length}`);
+      console.log(`#### 🏆 Updated tournament disconnection status for player ${playerId}: disconnected=${disconnected}`);
+      console.log(`#### 🏆 Tournament ${waitingRoomId} - Connected: ${waitingRoomData.players.filter(p => p.connected).length}, Disconnected: ${waitingRoomData.disconnectedPlayers.length}`);
     } catch (error) {
       console.error(`🏆 Error updating tournament disconnection status:`, error);
     }

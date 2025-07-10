@@ -143,12 +143,16 @@ export class TournamentMatchManager {
       const player1InSemiFinalB = semiFinalB.players.some(p => p.id === player1.id);
       const player2InSemiFinalA = semiFinalA.players.some(p => p.id === player2.id);
       const player2InSemiFinalB = semiFinalB.players.some(p => p.id === player2.id);
+
+      
       
       shouldHandleTwoPlayerFinalScenario = Boolean(
         (connectedCount === 2) &&
         (disconnectedCount === 2) && ((player1InSemiFinalA && player2InSemiFinalA) || (player1InSemiFinalB && player2InSemiFinalB))
       );
     }
+
+    
     
     if (!shouldHandleTwoPlayerFinalScenario) {
       return false;
