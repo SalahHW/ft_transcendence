@@ -1,3 +1,4 @@
+const parseContractError = require("../utils/parseContractError");
 const bigIntToString = require("../utils/bigIntToString");
 
 module.exports = async (fastify, opts) => {
@@ -17,26 +18,24 @@ module.exports = async (fastify, opts) => {
       },
     },
     async (request, reply) => {
-      if (!contract) {
+      if (!contract)
         return reply.status(503).send({ error: "Contract not initialized" });
-      }
 
       try {
         const tournaments = await contract.getTournamentByWinner(
           request.params.address
         );
-
-        if (!tournaments || tournaments.length === 0) {
-          return reply.status(404).send({
-            success: false,
-            error: "No tournaments found for this wallet.",
-          });
-        }
-
         reply.send(bigIntToString({ success: true, tournaments }));
       } catch (error) {
         request.log.error(error);
-        reply.status(500).send({ success: false, error: error.message });
+        const { code, error: message, details } = parseContractError(error);
+        reply
+          .status(code)
+          .send({
+            success: false,
+            error: message,
+            ...(details && { details }),
+          });
       }
     }
   );

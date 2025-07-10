@@ -1,3 +1,4 @@
+const parseContractError = require("../utils/parseContractError");
 const bigIntToString = require("../utils/bigIntToString");
 
 module.exports = async (fastify, opts) => {
@@ -17,33 +18,24 @@ module.exports = async (fastify, opts) => {
       },
     },
     async (request, reply) => {
-      if (!contract) {
+      if (!contract)
         return reply.status(503).send({ error: "Contract not initialized" });
-      }
-
-      const { address } = request.params;
 
       try {
-        const matches = await contract.getMatchesByWinner(address);
+        const matches = await contract.getMatchesByWinner(
+          request.params.address
+        );
         reply.send(bigIntToString({ success: true, matches }));
       } catch (error) {
         request.log.error(error);
-
-        const reason =
-          error?.reason || error?.error?.message || error?.message || "";
-
-        if (reason.includes("No matches found")) {
-          return reply.status(404).send({
+        const { code, error: message, details } = parseContractError(error);
+        reply
+          .status(code)
+          .send({
             success: false,
-            error: "No matches found for this wallet.",
+            error: message,
+            ...(details && { details }),
           });
-        }
-
-        return reply.status(500).send({
-          success: false,
-          error: "Internal server error",
-          details: reason,
-        });
       }
     }
   );

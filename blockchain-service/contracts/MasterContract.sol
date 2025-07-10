@@ -265,10 +265,27 @@ contract MasterContract is Ownable {
         address winner,
         uint16 tournamentId
     ) public onlyOwner {
+        require(
+            matchIds.length == 4,
+            "A tournament must include exactly 4 matches"
+        );
+        require(winner != address(0), "Winner address is invalid");
+
         for (uint i = 0; i < globalTournamentsArray.length; i++) {
             if (globalTournamentsArray[i].endTimestamp == endTimestamp) {
                 revert("Tournament already exists");
             }
+        }
+
+        for (uint i = 0; i < matchIds.length; i++) {
+            bool matchFound = false;
+            for (uint j = 0; j < globalMatchesArray.length; j++) {
+                if (globalMatchesArray[j].matchId == matchIds[i]) {
+                    matchFound = true;
+                    break;
+                }
+            }
+            require(matchFound, "One or more matchIds do not exist");
         }
 
         tournamentNft.mintTnt(winner, tournamentId);

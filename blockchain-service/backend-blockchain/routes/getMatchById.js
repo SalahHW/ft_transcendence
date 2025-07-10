@@ -1,3 +1,4 @@
+const parseContractError = require("../utils/parseContractError");
 const bigIntToString = require("../utils/bigIntToString");
 
 module.exports = async (fastify, opts) => {
@@ -17,24 +18,22 @@ module.exports = async (fastify, opts) => {
       },
     },
     async (request, reply) => {
-      if (!contract) {
+      if (!contract)
         return reply.status(503).send({ error: "Contract not initialized" });
-      }
 
       try {
         const match = await contract.getMatchesByMatchId(request.params.id);
-
-        if (!match || match.deleted) {
-          return reply.status(404).send({
-            success: false,
-            error: "Match not found.",
-          });
-        }
-
         reply.send(bigIntToString({ success: true, match }));
       } catch (error) {
         request.log.error(error);
-        reply.status(404).send({ success: false, error: error.message });
+        const { code, error: message, details } = parseContractError(error);
+        reply
+          .status(code)
+          .send({
+            success: false,
+            error: message,
+            ...(details && { details }),
+          });
       }
     }
   );

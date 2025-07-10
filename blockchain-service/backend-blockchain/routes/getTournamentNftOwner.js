@@ -1,3 +1,5 @@
+const parseContractError = require("../utils/parseContractError");
+
 module.exports = async function (fastify) {
   fastify.get(
     "/nft/tournament/:tokenId",
@@ -19,11 +21,16 @@ module.exports = async function (fastify) {
       try {
         const owner = await contract.ownerOf(tokenId);
         reply.send({ success: true, tokenId, owner });
-      } catch (err) {
-        request.log.error(err);
+      } catch (error) {
+        request.log.error(error);
+        const { code, error: message, details } = parseContractError(error);
         reply
-          .status(404)
-          .send({ success: false, error: "Token not found or invalid." });
+          .status(code)
+          .send({
+            success: false,
+            error: message,
+            ...(details && { details }),
+          });
       }
     }
   );

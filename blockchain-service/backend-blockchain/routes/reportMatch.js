@@ -1,3 +1,5 @@
+const parseContractError = require("../utils/parseContractError");
+
 module.exports = async (fastify, opts) => {
   const contract = fastify.masterContract;
 
@@ -27,9 +29,8 @@ module.exports = async (fastify, opts) => {
       },
     },
     async (request, reply) => {
-      if (!contract) {
+      if (!contract)
         return reply.status(503).send({ error: "Contract not initialized" });
-      }
 
       const { player1, player2, matchId, player1Score, player2Score, winner } =
         request.body;
@@ -43,50 +44,18 @@ module.exports = async (fastify, opts) => {
           player2Score,
           winner
         );
-        const receipt = await tx.wait();
-        reply.send({
-          success: true,
-          transactionHash: tx.hash,
-        });
+        await tx.wait();
+        reply.send({ success: true, transactionHash: tx.hash });
       } catch (error) {
         request.log.error(error);
-
-        const reason =
-          error?.reason || error?.error?.message || error?.message || "";
-
-        if (reason.includes("Match already reported")) {
-          return reply.status(409).send({
+        const { code, error: message, details } = parseContractError(error);
+        reply
+          .status(code)
+          .send({
             success: false,
-            error: "Match has already been reported.",
+            error: message,
+            ...(details && { details }),
           });
-        }
-
-        if (reason.includes("Invalid winner")) {
-          return reply.status(422).send({
-            success: false,
-            error: "Invalid winner address.",
-          });
-        }
-
-        if (reason.includes("Match not found")) {
-          return reply.status(404).send({
-            success: false,
-            error: "Match not found.",
-          });
-        }
-
-        if (reason.includes("Unauthorized")) {
-          return reply.status(403).send({
-            success: false,
-            error: "You are not allowed to report this match.",
-          });
-        }
-
-        return reply.status(502).send({
-          success: false,
-          error: "Blockchain error. Please try again later.",
-          details: reason,
-        });
       }
     }
   );
