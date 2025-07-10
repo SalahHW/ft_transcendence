@@ -23,6 +23,14 @@ module.exports = async (fastify, opts) => {
 
       try {
         const name = await contract.getPlayerName(address);
+
+        if (!name) {
+          return reply.status(404).send({
+            success: false,
+            error: "Player not found.",
+          });
+        }
+
         reply.send({ success: true, name });
       } catch (error) {
         request.log.error(error);

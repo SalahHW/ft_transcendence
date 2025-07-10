@@ -1,29 +1,43 @@
 const bigIntToString = require("../utils/bigIntToString");
 
 module.exports = async (fastify, opts) => {
-    const contract = fastify.masterContract
+  const contract = fastify.masterContract;
 
-    fastify.get('/tournament/winner/:address', {
-        schema: {
-            params: {
-                type: 'object',
-                required: ['address'],
-                properties: {
-                    address: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' }
-                }
-            }
-        }
-    }, async (request, reply) => {
-        if (!contract) {
-            return reply.status(503).send({ error: 'Contract not initialized' });
+  fastify.get(
+    "/tournament/winner/:address",
+    {
+      schema: {
+        params: {
+          type: "object",
+          required: ["address"],
+          properties: {
+            address: { type: "string", pattern: "^0x[a-fA-F0-9]{40}$" },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!contract) {
+        return reply.status(503).send({ error: "Contract not initialized" });
+      }
+
+      try {
+        const tournaments = await contract.getTournamentByWinner(
+          request.params.address
+        );
+
+        if (!tournaments || tournaments.length === 0) {
+          return reply.status(404).send({
+            success: false,
+            error: "No tournaments found for this wallet.",
+          });
         }
 
-        try {
-            const tournaments = await contract.getTournamentByWinner(request.params.address)
-            reply.send(bigIntToString({ success: true, tournaments }))
-        } catch (error) {
-            request.log.error(error)
-            reply.status(500).send({ success: false, error: error.message })
-        }
-    })
-}
+        reply.send(bigIntToString({ success: true, tournaments }));
+      } catch (error) {
+        request.log.error(error);
+        reply.status(500).send({ success: false, error: error.message });
+      }
+    }
+  );
+};

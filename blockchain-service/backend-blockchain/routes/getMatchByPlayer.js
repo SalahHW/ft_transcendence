@@ -25,6 +25,14 @@ module.exports = async (fastify, opts) => {
         const matches = await contract.getMatchesByPlayer(
           request.params.address
         );
+
+        if (!matches || matches.length === 0) {
+          return reply.status(404).send({
+            success: false,
+            error: "No matches found for this wallet.",
+          });
+        }
+
         reply.send(bigIntToString({ success: true, matches }));
       } catch (error) {
         request.log.error(error);

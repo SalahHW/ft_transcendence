@@ -23,10 +23,18 @@ module.exports = async (fastify, opts) => {
 
       try {
         const match = await contract.getMatchesByMatchId(request.params.id);
+
+        if (!match || match.deleted) {
+          return reply.status(404).send({
+            success: false,
+            error: "Match not found.",
+          });
+        }
+
         reply.send(bigIntToString({ success: true, match }));
       } catch (error) {
         request.log.error(error);
-        reply.status(500).send({ success: false, error: error.message });
+        reply.status(404).send({ success: false, error: error.message });
       }
     }
   );
