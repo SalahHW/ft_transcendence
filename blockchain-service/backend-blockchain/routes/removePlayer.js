@@ -1,3 +1,5 @@
+const parseContractError = require("../utils/parseContractError");
+
 module.exports = async (fastify, opts) => {
   const contract = fastify.masterContract;
 
@@ -15,19 +17,23 @@ module.exports = async (fastify, opts) => {
       },
     },
     async (request, reply) => {
-      const { address } = request.params;
-
-      if (!contract) {
+      if (!contract)
         return reply.status(503).send({ error: "Contract not initialized" });
-      }
 
       try {
-        const tx = await contract.removePlayer(address);
+        const tx = await contract.removePlayer(request.params.address);
         await tx.wait();
         reply.send({ success: true, transactionHash: tx.hash });
       } catch (error) {
         request.log.error(error);
-        reply.status(500).send({ success: false, error: error.message });
+        const { code, error: message, details } = parseContractError(error);
+        reply
+          .status(code)
+          .send({
+            success: false,
+            error: message,
+            ...(details && { details }),
+          });
       }
     }
   );

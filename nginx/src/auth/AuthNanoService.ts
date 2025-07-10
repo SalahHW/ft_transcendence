@@ -199,7 +199,6 @@ export default class AuthNanoService {
     } catch (error) {
       console.error("loginWithWallet() error:", error);
       throw error;
-
     }
   }
 
@@ -239,6 +238,5 @@ export default class AuthNanoService {
       clearInterval(this._refreshInterval);
       this._refreshInterval = null;
     }
-
   }
 }
