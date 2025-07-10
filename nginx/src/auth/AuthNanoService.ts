@@ -1,4 +1,6 @@
 import UsersApi, { User } from "../api/user.js";
+import PresenceSocketService from "./presencesService.js";
+import axios from "axios";
 
 export default class AuthNanoService {
   private static _instance: AuthNanoService;
@@ -199,6 +201,7 @@ export default class AuthNanoService {
     } catch (error) {
       console.error("loginWithWallet() error:", error);
       throw error;
+
     }
   }
 
@@ -238,5 +241,6 @@ export default class AuthNanoService {
       clearInterval(this._refreshInterval);
       this._refreshInterval = null;
     }
+
   }
 }
