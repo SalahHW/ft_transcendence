@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 16:41:12 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/10 14:24:00 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/11 18:01:27 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -122,15 +122,19 @@ export default class Wheel {
     this.render();
   }
 
-	private _setupKeyboardEvents(): void {
+		private _setupKeyboardEvents(): void {
 		document.addEventListener("keydown", async (event: KeyboardEvent) => {
-			const target = event.target as HTMLElement;
-			if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
-				return;
-			}
-
 			if (event.key === 'Shift') {
-				if (this._isVisible) return;
+				const target = event.target as HTMLElement;
+
+				if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+					return;
+				}
+
+				if (this._isVisible) {
+					return;
+				}
+
 				event.preventDefault();
 				await this.showWheel();
 			}
@@ -180,31 +184,39 @@ export default class Wheel {
     this._renderWheel();
   }
 
-  public async showWheel(): Promise<void> {
-    if (this._isVisible) return;
+    public async showWheel(): Promise<void> {
+    if (this._isVisible) {
+      return;
+    }
 
-    this._userIsLoggedIn = await this._authService.isLoggedIn();
+    try {
+      this._userIsLoggedIn = await this._authService.isLoggedIn();
 
-		this._isVisible = true;
-		this._selectedIndex = 0;
-		this._wheelOptions = this._baseWheelOptions.filter(
-			(option) => option.condition === undefined || option.condition()
-		);
-		this._optionHistory = [];
+      this._isVisible = true;
+      this._selectedIndex = 0;
+      this._wheelOptions = this._baseWheelOptions.filter(
+        (option) => option.condition === undefined || option.condition()
+      );
+      this._optionHistory = [];
 
-    this._element.classList.remove("hidden");
-    this._element.classList.add("flex");
-    this._renderWheel();
+      this._element.classList.remove("hidden");
+      this._element.classList.add("flex");
+      this._renderWheel();
 
-    // Animation d'entrée
-    requestAnimationFrame(() => {
-      this._element.classList.add("opacity-100", "scale-100");
-      this._element.classList.remove("opacity-0", "scale-95");
-    });
+      // Animation d'entrée
+      requestAnimationFrame(() => {
+        this._element.classList.add("opacity-100", "scale-100");
+        this._element.classList.remove("opacity-0", "scale-95");
+      });
+    } catch (error) {
+      console.error(`[Wheel] Error in showWheel():`, error);
+    }
   }
 
   public hideWheel(): void {
-    if (!this._isVisible) return;
+    if (!this._isVisible) {
+      return;
+    }
 
     this._isVisible = false;
 
