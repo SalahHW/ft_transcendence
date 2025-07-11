@@ -24,10 +24,21 @@ export class webSocketClient {
     private gameEndCallback: ((msg: WebSocketMessage) => void) | null;
     private soundEventCallback: ((msg: WebSocketMessage) => void) | null;
     private messageCallback: ((msg: { data: string }) => void) | null;
+    private powerupStateUpdateCallback: ((msg: WebSocketMessage) => void) | null;
+    private powerupActivatedCallback: ((msg: WebSocketMessage) => void) | null;
+    private powerupDeactivatedCallback: ((msg: WebSocketMessage) => void) | null;
+    private ballTraversalCallback: ((msg: WebSocketMessage) => void) | null;
+    private resetPlayerStatesCallback: ((msg: WebSocketMessage) => void) | null;
     public matchEndTime: Date | null;
 
     constructor(url: string, playerId: string | null = null) {
-        this.socket = new WebSocket(playerId ? `${url}?playerId=${playerId}` : url);
+        // Handle URLs that already have query parameters
+        let finalUrl = url;
+        if (playerId && !url.includes('playerId=')) {
+            const separator = url.includes('?') ? '&' : '?';
+            finalUrl = `${url}${separator}playerId=${playerId}`;
+        }
+        this.socket = new WebSocket(finalUrl);
         this.playerId = playerId;
         this.queue = [];
         this.initCallback = null;
@@ -38,6 +49,11 @@ export class webSocketClient {
         this.gameEndCallback = null;
         this.soundEventCallback = null;
         this.messageCallback = null;
+        this.powerupStateUpdateCallback = null;
+        this.powerupActivatedCallback = null;
+        this.powerupDeactivatedCallback = null;
+        this.ballTraversalCallback = null;
+        this.resetPlayerStatesCallback = null;
         this.matchEndTime = null;
 
         this.socket.addEventListener('open', () => {
@@ -106,6 +122,32 @@ export class webSocketClient {
             if (msg.type === 'soundEvent' && this.soundEventCallback) {
                 this.soundEventCallback(msg);
             }
+
+            if (msg.type === 'powerupStateUpdate' && this.powerupStateUpdateCallback) {
+                this.powerupStateUpdateCallback(msg);
+            }
+
+            if (msg.type === 'powerupActivated' && this.powerupActivatedCallback) {
+                this.powerupActivatedCallback(msg);
+            }
+
+            if (msg.type === 'powerupDeactivated' && this.powerupDeactivatedCallback) {
+                this.powerupDeactivatedCallback(msg);
+            }
+
+            if (msg.type === 'ballTraversal' && this.ballTraversalCallback) {
+                this.ballTraversalCallback(msg);
+            }
+
+            if (msg.type === 'resetPlayerStates' && this.resetPlayerStatesCallback) {
+                this.resetPlayerStatesCallback(msg);
+            }
+
+            // Tournament-specific message handlers
+            if (msg.type === 'tournamentWelcome' || msg.type === 'tournamentWaitingRoomStatus') {
+                // These are handled by the messageCallback for tournament UI updates
+                return;
+            }
         });
 
         this.socket.addEventListener('error', err => console.error('WS error:', err));
@@ -173,5 +215,35 @@ export class webSocketClient {
 
     set onMessage(callback: (msg: { data: string }) => void) {
         this.messageCallback = callback;
+    }
+
+    onPowerupStateUpdate(callback: (msg: WebSocketMessage) => void): void {
+        this.powerupStateUpdateCallback = callback;
+    }
+
+    onPowerupActivated(callback: (msg: WebSocketMessage) => void): void {
+        this.powerupActivatedCallback = callback;
+    }
+
+    onPowerupDeactivated(callback: (msg: WebSocketMessage) => void): void {
+        this.powerupDeactivatedCallback = callback;
+    }
+
+    onBallTraversal(callback: (msg: WebSocketMessage) => void): void {
+        this.ballTraversalCallback = callback;
+    }
+
+    onResetPlayerStates(callback: (msg: WebSocketMessage) => void): void {
+        this.resetPlayerStatesCallback = callback;
+    }
+
+    activatePowerup(): void {
+        const message = {
+            type: 'powerupActivation',
+            playerId: this.playerId,
+            timestamp: Date.now()
+        };
+        
+        this.send(message);
     }
 } 

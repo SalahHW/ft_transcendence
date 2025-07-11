@@ -1,13 +1,20 @@
 import * as BABYLON from '@babylonjs/core';
 import { createExplosion } from './ballEffects.js';
 import { GAME_CONFIG } from '../core/constants.js';
+import { BALL_CONSTANTS } from './ballConstants.js';
+import { BallPowerup } from './ballPowerup.js';
+import { playerManager } from '../player/PlayerManager.js';
 
 class Ball {
     constructor(player1, player2, gameEngine = null, roomId = null) {
-        this.position = new BABYLON.Vector3(0, -2, 0);
+        this.position = new BABYLON.Vector3(
+            BALL_CONSTANTS.INITIAL_POSITION.x,
+            BALL_CONSTANTS.INITIAL_POSITION.y,
+            BALL_CONSTANTS.INITIAL_POSITION.z
+        );
         this.velocity = new BABYLON.Vector3(0, 0, 0);
         this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
-        this.radius = 0.75;
+        this.radius = BALL_CONSTANTS.RADIUS;
         this.rebounds = 0;
         this.wasHitByPlayer = undefined;
         this.isRespawning = false;
@@ -24,17 +31,24 @@ class Ball {
         this.currentGlowColor = new BABYLON.Color3(0, 0, 0);
         this.shouldGlow = false;
         this.lastSpeedTier = 0; // Track speed tier changes
+        
+        // Initialize powerup system
+        this.powerup = new BallPowerup();
     }
 
     init() {
-        this.position = new BABYLON.Vector3(0, -2, 0);
+        this.position = new BABYLON.Vector3(
+            BALL_CONSTANTS.INITIAL_POSITION.x,
+            BALL_CONSTANTS.INITIAL_POSITION.y,
+            BALL_CONSTANTS.INITIAL_POSITION.z
+        );
         this.velocity = new BABYLON.Vector3(0, 0, 0);
         this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
         this.rebounds = 0;
         this.isRespawning = false;
         this.respawnTime = 0;
         this.hasValidPosition = true;
-        this.speed = GAME_CONFIG.INITIAL_BALL_SPEED;
+        this.speed = BALL_CONSTANTS.INITIAL_SPEED;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
         // Reset glow properties
@@ -44,19 +58,23 @@ class Ball {
     }
 
     setFirstVelocity() {
-        this.velocity = new BABYLON.Vector3(Math.random() >= 0.5 ? GAME_CONFIG.INITIAL_BALL_SPEED : -GAME_CONFIG.INITIAL_BALL_SPEED, 0, 0);
+        this.velocity = new BABYLON.Vector3(Math.random() >= 0.5 ? BALL_CONSTANTS.INITIAL_SPEED : -BALL_CONSTANTS.INITIAL_SPEED, 0, 0);
         this.previousVelocity.copyFrom(this.velocity);
-        this.speed = GAME_CONFIG.INITIAL_BALL_SPEED;
+        this.speed = BALL_CONSTANTS.INITIAL_SPEED;
     }
 
     handleBallRespawn(previousVelocity) {
-        this.position = new BABYLON.Vector3(0, -2, 0);
+        this.position = new BABYLON.Vector3(
+            BALL_CONSTANTS.INITIAL_POSITION.x,
+            BALL_CONSTANTS.INITIAL_POSITION.y,
+            BALL_CONSTANTS.INITIAL_POSITION.z
+        );
         this.velocity = BABYLON.Vector3.Zero();
         this.previousVelocity.copyFrom(previousVelocity);
         this.isRespawning = true;
         this.respawnTime = 0;
         this.hasValidPosition = true;
-        this.speed = GAME_CONFIG.INITIAL_BALL_SPEED;
+        this.speed = BALL_CONSTANTS.INITIAL_SPEED;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
     }
@@ -77,7 +95,6 @@ class Ball {
                 }
                 this.hasValidPosition = true;
                 this.handleAcceleration();
-                console.log('Respawn complete:', { position: this.position, velocity: this.velocity, speed: this.speed, rebounds: this.rebounds });
             }
             return;
         }
@@ -89,7 +106,11 @@ class Ball {
             this.lastUpdateTime = now;
         }
 
-        this.handleAcceleration();
+        // ⭐ CRITICAL FIX: Only call handleAcceleration if no powerup boost is active
+        if (!this.powerup.hasSpeedBoost()) {
+            this.handleAcceleration();
+        }
+        
         this.handleWallCollisions();
         this.handlePaddleCollisions(paddle1Pos, paddle2Pos);
         this.position.addInPlace(this.velocity.scale(deltaTime));
@@ -128,26 +149,16 @@ class Ball {
         let speed;
         let glowColor = null;
         
-        // New speed tiers based on rebounds with glowing effects
-        if (this.rebounds < GAME_CONFIG.SPEED_BOOST_THRESHOLD_1) {
-            speed = GAME_CONFIG.INITIAL_BALL_SPEED; // Base speed
+        // Simplified speed tiers based on rebounds with glowing effects
+        if (this.rebounds < BALL_CONSTANTS.SPEED_TIERS.TIER_1_THRESHOLD) {
+            speed = GAME_CONFIG.INITIAL_BALL_SPEED; // Base speed (17)
             glowColor = new BABYLON.Color3(0, 0, 0); // No glow
-        } else if (this.rebounds >= GAME_CONFIG.SPEED_BOOST_THRESHOLD_1 && this.rebounds < GAME_CONFIG.SPEED_BOOST_THRESHOLD_2) {
-            speed = GAME_CONFIG.FIRST_SPEED_BOOST; // First speed boost
-            glowColor = new BABYLON.Color3(0.8, 0.4, 0); // Orange glow
-        } else if (this.rebounds >= GAME_CONFIG.SPEED_BOOST_THRESHOLD_2) {
-            // Scale speed between 40-45 based on rebounds beyond threshold
-            const extraRebounds = this.rebounds - GAME_CONFIG.SPEED_BOOST_THRESHOLD_2;
-            const scalingFactor = Math.min(extraRebounds / 10, 1); // Scale over 10 rebounds
-            const minSpeed = 40;
-            const speedRange = GAME_CONFIG.MAX_BALL_SPEED - minSpeed;
-            speed = minSpeed + (speedRange * scalingFactor);
+        } else {
+            // Cap at first speed boost - no more scaling beyond this point
+            speed = GAME_CONFIG.FIRST_SPEED_BOOST; // Capped speed (27)
             
-            // Transition from orange to red-white
-            const redIntensity = 1;
-            const greenIntensity = 0.2 + (0.6 * scalingFactor); // From orange to white-red
-            const blueIntensity = scalingFactor * 0.4; // Slight blue tint at max speed
-            glowColor = new BABYLON.Color3(redIntensity, greenIntensity, blueIntensity);
+            // Fixed glow color for boosted speed (orange)
+            glowColor = new BABYLON.Color3(1, 0.6, 0.2); // Orange glow
         }
 
         const currentSpeed = this.velocity.length();
@@ -161,7 +172,7 @@ class Ball {
         
         // Store glow information for client synchronization
         this.currentGlowColor = glowColor;
-        this.shouldGlow = this.rebounds >= GAME_CONFIG.SPEED_BOOST_THRESHOLD_1;
+        this.shouldGlow = this.rebounds >= BALL_CONSTANTS.SPEED_TIERS.TIER_1_THRESHOLD;
     }
 
     handlePaddleCollisions(paddle1Pos, paddle2Pos) {
@@ -176,11 +187,145 @@ class Ball {
         const overlapZ = Math.abs(dz) <= paddleHalfDepth + this.radius;
 
         if (overlapX && overlapZ) {
-            const previousSpeedTier = this.getSpeedTier(this.rebounds);
-            this.rebounds++;
-            const newSpeedTier = this.getSpeedTier(this.rebounds);
+            const hitPlayerId = isHittingPlayer2 ? this.player2.playerId : this.player1.playerId;
+            const hitPlayer = isHittingPlayer2 ? this.player2 : this.player1;
+            const actualPlayer = playerManager.getPlayer(hitPlayerId);
+            const playerToCheck = actualPlayer || hitPlayer;
             
-            this.wasHitByPlayer = isHittingPlayer2 ? this.player2.playerId : this.player1.playerId;
+            // ⭐ NEW: Check if ball has speed boost (should traverse through paddle)
+            const ballHasSpeedBoost = this.powerup.hasSpeedBoost();
+            const playerHasDefensivePowerup = playerToCheck.powerup && playerToCheck.powerup.isWithinWindow();
+            
+            // Initialize speed tier variables for use throughout the method
+            const previousSpeedTier = this.getSpeedTier(this.rebounds);
+            let newSpeedTier = previousSpeedTier;
+            
+
+            
+            // ⭐ DEFENSIVE COUNTER: If ball has speed boost but player counters with powerup
+            if (ballHasSpeedBoost && playerHasDefensivePowerup) {
+
+                
+                // Apply defensive counter logic (normal collision + speed stack)
+                this.rebounds++;
+                newSpeedTier = this.getSpeedTier(this.rebounds);
+                this.wasHitByPlayer = hitPlayerId;
+                
+                // Stack speed boost (defensive counter adds another multiplier)
+                const currentSpeed = this.speed;
+                const stackedSpeed = currentSpeed * 2.0; // Stack another 2x on top
+                
+                // Update ball speed with stacked boost
+                const currentVelocityLength = this.velocity.length();
+                if (currentVelocityLength > 0) {
+                    this.velocity = this.velocity.scale(stackedSpeed / currentVelocityLength);
+                }
+                this.speed = stackedSpeed;
+                
+                // Update powerup state with new stacked speed
+                this.powerup.originalSpeed = currentSpeed; // Update reference
+                
+
+                
+                // Trigger defensive powerup success
+                playerToCheck.powerup.onSuccess();
+                
+                // Broadcast defensive powerup activation to clients
+                if (this.gameEngine && this.roomId) {
+                    this.gameEngine.broadcastToRoom(this.roomId, {
+                        type: 'powerupActivated',
+                        playerId: hitPlayerId,
+                        ballSpeedMultiplier: 2.0, // The stacking multiplier
+                        powerupType: 'defensive',
+                        originalSpeed: currentSpeed,
+                        stackedSpeed: stackedSpeed,
+                        timestamp: Date.now()
+                    });
+
+                }
+                
+                // ⭐ DEFENSIVE COUNTER SOUND: Play defensive sound immediately for defensive counters
+                if (this.gameEngine && this.roomId) {
+                    this.gameEngine.broadcastToRoom(this.roomId, {
+                        type: 'soundEvent',
+                        sound: 'defensivePowerUp',
+                        timestamp: Date.now(),
+                        ballSpeed: stackedSpeed,
+                        rebounds: this.rebounds,
+                        hitByPlayer: hitPlayerId,
+                        powerupActivated: true,
+                        powerupType: 'defensive'
+                    });
+
+                }
+                
+                // Continue with normal collision physics but with stacked speed
+                
+            } else if (ballHasSpeedBoost && !playerHasDefensivePowerup) {
+
+                
+                // ⭐ TRAVERSAL LOGIC: Ball keeps its speed boost and continues through paddle
+                // The speed boost will be removed when the point is scored, not here
+                // Don't increment rebounds, don't change direction - ball passes through
+                
+                // Broadcast traversal event (but keep powerup active)
+                if (this.gameEngine && this.roomId) {
+                    this.gameEngine.broadcastToRoom(this.roomId, {
+                        type: 'ballTraversal',
+                        playerId: hitPlayerId,
+                        ballSpeed: this.speed,
+                        timestamp: Date.now()
+                    });
+
+                }
+                
+                // Ball traverses through - no collision, continue to score zone
+                // Don't increment rebounds, don't change direction, KEEP speed boost
+                return; // Skip normal collision handling
+                
+            } else {
+
+                
+                // Normal collision logic
+                this.rebounds++;
+                newSpeedTier = this.getSpeedTier(this.rebounds);
+                this.wasHitByPlayer = hitPlayerId;
+            }
+            
+            // ⭐ POWERUP INTEGRATION: Check for powerup activation (reuse variables from above)
+            let powerupActivated = false;
+            
+
+            
+            // Check for OFFENSIVE powerup (normal speed boost when ball isn't already boosted)
+            if (!ballHasSpeedBoost && playerToCheck.powerup && playerToCheck.powerup.isWithinWindow()) {
+
+                
+                // Apply offensive powerup (normal speed boost)
+                powerupActivated = this.powerup.applySpeedBoost(this, hitPlayerId);
+                if (powerupActivated) {
+                    playerToCheck.powerup.onSuccess();
+                    
+
+                    
+                    // Broadcast offensive powerup activation to clients
+                    if (this.gameEngine && this.roomId) {
+                        this.gameEngine.broadcastToRoom(this.roomId, {
+                            type: 'powerupActivated',
+                            playerId: hitPlayerId,
+                            ballSpeedMultiplier: this.powerup.speedMultiplier,
+                            powerupType: 'offensive',
+                            timestamp: Date.now()
+                        });
+
+                    }
+                } else {
+
+                }
+            } else {
+
+            }
+            
             const isSideHit = Math.abs(dz) > paddleHalfDepth;
             let speed = this.velocity.length();
             if (isSideHit) {
@@ -202,8 +347,12 @@ class Ball {
             }
             this.previousVelocity.copyFrom(this.velocity);
             
-            // Update speed and glow based on new rebounds count
-            this.handleAcceleration();
+            // Update speed and glow based on new rebounds count (only if no powerup boost active)
+            const hasPowerupBoost = this.powerup.hasSpeedBoost();
+            
+            if (!hasPowerupBoost) {
+                this.handleAcceleration();
+            }
             
             // Mark speed tier change for client notification
             if (newSpeedTier !== previousSpeedTier) {
@@ -211,16 +360,38 @@ class Ball {
                 this.lastSpeedTier = newSpeedTier;
             }
 
-            // Broadcast paddle hit sound event
+            // Broadcast paddle hit sound event with different sounds for powerup types
             if (this.gameEngine && this.roomId) {
-                this.gameEngine.broadcastToRoom(this.roomId, {
-                    type: 'soundEvent',
-                    sound: 'paddleHit',
-                    timestamp: Date.now(),
-                    ballSpeed: this.speed,
-                    rebounds: this.rebounds,
-                    hitByPlayer: this.wasHitByPlayer
-                });
+                // Check if this was a defensive counter (ball had speed boost + player had defensive powerup)
+                const wasDefensiveCounter = ballHasSpeedBoost && playerHasDefensivePowerup;
+                
+                if (wasDefensiveCounter) {
+                    // ⭐ SKIP: Defensive counter sound already sent above
+                } else {
+                    // Send sound for non-defensive cases (offensive powerup or normal hit)
+                    let soundToPlay = 'paddleHit'; // Default sound (pop.mp3)
+                    let powerupType = 'none';
+                    
+                    if (powerupActivated) {
+                        // Offensive powerup sound  
+                        soundToPlay = 'powerUpHit';
+                        powerupType = 'offensive';
+                    }
+                    // else: keep default 'paddleHit' for normal hits
+                    
+                    this.gameEngine.broadcastToRoom(this.roomId, {
+                        type: 'soundEvent',
+                        sound: soundToPlay,
+                        timestamp: Date.now(),
+                        ballSpeed: this.speed,
+                        rebounds: this.rebounds,
+                        hitByPlayer: this.wasHitByPlayer,
+                        powerupActivated: powerupActivated,
+                        powerupType: powerupType
+                    });
+                    
+
+                }
             }
         }
     }
@@ -237,18 +408,42 @@ class Ball {
                 losingPlayerId = this.player2.playerId; // Player 2 lost the point
                 winningPlayerId = this.player1.playerId;
                 // Ball goes towards the loser (Player 2 - left side)
-                newVelocity = new BABYLON.Vector3(-GAME_CONFIG.INITIAL_BALL_SPEED, 0, 0);
+                newVelocity = new BABYLON.Vector3(-BALL_CONSTANTS.INITIAL_SPEED, 0, 0);
             } else {
                 // Ball went past right side (Player 1's side), Player 2 scores  
                 this.player2.playerScore++;
                 losingPlayerId = this.player1.playerId; // Player 1 lost the point
                 winningPlayerId = this.player2.playerId;
                 // Ball goes towards the loser (Player 1 - right side)
-                newVelocity = new BABYLON.Vector3(GAME_CONFIG.INITIAL_BALL_SPEED, 0, 0);
+                newVelocity = new BABYLON.Vector3(BALL_CONSTANTS.INITIAL_SPEED, 0, 0);
+            }
+
+            // ⭐ RESET POWERUP STATE: Remove any speed boost when point is scored
+            const hadPowerup = this.powerup.hasSpeedBoost();
+            if (hadPowerup) {
+                this.powerup.removeSpeedBoost(this);
+                
+                // Broadcast powerup deactivation
+                if (this.gameEngine && this.roomId) {
+                    this.gameEngine.broadcastToRoom(this.roomId, {
+                        type: 'powerupDeactivated',
+                        reason: 'pointScored',
+                        timestamp: Date.now()
+                    });
+                }
+            }
+
+            // ⭐ RESET PLAYER STATES: Both players become SOLID again for next rally
+            if (this.gameEngine && this.roomId) {
+                this.gameEngine.broadcastToRoom(this.roomId, {
+                    type: 'resetPlayerStates',
+                    reason: 'pointScored',
+                    timestamp: Date.now()
+                });
+
             }
 
             // Send lost point sound only to the player who lost
-
             if (this.gameEngine && this.roomId) {
                 if (losingPlayerId) {
                     this.gameEngine.sendToPlayer(this.roomId, losingPlayerId, {
@@ -291,9 +486,8 @@ class Ball {
     }
 
     getSpeedTier(rebounds) {
-        if (rebounds < GAME_CONFIG.SPEED_BOOST_THRESHOLD_1) return 0;
-        else if (rebounds < GAME_CONFIG.SPEED_BOOST_THRESHOLD_2) return 1;
-        else return 2;
+        if (rebounds < BALL_CONSTANTS.SPEED_TIERS.TIER_1_THRESHOLD) return 0;
+        else return 1;
     }
 
     updateClient(scene) {
@@ -307,7 +501,11 @@ class Ball {
 
     setState(state) {
         if (state.isInitialSpawn) {
-            this.position = new BABYLON.Vector3(0, -2, 0);
+            this.position = new BABYLON.Vector3(
+                BALL_CONSTANTS.INITIAL_POSITION.x,
+                BALL_CONSTANTS.INITIAL_POSITION.y,
+                BALL_CONSTANTS.INITIAL_POSITION.z
+            );
             this.velocity = new BABYLON.Vector3(0, 0, 0);
             this.previousVelocity = new BABYLON.Vector3(0, 0, 0);
             this.isRespawning = true;
@@ -328,7 +526,7 @@ class Ball {
         this.respawnTime = state.respawnTime || 0;
         this.wasHitByPlayer = state.wasHitByPlayer;
         this.hasValidPosition = state.hasValidPosition;
-        this.speed = state.speed || GAME_CONFIG.INITIAL_BALL_SPEED;
+        this.speed = state.speed || BALL_CONSTANTS.INITIAL_SPEED;
         this.lastPosition = this.position.clone();
         this.lastUpdateTime = Date.now();
     }

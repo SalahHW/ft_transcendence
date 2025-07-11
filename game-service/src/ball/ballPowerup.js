@@ -1,0 +1,81 @@
+export class BallPowerup {
+    constructor() {
+        this.isSpeedBoosted = false;
+        this.speedMultiplier = 2.0; // ⚡ TESTING: 4x speed for obvious difference
+        this.originalSpeed = 0;
+        this.boostDuration = 0; // No duration limit, lasts until next paddle hit
+        this.activatedByPlayer = null;
+    }
+
+    // Apply powerup speed boost to the ball
+    applySpeedBoost(ball, activatedByPlayerId) {
+        if (this.isSpeedBoosted) {
+            console.log('Speed boost already active, ignoring new activation');
+            return false;
+        }
+
+        this.originalSpeed = ball.speed;
+        this.isSpeedBoosted = true;
+        this.activatedByPlayer = activatedByPlayerId;
+        
+        // Apply 2x speed multiplier
+        const boostedSpeed = this.originalSpeed * this.speedMultiplier;
+        
+        // Update ball velocity with boosted speed
+        const currentVelocityLength = ball.velocity.length();
+        
+        if (currentVelocityLength > 0) {
+            const scaleFactor = boostedSpeed / currentVelocityLength;
+            
+            ball.velocity = ball.velocity.scale(scaleFactor);
+        }
+        ball.speed = boostedSpeed;
+        return true;
+    }
+
+    // Remove speed boost (called after next paddle hit)
+    removeSpeedBoost(ball) {
+        if (!this.isSpeedBoosted) {
+            return false;
+        }
+
+        console.log(`Removing speed boost, returning to normal speed handling`);
+        
+        this.isSpeedBoosted = false;
+        this.activatedByPlayer = null;
+        this.originalSpeed = 0;
+        
+        // Let the ball's normal speed handling take over
+        // The ball will recalculate its speed based on current rebounds in handleAcceleration()
+        
+        return true;
+    }
+
+    // Check if ball currently has speed boost active
+    hasSpeedBoost() {
+        return this.isSpeedBoosted;
+    }
+
+    // Get current powerup state
+    getState() {
+        return {
+            isSpeedBoosted: this.isSpeedBoosted,
+            speedMultiplier: this.speedMultiplier,
+            activatedByPlayer: this.activatedByPlayer,
+            originalSpeed: this.originalSpeed
+        };
+    }
+
+    // Reset powerup state
+    reset() {
+        this.isSpeedBoosted = false;
+        this.activatedByPlayer = null;
+        this.originalSpeed = 0;
+    }
+
+    // Update method (called each frame)
+    update(deltaTime) {
+        // Currently no frame-based updates needed
+        // Speed boost removal is handled by paddle collision events
+    }
+}

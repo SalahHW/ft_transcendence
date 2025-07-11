@@ -1,7 +1,7 @@
 import { webSocketClient } from './webSocketClient.js';
 
 /**
- * Client-side disconnection and cleanup handling for 1v1 games
+ * Client-side explicit leave game handling only
  */
 
 interface GameCleanupState {
@@ -20,6 +20,7 @@ interface GameCleanupState {
 
 export class WebSocketClientDisconnect {
     private gameState: GameCleanupState;
+    private cleanupPerformed: boolean = false;
 
     constructor() {
         this.gameState = {
@@ -38,36 +39,27 @@ export class WebSocketClientDisconnect {
     }
 
     /**
-     * Update the game state reference for cleanup operations
+     * Update game state for disconnect handling
      */
-    updateGameState(gameState: Partial<GameCleanupState>): void {
-        this.gameState = { ...this.gameState, ...gameState };
+    updateGameState(state: Partial<GameCleanupState>): void {
+        this.gameState = { ...this.gameState, ...state };
+        
+        // Reset cleanup flag if we're starting a new game
+        if (state.clientConnection && !this.gameState.isGameOver) {
+            this.cleanupPerformed = false;
+        }
     }
 
     /**
-     * Setup WebSocket disconnection event handlers
+     * Reset cleanup flag for new game sessions
      */
-    setupWebSocketDisconnectionHandlers(clientConnection: webSocketClient): void {
-        clientConnection.socket.addEventListener('close', () => {
-            console.log('🚪 WebSocket connection closed - cleaning up game');
-            this.updateGameStatus('Connection closed');
-            
-            // Clean up game loop if it's running
-            if (this.gameState.isGameLoopRunning && this.gameState.map && this.gameState.map.getEngine) {
-                this.gameState.map.getEngine.stopRenderLoop();
-                this.gameState.isGameLoopRunning = false;
-            }
-        });
-
-        clientConnection.socket.addEventListener('error', (error) => {
-            console.error('🔥 WebSocket error - cleaning up game:', error);
-            this.updateGameStatus('Connection error');
-            this.cleanup();
-        });
+    resetCleanupFlag(): void {
+        this.cleanupPerformed = false;
+        console.log('🔄 Cleanup flag reset for new game session');
     }
 
     /**
-     * Handle explicit leave game action
+     * Handle explicit leave game action (from leave game button only)
      */
     leaveGame(): void {
         console.log('🏃 Player explicitly leaving game...');
@@ -117,7 +109,12 @@ export class WebSocketClientDisconnect {
     /**
      * Comprehensive cleanup of all game resources
      */
-    cleanup(): void {
+    cleanup(closeWebSocket: boolean = true): void {
+        if (this.cleanupPerformed) {
+            console.log('🧹 Cleanup already performed, skipping');
+            return;
+        }
+
         console.log('🧹 Starting comprehensive game cleanup...');
         
         // Set game as over to immediately stop input and rendering
@@ -126,8 +123,10 @@ export class WebSocketClientDisconnect {
         // Stop game loop
         this.stopGameLoop();
         
-        // Close WebSocket connection
-        this.closeWebSocketConnection();
+        // Close WebSocket connection only if requested
+        if (closeWebSocket) {
+            this.closeWebSocketConnection();
+        }
         
         // Clean up UI event listeners
         this.cleanupUIEventListeners();
@@ -144,6 +143,7 @@ export class WebSocketClientDisconnect {
         // Nullify game objects
         this.nullifyGameObjects();
         
+        this.cleanupPerformed = true;
         console.log('✅ Game cleanup completed');
     }
 
@@ -192,23 +192,22 @@ export class WebSocketClientDisconnect {
      * Clean up keyboard event listeners
      */
     private cleanupKeyboardEventListeners(): void {
-        if ((window as any).gameControlsInitialized) {
-            if ((window as any).gameKeydownHandler) {
-                document.removeEventListener('keydown', (window as any).gameKeydownHandler);
-                delete (window as any).gameKeydownHandler;
-                console.log('⌨️ Keydown event listener removed');
-            }
-            if ((window as any).gameKeyupHandler) {
-                document.removeEventListener('keyup', (window as any).gameKeyupHandler);
-                delete (window as any).gameKeyupHandler;
-                console.log('⌨️ Keyup event listener removed');
-            }
-            (window as any).gameControlsInitialized = false;
+        // Remove global keyboard handlers
+        if ((window as any).keydownHandler) {
+            document.removeEventListener('keydown', (window as any).keydownHandler);
+            delete (window as any).keydownHandler;
+            console.log('⌨️ Keydown event listener removed');
+        }
+        
+        if ((window as any).keyupHandler) {
+            document.removeEventListener('keyup', (window as any).keyupHandler);
+            delete (window as any).keyupHandler;
+            console.log('⌨️ Keyup event listener removed');
         }
     }
 
     /**
-     * Reset key input states to prevent stuck keys
+     * Reset key states
      */
     private resetKeyStates(): void {
         this.gameState.isUpPressed = false;

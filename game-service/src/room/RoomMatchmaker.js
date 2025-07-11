@@ -1,5 +1,4 @@
 import { roomManager } from './RoomManager.js';
-import { tournamentManager } from './tournamentManager.js';
 
 /**
  * Handles matchmaking logic for finding or creating rooms
@@ -14,13 +13,7 @@ export class RoomMatchmaker {
    * Find or create a room for a player
    */
   findOrCreateRoom(player, preferences = {}) {
-    // Log whether player clicked tournament button
-    console.log(`**** Player ${player.id} (${player.username || 'Anonymous'}) - Tournament button clicked: ${player.tournament}`);
-    
-    // ⭐ TOURNAMENT HANDLER: Use TournamentManager for tournament players
-    if (player.tournament) {
-      return tournamentManager.handleTournamentPlayer(player, preferences);
-    }
+    console.log(`**** Player ${player.id} (${player.username || 'Anonymous'}) - Joining 1v1 game`);
     
     // Regular 1v1 player logic
     let room = this._findSuitableRoom(player, preferences);
@@ -29,6 +22,7 @@ export class RoomMatchmaker {
       // No suitable room found, create a new regular 1v1 room
       room = this.roomManager.createRoom(null, {
         maxPlayers: preferences.maxPlayers || 2,
+        matchType: '1v1', // 🏆 CRITICAL FIX: Explicitly set matchType for 1v1 rooms
         gameMode: preferences.gameMode || 'classic',
         metadata: {
           createdBy: player.id,
@@ -125,15 +119,11 @@ export class RoomMatchmaker {
    * Find a suitable existing room for a regular 1v1 player
    */
   _findSuitableRoom(player, preferences) {
-    const availableRooms = this.roomManager.getAvailableRooms();
+    // 🏆 CRITICAL FIX: Get only 1v1 rooms to prevent cross-contamination
+    const availableRooms = this.roomManager.getAvailableRooms('1v1');
     
-    // Filter rooms for regular 1v1 players only
+    // Filter rooms for 1v1 players
     const suitableRooms = availableRooms.filter(room => {
-      // Regular players should not join tournament rooms
-      if (room.metadata?.isTournament) {
-        return false;
-      }
-      
       // Check max players preference
       if (preferences.maxPlayers && room.maxPlayers !== preferences.maxPlayers) {
         return false;
@@ -246,6 +236,7 @@ export class RoomMatchmaker {
     // Merge preferences (requester takes priority)
     const roomOptions = {
       maxPlayers: requester.preferences.maxPlayers || 2,
+      matchType: '1v1', // 🏆 CRITICAL FIX: Explicitly set matchType for matchmade 1v1 rooms
       gameMode: requester.preferences.gameMode || 'classic',
       metadata: {
         matchType: 'matchmade',

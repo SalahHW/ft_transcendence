@@ -43,7 +43,7 @@ export default [
   },
   // Game client bundle (separate for optimization)
   {
-    input: 'src/game/client/client.ts',
+    input: 'src/game/index.ts',
     output: {
       file: 'public/js/game.bundle.js',
       format: 'es',

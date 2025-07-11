@@ -2,15 +2,18 @@ import { playerPaddle } from '../player/player.js';
 import { gameMap } from '../map/gameMap.js';
 import { webSocketClient } from '../webSocketClient/webSocketClient.js';
 import { webSocketClientDisconnect, leaveGame as disconnectLeaveGame, cleanup as disconnectCleanup } from '../webSocketClient/webSocketClientDisconnect.js';
+import { stateTracker } from '../webSocketClient/StateTracker.js';
+import { browserEventHandler } from '../webSocketClient/BrowserEventHandler.js';
 import { Ball } from '../ball/ball.js';
 import * as BABYLON from '@babylonjs/core';
 import { fetchWithSelfSigned } from '../utils/fetch.js';
 import { updatePlayerNames, updateScoresUI, updateScoresUIVersus, updatePlayerNamesVersus, updateGameStatus } from '../playerUi/playerUi.js';
-import { handleWaitingForPlayers } from '../ui/waitingStatusHandler.js';
+import { handleWaitingForPlayers, stopForfeitWinnerPing } from '../ui/waitingStatusHandler.js';
 import { soundManager } from '../audio/soundManager.js';
-import { TournamentClientHandler } from '../tournament/tournamentClientHandler.js';
 import { showSplashScreen } from '../ui/splashScreen.js';
-import { showGameEndSplashScreen, GameEndData } from '../utils/splashScreenUtils.js';
+// GameEndData interface will be imported dynamically
+import { cameraManager } from '../camera/cameraManager.js';
+import { PlayerPowerup } from '../player/playerPowerup.js';
 
 interface PlayerData {
     id: string;
@@ -21,8 +24,6 @@ interface PlayerData {
 interface ApiResponse {
     data: PlayerData[];
 }
-
-
 
 const serverPort = 8081; // Game service port (WebSocket and API)
 let clientConnection: webSocketClient | null = null;
@@ -45,34 +46,34 @@ let initTime: number | null = null;
 let syncCount: number = 0;
 let ballUpdateReceived: boolean = false;
 let isGameLoopRunning: boolean = false;
-let isShowingSemiFinalSplash: boolean = false;
-let queuedMessages: any[] = [];
 
-// Function to process queued messages after semi-final splash
-async function processQueuedMessages(): Promise<void> {
-    while (queuedMessages.length > 0) {
-        const message = queuedMessages.shift();
-        if (message.type === 'waitingForPlayers') {
-            handleWaitingForPlayers(message, updateGameStatus);
-        }         
-        // Small delay between processing messages to avoid overwhelming
-        await new Promise(resolve => setTimeout(resolve, 100));
-    }
-}
+// ⭐ POWERUP INTEGRATION: Add powerup UI instances
+let player1Powerup: PlayerPowerup | null = null;
+let player2Powerup: PlayerPowerup | null = null;
 
 // Function to handle sound events
 function handleSoundEvent(msg: any): void {
     const { sound, ballSpeed, rebounds } = msg;
+    let volumeMultiplier = 0;
     
     switch (sound) {
         case 'paddleHit':
             // Vary volume based on ball speed for more immersion
-            const volumeMultiplier = Math.min(1, (ballSpeed || 25) / 50);
+            volumeMultiplier = Math.min(1, (ballSpeed || 25) / 50);
             soundManager.playSound('paddleHit', volumeMultiplier);
             break;
             
+        case 'powerUpHit':
+            soundManager.playSound('powerUpHit', 1.0);
+            break;
+            
+        case 'defensivePowerUp':
+            soundManager.playSound('defensivePowerUp', 1.0);
+            break;
+            
         case 'wallHit':
-            soundManager.playSound('wallHit', 0.7);
+            volumeMultiplier = Math.min(1, (ballSpeed || 25) / 50);
+            soundManager.playSound('wallHit', volumeMultiplier);
             break;
             
         case 'lostPoint':
@@ -81,35 +82,14 @@ function handleSoundEvent(msg: any): void {
         case 'playerScored':
             soundManager.playSound('playerScored', 1.0);
             break;
-        case 'semiFinalWin':
-            soundManager.playSound('semiFinalWin', 1.0);
-            break;
-        case 'semiFinalLose':
-            soundManager.playSound('semiFinalLose', 1.0);
-            break;
-        case 'firstPlace':
-            soundManager.playSound('firstPlace', 1.0);
-            break;
-        case 'secondPlace':
-            soundManager.playSound('secondPlace', 1.0);
-            break;
-        case 'thirdPlace':
-            soundManager.playSound('thirdPlace', 1.0);
-            break;
-        case 'fourthPlace':
-            soundManager.playSound('fourthPlace', 1.0);
-            break;
         default:
             console.warn('Unknown sound event:', sound);
     }
 }
 
-
-
 // Function to check available players
 async function checkAvailablePlayers(): Promise<PlayerData[]> {
     try {
-        // FIXED: Use current domain instead of localhost for game service API
         const gameApiUrl = `${window.location.protocol}//${window.location.host}/api/game/players`;
         const response = await fetchWithSelfSigned(gameApiUrl, {
             method: 'GET',
@@ -130,14 +110,13 @@ async function checkAvailablePlayers(): Promise<PlayerData[]> {
 // Function to set player ready status
 async function setPlayerReady(playerId: string): Promise<boolean> {
     try {
-        // FIXED: Use current domain instead of localhost for game service API
         const gameApiUrl = `${window.location.protocol}//${window.location.host}/api/game/players/${playerId}/ready`;
         const response = await fetchWithSelfSigned(gameApiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({}),  // Send empty object as body
+            body: JSON.stringify({}),
         });
         
         if (!response.ok) {
@@ -152,33 +131,52 @@ async function setPlayerReady(playerId: string): Promise<boolean> {
 }
 
 // Function to initialize the game
-export function initializeGame(playerId: string): void {
+export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' = '1v1'): void {
+    console.log(`🎮 Initializing game for player ${playerId} with game type: ${gameType}`);
+    
+    // If tournament mode, just log and return without starting 1v1 game logic
+    if (gameType === 'tournament') {
+        console.log('🏆 Tournament mode detected - skipping 1v1 game initialization');
+        console.log('🏆 Tournament logic will be implemented later');
+        updateGameStatus('Tournament mode - waiting for implementation');
+        return;
+    }
+    
     if (clientConnection) {
         clientConnection.socket.close();
     }
     isGameOver = false;
     isGameLoopRunning = false;
     localPlayerId = playerId;
-    // FIXED: Use current domain instead of localhost for WebSocket connection
-    // Dynamically determine protocol (ws:// for HTTP, wss:// for HTTPS)
+    
+    // Reset cleanup flags for new game session
+    webSocketClientDisconnect.resetCleanupFlag();
+    
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${wsProtocol}//${window.location.host}/api/game/ws`;
     clientConnection = new webSocketClient(wsUrl, playerId);
     
     // Make leaveGame function available globally for Leave Game button
     (window as any).leaveGame = leaveGame;
+    (window as any).clientConnection = clientConnection;
+    
+
 
     clientConnection.socket.addEventListener('open', () => {
         updateGameStatus('Connected to game server');
+        
+        // Initialize state tracking and browser event handling AFTER connection is established
+        console.log('🌐 WebSocket connection opened, initializing disconnect handlers');
+        if (clientConnection) {
+            stateTracker.initialize(clientConnection, playerId, 'waiting'); // Temporary room ID
+            browserEventHandler.initialize(clientConnection, playerId, 'waiting'); // Temporary room ID
+        }
     });
 
     clientConnection.socket.addEventListener('error', err => {
         console.error('WebSocket error:', err);
         updateGameStatus('Connection error');
     });
-
-    // Setup disconnection handlers using the dedicated module
-    webSocketClientDisconnect.setupWebSocketDisconnectionHandlers(clientConnection);
     
     // Update the disconnect handler with current game state
     webSocketClientDisconnect.updateGameState({
@@ -200,12 +198,11 @@ export function initializeGame(playerId: string): void {
         if (!player1 || !player2) return;
         const movingPlayer = msg.playerId === player1.getPlayerId() ? player1 : player2;
         if (movingPlayer) {
-            // Always update paddle position from server (for HTTP commands and sync)
             movingPlayer.setZ(msg.positionZ || 0);
         }
     });
 
-    // 🔊 Set up sound event handler
+    // Set up sound event handler
     clientConnection.onSoundEvent((msg) => {
         handleSoundEvent(msg);
     });
@@ -221,22 +218,29 @@ export function initializeGame(playerId: string): void {
         if (msg.ballState) {
             ball.setState(msg.ballState);
         }
+        
+        // Update state to playing when ball is active
+        if (msg.ballState && !msg.ballState.isRespawning) {
+            stateTracker.setPlayingState();
+        }
     });
 
-    // Add sync handler to ensure positions are correct
+    // Add sync handler
     clientConnection.onSync((msg) => {
         if (!player1 || !player2) return;
+        
         if (msg.playerPositions) {
             Object.entries(msg.playerPositions).forEach(([playerId, positionZ]) => {
                 const syncPlayer = playerId === player1!.getPlayerId() ? player1 : player2;
-                if (syncPlayer) {
-                    // Always sync paddle positions from server (important for HTTP commands)
+                if (syncPlayer && syncPlayer.getPlayerId() !== localPlayerId) {
                     syncPlayer.setZ(positionZ);
                 }
             });
         }
+        
         if (msg.ballState && ball) {
             ball.setState(msg.ballState);
+            lastSyncTime = typeof msg.serverTime === 'number' ? msg.serverTime : Date.now();
         }
     });
 
@@ -262,7 +266,7 @@ export function initializeGame(playerId: string): void {
         }
         
         if (losingPlayerId === localPlayerId) {
-            map.triggerCameraShake().catch(error => {
+            cameraManager.triggerCameraShake().catch(error => {
                 console.error('Camera shake failed:', error);
             });
         }
@@ -274,23 +278,22 @@ export function initializeGame(playerId: string): void {
             player1.playerScore = player1Score;
             player2.playerScore = player2Score;
             
-            // Update UI with scores and player names from current player's perspective
             const currentPlayer = localPlayerId === player1.getPlayerId() ? player1 : player2;
             const opponent = localPlayerId === player1.getPlayerId() ? player2 : player1;
             const currentPlayerScore = currentScores[currentPlayer.getPlayerId()] || 0;
             const opponentScore = currentScores[opponent.getPlayerId()] || 0;
             
             updateScoresUIVersus(currentPlayerScore, opponentScore, currentPlayer.playerName, opponent.playerName);
-            
-
         }
     });
 
-    // Add game end handler
+    // Add game end handler - simplified for 1v1 only
     clientConnection.onGameEnd(async (msg: any) => {
-        const gameEndData = msg as GameEndData;
+        const gameEndData = msg;
         isGameOver = true;
         
+        // Update state to game over
+        stateTracker.setGameOverState();
         
         // Stop the game loop and clean up
         if (isGameLoopRunning && map?.getEngine) {
@@ -298,270 +301,132 @@ export function initializeGame(playerId: string): void {
             isGameLoopRunning = false;
         }
         
-        // ⭐ ENHANCED FINAL DETECTION: Check multiple indicators for finals
-        const isFinal = gameEndData.matchType === 'final' || 
-                       gameEndData.gameStats?.matchType === 'final' ||
-                       gameEndData.finalMatchType === 'winners' ||
-                       gameEndData.finalMatchType === 'losers' ||
-                       gameEndData.gameStats?.finalMatchType === 'winners' ||
-                       gameEndData.gameStats?.finalMatchType === 'losers' ||
-                       roomId?.includes('final') ||
-                       gameEndData.roomId?.includes('final') ||
-                       roomId?.includes('Final') ||
-                       gameEndData.roomId?.includes('Final');
-        
-        // Check if this is a semi-final match - improved detection (but exclude finals)
-        const isSemiFinal = !isFinal && (
-                           gameEndData.matchType === 'semi-final' || 
-                           gameEndData.gameStats?.matchType === 'semi-final' ||
-                           roomId?.includes('semi') ||
-                           gameEndData.roomId?.includes('semi') ||
-                           roomId?.includes('Semi') ||
-                           gameEndData.roomId?.includes('Semi'));
-        
-        
-        if (isFinal) {
-            // For finals, show tournament final placement splash screen
-            const isWinner = gameEndData.winner.id === localPlayerId;
-            const opponentName = gameEndData.winner.id === localPlayerId ? 
-                                gameEndData.loser.username : 
-                                gameEndData.winner.username;
-            
-            
-            // Determine final placement based on room type and result
-            let finalPlacement: 1 | 2 | 3 | 4;
-            
-            // ⭐ IMPROVED: Use server-provided final match type first, then fallback to room ID parsing
-            let isWinnersFinal = false;
-            let isLosersFinal = false;
-            
-            // Try server-provided finalMatchType first (more reliable)
-            if (gameEndData.finalMatchType) {
-                isWinnersFinal = gameEndData.finalMatchType === 'winners';
-                isLosersFinal = gameEndData.finalMatchType === 'losers';
-            } else if (gameEndData.gameStats?.finalMatchType) {
-                isWinnersFinal = gameEndData.gameStats.finalMatchType === 'winners';
-                isLosersFinal = gameEndData.gameStats.finalMatchType === 'losers';
-            } else {
-                // Fallback to room ID parsing
-                isWinnersFinal = roomId?.includes('winners') || 
-                                gameEndData.roomId?.includes('winners') ||
-                                roomId?.includes('Winners') || 
-                                gameEndData.roomId?.includes('Winners');
-                
-                isLosersFinal = roomId?.includes('losers') || 
-                               gameEndData.roomId?.includes('losers') ||
-                               roomId?.includes('Losers') || 
-                               gameEndData.roomId?.includes('Losers');
-                
-            }
-            
-            
-            if (isWinnersFinal) {
-                // Winners final: 1st place for winner, 2nd place for loser
-                finalPlacement = isWinner ? 1 : 2;
-            } else if (isLosersFinal) {
-                // Losers final: 3rd place for winner, 4th place for loser
-                finalPlacement = isWinner ? 3 : 4;
-            } else {
-                // Fallback - try to determine from room name or default to middle placement
-                console.warn('🏆 ⚠️ Could not determine final type, defaulting placement');
-                console.warn('🏆 DEBUG: ⚠️ No clear room type detected - this should not happen in finals!');
-                console.warn('🏆 DEBUG: ⚠️ Available data:', { 
-                    roomId, 
-                    'gameEndData.roomId': gameEndData.roomId,
-                    'gameEndData.finalMatchType': gameEndData.finalMatchType,
-                    'gameEndData.gameStats?.finalMatchType': gameEndData.gameStats?.finalMatchType
-                });
-                finalPlacement = isWinner ? 1 : 2; // Default to winners final
-            }
-            
-            try {
-                await TournamentClientHandler.handleFinalGameEnd(gameEndData, localPlayerId, opponentName, finalPlacement);
-            } catch (error) {
-                console.error('🏆 ERROR: Error showing final splash:', error);
-                // ⭐ CLEANUP ON ERROR: If final splash fails, still cleanup and try to navigate
-                cleanup();
-            }
-            
-            // ⭐ NOTE: No cleanup() call here for successful finals - handled by tournament handler with navigation
-        } else if (isSemiFinal) {
-            // For semi-finals, show tournament-specific splash screen as overlay
-            const opponentName = gameEndData.winner.id === localPlayerId ? 
-                                gameEndData.loser.username : 
-                                gameEndData.winner.username;
-            
-            
-            try {
-                await TournamentClientHandler.handleSemiFinalGameEnd(gameEndData, localPlayerId, opponentName);
-            } catch (error) {
-                console.error('🏆 ERROR: Error showing semi-final splash:', error);
-            }
-            
-            // Don't cleanup immediately for tournament matches - let tournament system handle it
-        } else {
-            // Regular 1v1 match - show regular splash screen and cleanup
-            showGameEndSplashScreen(gameEndData, localPlayerId);
-            cleanup();
+        // ⭐ FIX: Dispose ball assets before showing splash screen
+        if (ball && !ball.isDisposed) {
+            console.log('🧹 1v1: Disposing ball assets at game end');
+            ball.dispose();
         }
+        
+        // Show regular 1v1 game end splash screen
+        const { showGameEndSplashScreen } = await import('../utils/splashScreenUtils.js');
+        await showGameEndSplashScreen(gameEndData, localPlayerId);
+        cleanup();
     });
 
-    // Add handler for waiting status and tournament advancement
+    // Handle waiting status messages
     clientConnection.socket.addEventListener('message', async (event: MessageEvent) => {
         try {
             const message = JSON.parse(event.data);
             
-            
-            // 🏆 QUEUE MANAGEMENT: If showing semi-final splash, queue non-critical messages
-            if (isShowingSemiFinalSplash && (message.type === 'init' || message.type === 'waitingForPlayers')) {
-                queuedMessages.push(message);
-                return;
-            }
-            
             if (message.type === 'waitingForPlayers') {
+                console.log('CLIENT: Received waitingForPlayers message:', message);
                 handleWaitingForPlayers(message, updateGameStatus);
-            } else if (message.type === 'tournamentAdvancement') {
-
-                updateGameStatus(message.message || 'Tournament advancement...');
                 
-                // 🏆 SEMI-FINAL DETECTION: Check if this is the end of a semi-final
-                if (message.status === 'transferred_to_final') {
-                    // ⭐ SAFETY CHECK: Prevent showing semi-final splash if we're already in a final room
-                    const currentlyInFinalRoom = roomId?.includes('final') || roomId?.includes('Final');
-                    if (currentlyInFinalRoom) {
-                        return; // Don't show semi-final splash for final room activities
-                    }
-                    
-                    // Show semi-final splash screen FIRST, then handle tournament advancement
-                    const isWinner = message.playerType === 'winner';
-                    const opponentName = message.opponentName || 'Opponent'; // Default if not provided
-                    const score = message.score || ''; // Default if not provided
-                    
-                    // Show splash screen and WAIT for it to complete before tournament advancement
-                    try {
-                        isShowingSemiFinalSplash = true; // Block incoming messages
-                        
-                        await TournamentClientHandler.handleSemiFinalGameEnd(
-                            {
-                                winner: { 
-                                    id: isWinner ? localPlayerId : 'opponent',
-                                    username: isWinner ? 'You' : opponentName,
-                                    score: 0 // We'll use message.score if available
-                                },
-                                loser: {
-                                    id: !isWinner ? localPlayerId : 'opponent', 
-                                    username: !isWinner ? 'You' : opponentName,
-                                    score: 0
-                                },
-                                roomId: roomId || '',
-                                matchDuration: 0,
-                                gameStats: { totalRebounds: 0 },
-                                matchEndTime: new Date()
-                            },
-                            localPlayerId,
-                            opponentName
-                        );
-                        
-                        isShowingSemiFinalSplash = false; // Allow new messages
-                        
-                        // Process any queued messages that arrived during splash
-                        await processQueuedMessages();
-                        
-                    } catch (error) {
-                        console.error('🏆 ERROR: Failed to show semi-final splash:', error);
-                        isShowingSemiFinalSplash = false; // Reset flag on error
-                    }
-                    
-                    // NOW handle tournament advancement after splash screen is done
-                    TournamentClientHandler.handleTournamentAdvancement(
-                        message,
-                        updateGameStatus,
-                        {
-                            isGameOver,
-                            isGameLoopRunning,
-                            map,
-                            ball,
-                            player1,
-                            player2
-                        }
-                    );
-                    
-                    // Reset game state for finals
-                    // ⭐ CRITICAL: Reset all game state for final match
-                    isGameOver = false; // Allow new game to start
-                    isGameLoopRunning = false;
-                    ballUpdateReceived = false;
-                    syncCount = 0;
-                    lastBallPosition = null;
-                    lastSyncTime = null;
-                    predictedPosition = null;
-                    
-                    // Clear object references (TournamentClientHandler already disposed/nulled them)
-                    map = null;
-                    ball = null;
-                    player1 = null;
-                    player2 = null;
-                } else {
-                    // For non-semi-final tournament advancement, handle immediately
-                    TournamentClientHandler.handleTournamentAdvancement(
-                        message,
-                        updateGameStatus,
-                        {
-                            isGameOver,
-                            isGameLoopRunning,
-                            map,
-                            ball,
-                            player1,
-                            player2
-                        }
-                    );
-                }
-            } else if (message.type === 'hideGameElements') {
-                // Handle semi-final completion element hiding
-                TournamentClientHandler.handleHideGameElements(
-                    message,
-                    updateGameStatus,
-                    { ball, player1, player2 }
-                );
-            } else if (message.type === 'gameEnd' || message.type === 'matchEnd' || message.type === 'tournamentGameEnd') {
-                // 🏆 REMOVE DUPLICATE: Game end messages should ONLY be handled by clientConnection.onGameEnd
-                // This prevents conflicts between multiple event handlers
-                // DO NOT process game end here - let the primary onGameEnd handler deal with it
+                // Update state to waiting
+                stateTracker.setWaitingState();
             }
         } catch (error) {
             console.error('Error parsing message:', error);
         }
     });
 
-    clientConnection.onInit(async ({ playerId, roomId: rId, role, opponentId, playerName, opponentName }) => {
+    // Add powerup message handlers
+    clientConnection.onPowerupStateUpdate((msg) => {
+        if (msg.powerupStates && player1 && player2) {
+            Object.entries(msg.powerupStates).forEach(([pid, state]: [string, any]) => {
+                if (pid === player1!.playerId && player1Powerup) {
+                    player1Powerup.updateState(state);
+                } else if (pid === player2!.playerId && player2Powerup) {
+                    player2Powerup.updateState(state);
+                }
+            });
+        }
+    });
 
+    clientConnection.onPowerupActivated((msg) => {
+        
+        const isDefensive = msg.powerupType === 'defensive';
+        
+        if (msg.playerId && player1 && player2) {
+            if (msg.playerId === player1.playerId && player1Powerup) {
+                if (isDefensive) {
+                    player1Powerup.showDefensiveSuccessFeedback();
+                } else {
+                    player1Powerup.showSuccessFeedback();
+                }
+            } else if (msg.playerId === player2.playerId && player2Powerup) {
+                if (isDefensive) {
+                    player2Powerup.showDefensiveSuccessFeedback();
+                } else {
+                    player2Powerup.showSuccessFeedback();
+                }
+            }
+            
+            if (map && map.getScene) {
+                cameraManager.triggerCameraShake().then(() => {
+                    // Screen shake completed
+                }).catch(() => {
+                    // Screen shake failed, but that's okay
+                });
+            }
+        }
+        
+        if (ball && ball.ballPowerup) {
+            ball.ballPowerup.updateState({
+                isSpeedBoosted: true,
+                speedMultiplier: msg.ballSpeedMultiplier || 2.0,
+                activatedByPlayer: msg.playerId || null,
+                originalSpeed: msg.originalSpeed || 0,
+                isDefensive: isDefensive,
+                stackedSpeed: msg.stackedSpeed
+            });
+        }
+    });
+
+    clientConnection.onPowerupDeactivated((msg) => {
+        
+        if (ball && ball.ballPowerup) {
+            ball.ballPowerup.updateState({
+                isSpeedBoosted: false,
+                speedMultiplier: 1.0,
+                activatedByPlayer: null,
+                originalSpeed: 0
+            });
+        }
+    });
+
+    clientConnection.onBallTraversal((msg) => {
+        // Handle visual feedback for ball traversal
+    });
+
+    clientConnection.onResetPlayerStates((msg) => {
+        // Reset any client-side player state tracking
+    });
+
+    clientConnection.onInit(async ({ playerId, roomId: rId, role, opponentId, playerName, opponentName, playerPositionZ, opponentPositionZ }) => {
+        console.log('🎮 Game init received:', { playerId, roomId: rId, role, opponentId, playerName, opponentName });
+        
         initTime = Date.now();
         roomId = rId || null;
         localPlayerId = playerId || null;
 
-        // ⭐ TOURNAMENT FIX: Reset game state for clean start (important for finals)
-        TournamentClientHandler.resetTournamentGameState({
-            isGameOver,
-            isGameLoopRunning
-        });
-        isGameOver = false;
-        isGameLoopRunning = false;
-
-        // Store player names for UI updates
-        let player1Name, player2Name;
-        if (role === 0) {
-            player1Name = playerName || 'Player 1';
-            player2Name = opponentName || 'Player 2';
-        } else {
-            player1Name = opponentName || 'Player 1';
-            player2Name = playerName || 'Player 2';
+        // Update state tracker and browser event handler with actual room ID
+        if (roomId) {
+            stateTracker.updateRoomId(roomId);
+            browserEventHandler.updateRoomId(roomId);
+            console.log(`🔄 Updated disconnect handlers with room ID: ${roomId}`);
         }
 
-        // Get player names for splash screen (from current player's perspective)
+        stopForfeitWinnerPing();
+
+        isGameOver = false;
+        isGameLoopRunning = false;
+        
+        // Get player names for splash screen
         const currentPlayerName = playerName || 'You';
         const opponentDisplayName = opponentName || 'Opponent';
         
-        // Show splash screen BEFORE creating any game elements
+        // 🎬 Show splash screen BEFORE creating any game elements
         updateGameStatus('Preparing match...');
         
         try {
@@ -573,84 +438,113 @@ export function initializeGame(playerId: string): void {
         }
         
         // NOW create the game elements AFTER splash screen
-
-        // Create new map (should always be fresh for tournament games)
-        if (!map) {
-            try {
-                map = new gameMap();
-                map.createMap();
-                map.createPlayground();
-                if (!map.getScene) {
-                    throw new Error('map.getScene is undefined');
-                }
-            } catch (e) {
-                console.error('Map creation failed:', e);
-                updateGameStatus('Error: Failed to create game map');
-                return;
-            }
-        }
-
-        // Create fresh paddles (important for tournament final matches)
-        if (!player1 || !player2) {
-            if (!playerId || !opponentId) {
-                console.error('Missing player IDs');
-                return;
+        
+        // ⭐ FIX: Always recreate map for new game session
+        try {
+            // Dispose of existing map if it exists
+            if (map) {
+                map.dispose();
             }
             
-            if (role === 0) {
-                player1 = new playerPaddle(player1Name, playerId, 0);
-                player2 = new playerPaddle(player2Name, opponentId, 1);
-            } else {
-                player1 = new playerPaddle(player1Name, opponentId, 0);
-                player2 = new playerPaddle(player2Name, playerId, 1);
+            map = new gameMap();
+            map.createMap();
+            map.createPlayground();
+            if (!map.getScene) {
+                throw new Error('map.getScene is undefined');
             }
-
-            try {
-                player1.createPaddle(map.getScene!, 19.5, 2, 20);
-                player2.createPaddle(map.getScene!, -19.5, 2, 20);
-                
-                TournamentClientHandler.resetTournamentPaddlePositions(player1, player2);
-            } catch (e) {
-                console.error('Paddle creation failed:', e);
-                return;
-            }
+        } catch (e) {
+            console.error('Map creation failed:', e);
+            updateGameStatus('Error: Failed to create game map');
+            return;
         }
 
-        // Create fresh ball (important for tournament final matches)
-        if (!ball) {
-            try {
-                ball = new Ball(player1, player2);
-                ball.createBall(map.getScene!);
-                if (ball.ballBody) {
-                    ball.ballBody.metadata = { roomId };
-                    ball.ballBody.position = new BABYLON.Vector3(0, 0, 0);
-                    ball.ballBody.isVisible = true;
+        // ⭐ FIX: Always recreate players for new game session
+        if (!playerId || !opponentId) {
+            console.error('Missing player IDs');
+            return;
+        }
+        
+        // Clear existing players (they don't have dispose method)
+        if (player1) {
+            player1 = null;
+        }
+        if (player2) {
+            player2 = null;
+        }
+        
+        const player1Name = role === 0 ? playerName : opponentName;
+        const player2Name = role === 0 ? opponentName : playerName;
+        
+        if (role === 0) {
+            player1 = new playerPaddle(player1Name, playerId, 0);
+            player2 = new playerPaddle(player2Name, opponentId, 1);
+        } else {
+            player1 = new playerPaddle(player1Name, opponentId, 0);
+            player2 = new playerPaddle(player2Name, playerId, 1);
+        }
+
+        try {
+            player1.createPaddle(map.getScene!, 19.5, 2, 20);
+            player2.createPaddle(map.getScene!, -19.5, 2, 20);
+            
+            // ⭐ FIX: Use server-provided initial positions to ensure synchronization
+            const player1PositionZ = playerPositionZ || 0;
+            const player2PositionZ = opponentPositionZ || 0;
+            
+            // Set paddle positions based on server data
+            player1.setZ(player1PositionZ);
+            player2.setZ(player2PositionZ);
+            
+            console.log(`🎮 Set initial paddle positions: player1=${player1PositionZ}, player2=${player2PositionZ}`);
+            
+            // Create powerup UI system for LOCAL player only
+            if (map.getScene) {
+                const isLocalPlayer1 = player1.playerId === localPlayerId;
+                
+                if (isLocalPlayer1) {
+                    player1Powerup = new PlayerPowerup(player1.playerId, map.getScene, 0);
+                    player2Powerup = null;
+                } else {
+                    player1Powerup = null;
+                    player2Powerup = new PlayerPowerup(player2.playerId, map.getScene, 1);
                 }
-                ball.position = new BABYLON.Vector3(0, 0, 0);
-                ball.isRespawning = true;
-                ball.respawnTime = 0;
-                ball.hasValidPosition = true;
                 
-                // Request initial ball respawn from server
-                clientConnection!.send({
-                    type: 'requestBallRespawn',
-                    isInitial: true
-                });
-                console.log('Requested initial ball respawn');
-            } catch (e) {
-                console.error('Ball creation failed:', e);
-                return;
             }
+        } catch (e) {
+            console.error('Paddle creation failed:', e);
+            return;
         }
 
-        // ⭐ TOURNAMENT FIX: Ensure all elements are visible for new game
-        TournamentClientHandler.ensureTournamentElementsVisible({
-            ball,
-            player1,
-            player2
-        });
+        // ⭐ FIX: Always recreate ball for new game session
+        try {
+            // Dispose of existing ball if it exists
+            if (ball) {
+                ball.dispose();
+            }
+            
+            ball = new Ball(player1, player2);
+            ball.createBall(map.getScene!);
+            if (ball.ballBody) {
+                ball.ballBody.metadata = { roomId };
+                ball.ballBody.position = new BABYLON.Vector3(0, -2, 0);
+                ball.ballBody.isVisible = true;
+            }
+            ball.position = new BABYLON.Vector3(0, -2, 0);
+            ball.isRespawning = true;
+            ball.respawnTime = 0;
+            ball.hasValidPosition = true;
+            
+            // ⭐ FIX: Remove early ball respawn request - will be sent after animation completes
+            console.log('Ball created, waiting for animation to complete before requesting respawn');
+            
+            // Update state to playing when ball spawns
+            stateTracker.setPlayingState();
+        } catch (e) {
+            console.error('Ball creation failed:', e);
+            return;
+        }
 
-        // ⭐ CRITICAL FIX: Double-check paddle visibility before animation
+        // Ensure all elements are visible
         if (player1?.paddleBody) {
             player1.paddleBody.isVisible = true;
         }
@@ -661,56 +555,98 @@ export function initializeGame(playerId: string): void {
             ball.ballBody.isVisible = true;
         }
 
+        // Initialize camera manager
+        if (map && player1 && player2 && localPlayerId) {
+            cameraManager.initialize(map, player1, player2, localPlayerId);
+        }
+
         updateGameStatus('Game starting...');
         
-        // 🔊 Initialize sound manager
+        // Update state to launch animation
+        stateTracker.setLaunchAnimationState();
+        
         soundManager.preloadSounds().catch(error => {
             console.warn('Failed to initialize sound manager:', error);
         });
         updateScoresUIVersus(0, 0, player1Name, player2Name);
-        // Update player names in UI from current player's perspective
         updatePlayerNamesVersus(playerName || 'Player', opponentName || 'Opponent');
         
         // Set up keyboard controls if not already set
         if (!(window as any).gameControlsInitialized) {
             const keydownHandler = (event: KeyboardEvent) => {
                 if (isGameOver) return;
-                if (event.key === 'ArrowUp' && !isUpPressed) {
-                    isUpPressed = true;
-                    clientConnection!.send({ type: 'keyDown', direction: 'up' });
-                } else if (event.key === 'ArrowDown' && !isDownPressed) {
-                    isDownPressed = true;
-                    clientConnection!.send({ type: 'keyDown', direction: 'down' });
+                
+                const shouldInvert = cameraManager.shouldInvertControls();
+                
+                if (event.key === 'ArrowLeft') {
+                    const direction = shouldInvert ? 'down' : 'up';
+                    
+                    if (direction === 'up' && !isUpPressed) {
+                        isUpPressed = true;
+                        clientConnection!.send({ type: 'keyDown', direction: 'up' });
+                    } else if (direction === 'down' && !isDownPressed) {
+                        isDownPressed = true;
+                        clientConnection!.send({ type: 'keyDown', direction: 'down' });
+                    }
+                } else if (event.key === 'ArrowRight') {
+                    const direction = shouldInvert ? 'up' : 'down';
+                    
+                    if (direction === 'up' && !isUpPressed) {
+                        isUpPressed = true;
+                        clientConnection!.send({ type: 'keyDown', direction: 'up' });
+                    } else if (direction === 'down' && !isDownPressed) {
+                        isDownPressed = true;
+                        clientConnection!.send({ type: 'keyDown', direction: 'down' });
+                    }
+                } else if (event.key.toLowerCase() === 'a') {
+                    if (clientConnection) {
+                        clientConnection.activatePowerup();
+                    }
                 }
             };
 
             const keyupHandler = (event: KeyboardEvent) => {
                 if (isGameOver) return;
-                if (event.key === 'ArrowUp' && isUpPressed) {
-                    isUpPressed = false;
-                    clientConnection!.send({ type: 'keyUp', direction: 'up' });
-                } else if (event.key === 'ArrowDown' && isDownPressed) {
-                    isDownPressed = false;
-                    clientConnection!.send({ type: 'keyUp', direction: 'down' });
+                
+                const shouldInvert = cameraManager.shouldInvertControls();
+                
+                if (event.key === 'ArrowLeft') {
+                    const direction = shouldInvert ? 'down' : 'up';
+                    
+                    if (direction === 'up' && isUpPressed) {
+                        isUpPressed = false;
+                        clientConnection!.send({ type: 'keyUp', direction: 'up' });
+                    } else if (direction === 'down' && isDownPressed) {
+                        isDownPressed = false;
+                        clientConnection!.send({ type: 'keyUp', direction: 'down' });
+                    }
+                } else if (event.key === 'ArrowRight') {
+                    const direction = shouldInvert ? 'up' : 'down';
+                    
+                    if (direction === 'up' && isUpPressed) {
+                        isUpPressed = false;
+                        clientConnection!.send({ type: 'keyUp', direction: 'up' });
+                    } else if (direction === 'down' && isDownPressed) {
+                        isDownPressed = false;
+                        clientConnection!.send({ type: 'keyUp', direction: 'down' });
+                    }
                 }
             };
 
             document.addEventListener('keydown', keydownHandler);
             document.addEventListener('keyup', keyupHandler);
             
-            // **CRITICAL**: Store handlers globally for cleanup
             (window as any).gameKeydownHandler = keydownHandler;
             (window as any).gameKeyupHandler = keyupHandler;
             (window as any).gameControlsInitialized = true;
-
         }
         
-        // Start the game loop after match animation if not already running
+        // Start the game loop after match animation
         if (!isGameLoopRunning) {
             try {
                 await map.launchMatchAnimation();
                 
-                // ⭐ CRITICAL FIX: Re-enforce visibility after animation completes
+                // Re-enforce visibility after animation completes
                 if (player1?.paddleBody) {
                     player1.paddleBody.isVisible = true;
                 }
@@ -719,27 +655,32 @@ export function initializeGame(playerId: string): void {
                 }
                 if (ball?.ballBody) {
                     ball.ballBody.isVisible = true;
-                    // ⭐ CRITICAL FIX: Ensure ball is positioned for visibility
-                    if (ball.ballBody.position.y < -1) {
-                        ball.ballBody.position.y = 0;
-                        ball.position.y = 0;
-                    }
                 }
+
+                cameraManager.switchToFPSAfterAnimation();
                 
-                // Notify server that animation is complete
+                // ⭐ FIX: Send animationComplete FIRST, then request ball respawn (same as tournament)
                 if (clientConnection) {
                     clientConnection.send({
                         type: 'animationComplete',
                         playerId: localPlayerId
                     });
-                    console.log('Sent animationComplete to server');
+                    
+                    // Wait a moment for server to process animation complete, then request ball respawn
+                    setTimeout(() => {
+                        if (clientConnection) {
+                            clientConnection.send({
+                                type: 'requestBallRespawn',
+                                isInitial: true
+                            });
+                        }
+                    }, 100); // Small delay to ensure proper order
                 }
                 
                 setupGameLoop();
             } catch (e) {
                 console.error('Error during game initialization:', e);
                 
-                // ⭐ CRITICAL FIX: Even on error, ensure elements are visible
                 if (player1?.paddleBody) {
                     player1.paddleBody.isVisible = true;
                 }
@@ -748,22 +689,25 @@ export function initializeGame(playerId: string): void {
                 }
                 if (ball?.ballBody) {
                     ball.ballBody.isVisible = true;
-                    // ⭐ CRITICAL FIX: Ensure ball is positioned for visibility even on error
-                    if (ball.ballBody.position.y < -1) {
-                        ball.ballBody.position.y = 0;
-                        ball.position.y = 0;
-                    }
                 }
                 
-                // Send animation complete anyway to prevent server hanging
+                // ⭐ FIX: Send animationComplete FIRST, then request ball respawn (same as tournament)
                 if (clientConnection) {
                     clientConnection.send({
                         type: 'animationComplete',
                         playerId: localPlayerId
                     });
-                    console.log('Sent animationComplete to server (after error)');
+                    
+                    // Wait a moment for server to process animation complete, then request ball respawn
+                    setTimeout(() => {
+                        if (clientConnection) {
+                            clientConnection.send({
+                                type: 'requestBallRespawn',
+                                isInitial: true
+                            });
+                        }
+                    }, 100); // Small delay to ensure proper order
                 }
-                // Start game loop anyway if animation fails
                 setupGameLoop();
             }
         }
@@ -772,7 +716,25 @@ export function initializeGame(playerId: string): void {
 
 // Export cleanup function for Leave Game button
 export function cleanup(): void {
-    // Update disconnect handler with current state before cleanup
+    stopForfeitWinnerPing();
+    (window as any).clientConnection = null;
+
+    // ✅ FIX: Clean up 1v1 keyboard event listeners that conflict with tournament mode
+    if ((window as any).gameKeydownHandler) {
+        document.removeEventListener('keydown', (window as any).gameKeydownHandler);
+        delete (window as any).gameKeydownHandler;
+        console.log('⌨️ 1v1 Keydown event listener removed');
+    }
+    
+    if ((window as any).gameKeyupHandler) {
+        document.removeEventListener('keyup', (window as any).gameKeyupHandler);
+        delete (window as any).gameKeyupHandler;
+        console.log('⌨️ 1v1 Keyup event listener removed');
+    }
+    
+    // Reset game control flags
+    (window as any).gameControlsInitialized = false;
+
     webSocketClientDisconnect.updateGameState({
         isGameOver,
         isGameLoopRunning,
@@ -787,10 +749,23 @@ export function cleanup(): void {
         isDownPressed
     });
     
-    // Use the dedicated disconnect cleanup
     disconnectCleanup();
+    stateTracker.cleanup();
+    browserEventHandler.cleanup();
+    cameraManager.dispose();
     
-    // Update local variables to match cleanup
+    // ⭐ FIX: Properly dispose ball assets before cleanup
+    if (ball && !ball.isDisposed) {
+        console.log('🧹 1v1: Disposing ball assets during cleanup');
+        ball.dispose();
+    }
+    
+    // ⭐ FIX: Dispose map assets
+    if (map && map.dispose) {
+        console.log('🧹 1v1: Disposing map assets during cleanup');
+        map.dispose();
+    }
+    
     isGameOver = true;
     isGameLoopRunning = false;
     clientConnection = null;
@@ -806,7 +781,25 @@ export function cleanup(): void {
 
 // Export leaveGame function for Leave Game button
 export function leaveGame(): void {
-    // Update disconnect handler with current state before leaving
+    stopForfeitWinnerPing();
+    (window as any).clientConnection = null;
+
+    // ✅ FIX: Clean up 1v1 keyboard event listeners that conflict with tournament mode
+    if ((window as any).gameKeydownHandler) {
+        document.removeEventListener('keydown', (window as any).gameKeydownHandler);
+        delete (window as any).gameKeydownHandler;
+        console.log('⌨️ 1v1 Keydown event listener removed');
+    }
+    
+    if ((window as any).gameKeyupHandler) {
+        document.removeEventListener('keyup', (window as any).gameKeyupHandler);
+        delete (window as any).gameKeyupHandler;
+        console.log('⌨️ 1v1 Keyup event listener removed');
+    }
+    
+    // Reset game control flags
+    (window as any).gameControlsInitialized = false;
+
     webSocketClientDisconnect.updateGameState({
         isGameOver,
         isGameLoopRunning,
@@ -821,10 +814,23 @@ export function leaveGame(): void {
         isDownPressed
     });
     
-    // Use the dedicated disconnect leave game
     disconnectLeaveGame();
+    stateTracker.cleanup();
+    browserEventHandler.cleanup();
+    cameraManager.dispose();
     
-    // Update local variables to match cleanup
+    // ⭐ FIX: Properly dispose ball assets before leaving game
+    if (ball && !ball.isDisposed) {
+        console.log('🧹 1v1: Disposing ball assets during leave game');
+        ball.dispose();
+    }
+    
+    // ⭐ FIX: Dispose map assets
+    if (map && map.dispose) {
+        console.log('🧹 1v1: Disposing map assets during leave game');
+        map.dispose();
+    }
+    
     isGameOver = true;
     isGameLoopRunning = false;
     clientConnection = null;
@@ -880,8 +886,11 @@ function setupGameLoop(): void {
                 paddleMoved = true;
             }
 
-            // Send paddle position updates at a fixed rate
-            if (paddleMoved && now - lastPaddleUpdate >= PADDLE_UPDATE_INTERVAL && clientConnection) {
+            // 🚨 PROBLEM: 1v1 MODE - PADDLE UPDATE THROTTLING IS BROKEN
+            // The throttling condition is commented out, causing unlimited updates!
+            // This makes 1v1 mode send paddle updates every frame (60+ FPS)
+            // while tournament mode is properly throttled to 60 FPS
+            if (paddleMoved &&  now - lastPaddleUpdate >= PADDLE_UPDATE_INTERVAL &&  clientConnection) {
                 const paddlePos = localPlayer.getPaddleBodyPos;
                 if (paddlePos) {
                     clientConnection.send({
@@ -892,6 +901,17 @@ function setupGameLoop(): void {
                     lastPaddleUpdate = now;
                 }
             }
+        }
+
+        // Update camera system
+        cameraManager.update();
+
+        // Update local player's powerup UI position to stay as HUD
+        if (player1Powerup) {
+            player1Powerup.updateCameraPosition();
+        }
+        if (player2Powerup) {
+            player2Powerup.updateCameraPosition();
         }
 
         // Update ball position and ensure it's visible
@@ -909,14 +929,16 @@ function setupGameLoop(): void {
     if (map && map.getEngine) {
         map.getEngine.runRenderLoop(renderLoop);
         isGameLoopRunning = true;
+        
+        // Update state to playing
+        stateTracker.setPlayingState();
     } else {
         console.error('Failed to start game loop: map or engine not initialized');
     }
 }
 
-// Export function to setup join game button (called explicitly when needed)
-export function setupJoinGameButton(): void {
-    // Only setup if not already setup
+// Export function to setup join game button
+export function setupJoinGameButton(gameType: '1v1' | 'tournament' = '1v1'): void {
     if ((window as any).joinGameButtonSetup) {
         return;
     }
@@ -937,7 +959,6 @@ export function setupJoinGameButton(): void {
                     return;
                 }
 
-                // Find an available player slot
                 const availablePlayers = players.filter(p => !p.readyToPlay);
                 if (availablePlayers.length === 0) {
                     updateGameStatus('All players are already in game. Please wait.');
@@ -948,10 +969,8 @@ export function setupJoinGameButton(): void {
                 const playerId = availablePlayers[0].id;
                 updateGameStatus('Joining game...');
                 
-                // Initialize game connection
-                initializeGame(playerId);
+                initializeGame(playerId, gameType);
                 
-                // Set player as ready
                 await setPlayerReady(playerId);
                 updateGameStatus('Waiting for other player to join...');
 
@@ -964,7 +983,6 @@ export function setupJoinGameButton(): void {
         
         joinGameBtn.addEventListener('click', clickHandler);
         
-        // Store reference for cleanup
         (window as any).joinGameButtonHandler = clickHandler;
         (window as any).joinGameButtonSetup = true;
     }

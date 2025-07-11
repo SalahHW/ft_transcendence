@@ -24,6 +24,7 @@ export class Room {
     this.ball = null;
     this.ballUpdateSent = false;
     this.ballUpdateTimeout = null;
+    this.ballDisposed = false; // ⭐ NEW: Flag to prevent ball recreation after disposal
     
     // Match tracking
     this.matchData = {
@@ -36,8 +37,12 @@ export class Room {
     this.metadata = {
       lastActivity: Date.now(),
       totalPlayTime: 0,
+      playerStates: {}, // Initialize player states tracking
       ...options.metadata
     };
+    
+    // Set match type from options
+    this.matchType = options.matchType || '1v1';
   }
 
   /**
@@ -173,6 +178,17 @@ export class Room {
    * Reset ball for respawn
    */
   resetBall() {
+    if (this.players.length < 2) {
+      console.warn(`Cannot reset ball in room ${this.id}: insufficient players (${this.players.length}/2)`);
+      return;
+    }
+
+    // ⭐ CRITICAL FIX: Prevent ball recreation if it has been disposed
+    if (this.ballDisposed) {
+      console.warn(`Cannot reset ball in room ${this.id}: ball has been disposed and cannot be recreated`);
+      return;
+    }
+
     if (!this.ball) {
       this.initializeBall();
       return;

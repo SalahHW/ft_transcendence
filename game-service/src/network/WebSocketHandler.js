@@ -1,6 +1,6 @@
 import { messageRouter } from './MessageRouter.js';
 import { connectionManager } from './ConnectionManager.js';
-import { disconnectionHandler } from '../server/disconnect.js';
+import { setupDisconnectDetection, handlePlayerDisconnect, handleExplicitLeave, handleBrowserEvent } from '../server/disconnect/index.js';
 import { WebSocketUtils } from '../utils/helpers.js';
 import { gameStateManager } from '../game/GameStateManager.js';
 
@@ -34,15 +34,29 @@ export class WebSocketHandler {
   /**
    * Handle new WebSocket connection
    */
-  _handleNewConnection(ws, req, fastify) {
+  async _handleNewConnection(ws, req, fastify) {
     const playerId = req.query.playerId || fastify.uuid();
-    const roomId = this.connectionManager.handlePlayerConnection(ws, playerId);
-
-    // Setup message handling
-    this._setupMessageHandling(ws, playerId, roomId);
+    const roomId = req.query.roomId || null;
+    const matchType = req.query.matchType || '1v1';
     
-    // Setup disconnect handling using dedicated module
-    disconnectionHandler.setupWebSocketDisconnectHandlers(ws, playerId, roomId);
+    // Set matchType on WebSocket for connection manager
+    ws.matchType = matchType;
+    
+    const assignedRoomId = await this.connectionManager.handlePlayerConnection(ws, playerId, roomId);
+
+    if (assignedRoomId) {
+      // Setup message handling
+      this._setupMessageHandling(ws, playerId, assignedRoomId);
+      
+      // Setup disconnect detection for unexpected disconnections
+      setupDisconnectDetection(ws, playerId, assignedRoomId);
+      
+      // Setup actual WebSocket event listeners
+      this._setupWebSocketEventListeners(ws, playerId, assignedRoomId);
+    } else {
+      console.error(`Failed to establish connection for player ${playerId}`);
+      ws.close(1000, 'Connection failed');
+    }
   }
 
   /**
@@ -51,42 +65,107 @@ export class WebSocketHandler {
   _setupMessageHandling(ws, playerId, roomId) {
     let messageCount = 0;
     
-    ws.on('message', (data) => {
+    ws.on('message', async (data) => {
       messageCount++;
       
       // Update player activity
       this.connectionManager.updatePlayerActivity(playerId);
       
-      // Optional: Log message frequency for debugging
-      // if (messageCount % 10 === 0) {
-      //   console.log('Received WebSocket message:', data.toString());
-      // }
-
+      // Use current room for message routing
+      const currentRoomId = ws.roomId || roomId;
+      
       // Route the message
-      this.messageRouter.routeMessage(
+      await this.messageRouter.routeMessage(
         data, 
         playerId, 
-        roomId, 
-        ws, 
-        disconnectionHandler.createDisconnectHandler(playerId, roomId)
+        currentRoomId,
+        ws
       );
     });
   }
 
   /**
-   * Setup disconnect handling for WebSocket connection (delegated to disconnect module)
+   * Setup actual WebSocket event listeners for disconnect handling
    */
-  _setupDisconnectHandling(ws, playerId, roomId) {
-    // Delegate to the dedicated disconnect handler
-    return disconnectionHandler.setupWebSocketDisconnectHandlers(ws, playerId, roomId);
+  _setupWebSocketEventListeners(ws, playerId, roomId) {
+    // Handle WebSocket close events
+    ws.on('close', (code, reason) => {
+      // Use the current room ID from the WebSocket connection, not the original room ID
+      // This is important for tournament transfers where players move between rooms
+      const currentRoomId = ws.roomId || roomId;
+      console.log(`🔌 WebSocket closed for player ${playerId} in room ${currentRoomId}: code=${code}, reason=${reason}`);
+      
+      // Get the disconnect reason from close code
+      const disconnectReason = this._getDisconnectionReasonFromCloseCode(code);
+      
+      // Handle the disconnection through the disconnect system
+      this._handlePlayerDisconnect(playerId, currentRoomId, disconnectReason);
+    });
+
+    // Handle WebSocket error events
+    ws.on('error', (error) => {
+      // Use the current room ID from the WebSocket connection, not the original room ID
+      const currentRoomId = ws.roomId || roomId;
+      console.error(`🔥 WebSocket error for player ${playerId} in room ${currentRoomId}:`, error);
+      
+      // Handle as network disconnect
+      this._handlePlayerDisconnect(playerId, currentRoomId, 'network_disconnect');
+    });
+
+    // Start heartbeat monitoring
+    this._startHeartbeat(playerId, roomId);
+
+    console.log(`🔍 WebSocket event listeners set up for player ${playerId} in room ${roomId}`);
   }
 
   /**
-   * Create disconnect handler function (delegated to disconnect module)
+   * Handle player disconnection through the disconnect system
+   */
+  _handlePlayerDisconnect(playerId, roomId, reason) {
+    try {
+      console.log(`🔌 Handling disconnect for player ${playerId} in room ${roomId} with reason: ${reason}`);
+      
+      // Stop heartbeat monitoring for this player
+      this._stopHeartbeat(playerId);
+      
+      // Handle the disconnection through the disconnect system
+      handlePlayerDisconnect(playerId, roomId, reason);
+    } catch (error) {
+      console.error(`Error handling disconnect for player ${playerId}:`, error);
+    }
+  }
+
+  /**
+   * Get disconnection reason from WebSocket close code
+   */
+  _getDisconnectionReasonFromCloseCode(code) {
+    switch (code) {
+      case 1000: // Normal closure
+        return 'player_left';
+      case 1001: // Going away
+        return 'browser_navigation';
+      case 1006: // Abnormal closure
+        return 'network_disconnect';
+      default:
+        return 'unexpected';
+    }
+  }
+
+  /**
+   * Setup disconnect handling for WebSocket connection
+   */
+  _setupDisconnectHandling(ws, playerId, roomId) {
+    setupDisconnectDetection(ws, playerId, roomId);
+  }
+
+  /**
+   * Create disconnect handler function
    */
   _createDisconnectHandler(playerId, roomId) {
-    // Delegate to the dedicated disconnect handler
-    return disconnectionHandler.createDisconnectHandler(playerId, roomId);
+    return (reason) => {
+      // This is now handled by the disconnect detection system
+      console.log(`Disconnect handler called for player ${playerId} with reason: ${reason}`);
+    };
   }
 
   /**
@@ -108,19 +187,62 @@ export class WebSocketHandler {
   }
 
   /**
-   * Clean up stale connections (delegated to disconnect module)
+   * Clean up stale connections
    */
   cleanupStaleConnections() {
-    // Delegate to the dedicated disconnect handler
-    return disconnectionHandler.cleanupStaleConnections();
+    // This is now handled by the disconnect detection system
+    console.log('Cleanup handled by disconnect detection system');
   }
 
   /**
-   * Gracefully close all connections (delegated to disconnect module)
+   * Close all connections
    */
   closeAllConnections() {
-    // Delegate to the dedicated disconnect handler
-    return disconnectionHandler.closeAllConnections();
+    // This is now handled by the disconnect detection system
+    console.log('Connection closing handled by disconnect detection system');
+  }
+
+  /**
+   * Start heartbeat monitoring for player
+   */
+  _startHeartbeat(playerId, roomId, timeoutMs = 30000) {
+    // Clear any existing heartbeat
+    this._stopHeartbeat(playerId);
+
+    const interval = setInterval(() => {
+      const room = gameStateManager.getRoom(roomId);
+      if (!room || room.isGameOver) {
+        this._stopHeartbeat(playerId);
+        return;
+      }
+
+      const player = gameStateManager.getPlayer(playerId);
+      if (!player || !player.ws || player.ws.readyState !== 1) {
+        console.log(`💓 Heartbeat timeout for player ${playerId}`);
+        this._handlePlayerDisconnect(playerId, roomId, 'timeout');
+        this._stopHeartbeat(playerId);
+        return;
+      }
+
+      // Update player activity
+      this.connectionManager.updatePlayerActivity(playerId);
+    }, timeoutMs);
+
+    // Store the interval for cleanup
+    if (!this.heartbeatIntervals) {
+      this.heartbeatIntervals = new Map();
+    }
+    this.heartbeatIntervals.set(playerId, interval);
+  }
+
+  /**
+   * Stop heartbeat monitoring for player
+   */
+  _stopHeartbeat(playerId) {
+    if (this.heartbeatIntervals && this.heartbeatIntervals.has(playerId)) {
+      clearInterval(this.heartbeatIntervals.get(playerId));
+      this.heartbeatIntervals.delete(playerId);
+    }
   }
 }
 

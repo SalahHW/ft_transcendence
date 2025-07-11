@@ -5,7 +5,8 @@ import { gameStateManager } from './GameStateManager.js';
 import {  WebSocketUtils } from '../utils/helpers.js';
 import { roomMatchmaker } from '../room/RoomMatchmaker.js';
 import { createWaitingMessage } from '../player/playerStatus.js';
-import { TournamentGameHandler } from '../tournament/tournamentGameHandler.js';
+import { GAME_CONFIG } from '../core/constants.js';
+import { PlayerStates } from '../server/disconnect/BaseDisconnectHandler.js';
 
 /**
  * Core game engine responsible for game logic orchestration
@@ -18,12 +19,12 @@ export class GameEngine {
   /**
    * Check if room is ready and start game if conditions are met
    */
-  checkRoomReady(roomId) {
+  async checkRoomReady(roomId) {
     const room = this.stateManager.getRoom(roomId);
     if (!room || room.ready) return;
 
     if (room.isReadyForGame()) {
-      this._startGame(room, roomId);
+      await this._startGame(room, roomId);
     } else {
       this._notifyWaitingStatus(room);
     }
@@ -55,6 +56,12 @@ export class GameEngine {
       return;
     }
 
+    // ⭐ CRITICAL FIX: Prevent ball recreation if it has been disposed
+    if (room.ballDisposed) {
+      console.warn(`Cannot send forced ballUpdate for room ${roomId}: ball has been disposed and cannot be recreated`);
+      return;
+    }
+
     if (!room.ball) {
       this._initializeBall(room);
     }
@@ -81,10 +88,10 @@ export class GameEngine {
     const json = JSON.stringify(message);
     const room = this.stateManager.getRoom(roomId) || { players: [] };
     
-    // Filter out disconnected players
-    room.players = room.players.filter(p => p.ws && p.ws.readyState === 1);
+    // Only filter for connected players when sending, do NOT mutate room.players
+    const connectedPlayers = room.players.filter(p => p.ws && p.ws.readyState === 1);
     
-    room.players.forEach(({ ws, id }) => {
+    connectedPlayers.forEach(({ ws, id }) => {
       if (WebSocketUtils.isWebSocketReady(ws)) {
         try {
           ws.send(json);
@@ -122,27 +129,39 @@ export class GameEngine {
    * End game and report results
    */
   async endGame(room, roomId) {
-    if (room.ball.player1.playerScore >= 11 || room.ball.player2.playerScore >= 11) {
+    // ⭐ CRITICAL FIX: Check if ball exists before accessing its properties
+    if (!room.ball) {
+      console.warn(`Cannot end game for room ${roomId}: ball has been disposed`);
+      return;
+    }
+    
+    if (room.ball.player1.playerScore >= GAME_CONFIG.WINNING_SCORE || room.ball.player2.playerScore >= GAME_CONFIG.WINNING_SCORE) {
       room.isGameOver = true;
       
       const matchData = this._createMatchData(room, roomId);
+      
+      // ⭐ CRITICAL FIX: Handle case where match data creation fails
+      if (!matchData) {
+        console.warn(`Cannot end game for room ${roomId}: failed to create match data`);
+        return;
+      }
+      
       this._logMatchCompletion(matchData);
       
-      // Report to external services (async, don't wait for completion)
-      reportMatchResultsToAPI(matchData).catch(err => {
-        console.error('Failed to report match results to external services:', err.message);
-      });
-      
-      // ⭐ TOURNAMENT LOGIC: Handle tournament game completion
-      const isTournamentGame = TournamentGameHandler.isTournamentRoom(room);
-      
-      if (isTournamentGame) {
-        console.log(`🏆 Tournament game ended in room ${roomId}, delegating to TournamentGameHandler`);
-        TournamentGameHandler.handleTournamentGameEnd(room, roomId, matchData, this.broadcastToRoom.bind(this));
-        // Tournament handler will send appropriate messages, don't send basic gameEnd
+      // Check if this is a tournament match and handle advancement
+      if (room.matchType === 'tournament') {
+        await this._handleTournamentMatchEnd(room, roomId, matchData);
       } else {
-        console.log(`🏆 Regular game ended in room ${roomId}, sending standard gameEnd message`);
-        // Enhanced client message for regular games
+        // ⭐ FIX: Dispose ball assets for 1v1 games to prevent memory leaks
+        await this._disposeBallAssets(room, roomId);
+        
+        // Report to external services (async, don't wait for completion)
+        reportMatchResultsToAPI(matchData).catch(err => {
+          console.error('Failed to report match results to external services:', err.message);
+        });
+        
+        // Send game end message to players
+        console.log(`🎮 Regular game ended in room ${roomId}, sending standard gameEnd message`);
         this.broadcastToRoom(roomId, {
           type: 'gameEnd',
           ...matchData
@@ -154,16 +173,19 @@ export class GameEngine {
   /**
    * Create or join a room for a player
    */
-  createOrJoinRoom(playerId, player, ws) {
+  async createOrJoinRoom(playerId, player, ws) {
     const result = roomMatchmaker.findOrCreateRoom(player);
-    this.checkRoomReady(result.roomId);
+    await this.checkRoomReady(result.roomId);
     return result.roomId;
   }
 
   // Private helper methods
-  _startGame(room, roomId) {
+  async _startGame(room, roomId) {
+    console.log(`🎮 Starting game for room ${roomId}`);
     room.setReady();
+    console.log(`🎮 Room ${roomId} set ready, gameStarted: ${room.gameStarted}`);
     
+    // Set player states to LAUNCH_ANIMATION when game starts
     room.players.forEach((p, i) => {
       const otherPlayer = room.players[1 - i];
       if (p.ws && p.ws.readyState === 1) {
@@ -176,19 +198,56 @@ export class GameEngine {
             opponentId: otherPlayer.id,
             playerName: p.username || 'Anonymous',
             opponentName: otherPlayer.username || 'Anonymous',
+            // ⭐ FIX: Include initial paddle positions to ensure synchronization
+            playerPositionZ: p.positionZ || 0,
+            opponentPositionZ: otherPlayer.positionZ || 0
           }));
-          console.log(`Sent init to player ${p.id} (${p.username}) in room ${roomId}`);
-        } catch (e) {
-          console.error(`Failed to send init to player ${p.id}:`, e);
+          console.log(`🎮 Sent game init to ${p.username}(${p.id}) in room ${roomId}`);
+        } catch (error) {
+          console.error(`❌ Error sending game init to player ${p.id}:`, error);
         }
       }
     });
 
-    // Initialize animation status
-    this.stateManager.initializeAnimationStatus(roomId);
+    // Initialize ball for the room
+    room.initializeBall();
+    console.log(`🎮 Ball initialized for room ${roomId}`);
+
+    // ⭐ FIX: Reset ball update flags to allow ball spawning after animation
+    room.ballUpdateSent = false;
+    room.ballUpdateTimeout = null;
     
-    // Retry ball update with shorter delays
-    this._attemptBallUpdate(roomId);
+    // Initialize animation status for the room
+    gameStateManager.initializeAnimationStatus(roomId);
+    console.log(`🎮 Animation status initialized for room ${roomId}`);
+
+    // Set player states to LAUNCH_ANIMATION using disconnect handler
+    console.log(`🎮 About to set player states to LAUNCH_ANIMATION for room ${roomId}`);
+    await this._setPlayerStatesToLaunchAnimation(room, roomId);
+    console.log(`🎮 Finished setting player states to LAUNCH_ANIMATION for room ${roomId}`);
+  }
+
+  /**
+   * Set player states to LAUNCH_ANIMATION using disconnect handler
+   */
+  async _setPlayerStatesToLaunchAnimation(room, roomId) {
+    console.log(`🎮 Setting player states to LAUNCH_ANIMATION for room ${roomId}`);
+    
+    try {
+      const { disconnectionDetector } = await import('../server/disconnect/DisconnectionDetector.js');
+      const matchType = room.matchType || '1v1';
+      const handler = disconnectionDetector.getHandler(matchType, roomId);
+      
+      // Set player states to LAUNCH_ANIMATION
+      room.players.forEach((player, index) => {
+        console.log(`🎮 Setting player ${player.id} (${player.username}) to LAUNCH_ANIMATION state`);
+        handler.setPlayerState(player.id, roomId, PlayerStates.LAUNCH_ANIMATION);
+      });
+      
+      console.log(`✅ Successfully set all players to LAUNCH_ANIMATION state in room ${roomId}`);
+    } catch (error) {
+      console.error(`❌ Error setting player states to LAUNCH_ANIMATION for room ${roomId}:`, error);
+    }
   }
 
   _notifyWaitingStatus(room) {
@@ -201,6 +260,12 @@ export class GameEngine {
   }
 
   _initializeBall(room) {
+    // ⭐ CRITICAL FIX: Prevent ball recreation if it has been disposed
+    if (room.ballDisposed) {
+      console.warn(`Cannot initialize ball for room ${room.id}: ball has been disposed and cannot be recreated`);
+      return;
+    }
+    
     console.error(`Ball not initialized for room, creating new`);
     room.ball = new Ball(
       { playerId: room.players[0].id, playerScore: 0, username: room.players[0].username || 'Player 1' },
@@ -222,6 +287,12 @@ export class GameEngine {
   }
 
   _ensureBallRespawnState(room) {
+    // ⭐ CRITICAL FIX: Prevent ball state changes if it has been disposed
+    if (room.ballDisposed) {
+      console.warn(`Cannot ensure ball respawn state for room ${room.id}: ball has been disposed`);
+      return;
+    }
+    
     if (!room.ballUpdateSent) {
       room.ball.position = new BABYLON.Vector3(0, -2, 0);
       room.ball.velocity = new BABYLON.Vector3(0, 0, 0);
@@ -250,53 +321,61 @@ export class GameEngine {
     };
   }
 
+  /**
+   * Handle tournament match end and advancement
+   */
+  async _handleTournamentMatchEnd(room, roomId, matchData) {
+    console.log(`🏆 Tournament match ended in room ${roomId}`);
+    
+    // Import tournament manager dynamically to avoid circular dependencies
+    const { tournamentManager } = await import('../tournament/TournamentManager.js');
+    
+    // Get the waiting room ID from the tournament room metadata
+    const waitingRoomId = room.metadata?.waitingRoomId;
+    if (!waitingRoomId) {
+      console.error(`🏆 No waiting room ID found for tournament room ${roomId}`);
+      return;
+    }
+    
+    // Handle tournament advancement based on room type
+    const roomType = room.metadata?.roomType;
+    if (roomType === 'semi_final_a' || roomType === 'semi_final_b') {
+      await tournamentManager.handleSemiFinalMatchEnd(waitingRoomId, roomId, matchData);
+    } else if (roomType === 'winner_final' || roomType === 'loser_final') {
+      await tournamentManager.handleFinalMatchEnd(waitingRoomId, roomId, matchData);
+    } else {
+      console.error(`🏆 Unknown tournament room type: ${roomType}`);
+    }
+  }
+
   _createMatchData(room, roomId) {
     const player1 = room.players[0];
     const player2 = room.players[1];
+    
+    // ⭐ CRITICAL FIX: Check if ball exists before accessing its properties
+    if (!room.ball) {
+      console.warn(`Cannot create match data for room ${roomId}: ball has been disposed`);
+      return null;
+    }
+    
     const score1 = room.ball.player1.playerScore;
     const score2 = room.ball.player2.playerScore;
     
-    const winner = score1 >= 11 ? player1 : player2;
-    const loser = score1 >= 11 ? player2 : player1;
-    const winnerScore = score1 >= 11 ? score1 : score2;
-    const loserScore = score1 >= 11 ? score2 : score1;
+    const winner = score1 >= GAME_CONFIG.WINNING_SCORE ? player1 : player2;
+    const loser = score1 >= GAME_CONFIG.WINNING_SCORE ? player2 : player1;
+    const winnerScore = score1 >= GAME_CONFIG.WINNING_SCORE ? score1 : score2;
+    const loserScore = score1 >= GAME_CONFIG.WINNING_SCORE ? score2 : score1;
     
     const matchEndTime = new Date().toISOString();
     const matchStartTime = room.startTime || new Date().toISOString();
-    
-    // ⭐ TOURNAMENT FIX: Determine match type based on room metadata and ID
-    let matchType = 'regular';
-    let finalMatchType = null; // Track if this is winners or losers final
-    
-    if (room.metadata?.isTournament === true) {
-      if (room.metadata?.tournamentType === 'semifinal') {
-        matchType = 'semi-final';
-      } else if (room.metadata?.tournamentType === 'final') {
-        matchType = 'final';
-        finalMatchType = room.metadata?.finalMatch; // 'winners' or 'losers'
-      } else if (roomId?.includes('_sf_')) {
-        matchType = 'semi-final';
-      } else if (roomId?.includes('_final_')) {
-        matchType = 'final';
-        // Try to determine final type from room ID
-        if (roomId.includes('_final_winners')) {
-          finalMatchType = 'winners';
-        } else if (roomId.includes('_final_losers')) {
-          finalMatchType = 'losers';
-        }
-      }
-    }
-    
-    console.log(`🏆 DEBUG: _createMatchData - roomId: ${roomId}, matchType: ${matchType}, finalMatchType: ${finalMatchType}`);
-    console.log(`🏆 DEBUG: Full room.metadata:`, room.metadata);
     
     return {
       roomId,
       matchStartTime,
       matchEndTime,
       matchDuration: new Date() - new Date(matchStartTime),
-      matchType, // ⭐ ADD MATCH TYPE
-      finalMatchType, // ⭐ ADD FINAL MATCH TYPE ('winners' or 'losers')
+      matchType: 'regular',
+      finalMatchType: null,
       winner: {
         id: winner.id,
         username: winner.username || 'Anonymous',
@@ -313,8 +392,8 @@ export class GameEngine {
         scoreHistory: room.scoreHistory || [],
         ballSpeed: room.ball.speed,
         lastHitBy: room.ball.wasHitByPlayer,
-        matchType, // ⭐ ADD MATCH TYPE IN GAME STATS TOO
-        finalMatchType // ⭐ ADD FINAL MATCH TYPE IN GAME STATS TOO
+        matchType: 'regular',
+        finalMatchType: null
       },
       serverTime: Date.now(),
     };
@@ -339,29 +418,21 @@ export class GameEngine {
     if (!room || room.ballUpdateSent || attempt > 5) return;
 
     console.log(`Attempting ball update for room ${roomId}, attempt ${attempt}`);
-    if (room.players.length === 2) {
-      // 🎬 Check if this is a tournament room - if so, add splash screen delay
-      const isTournamentRoom = room.metadata?.isTournament === true;
-      
-      if (isTournamentRoom) {
-        console.log(`🏆 Tournament room ${roomId} detected - adding splash screen delay before ball update`);
-        
-        // Add the same delay as in MessageRouter for tournament games
-        setTimeout(() => {
-          // Double-check that room still exists and is valid
-          const roomCheck = this.stateManager.getRoom(roomId);
-          if (roomCheck && !roomCheck.ballUpdateSent) {
-            console.log(`🏆 Sending ballUpdate for tournament room ${roomId} after splash screen delay`);
-            this.sendBallUpdateForced(roomId);
-          } else {
-            console.log(`🏆 Skipping ballUpdate for tournament room ${roomId} - room state changed or ball already sent`);
-          }
-        }, 3500); // 3000ms splash screen + 500ms buffer
-      } else {
-        // Regular 1v1 room - immediate ball update (will wait for animationComplete)
-        this.sendBallUpdateForced(roomId);
-      }
+    
+    // ⭐ FIX: Check if both players have completed animation before sending ball update
+    const animationStatus = gameStateManager.getAnimationStatusForRoom(roomId);
+    const animationCompleteCount = animationStatus.length;
+    
+    if (room.players.length === 2 && animationCompleteCount >= 2) {
+      // Both players have completed animation - send ball update
+      console.log(`🎮 Both players completed animation in room ${roomId}, sending ball update`);
+      this.sendBallUpdateForced(roomId);
+    } else if (room.players.length === 2 && animationCompleteCount < 2) {
+      // Wait for animation completion
+      console.log(`🎮 Waiting for animation completion in room ${roomId} (${animationCompleteCount}/2 players ready)`);
+      setTimeout(() => this._attemptBallUpdate(roomId, attempt + 1), 100 * attempt);
     } else {
+      // Not enough players or other conditions
       setTimeout(() => this._attemptBallUpdate(roomId, attempt + 1), 100 * attempt);
     }
   }
@@ -369,6 +440,68 @@ export class GameEngine {
   _generateRoomId() {
     // Simple room ID generation - could be enhanced
     return Math.random().toString(36).substring(2, 15);
+  }
+
+  /**
+   * ⭐ FIX: Dispose ball assets to prevent memory leaks in 1v1 games
+   */
+  async _disposeBallAssets(room, roomId) {
+    console.log(`🧹 1v1: Disposing ball assets for room ${roomId}`);
+    
+    if (room.ball) {
+      // Stop ball movement by setting velocity to zero
+      if (room.ball.velocity) {
+        room.ball.velocity.set(0, 0, 0);
+        console.log(`🧹 1v1: Ball velocity set to zero for room ${roomId}`);
+      }
+      if (room.ball.previousVelocity) {
+        room.ball.previousVelocity.set(0, 0, 0);
+      }
+      
+      // Reset ball state to prevent respawning
+      room.ball.isRespawning = false;
+      room.ball.respawnTime = 0;
+      room.ball.hasValidPosition = false;
+      
+      // Clear ball references to prevent memory leaks
+      room.ball.gameEngine = null;
+      room.ball.roomId = null;
+      
+      // ⭐ CRITICAL: Nullify the ball object to stop all movement
+      room.ball = null;
+      
+      console.log(`🧹 1v1: Ball object nullified for room ${roomId}`);
+    }
+    
+    // ⭐ FIX: Set flag to prevent ball recreation
+    room.ballDisposed = true;
+    console.log(`🧹 1v1: Ball disposal flag set for room ${roomId}`);
+    
+    // ⭐ FIX: Send final sync message with ballState: null to explicitly stop client processing
+    try {
+      this.broadcastToRoom(roomId, {
+        type: 'sync',
+        playerPositions: {},
+        ballState: null,
+        serverTime: Date.now(),
+        roomId: roomId,
+        isDelta: true,
+        ballDisposed: true // ⭐ NEW: Flag to indicate ball has been disposed
+      });
+      console.log(`🧹 1v1: Sent final sync message with ballState: null for room ${roomId}`);
+    } catch (error) {
+      console.error(`🧹 1v1: Error sending final sync message for room ${roomId}:`, error);
+    }
+    
+    // Clear ball update flags
+    room.ballUpdateSent = false;
+    if (room.ballUpdateTimeout) {
+      clearTimeout(room.ballUpdateTimeout);
+      room.ballUpdateTimeout = null;
+      console.log(`🧹 1v1: Ball update timeout cleared for room ${roomId}`);
+    }
+    
+    console.log(`🧹 1v1: Ball assets disposal completed for room ${roomId}`);
   }
 }
 
