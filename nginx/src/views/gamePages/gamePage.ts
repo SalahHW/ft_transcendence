@@ -84,7 +84,9 @@ export default class GamePage {
 
 		// Handle window resize for canvas - store reference for cleanup
 		this._resizeHandler = this._handleResize.bind(this);
-		window.addEventListener('resize', this._resizeHandler);
+		if (this._resizeHandler) {
+			window.addEventListener('resize', this._resizeHandler);
+		}
 	}
 
 	private _leaveGame(): void {

@@ -571,75 +571,8 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
         updateScoresUIVersus(0, 0, player1Name, player2Name);
         updatePlayerNamesVersus(playerName || 'Player', opponentName || 'Opponent');
         
-        // Set up keyboard controls if not already set
-        if (!(window as any).gameControlsInitialized) {
-            const keydownHandler = (event: KeyboardEvent) => {
-                if (isGameOver) return;
-                
-                const shouldInvert = cameraManager.shouldInvertControls();
-                
-                if (event.key === 'ArrowLeft') {
-                    const direction = shouldInvert ? 'down' : 'up';
-                    
-                    if (direction === 'up' && !isUpPressed) {
-                        isUpPressed = true;
-                        clientConnection!.send({ type: 'keyDown', direction: 'up' });
-                    } else if (direction === 'down' && !isDownPressed) {
-                        isDownPressed = true;
-                        clientConnection!.send({ type: 'keyDown', direction: 'down' });
-                    }
-                } else if (event.key === 'ArrowRight') {
-                    const direction = shouldInvert ? 'up' : 'down';
-                    
-                    if (direction === 'up' && !isUpPressed) {
-                        isUpPressed = true;
-                        clientConnection!.send({ type: 'keyDown', direction: 'up' });
-                    } else if (direction === 'down' && !isDownPressed) {
-                        isDownPressed = true;
-                        clientConnection!.send({ type: 'keyDown', direction: 'down' });
-                    }
-                } else if (event.key.toLowerCase() === 'a') {
-                    if (clientConnection) {
-                        clientConnection.activatePowerup();
-                    }
-                }
-            };
-
-            const keyupHandler = (event: KeyboardEvent) => {
-                if (isGameOver) return;
-                
-                const shouldInvert = cameraManager.shouldInvertControls();
-                
-                if (event.key === 'ArrowLeft') {
-                    const direction = shouldInvert ? 'down' : 'up';
-                    
-                    if (direction === 'up' && isUpPressed) {
-                        isUpPressed = false;
-                        clientConnection!.send({ type: 'keyUp', direction: 'up' });
-                    } else if (direction === 'down' && isDownPressed) {
-                        isDownPressed = false;
-                        clientConnection!.send({ type: 'keyUp', direction: 'down' });
-                    }
-                } else if (event.key === 'ArrowRight') {
-                    const direction = shouldInvert ? 'up' : 'down';
-                    
-                    if (direction === 'up' && isUpPressed) {
-                        isUpPressed = false;
-                        clientConnection!.send({ type: 'keyUp', direction: 'up' });
-                    } else if (direction === 'down' && isDownPressed) {
-                        isDownPressed = false;
-                        clientConnection!.send({ type: 'keyUp', direction: 'down' });
-                    }
-                }
-            };
-
-            document.addEventListener('keydown', keydownHandler);
-            document.addEventListener('keyup', keyupHandler);
-            
-            (window as any).gameKeydownHandler = keydownHandler;
-            (window as any).gameKeyupHandler = keyupHandler;
-            (window as any).gameControlsInitialized = true;
-        }
+        // ⭐ FIX: Set up keyboard controls for 1v1 mode
+        setupKeyboardControls();
         
         // Start the game loop after match animation
         if (!isGameLoopRunning) {
@@ -659,22 +592,12 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
 
                 cameraManager.switchToFPSAfterAnimation();
                 
-                // ⭐ FIX: Send animationComplete FIRST, then request ball respawn (same as tournament)
+                // ⭐ FIX: Only send animationComplete - server will handle ball spawning when both players are ready
                 if (clientConnection) {
                     clientConnection.send({
                         type: 'animationComplete',
                         playerId: localPlayerId
                     });
-                    
-                    // Wait a moment for server to process animation complete, then request ball respawn
-                    setTimeout(() => {
-                        if (clientConnection) {
-                            clientConnection.send({
-                                type: 'requestBallRespawn',
-                                isInitial: true
-                            });
-                        }
-                    }, 100); // Small delay to ensure proper order
                 }
                 
                 setupGameLoop();
@@ -691,22 +614,12 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
                     ball.ballBody.isVisible = true;
                 }
                 
-                // ⭐ FIX: Send animationComplete FIRST, then request ball respawn (same as tournament)
+                // ⭐ FIX: Only send animationComplete - server will handle ball spawning when both players are ready
                 if (clientConnection) {
                     clientConnection.send({
                         type: 'animationComplete',
                         playerId: localPlayerId
                     });
-                    
-                    // Wait a moment for server to process animation complete, then request ball respawn
-                    setTimeout(() => {
-                        if (clientConnection) {
-                            clientConnection.send({
-                                type: 'requestBallRespawn',
-                                isInitial: true
-                            });
-                        }
-                    }, 100); // Small delay to ensure proper order
                 }
                 setupGameLoop();
             }
@@ -844,6 +757,112 @@ export function leaveGame(): void {
     isDownPressed = false;
 }
 
+// Function to setup keyboard controls for 1v1 mode
+function setupKeyboardControls(): void {
+    // ⭐ FIX: Prevent multiple keyboard handler initialization
+    if ((window as any).gameControlsInitialized) {
+        console.log('⌨️ 1v1: Keyboard controls already initialized, skipping');
+        return;
+    }
+
+    // ⭐ FIX: Create keyboard handlers for 1v1 mode
+    const keydownHandler = (event: KeyboardEvent) => {
+        // ⭐ CRITICAL: Only process input when game is actually playing
+        if (isGameOver || !clientConnection) {
+            console.log('⌨️ 1v1: Input blocked: game not ready for input', {
+                isGameOver,
+                hasConnection: !!clientConnection
+            });
+            return;
+        }
+        
+        // ⭐ NEW: Add debug logging for successful input
+        console.log('⌨️ 1v1: Processing keydown:', event.key, {
+            isGameOver,
+            hasConnection: !!clientConnection
+        });
+        
+        // 🎮 FIX: Use perspective-aware control mapping for FPS mode
+        const shouldInvert = cameraManager.shouldInvertControls();
+        
+        if (event.key === 'ArrowLeft') {
+            const direction = shouldInvert ? 'down' : 'up';
+            
+            if (direction === 'up' && !isUpPressed) {
+                isUpPressed = true;
+                clientConnection.send({ type: 'keyDown', direction: 'up' });
+                console.log('⌨️ 1v1: Sent keyDown up');
+            } else if (direction === 'down' && !isDownPressed) {
+                isDownPressed = true;
+                clientConnection.send({ type: 'keyDown', direction: 'down' });
+                console.log('⌨️ 1v1: Sent keyDown down');
+            }
+        } else if (event.key === 'ArrowRight') {
+            const direction = shouldInvert ? 'up' : 'down';
+            
+            if (direction === 'up' && !isUpPressed) {
+                isUpPressed = true;
+                clientConnection.send({ type: 'keyDown', direction: 'up' });
+                console.log('⌨️ 1v1: Sent keyDown up');
+            } else if (direction === 'down' && !isDownPressed) {
+                isDownPressed = true;
+                clientConnection.send({ type: 'keyDown', direction: 'down' });
+                console.log('⌨️ 1v1: Sent keyDown down');
+            }
+        } else if (event.key === 'A' || event.key === 'a') {
+            // ⭐ POWERUP: Activate power-up when A key is pressed
+            console.log('⌨️ 1v1: Power-up activation requested');
+            clientConnection.activatePowerup();
+        }
+    };
+
+    const keyupHandler = (event: KeyboardEvent) => {
+        // ⭐ CRITICAL: Only process input when game is actually playing
+        if (isGameOver || !clientConnection) {
+            return;
+        }
+        
+        const shouldInvert = cameraManager.shouldInvertControls();
+        
+        if (event.key === 'ArrowLeft') {
+            const direction = shouldInvert ? 'down' : 'up';
+            
+            if (direction === 'up' && isUpPressed) {
+                isUpPressed = false;
+                clientConnection.send({ type: 'keyUp', direction: 'up' });
+            } else if (direction === 'down' && isDownPressed) {
+                isDownPressed = false;
+                clientConnection.send({ type: 'keyUp', direction: 'down' });
+            }
+        } else if (event.key === 'ArrowRight') {
+            const direction = shouldInvert ? 'up' : 'down';
+            
+            if (direction === 'up' && isUpPressed) {
+                isUpPressed = false;
+                clientConnection.send({ type: 'keyUp', direction: 'up' });
+            } else if (direction === 'down' && isDownPressed) {
+                isDownPressed = false;
+                clientConnection.send({ type: 'keyUp', direction: 'down' });
+            }
+        }
+    };
+
+    // ⭐ FIX: Store handlers globally for proper cleanup
+    (window as any).gameKeydownHandler = keydownHandler;
+    (window as any).gameKeyupHandler = keyupHandler;
+    (window as any).gameControlsInitialized = true;
+
+    document.addEventListener('keydown', keydownHandler);
+    document.addEventListener('keyup', keyupHandler);
+    
+    console.log('⌨️ 1v1: Keyboard controls initialized');
+    
+    // ⭐ NEW: Test keyboard event listener attachment
+    console.log('⌨️ 1v1: Testing keyboard event listener attachment...');
+    const testEvent = new KeyboardEvent('keydown', { key: 'ArrowUp' });
+    document.dispatchEvent(testEvent);
+}
+
 // Function to setup game loop
 function setupGameLoop(): void {
     if (isGameLoopRunning) {
@@ -876,31 +895,15 @@ function setupGameLoop(): void {
         // Handle player movement
         if (player1 && player2 && localPlayerId) {
             const localPlayer = player1.getPlayerId() === localPlayerId ? player1 : player2;
-            let paddleMoved = false;
 
+            // ⭐ FIX: Remove broken paddle position updates - use keyDown/keyUp system only
+            // This prevents network spam and ensures consistent behavior across game modes
             if (isUpPressed && !isDownPressed) {
                 localPlayer.move(-1, deltaTime);
-                paddleMoved = true;
             } else if (isDownPressed && !isUpPressed) {
                 localPlayer.move(1, deltaTime);
-                paddleMoved = true;
             }
-
-            // 🚨 PROBLEM: 1v1 MODE - PADDLE UPDATE THROTTLING IS BROKEN
-            // The throttling condition is commented out, causing unlimited updates!
-            // This makes 1v1 mode send paddle updates every frame (60+ FPS)
-            // while tournament mode is properly throttled to 60 FPS
-            if (paddleMoved &&  now - lastPaddleUpdate >= PADDLE_UPDATE_INTERVAL &&  clientConnection) {
-                const paddlePos = localPlayer.getPaddleBodyPos;
-                if (paddlePos) {
-                    clientConnection.send({
-                        type: 'paddlePosition',
-                        playerId: localPlayerId,
-                        positionZ: paddlePos.z,
-                    });
-                    lastPaddleUpdate = now;
-                }
-            }
+            // ✅ REMOVED: No more paddlePosition messages - keyboard controls handle input
         }
 
         // Update camera system

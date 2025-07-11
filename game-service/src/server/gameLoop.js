@@ -50,38 +50,26 @@ export function startGameLoop() {
           return;
         }
 
-        // ⭐ CRITICAL FIX: Check if room is in animation phase and skip ball updates
         const animationStatus = gameStateManager.getAnimationStatusForRoom(roomId);
         const isInAnimationPhase = animationStatus.length < 2; // Less than 2 players completed animation
         
         if (isInAnimationPhase) {
-          // Skip ball processing during animation phase to prevent state corruption
-          // Only process player movements during animation
-          const changedPlayerPositions = {};
-          room.players.forEach((player, index) => {
-            if (player.ws && player.ws.readyState === 1) {
-              // Process player input during animation (for visual feedback)
-              if (player.inputState) {
-                const moveDirection = player.inputState.up ? -1 : player.inputState.down ? 1 : 0;
-                if (moveDirection !== 0) {
-                  const newPosition = player.positionZ + (moveDirection * GAME_CONFIG.PADDLE_SPEED * deltaTime);
-                  player.positionZ = Math.max(-GAME_CONFIG.PADDLE_BOUNDARY, Math.min(GAME_CONFIG.PADDLE_BOUNDARY, newPosition));
-                  changedPlayerPositions[player.id] = player.positionZ;
-                }
-              }
-            }
-          });
+          // This prevents players from controlling paddles during splash screens and animations
+          console.log(`🎬 Room ${roomId}: In animation phase, blocking all player input`);
           
-          // Skip ball updates during animation phase
+          // Skip all player movement processing during animation
           return;
         }
 
+
         room.players.forEach((player, index) => {
-          // ✅ SERVER-SIDE: IDENTICAL FOR ALL ROOM TYPES (1v1, semi-finals, finals)
           // All game modes use the same paddle speed calculation and deltaTime
           const speed = GAME_CONFIG.PADDLE_SPEED;
           const halfD = GAME_CONFIG.PADDLE_BOUNDARY;
           let moved = false;
+          
+          // ⭐ FIX: Use consistent input state management
+          // Only process input when game is actually playing (after animationComplete)
           if (player.isUpPressed && !player.isDownPressed) {
             const newZ = player.positionZ - speed * deltaTime;
             player.positionZ = Math.max(-halfD, newZ);
@@ -99,7 +87,6 @@ export function startGameLoop() {
             playerData.update(deltaTime, ballRebounds);
           }
 
-          // ✅ SERVER-SIDE: BROADCAST THROTTLING IS IDENTICAL FOR ALL ROOM TYPES
           // The server sends paddle updates at the same rate regardless of room type
           if ((player.isUpPressed || player.isDownPressed) && now - lastBroadcast >= 1000 / BROADCAST_FPS) {
             gameEngine.broadcastToRoom(roomId, {
@@ -351,6 +338,8 @@ export function startGameLoop() {
               ballState: ballState ? {...ballState} : null
             });
           }
+          
+          // ⭐ REMOVED: No longer need to send gameStarted notification since client enables input immediately
           
           lastSync = now;
         }
