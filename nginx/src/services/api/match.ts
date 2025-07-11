@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:41:07 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/03 13:16:22 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/11 16:55:05 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,7 +33,7 @@ export interface Match {
  * Toutes les méthodes correspondent aux routes exposées par le backend Fastify du blockchain-service.
  */
 export default class MatchServiceAPI {
-	private _baseUrl: string = "https://elsalmajori.games:8444"; // Port du blockchain-service
+	private _baseUrl: string = "https://elsalmatjori.com:16443"; // Port du blockchain-service
 
 	/**
 	 * Get all matches played by a player (by name)

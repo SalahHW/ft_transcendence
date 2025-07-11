@@ -12,7 +12,7 @@ export interface Friendship {
  * Friends service API.
  */
 export default class FriendsServiceAPI {
-	private _host: string = "https://elsalmajori.games:8443";
+	private _host: string = "https://elsalmatjori.com:16443";
 	private _friendsBaseUrl: string = `${this._host}/friends`;
 
 	/**
