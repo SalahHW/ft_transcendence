@@ -74,6 +74,14 @@ export async function registerWithWallet(request, reply) {
       maxAge: 300,
     });
 
+    reply.setCookie("refresh_token", token, {
+      path: "/",
+      httpOnly: true,
+      sameSite: "Strict",
+      secure: true,
+      maxAge: 604800, // 7 days
+    });
+
     return reply.code(201).send({ id: user.id, username });
   } catch (err) {
     if (user?.id) {
@@ -135,6 +143,14 @@ export async function loginWithWallet(request, reply) {
       sameSite: "Strict",
       secure: true,
       maxAge: 300,
+    });
+
+    reply.setCookie("refresh_token", token, {
+      path: "/",
+      httpOnly: true,
+      sameSite: "Strict",
+      secure: true,
+      maxAge: 604800, // 7 days
     });
 
     return reply.code(200).send({ id: user.id, username: user.username });

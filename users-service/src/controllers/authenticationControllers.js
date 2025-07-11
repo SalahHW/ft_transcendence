@@ -31,14 +31,23 @@ export const loginUser = async (request, reply) => {
       aud: "users-service",
     });
 
+    reply.setCookie("token", token, {
+      httpOnly: true,
+      // secure: process.env.NODE_ENV === "production",
+      secure: true, // TODO: Update .env to set production mode
+      sameSite: "strict",
+      path: "/",
+      maxAge: 300,
+    });
+
     reply
-      .setCookie("token", token, {
+      .setCookie("refresh_token", token, {
         httpOnly: true,
         // secure: process.env.NODE_ENV === "production",
         secure: true, // TODO: Update .env to set production mode
         sameSite: "strict",
         path: "/",
-        maxAge: 300,
+        maxAge: 604800, // 7 days
       })
       .code(200)
       .send({ message: "Login successful" });
