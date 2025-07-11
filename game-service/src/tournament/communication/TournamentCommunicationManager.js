@@ -83,11 +83,18 @@ export class TournamentCommunicationManager {
       }
     });
     
-    // ⭐ FIX: Also close any remaining WebSocket connections that might be lingering
-    // This ensures all connections are properly closed even if players are not in rooms
-    console.log(`🏆 Tournament completion cleanup: Ensuring all WebSocket connections are closed`);
+    // ⭐ CRITICAL FIX: Clean up stale waiting room data immediately after tournament completion
+    // This prevents issues where players can't join new tournaments due to stale data
+    setTimeout(async () => {
+      try {
+        await this.tournamentManager.cleanupManager.cleanupStaleWaitingRoomData();
+        console.log('🏆 Stale waiting room data cleaned up immediately after tournament completion');
+      } catch (error) {
+        console.error('🏆 Error cleaning up stale waiting room data immediately after tournament completion:', error);
+      }
+    }, 100); // Small delay to ensure completion messages are sent first
     
-    // Force cleanup of any remaining connections
+    // ⭐ FIX: Also close any remaining WebSocket connections that might be lingering
     setTimeout(() => {
       this._forceCleanupRemainingConnections(waitingRoomId, finalStandings);
     }, 5000); // 5 second delay to allow normal completion messages to be sent

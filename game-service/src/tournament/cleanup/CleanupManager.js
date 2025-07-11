@@ -6,6 +6,7 @@
 import { TournamentConfig } from '../constants.js';
 import { transferLockManager } from '../playerManagement/TournamentTransferLockManager.js';
 import { assetDisposalManager } from '../assetManagement/TournamentAssetDisposalManager.js';
+import { gameStateManager } from '../../game/GameStateManager.js';
 
 export class TournamentCleanupManager {
   constructor(waitingRooms, disconnectHandler) {
@@ -34,6 +35,7 @@ export class TournamentCleanupManager {
         await this.cleanupInactivePlayers();
         // ⭐ NEW: Also check for stuck tournaments
         await this.forceCleanupStuckTournaments();
+        await this.cleanupStaleWaitingRoomData();
       } catch (error) {
         console.error('🏆 Error during tournament inactivity cleanup:', error);
       }
@@ -153,6 +155,36 @@ export class TournamentCleanupManager {
     
     if (stuckTournaments.length > 0) {
       console.log(`🏆 Force cleaned up ${stuckTournaments.length} stuck tournaments`);
+    }
+  }
+
+  /**
+   * ⭐ NEW: Clean up stale waiting room data
+   * This removes waiting room data where the actual room no longer exists
+   * This can happen after tournament completion when rooms are cleaned up but data remains
+   */
+  async cleanupStaleWaitingRoomData() {
+    console.log(`🏆 Checking for stale waiting room data...`);
+    
+    const staleWaitingRooms = [];
+    
+    for (const [waitingRoomId, waitingRoomData] of this.waitingRooms) {
+      // Check if the actual room still exists in game state
+      const room = gameStateManager.getRoom(waitingRoomId);
+      if (!room) {
+        console.log(`🏆 Found stale waiting room data for ${waitingRoomId} (room no longer exists)`);
+        staleWaitingRooms.push(waitingRoomId);
+      }
+    }
+    
+    // Clean up stale waiting room data
+    for (const waitingRoomId of staleWaitingRooms) {
+      console.log(`🏆 Removing stale waiting room data for ${waitingRoomId}`);
+      this.waitingRooms.delete(waitingRoomId);
+    }
+    
+    if (staleWaitingRooms.length > 0) {
+      console.log(`🏆 Cleaned up ${staleWaitingRooms.length} stale waiting room data entries`);
     }
   }
 } 

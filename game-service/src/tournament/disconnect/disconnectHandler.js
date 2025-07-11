@@ -270,6 +270,10 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     const waitingRoomId = room.metadata?.waitingRoomId;
     let numberOfDisconnectedPlayers = 0;
     let numberOfConnectedPlayers = 0;
+    let winnerFinalRoom = null;
+    let loserFinalRoom = null;
+    let winnerFinalExists = false;
+    let loserFinalExists = false;
     
     if (waitingRoomId) {
       try {
@@ -278,6 +282,19 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
         if (waitingRoomData) {
           numberOfDisconnectedPlayers = waitingRoomData.disconnectedPlayers.length;
           numberOfConnectedPlayers = waitingRoomData.players.filter(p => p.connected).length;
+          
+          // Get winner final room from tournament data
+          const winnerFinal = waitingRoomData.tournamentRooms.winnerFinal;
+          if (winnerFinal) {
+            winnerFinalRoom = gameStateManager.getRoom(winnerFinal.id);
+            winnerFinalExists = !!winnerFinalRoom;
+          }
+          // Get loser final room from tournament data
+          const loserFinal = waitingRoomData.tournamentRooms.loserFinal;
+          if (loserFinal) {
+            loserFinalRoom = gameStateManager.getRoom(loserFinal.id);
+            loserFinalExists = !!loserFinalRoom;
+          }
         }
       } catch (error) {
         console.error(`🏆 Error getting tournament player counts:`, error);
@@ -287,16 +304,22 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     const matchEndTime = TimeUtils.getCurrentTimestamp();
     const isSinglePlayerForfeitSemi = Boolean(numberOfDisconnectedPlayers === 3 && numberOfConnectedPlayers === 1);
     if (isSinglePlayerForfeitSemi) {
-      room.metadata.tournamentPhase = 'winner_final';
-      room.metadata.roomType = 'winner_final';
+      if (!winnerFinalRoom && loserFinalExists) {
+        room.metadata.tournamentPhase = 'loser_final';
+        room.metadata.roomType = 'loser_final';
+      }
+      else {
+        room.metadata.tournamentPhase = 'winner_final';
+        room.metadata.roomType = 'winner_final';
+      }
     }
     const matchStartTime = room.startTime || matchEndTime;
     
     return {
       roomId,
       matchType: this.matchType,
-      tournamentPhase: isSinglePlayerForfeitSemi ? 'winner_final' : room.metadata?.tournamentPhase,
-      tournamentRoomType: isSinglePlayerForfeitSemi ? 'winner_final' : room.metadata?.tournamentPhase,
+      tournamentPhase: (isSinglePlayerForfeitSemi  ? 'winner_final' : room.metadata?.tournamentPhase),
+      tournamentRoomType: (isSinglePlayerForfeitSemi ? 'winner_final' : room.metadata?.tournamentPhase),
       waitingRoomId: room.metadata?.waitingRoomId,
       matchStartTime,
       matchEndTime,

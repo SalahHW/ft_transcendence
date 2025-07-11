@@ -20,6 +20,7 @@ import { showSplashScreen } from '../ui/splashScreen.js';
 import { cameraManager } from '../camera/cameraManager.js';
 import { updatePlayerNamesVersus, updateScoresUIVersus } from '../playerUi/playerUi.js';
 import { frontendAssetDisposalManager } from '../assetManagement/FrontendAssetDisposalManager.js';
+import { soundManager } from '../audio/soundManager.js';
 import * as BABYLON from '@babylonjs/core';
 
 export class GameClient {
@@ -270,6 +271,11 @@ export class GameClient {
             cameraManager.initialize(this.map, this.player1, this.player2, this.localPlayerId);
         }
 
+        // Initialize sound manager for tournament matches
+        soundManager.preloadSounds().catch(error => {
+            console.warn('Failed to initialize sound manager for tournament:', error);
+        });
+
         // ⭐ FIX: Update player names in UI using proper styled functions
         updateScoresUIVersus(0, 0, matchData.playerName || 'Player', matchData.opponentName || 'Opponent');
         updatePlayerNamesVersus(matchData.playerName || 'Player', matchData.opponentName || 'Opponent');
@@ -447,6 +453,7 @@ export class GameClient {
         this.clientConnection.onBallUpdate(this.handleBallUpdate.bind(this));
         this.clientConnection.onSync(this.handleSync.bind(this));
         this.clientConnection.onScoreUpdate(this.handleScoreUpdate.bind(this));
+        this.clientConnection.onSoundEvent(this.handleSoundEvent.bind(this));
         this.clientConnection.onGameEnd(async (gameEndData: any) => {
             await this.handleGameEnd(gameEndData);
         });
@@ -549,7 +556,7 @@ export class GameClient {
         this.isIntroAnimationRunning = true;
         
         // Update UI with player names and scores
-        this.updateScores(0, 0);
+        updateScoresUIVersus(0, 0, playerName || 'Player', opponentName || 'Opponent');
 
         // ⭐ FIX: Create paddles with server-provided initial positions
         try {
@@ -580,7 +587,7 @@ export class GameClient {
         }
 
         // ⭐ TOURNAMENT FIX: Reset scores display when game initializes
-        this.updateScores(0, 0);
+        updateScoresUIVersus(0, 0, playerName || 'Player', opponentName || 'Opponent');
 
         // Create fresh ball (important for tournament final matches)
         if (!this.ball && this.player1 && this.player2) {
@@ -603,6 +610,11 @@ export class GameClient {
             ball: null,
             player1: this.player1,
             player2: this.player2
+        });
+
+        // Initialize sound manager for 1v1 matches
+        soundManager.preloadSounds().catch(error => {
+            console.warn('Failed to initialize sound manager for 1v1:', error);
         });
 
         // Start the game loop after match animation
@@ -757,21 +769,76 @@ export class GameClient {
     }
 
     private handleScoreUpdate(msg: any): void {
-        if (!this.player1 || !this.player2 || !this.map || !msg.scores) return;
+        if (!this.player1 || !this.player2) return;
         
-        const player1Score = msg.scores[this.player1.getPlayerId()] || 0;
-        const player2Score = msg.scores[this.player2.getPlayerId()] || 0;
+        // Update scores using proper UI functions with player names
+        const player1Score = msg.player1Score || 0;
+        const player2Score = msg.player2Score || 0;
         
-        this.player1.playerScore = player1Score;
-        this.player2.playerScore = player2Score;
+        // Use the proper UI function that preserves player names and colors
+        updateScoresUIVersus(player1Score, player2Score, this.player1.playerName, this.player2.playerName);
         
-        // ⭐ FIX: Update UI scores with proper player names
-        const currentPlayer = this.localPlayerId === this.player1.getPlayerId() ? this.player1 : this.player2;
-        const opponent = this.localPlayerId === this.player1.getPlayerId() ? this.player2 : this.player1;
-        const currentPlayerScore = msg.scores[currentPlayer.getPlayerId()] || 0;
-        const opponentScore = msg.scores[opponent.getPlayerId()] || 0;
+        // Add camera shake for losing player
+        const previousScores = (this as any).previousScores || {};
+        const currentScores = {
+            [this.player1.getPlayerId()]: player1Score,
+            [this.player2.getPlayerId()]: player2Score
+        };
         
-        updateScoresUIVersus(currentPlayerScore, opponentScore, currentPlayer.playerName, opponent.playerName);
+        // Check if any player lost a point
+        Object.entries(currentScores).forEach(([playerId, currentScore]) => {
+            const previousScore = previousScores[playerId] || 0;
+            if (currentScore > previousScore) {
+                // Player scored - no camera shake
+            } else if (currentScore < previousScore) {
+                // Player lost a point - add camera shake
+                const losingPlayer = playerId === this.player1.getPlayerId() ? this.player1 : this.player2;
+                if (losingPlayer && playerId === this.localPlayerId) {
+                    cameraManager.triggerCameraShake().catch(error => {
+                        console.warn('Failed to trigger camera shake:', error);
+                    });
+                }
+            }
+        });
+        
+        // Store current scores for next comparison
+        (this as any).previousScores = currentScores;
+    }
+
+    // Handle sound events for tournament matches
+    private handleSoundEvent(msg: any): void {
+        const { sound, ballSpeed, rebounds } = msg;
+        let volumeMultiplier = 0;
+        
+        switch (sound) {
+            case 'paddleHit':
+                // Vary volume based on ball speed for more immersion
+                volumeMultiplier = Math.min(1, (ballSpeed || 25) / 50);
+                soundManager.playSound('paddleHit', volumeMultiplier);
+                break;
+                
+            case 'powerUpHit':
+                soundManager.playSound('powerUpHit', 1.0);
+                break;
+                
+            case 'defensivePowerUp':
+                soundManager.playSound('defensivePowerUp', 1.0);
+                break;
+                
+            case 'wallHit':
+                volumeMultiplier = Math.min(1, (ballSpeed || 25) / 50);
+                soundManager.playSound('wallHit', volumeMultiplier);
+                break;
+                
+            case 'lostPoint':
+                soundManager.playSound('lostPoint', 1.0);
+                break;
+            case 'playerScored':
+                soundManager.playSound('playerScored', 1.0);
+                break;
+            default:
+                console.warn('Unknown sound event:', sound);
+        }
     }
 
     private async handleGameEnd(gameEndData: any): Promise<void> {
@@ -971,17 +1038,7 @@ export class GameClient {
         }
     }
 
-    private updateScores(player1Score: number, player2Score: number): void {
-        const player1Element = document.getElementById('player1Score');
-        const player2Element = document.getElementById('player2Score');
-        
-        if (player1Element) {
-            player1Element.textContent = `Player 1: ${player1Score}`;
-        }
-        if (player2Element) {
-            player2Element.textContent = `Player 2: ${player2Score}`;
-        }
-    }
+
 
     public async cleanup(): Promise<void> {
         console.log('🧹 Starting game client cleanup...');
