@@ -27,6 +27,7 @@
     "@types/babylonjs": "^2.3.31",
     "@types/ws": "^8.18.1",
     "rollup": "^4.21.0",
+    "rollup-plugin-copy": "^3.5.0",
     "tslib": "^2.6.2"
   }
 }
