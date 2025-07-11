@@ -54,8 +54,8 @@ if (isDev) {
   if (isDev) console.log(`Development mode: using HTTP server`);
 } else {
   const serverOptions = {
-    key: fs.readFileSync("./ssl/key.pem"),
-    cert: fs.readFileSync("./ssl/cert.pem"),
+    key: fs.readFileSync("./ssl/privkey.pem"),
+    cert: fs.readFileSync("./ssl/fullchain.pem"),
   };
   server = https.createServer(serverOptions);
 }
