@@ -12,10 +12,23 @@
 
 import Wheel from "./components/Wheel.js";
 import Router from "./router/Router.js";
+import AuthService from "./auth/AuthNanoService.js";
 
-document.addEventListener("DOMContentLoaded", () => {
-	const router = Router.getInstance();
-	router.init();
+document.addEventListener("DOMContentLoaded", async () => {
+  const router = Router.getInstance();
+  router.init();
 
-	new Wheel("wheel-container");
+  try {
+    const auth = AuthService.getInstance();
+    const loggedIn = await auth.isLoggedIn();
+    if (loggedIn) {
+      console.info("[INIT] Active session detected. Refresh loop started.");
+    } else {
+      console.info("[INIT] No active session found.");
+    }
+  } catch (err) {
+    console.warn("[INIT] Error during session initialization:", err);
+  }
+
+  new Wheel("wheel-container");
 });
