@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/22 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/11 17:27:16 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/11 18:57:00 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,7 +49,6 @@ export default class ProfileView extends ModalView {
 	}
 
 	public updateProfile(): void {
-		console.log('Updating profile...');
 		const profileContainer = this._contentContainer.querySelector('#profile');
 		if (!profileContainer) {
 			console.error('Profile container not found');
