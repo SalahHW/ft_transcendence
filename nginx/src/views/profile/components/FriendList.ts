@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/11 18:06:04 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/11 18:58:48 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -98,14 +98,17 @@ export class FriendList {
             this.isLoading = true;
             const currentUser = await this.authService.getUser();
 
-            if (!currentUser || !currentUser.id) {
+            // Extraire l'ID utilisateur de la structure JWT
+            const userId = (currentUser as any)?.user?.sub;
+
+            if (!userId) {
                 console.warn('Utilisateur non connecté ou ID manquant');
                 this.friends = [];
                 return;
             }
 
             // Récupérer les amitiés de l'utilisateur
-            const friendships = await this.friendsService.getUserFriendships(currentUser.id);
+            const friendships = await this.friendsService.getUserFriendships(userId);
 
             // Enrichir chaque amitié avec les informations utilisateur
             this.friends = await Promise.all(
@@ -255,7 +258,11 @@ export class FriendList {
 
         try {
             const currentUser = await this.authService.getUser();
-            if (!currentUser || !currentUser.id) {
+
+            // Extraire l'ID utilisateur de la structure JWT
+            const currentUserId = (currentUser as any)?.user?.sub;
+
+            if (!currentUserId) {
                 console.error('Utilisateur non connecté');
                 alert('Vous devez être connecté pour ajouter un ami');
                 return;
@@ -274,7 +281,7 @@ export class FriendList {
                 return;
             }
 
-            if (targetUser.id === currentUser.id) {
+            if (targetUser.id === currentUserId) {
                 alert('Vous ne pouvez pas vous ajouter comme ami');
                 return;
             }
@@ -287,9 +294,7 @@ export class FriendList {
             }
 
             // Créer l'amitié
-            await this.friendsService.createFriendship(currentUser.id, targetUser.id);
-
-            console.log(`Ami ajouté avec succès : ${username}`);
+            await this.friendsService.createFriendship(currentUserId, targetUser.id);
 
             // Recharger la liste des amis
             await this.loadFriends();
