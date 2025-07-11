@@ -1,4 +1,4 @@
-import UsersApi, { User } from "../api/user.js";
+import UsersApi, { User } from "../services/api/user.js";
 
 export default class AuthNanoService {
   private static _instance: AuthNanoService;

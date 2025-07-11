@@ -1,4 +1,4 @@
-import UsersApi from "../../../api/user.js";
+import UsersApi from "../../../services/api/user.js";
 import { buttonHTML } from "../../../components/button.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 

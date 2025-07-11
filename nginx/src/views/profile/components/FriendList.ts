@@ -6,11 +6,11 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/10 12:22:08 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/11 15:14:15 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-import { mockProfile } from "../../../api/mockProfile/mockProfile.js";
+import { mockProfile } from "../../../services/api/mockProfile/mockProfile.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 import { createWinRateDonutChart } from "./WinRateDonutChart.js";
 
@@ -18,7 +18,7 @@ export class FriendList {
     private static isAddFriendExpanded: boolean = false;
 
     public static render(): string {
-        const friendsHtml = mockProfile.friends.map(friend => this.createFriendListItem(friend)).join('');
+        const friendsHtml = mockProfile.friends.map((friend: any) => this.createFriendListItem(friend)).join('');
         return /* HTML */`
             <div class="flex flex-col gap-2 h-full">
                 <div class="overflow-auto flex-[1] [mask-image:linear-gradient(to_bottom,transparent,black_2%,black_98%,transparent)] pt-2">
