@@ -6,16 +6,16 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/10 00:35:42 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/11 15:14:17 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-import { mockProfile } from "../../../api/mockProfile/mockProfile.js";
+import { mockProfile } from "../../../services/api/mockProfile/mockProfile.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 
 export class MatchHistory {
     public static render(): string {
-        const matchesHtml = mockProfile.matches.matches.map(match => this.createMatchHistoryItem(match)).join('');
+        const matchesHtml = mockProfile.matches.matches.map((match: any) => this.createMatchHistoryItem(match)).join('');
         return /* HTML */`
             <div class="flex flex-col h-full">
                 <div class="overflow-auto flex-[1] [mask-image:linear-gradient(to_bottom,transparent,black_2%,black_98%,transparent)] pt-2">

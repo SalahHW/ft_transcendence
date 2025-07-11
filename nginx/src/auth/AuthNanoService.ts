@@ -1,4 +1,4 @@
-import UsersApi, { User } from "../api/user.js";
+import UsersApi, { User } from "../services/api/user.js";
 
 export default class AuthNanoService {
   private static _instance: AuthNanoService;
@@ -6,6 +6,7 @@ export default class AuthNanoService {
   private _user: User | null = null;
   private _isLoggedIn: boolean | null = null; // null means auth status not checked yet
   private _refreshInterval: ReturnType<typeof setInterval> | null = null;
+  private _host: string = `${window.location.protocol}//${window.location.host}`;
 
   private constructor() {}
 
@@ -70,7 +71,7 @@ export default class AuthNanoService {
     authenticationMethod: string;
     wallet: string;
   }): Promise<User> {
-    const response = await fetch("https://elsalmatjori.com:16443/users", {
+    const response = await fetch(`${this._host}/users`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -94,7 +95,7 @@ export default class AuthNanoService {
       if (!wallet) throw new Error("No wallet detected");
 
       const challengeRes = await fetch(
-        `https://elsalmatjori.com:16443/wallet/challenge?wallet=${wallet}`
+        `${this._host}/wallet/challenge?wallet=${wallet}`
       );
       if (!challengeRes.ok) {
         const errorText = await challengeRes.text();
@@ -108,7 +109,7 @@ export default class AuthNanoService {
       const signature = await this._signMessage(challenge, wallet);
 
       const registerRes = await fetch(
-        "https://elsalmatjori.com:16443/register/wallet",
+        `${this._host}/register/wallet`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -141,7 +142,7 @@ export default class AuthNanoService {
       if (!wallet) throw new Error("No wallet detected");
 
       const challengeRes = await fetch(
-        `https://elsalmatjori.com:16443/wallet/challenge?wallet=${wallet}`
+        `${this._host}/wallet/challenge?wallet=${wallet}`
       );
       if (!challengeRes.ok) {
         const errorText = await challengeRes.text();
@@ -155,7 +156,7 @@ export default class AuthNanoService {
       const signature = await this._signMessage(challenge, wallet);
 
       const loginRes = await fetch(
-        "https://elsalmatjori.com:16443/login/wallet",
+        `${this._host}/login/wallet`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -210,7 +211,7 @@ export default class AuthNanoService {
 
     this._refreshInterval = setInterval(async () => {
       try {
-        const res = await fetch("https://elsalmatjori.com:16443/refresh", {
+        const res = await fetch(`${this._host}/refresh`, {
           method: "POST",
           credentials: "include",
         });

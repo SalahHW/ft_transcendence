@@ -6,11 +6,11 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/10 00:03:42 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/11 15:13:58 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-import { mockProfile } from "../../../api/mockProfile/mockProfile.js";
+import { mockProfile } from "../../../services/api/mockProfile/mockProfile.js";
 import { createWinRateDonutChart } from "./WinRateDonutChart.js";
 
 export class UserProfile {

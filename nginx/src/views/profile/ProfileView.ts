@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/22 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/10 12:17:05 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/11 18:57:00 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,10 +23,15 @@ export default class ProfileView extends ModalView {
 			height: '70vh'
 		});
 
-		this.render();
+		// Initialize asynchronously after construction
+		this.init();
 	}
 
-	public render(): void {
+	private async init(): Promise<void> {
+		await this.render();
+	}
+
+	public async render(): Promise<void> {
 		this._contentContainer.innerHTML = /* HTML */`
 			<div class="flex h-full w-full overflow-auto min-h-0">
 				<div class="relative flex flex-[4] flex-col gap-2 p-2 after:absolute after:right-0 after:top-[5%] after:h-[90%] after:w-px after:bg-white/20">
@@ -40,11 +45,10 @@ export default class ProfileView extends ModalView {
 		`;
 		this.updateProfile();
 		this.updateMatchHistory();
-		this.updateFriendList();
+		await this.updateFriendList();
 	}
 
 	public updateProfile(): void {
-		console.log('Updating profile...');
 		const profileContainer = this._contentContainer.querySelector('#profile');
 		if (!profileContainer) {
 			console.error('Profile container not found');
@@ -65,14 +69,14 @@ export default class ProfileView extends ModalView {
 		matchHistoryContainer.innerHTML = MatchHistory.render();
 	}
 
-	public updateFriendList(): void {
+	public async updateFriendList(): Promise<void> {
 		const friendListContainer = this._contentContainer.querySelector('#friends');
 		if (!friendListContainer) {
 			console.error('Friend list container not found');
 			return;
 		}
 
-		friendListContainer.innerHTML = FriendList.render();
+		friendListContainer.innerHTML = await FriendList.render();
 		FriendList.addEventListeners();
 	}
 }

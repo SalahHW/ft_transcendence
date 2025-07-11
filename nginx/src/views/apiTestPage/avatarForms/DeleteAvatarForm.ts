@@ -1,4 +1,4 @@
-import AvatarServiceAPI from "../../../api/avatar.js";
+import AvatarServiceAPI from "../../../services/api/avatar.js";
 import { buttonHTML } from "../../../components/button.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 

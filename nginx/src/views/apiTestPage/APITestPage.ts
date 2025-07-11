@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/27 19:14:29 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/01 15:56:49 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/11 15:06:01 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,6 +36,11 @@ import GetAvatarForm from "./avatarForms/GetAvatarForm.js";
 import CreateAvatarForm from "./avatarForms/CreateAvatarForm.js";
 import UpdateAvatarForm from "./avatarForms/UpdateAvatarForm.js";
 import DeleteAvatarForm from "./avatarForms/DeleteAvatarForm.js";
+
+// Friends forms
+import CreateFriendshipForm from "./friendsForms/CreateFriendshipForm.js";
+import GetFriendshipsForm from "./friendsForms/GetFriendshipsForm.js";
+import DeleteFriendshipForm from "./friendsForms/DeleteFriendshipForm.js";
 
 export default class APITestPage extends ModalView {
 	private _terminalInstance: any = null;
@@ -84,7 +89,7 @@ export default class APITestPage extends ModalView {
 
 	private _renderLeftCardContent(): void {
 		const tabs = new Tabs(
-			"left-card-content", ["User API", "Match API", "Current User API", "Game API", "Avatar API"]
+			"left-card-content", ["User API", "Match API", "Current User API", "Game API", "Avatar API", "Friends API"]
 		);
 
 		const userContainer = document.createElement('div');
@@ -116,6 +121,12 @@ export default class APITestPage extends ModalView {
 		tabs.setTabContent(4, avatarContainer);
 
 		this._renderAvatarForms();
+
+		const friendsContainer = document.createElement('div');
+		friendsContainer.id = "friends-forms-container";
+		tabs.setTabContent(5, friendsContainer);
+
+		this._renderFriendsForms();
 	}
 
 	private _renderUserForms(): void {
@@ -273,6 +284,36 @@ export default class APITestPage extends ModalView {
 
 		const deleteAvatarForm = new DeleteAvatarForm("delete-avatar-form-container");
 		deleteAvatarForm.render();
+	}
+
+	private _renderFriendsForms(): void {
+		const tabs = new Tabs(
+			"friends-forms-container", ["Create Friendship", "Get Friendships", "Delete Friendship"]
+		);
+
+		/* Create Friendship */
+		const createFriendshipContainer = document.createElement('div');
+		createFriendshipContainer.id = "create-friendship-form-container";
+		tabs.setTabContent(0, createFriendshipContainer);
+
+		const createFriendshipForm = new CreateFriendshipForm("create-friendship-form-container");
+		createFriendshipForm.render();
+
+		/* Get Friendships */
+		const getFriendshipsContainer = document.createElement('div');
+		getFriendshipsContainer.id = "get-friendships-form-container";
+		tabs.setTabContent(1, getFriendshipsContainer);
+
+		const getFriendshipsForm = new GetFriendshipsForm("get-friendships-form-container");
+		getFriendshipsForm.render();
+
+		/* Delete Friendship */
+		const deleteFriendshipContainer = document.createElement('div');
+		deleteFriendshipContainer.id = "delete-friendship-form-container";
+		tabs.setTabContent(2, deleteFriendshipContainer);
+
+		const deleteFriendshipForm = new DeleteFriendshipForm("delete-friendship-form-container");
+		deleteFriendshipForm.render();
 	}
 
 	private _renderRightCardContent(): void {

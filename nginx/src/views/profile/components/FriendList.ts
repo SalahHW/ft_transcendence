@@ -6,30 +6,154 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/10 12:22:08 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/11 18:58:48 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-import { mockProfile } from "../../../api/mockProfile/mockProfile.js";
+import FriendsServiceAPI, { Friendship } from "../../../services/api/friends.js";
+import UsersApi, { User } from "../../../services/api/user.js";
+import AuthNanoService from "../../../auth/AuthNanoService.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 import { createWinRateDonutChart } from "./WinRateDonutChart.js";
 
+// Interface pour un ami enrichi avec les informations utilisateur
+interface EnrichedFriend {
+    id: number;
+    username: string;
+    avatarUrl: string;
+    status: 'online' | 'offline';
+    wins: number;
+    losses: number;
+    authenticationMethod?: string;
+    email?: string;
+    wallet?: string;
+    created_at: string;
+}
+
 export class FriendList {
     private static isAddFriendExpanded: boolean = false;
+    private static friends: EnrichedFriend[] = [];
+    private static friendsService = new FriendsServiceAPI();
+    private static usersService = new UsersApi();
+    private static authService = AuthNanoService.getInstance();
+    private static isLoading: boolean = false;
 
-    public static render(): string {
-        const friendsHtml = mockProfile.friends.map(friend => this.createFriendListItem(friend)).join('');
+    public static async render(): Promise<string> {
+        try {
+            if (this.friends.length === 0 && !this.isLoading) {
+                await this.loadFriends();
+            }
+
+            if (this.isLoading) {
+                return this.renderLoadingState();
+            }
+
+            const friendsHtml = this.friends.map(friend => this.createFriendListItem(friend)).join('');
+            return /* HTML */`
+                <div class="flex flex-col gap-2 h-full">
+                    <div class="overflow-auto flex-[1] [mask-image:linear-gradient(to_bottom,transparent,black_2%,black_98%,transparent)] pt-2">
+                        ${friendsHtml.length > 0 ? friendsHtml : this.renderEmptyState()}
+                    </div>
+                    ${this.createAddFriendSection()}
+                </div>
+            `;
+        } catch (error) {
+            console.error('[FriendList] Error in render():', error);
+            return this.renderErrorState();
+        }
+    }
+
+    private static renderLoadingState(): string {
         return /* HTML */`
             <div class="flex flex-col gap-2 h-full">
-                <div class="overflow-auto flex-[1] [mask-image:linear-gradient(to_bottom,transparent,black_2%,black_98%,transparent)] pt-2">
-                    ${friendsHtml}
+                <div class="overflow-auto flex-[1] flex items-center justify-center">
+                    <div class="text-gray-400">Chargement des amis...</div>
                 </div>
                 ${this.createAddFriendSection()}
             </div>
         `;
     }
 
-    private static createFriendListItem(friend: any): string {
+    private static renderEmptyState(): string {
+        return /* HTML */`
+            <div class="flex items-center justify-center h-full text-gray-400">
+                <p>Aucun ami pour le moment</p>
+            </div>
+        `;
+    }
+
+    private static renderErrorState(): string {
+        return /* HTML */`
+            <div class="flex flex-col gap-2 h-full">
+                <div class="overflow-auto flex-[1] flex items-center justify-center">
+                    <div class="text-red-400">Erreur lors du chargement des amis</div>
+                </div>
+                ${this.createAddFriendSection()}
+            </div>
+        `;
+    }
+
+    private static async loadFriends(): Promise<void> {
+        try {
+            this.isLoading = true;
+            const currentUser = await this.authService.getUser();
+
+            // Extraire l'ID utilisateur de la structure JWT
+            const userId = (currentUser as any)?.user?.sub;
+
+            if (!userId) {
+                console.warn('Utilisateur non connecté ou ID manquant');
+                this.friends = [];
+                return;
+            }
+
+            // Récupérer les amitiés de l'utilisateur
+            const friendships = await this.friendsService.getUserFriendships(userId);
+
+            // Enrichir chaque amitié avec les informations utilisateur
+            this.friends = await Promise.all(
+                friendships.map(async (friendship: Friendship) => {
+                    try {
+                        const user = await this.usersService.getUserById(friendship.friend_id);
+                        return this.enrichFriend(friendship, user);
+                    } catch (error) {
+                        console.error(`Erreur lors de la récupération de l'utilisateur ${friendship.friend_id}:`, error);
+                        // Retourner un ami par défaut en cas d'erreur
+                        return {
+                            id: friendship.friend_id,
+                            username: `User ${friendship.friend_id}`,
+                            avatarUrl: '/assets/defaultAvatar.jpg',
+                            status: 'offline' as const,
+                            wins: 0,
+                            losses: 0,
+                            created_at: friendship.created_at
+                        };
+                    }
+                })
+            );
+        } catch (error) {
+            console.error('Erreur lors du chargement des amis:', error);
+            this.friends = [];
+        } finally {
+            this.isLoading = false;
+        }
+    }
+
+    private static enrichFriend(friendship: Friendship, user: User): EnrichedFriend {
+        return {
+            id: friendship.friend_id,
+            username: user.username || `User ${friendship.friend_id}`,
+            avatarUrl: '/assets/defaultAvatar.jpg', // TODO: intégrer l'avatar service une fois connecté
+            status: 'offline', // Tous les amis sont offline comme demandé
+            wins: 0, // TODO: intégrer les stats de match une fois le service connecté
+            losses: 0, // TODO: intégrer les stats de match une fois le service connecté
+            authenticationMethod: user.email ? 'credentials' : 'wallet',
+            email: user.email,
+            created_at: friendship.created_at
+        };
+    }
+
+    private static createFriendListItem(friend: EnrichedFriend): string {
         const statusColor = friend.status === 'online' ? UI_THEME.colors.green.light : UI_THEME.colors.red.light;
         return /* HTML */`
             <div class="flex items-center justify-between p-2 rounded-lg mb-2 bg-black/20">
@@ -122,7 +246,7 @@ export class FriendList {
         this.refreshAddFriendSection();
     }
 
-    private static handleAddFriend(): void {
+    private static async handleAddFriend(): Promise<void> {
         const friendUsernameInput = document.getElementById('friend-username-input') as HTMLInputElement;
         if (!friendUsernameInput) return;
 
@@ -132,12 +256,68 @@ export class FriendList {
             return;
         }
 
-        // Ici vous pourrez ajouter la logique pour ajouter réellement l'ami
-        console.log(`Tentative d'ajout de l'ami : ${username}`);
+        try {
+            const currentUser = await this.authService.getUser();
 
-        // Reset du formulaire
-        friendUsernameInput.value = '';
-        this.toggleAddFriendMode();
+            // Extraire l'ID utilisateur de la structure JWT
+            const currentUserId = (currentUser as any)?.user?.sub;
+
+            if (!currentUserId) {
+                console.error('Utilisateur non connecté');
+                alert('Vous devez être connecté pour ajouter un ami');
+                return;
+            }
+
+            // Chercher l'utilisateur par nom d'utilisateur
+            const users = await this.usersService.getUsersByUsername(username);
+            if (!users || users.length === 0) {
+                alert(`Utilisateur "${username}" introuvable`);
+                return;
+            }
+
+            const targetUser = users[0];
+            if (!targetUser.id) {
+                console.error('ID utilisateur manquant');
+                return;
+            }
+
+            if (targetUser.id === currentUserId) {
+                alert('Vous ne pouvez pas vous ajouter comme ami');
+                return;
+            }
+
+            // Vérifier si l'amitié existe déjà
+            const isAlreadyFriend = this.friends.some(friend => friend.id === targetUser.id);
+            if (isAlreadyFriend) {
+                alert(`${username} est déjà dans votre liste d'amis`);
+                return;
+            }
+
+            // Créer l'amitié
+            await this.friendsService.createFriendship(currentUserId, targetUser.id);
+
+            // Recharger la liste des amis
+            await this.loadFriends();
+
+            // Reset du formulaire
+            friendUsernameInput.value = '';
+            this.toggleAddFriendMode();
+
+            // Rafraîchir l'affichage si nous sommes dans un contexte où c'est possible
+            const container = document.querySelector('.flex.flex-col.gap-2.h-full');
+            if (container) {
+                container.innerHTML = await this.render();
+                this.addEventListeners();
+            }
+
+        } catch (error) {
+            console.error('Erreur lors de l\'ajout de l\'ami:', error);
+            if (error instanceof Error) {
+                alert(`Erreur: ${error.message}`);
+            } else {
+                alert('Erreur lors de l\'ajout de l\'ami');
+            }
+        }
     }
 
     private static refreshAddFriendSection(): void {
@@ -152,5 +332,10 @@ export class FriendList {
             container.replaceWith(newContainer);
             this.updateAddFriendEventListeners();
         }
+    }
+
+    // Méthode publique pour forcer le rechargement des amis
+    public static async refreshFriends(): Promise<void> {
+        await this.loadFriends();
     }
 }

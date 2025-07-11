@@ -119,5 +119,34 @@ export const mockProfile = {
 			authenticationMethod: 'wallet',
 			wallet: '0x1234567890abcdef1234567890abcdef12345678'
 		}
-	]
+	],
+	tournament: {
+		timestamp: "2024-03-20T14:00:00Z",
+		matches: [
+			{
+				player1: "devuser",
+				player2: "bob",
+				score: { player1: 11, player2: 8 },
+				winner: "devuser"
+			},
+			{
+				player1: "alice",
+				player2: "charlie",
+				score: { player1: 11, player2: 9 },
+				winner: "alice"
+			},
+			{
+				player1: "devuser",
+				player2: "alice",
+				score: { player1: 11, player2: 7 },
+				winner: "devuser"
+			},
+			{
+				player1: "bob",
+				player2: "charlie",
+				score: { player1: 10, player2: 11 },
+				winner: "charlie"
+			}
+		]
+	}
 };
