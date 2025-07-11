@@ -42,7 +42,7 @@ export interface User {
  * User service API.
  */
 export default class UsersApi {
-  private _host: string = "https://elsalmatjori.com:16443";
+  private _host: string = "https://elsalmajori.games:8443";
   private _userPath: string = "/users";
   private _mePath: string = "/me";
   private _loginPath: string = "/login";
