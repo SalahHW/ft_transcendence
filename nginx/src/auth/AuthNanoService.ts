@@ -4,7 +4,7 @@ export default class AuthNanoService {
   private static _instance: AuthNanoService;
   private _usersApi: UsersApi = new UsersApi();
   private _user: User | null = null;
-  private _isLoggedIn: boolean | null = null; // null means we haven't checked yet
+  private _isLoggedIn: boolean | null = null; // null means auth status not checked yet
   private _refreshInterval: ReturnType<typeof setInterval> | null = null;
 
   private constructor() {}
@@ -21,7 +21,10 @@ export default class AuthNanoService {
       try {
         this._user = await this._usersApi.getCurrentUser();
         this._isLoggedIn = !!this._user;
-        if (this._isLoggedIn) this._startRefreshLoop();
+
+        if (this._isLoggedIn) {
+          this._startRefreshLoop();
+        }
       } catch (error) {
         console.error("Failed to check auth status", error);
         this._user = null;
@@ -132,30 +135,6 @@ export default class AuthNanoService {
     }
   }
 
-  private async _getWalletAddress(): Promise<string | null> {
-    const ethereum = (window as any).ethereum;
-    if (!ethereum) throw new Error("MetaMask not detected");
-
-    const accounts: string[] = await ethereum.request({
-      method: "eth_requestAccounts",
-    });
-    return accounts[0] || null;
-  }
-
-  private async _signMessage(
-    message: string,
-    address: string
-  ): Promise<string> {
-    const ethereum = (window as any).ethereum;
-    if (!ethereum) throw new Error("Ethereum provider not available");
-
-    const signature: string = await ethereum.request({
-      method: "personal_sign",
-      params: [message, address],
-    });
-    return signature;
-  }
-
   public async loginWithWallet(): Promise<void> {
     try {
       const wallet = await this._getWalletAddress();
@@ -202,6 +181,30 @@ export default class AuthNanoService {
     }
   }
 
+  private async _getWalletAddress(): Promise<string | null> {
+    const ethereum = (window as any).ethereum;
+    if (!ethereum) throw new Error("MetaMask not detected");
+
+    const accounts: string[] = await ethereum.request({
+      method: "eth_requestAccounts",
+    });
+    return accounts[0] || null;
+  }
+
+  private async _signMessage(
+    message: string,
+    address: string
+  ): Promise<string> {
+    const ethereum = (window as any).ethereum;
+    if (!ethereum) throw new Error("Ethereum provider not available");
+
+    const signature: string = await ethereum.request({
+      method: "personal_sign",
+      params: [message, address],
+    });
+    return signature;
+  }
+
   private _startRefreshLoop() {
     if (this._refreshInterval) return;
 
@@ -230,7 +233,7 @@ export default class AuthNanoService {
           err
         );
       }
-    }, 240_000);
+    }, 240_000); // 4 minutes
   }
 
   private _stopRefreshLoop() {
