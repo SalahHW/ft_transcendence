@@ -274,6 +274,8 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     let loserFinalRoom = null;
     let winnerFinalExists = false;
     let loserFinalExists = false;
+    let winnerFinalPlayerCount = 0;
+    let loserFinalPlayerCount = 0;
     
     if (waitingRoomId) {
       try {
@@ -288,12 +290,14 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
           if (winnerFinal) {
             winnerFinalRoom = gameStateManager.getRoom(winnerFinal.id);
             winnerFinalExists = !!winnerFinalRoom;
+            winnerFinalPlayerCount = winnerFinalRoom ? winnerFinalRoom.players.length : 0;
           }
           // Get loser final room from tournament data
           const loserFinal = waitingRoomData.tournamentRooms.loserFinal;
           if (loserFinal) {
             loserFinalRoom = gameStateManager.getRoom(loserFinal.id);
             loserFinalExists = !!loserFinalRoom;
+            loserFinalPlayerCount = loserFinalRoom ? loserFinalRoom.players.length : 0;
           }
         }
       } catch (error) {
@@ -304,7 +308,14 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     const matchEndTime = TimeUtils.getCurrentTimestamp();
     const isSinglePlayerForfeitSemi = Boolean(numberOfDisconnectedPlayers === 3 && numberOfConnectedPlayers === 1);
     if (isSinglePlayerForfeitSemi) {
-      if (!winnerFinalRoom && loserFinalExists) {
+      console.log(`🏆 X X X X X X X X ATTEND QUOI ?????? X X X X X X X X `);
+      console.log(`🏆 X X X X X X X X WINNER FINAL EXISTS : ${winnerFinalExists} ?????? X X X X X X X X `);
+      console.log(`🏆 X X X X X X X X LOSER FINAL EXISTS : ${loserFinalExists} ?????? X X X X X X X X `);
+      console.log(`🏆 X X X X X X X X WINNER FINAL ROOM : ${winnerFinalRoom} ?????? X X X X X X X X `);
+      console.log(`🏆 X X X X X X X X LOSER FINAL ROOM : ${loserFinalRoom} ?????? X X X X X X X X `);
+      console.log(`🏆 X X X X X X X X WINNER FINAL PLAYER COUNT : ${winnerFinalPlayerCount} ?????? X X X X X X X X `);
+      console.log(`🏆 X X X X X X X X LOSER FINAL PLAYER COUNT : ${loserFinalPlayerCount} ?????? X X X X X X X X `);
+      if (loserFinalPlayerCount == 2) {
         room.metadata.tournamentPhase = 'loser_final';
         room.metadata.roomType = 'loser_final';
       }

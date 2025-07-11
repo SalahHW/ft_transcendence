@@ -158,6 +158,7 @@ export class TournamentMatchManager {
       return false;
     }
     
+    console.log(`🏆 X X X X X X X X ATTEND QUOI SSF ?????? X X X X X X X X `);
     // Find the actual player objects
     const winnerPlayer = this._findPlayerInRoom(roomId, winner.id);
     const loserPlayer = this._findPlayerInRoom(roomId, loser.id);
