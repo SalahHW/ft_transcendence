@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 16:41:12 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/11 18:01:27 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/11 18:56:52 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,7 +41,6 @@ export default class Wheel {
       label: "API Test page",
       icon: "🔧",
       onClick: () => {
-        console.log("API Test page clicked");
         this._router.navigate("/api-test");
       },
     },
@@ -62,7 +61,6 @@ export default class Wheel {
           label: "Sign In",
           icon: "→",
           onClick: () => {
-            console.log("Sign In clicked");
             this._router.navigate("/login");
           },
         },
@@ -70,7 +68,6 @@ export default class Wheel {
           label: "Register",
           icon: "+",
           onClick: () => {
-            console.log("Register clicked");
             this._router.navigate("/register");
           },
         },
