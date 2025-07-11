@@ -67,7 +67,7 @@ export default class AuthNanoService {
     authenticationMethod: string;
     wallet: string;
   }): Promise<User> {
-    const response = await fetch("https://elsalmatjori.com:16443/users", {
+    const response = await fetch(`${process.env.API_BASE_URL!}/users`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -91,7 +91,7 @@ export default class AuthNanoService {
       if (!wallet) throw new Error("No wallet detected");
 
       const challengeRes = await fetch(
-        `https://elsalmatjori.com:16443/wallet/challenge?wallet=${wallet}`
+        `${process.env.API_BASE_URL!}/wallet/challenge?wallet=${wallet}`
       );
       if (!challengeRes.ok) {
         const errorText = await challengeRes.text();
@@ -105,7 +105,7 @@ export default class AuthNanoService {
       const signature = await this._signMessage(challenge, wallet);
 
       const registerRes = await fetch(
-        "https://elsalmatjori.com:16443/register/wallet",
+        `${process.env.API_BASE_URL!}/register/wallet`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -162,7 +162,7 @@ export default class AuthNanoService {
       if (!wallet) throw new Error("No wallet detected");
 
       const challengeRes = await fetch(
-        `https://elsalmatjori.com:16443/wallet/challenge?wallet=${wallet}`
+        `${process.env.API_BASE_URL!}/wallet/challenge?wallet=${wallet}`
       );
       if (!challengeRes.ok) {
         const errorText = await challengeRes.text();
@@ -176,7 +176,7 @@ export default class AuthNanoService {
       const signature = await this._signMessage(challenge, wallet);
 
       const loginRes = await fetch(
-        "https://elsalmatjori.com:16443/login/wallet",
+        `${process.env.API_BASE_URL!}/login/wallet`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -207,7 +207,7 @@ export default class AuthNanoService {
 
     this._refreshInterval = setInterval(async () => {
       try {
-        const res = await fetch("https://elsalmatjori.com:16443/refresh", {
+        const res = await fetch(`${process.env.API_BASE_URL!}/refresh`, {
           method: "POST",
           credentials: "include",
         });
