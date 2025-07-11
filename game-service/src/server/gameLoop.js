@@ -54,10 +54,6 @@ export function startGameLoop() {
         const isInAnimationPhase = animationStatus.length < 2; // Less than 2 players completed animation
         
         if (isInAnimationPhase) {
-          // This prevents players from controlling paddles during splash screens and animations
-          console.log(`🎬 Room ${roomId}: In animation phase, blocking all player input`);
-          
-          // Skip all player movement processing during animation
           return;
         }
 

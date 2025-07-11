@@ -536,7 +536,6 @@ export class GameClient {
     }
 
     private async handleGameInit(data: any): Promise<void> {
-        console.log('🎮 Tournament: Game init received:', data);
         
         const { 
             player1Name, player2Name, playerName, opponentName, 
@@ -575,7 +574,6 @@ export class GameClient {
             this.player1.setZ(player1PositionZ);
             this.player2.setZ(player2PositionZ);
             
-            console.log(`🎮 Tournament: Set initial paddle positions: player1=${player1PositionZ}, player2=${player2PositionZ}`);
         } catch (e) {
             console.error('Tournament paddle creation failed:', e);
             return;
@@ -636,7 +634,6 @@ export class GameClient {
                 // ⭐ FIX: Animation is complete, but game is not started yet
                 // The server will enable input when both players complete animation
                 this.isIntroAnimationRunning = false;
-                console.log('🎮 Tournament: Animation complete, waiting for server to start game');
                 
                 this.startGameLoop();
             } catch (e) {
@@ -677,9 +674,6 @@ export class GameClient {
         movingPlayer.setZ(msg.positionZ || 0);
         
         // Debug logging to track sync
-        if (movingPlayer.getPlayerId() === this.localPlayerId) {
-            console.log(`🎮 Tournament: Sync message updated local player paddle to: ${msg.positionZ}`);
-        }
     }
 
     private handleBallUpdate(msg: any): void {
@@ -738,11 +732,6 @@ export class GameClient {
                 // This ensures consistent synchronization between server and client
                 if (syncPlayer) {
                     syncPlayer.setZ(positionZ);
-                    
-                    // Debug logging for local player sync
-                    if (syncPlayer.getPlayerId() === this.localPlayerId) {
-                        console.log(`🎮 Tournament: Sync message updated local player paddle to: ${positionZ}`);
-                    }
                 }
             });
         }
