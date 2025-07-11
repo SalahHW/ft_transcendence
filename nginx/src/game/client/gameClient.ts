@@ -769,40 +769,58 @@ export class GameClient {
     }
 
     private handleScoreUpdate(msg: any): void {
-        if (!this.player1 || !this.player2) return;
+        if (!this.player1 || !this.player2 || !msg.scores) return;
         
-        // Update scores using proper UI functions with player names
-        const player1Score = msg.player1Score || 0;
-        const player2Score = msg.player2Score || 0;
+        // ⭐ FIX: Use the same format as 1v1 client - server sends scores object with player IDs
+        const currentScores = msg.scores;
         
-        // Use the proper UI function that preserves player names and colors
-        updateScoresUIVersus(player1Score, player2Score, this.player1.playerName, this.player2.playerName);
-        
-        // Add camera shake for losing player
+        // Initialize previous scores if not set
         const previousScores = (this as any).previousScores || {};
-        const currentScores = {
-            [this.player1.getPlayerId()]: player1Score,
-            [this.player2.getPlayerId()]: player2Score
-        };
+        if (Object.keys(previousScores).length === 0) {
+            Object.keys(currentScores).forEach(playerId => {
+                previousScores[playerId] = 0;
+            });
+        }
         
-        // Check if any player lost a point
-        Object.entries(currentScores).forEach(([playerId, currentScore]) => {
+        // Find which player lost a point for camera shake
+        let losingPlayerId: string | null = null;
+        for (const [playerId, currentScore] of Object.entries(currentScores)) {
             const previousScore = previousScores[playerId] || 0;
             if (currentScore > previousScore) {
-                // Player scored - no camera shake
-            } else if (currentScore < previousScore) {
-                // Player lost a point - add camera shake
-                const losingPlayer = playerId === this.player1.getPlayerId() ? this.player1 : this.player2;
-                if (losingPlayer && playerId === this.localPlayerId) {
-                    cameraManager.triggerCameraShake().catch(error => {
-                        console.warn('Failed to trigger camera shake:', error);
-                    });
-                }
+                const otherPlayerId = Object.keys(currentScores).find(id => id !== playerId);
+                losingPlayerId = otherPlayerId || null;
+                break;
             }
-        });
+        }
         
-        // Store current scores for next comparison
-        (this as any).previousScores = currentScores;
+        // Trigger camera shake for losing player
+        if (losingPlayerId === this.localPlayerId) {
+            cameraManager.triggerCameraShake().catch(error => {
+                console.warn('Failed to trigger camera shake:', error);
+            });
+        }
+        
+        // Update previous scores for next comparison
+        (this as any).previousScores = { ...currentScores };
+        
+        // Update player scores and UI
+        if (this.player1 && this.player2) {
+            const player1Score = currentScores[this.player1.getPlayerId()] || 0;
+            const player2Score = currentScores[this.player2.getPlayerId()] || 0;
+            
+            // Update player score properties
+            this.player1.playerScore = player1Score;
+            this.player2.playerScore = player2Score;
+            
+            // Determine current player vs opponent for UI
+            const currentPlayer = this.localPlayerId === this.player1.getPlayerId() ? this.player1 : this.player2;
+            const opponent = this.localPlayerId === this.player1.getPlayerId() ? this.player2 : this.player1;
+            const currentPlayerScore = currentScores[currentPlayer.getPlayerId()] || 0;
+            const opponentScore = currentScores[opponent.getPlayerId()] || 0;
+            
+            // Update UI with proper perspective (current player first, opponent second)
+            updateScoresUIVersus(currentPlayerScore, opponentScore, currentPlayer.playerName, opponent.playerName);
+        }
     }
 
     // Handle sound events for tournament matches
@@ -1050,7 +1068,6 @@ export class GameClient {
         if ((window as any).gameKeydownHandler) {
             document.removeEventListener('keydown', (window as any).gameKeydownHandler);
             delete (window as any).gameKeydownHandler;
-            console.log('⌨️ Tournament: Keydown event listener removed');
         }
         
         if ((window as any).gameKeyupHandler) {
