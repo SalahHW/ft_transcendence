@@ -3,8 +3,6 @@ services:
   nginx:
     container_name: nginx
     build: ./nginx/
-    env_file:
-      - ./nginx/.env
     ports:
       - "16443:443"
     networks:

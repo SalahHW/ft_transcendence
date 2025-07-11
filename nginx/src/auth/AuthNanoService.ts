@@ -6,6 +6,7 @@ export default class AuthNanoService {
   private _user: User | null = null;
   private _isLoggedIn: boolean | null = null; // null means we haven't checked yet
   private _refreshInterval: ReturnType<typeof setInterval> | null = null;
+  private _host: string = `${window.location.protocol}//${window.location.host}`;
 
   private constructor() {}
 
@@ -67,7 +68,7 @@ export default class AuthNanoService {
     authenticationMethod: string;
     wallet: string;
   }): Promise<User> {
-    const response = await fetch(`${process.env.API_BASE_URL!}/users`, {
+    const response = await fetch(`${this._host}/users`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -91,7 +92,7 @@ export default class AuthNanoService {
       if (!wallet) throw new Error("No wallet detected");
 
       const challengeRes = await fetch(
-        `${process.env.API_BASE_URL!}/wallet/challenge?wallet=${wallet}`
+        `${this._host}/wallet/challenge?wallet=${wallet}`
       );
       if (!challengeRes.ok) {
         const errorText = await challengeRes.text();
@@ -105,7 +106,7 @@ export default class AuthNanoService {
       const signature = await this._signMessage(challenge, wallet);
 
       const registerRes = await fetch(
-        `${process.env.API_BASE_URL!}/register/wallet`,
+        `${this._host}/register/wallet`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -162,7 +163,7 @@ export default class AuthNanoService {
       if (!wallet) throw new Error("No wallet detected");
 
       const challengeRes = await fetch(
-        `${process.env.API_BASE_URL!}/wallet/challenge?wallet=${wallet}`
+        `${this._host}/wallet/challenge?wallet=${wallet}`
       );
       if (!challengeRes.ok) {
         const errorText = await challengeRes.text();
@@ -176,7 +177,7 @@ export default class AuthNanoService {
       const signature = await this._signMessage(challenge, wallet);
 
       const loginRes = await fetch(
-        `${process.env.API_BASE_URL!}/login/wallet`,
+        `${this._host}/login/wallet`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -207,7 +208,7 @@ export default class AuthNanoService {
 
     this._refreshInterval = setInterval(async () => {
       try {
-        const res = await fetch(`${process.env.API_BASE_URL!}/refresh`, {
+        const res = await fetch(`${this._host}/refresh`, {
           method: "POST",
           credentials: "include",
         });

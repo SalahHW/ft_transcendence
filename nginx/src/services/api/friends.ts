@@ -12,7 +12,7 @@ export interface Friendship {
  * Friends service API.
  */
 export default class FriendsServiceAPI {
-	private _host: string = process.env.API_BASE_URL!;
+	private _host: string = `${window.location.protocol}//${window.location.host}`;
 	private _friendsBaseUrl: string = `${this._host}/friends`;
 
 	/**

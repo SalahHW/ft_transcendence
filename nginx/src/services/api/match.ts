@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:41:07 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/11 17:16:59 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/11 18:01:27 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,7 +33,7 @@ export interface Match {
  * Toutes les méthodes correspondent aux routes exposées par le backend Fastify du blockchain-service.
  */
 export default class MatchServiceAPI {
-	private _baseUrl: string = process.env.API_BASE_URL!; // Port du blockchain-service
+	private _baseUrl: string = `${window.location.protocol}//${window.location.host}`; // Port du blockchain-service
 
 	/**
 	 * Get all matches played by a player (by name)

@@ -14,7 +14,7 @@ export interface Avatar {
  * Avatar service API.
  */
 export default class AvatarServiceAPI {
-	private _host: string = process.env.API_BASE_URL!;
+	private _host: string = `${window.location.protocol}//${window.location.host}`;
 	private _avatarsBaseUrl: string = `${this._host}/avatars`;
 
 	/**

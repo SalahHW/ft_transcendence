@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:41:03 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/11 17:16:56 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/11 18:01:27 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,7 +42,7 @@ export interface User {
  * User service API.
  */
 export default class UsersApi {
-  private _host: string = process.env.API_BASE_URL!;
+  private _host: string = `${window.location.protocol}//${window.location.host}`;
   private _userPath: string = "/users";
   private _mePath: string = "/me";
   private _loginPath: string = "/login";
