@@ -22,12 +22,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     const auth = AuthService.getInstance();
     const loggedIn = await auth.isLoggedIn();
     if (loggedIn) {
-      console.info("[INIT] Session active. Refresh loop active.");
+      console.info("[INIT] Active session detected. Refresh loop started.");
     } else {
-      console.info("[INIT] Pas de session détectée.");
+      console.info("[INIT] No active session found.");
     }
   } catch (err) {
-    console.warn("[INIT] Erreur pendant l'init de session:", err);
+    console.warn("[INIT] Error during session initialization:", err);
   }
 
   new Wheel("wheel-container");
