@@ -44,7 +44,7 @@ export default class GamePage {
 							<div class="text-xl font-medium text-gray-300">
 								<span class="text-yellow-400 font-mono">hypershot</span>
 								<span class="text-white mx-2">:</span>
-								<span class="font-mono text-yellow-300">D</span>
+								<span class="font-mono text-yellow-300">A</span>
 							</div>
 
 							<!-- Scores Section - Center -->

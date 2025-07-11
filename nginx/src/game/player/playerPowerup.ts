@@ -33,6 +33,11 @@ export class PlayerPowerup {
         this.playerRole = playerRole;
         this.createVisualElements();
         this.updateVisuals(); // Ensure initial state is reflected visually
+        
+        // ⭐ NEW: Start with powerUp UI hidden - will be shown only when FPS camera is activated
+        if (this.uiContainer) {
+            this.uiContainer.isVisible = false;
+        }
     }
 
     private createVisualElements(): void {
@@ -398,7 +403,26 @@ export class PlayerPowerup {
     }
 
     /**
+     * ⭐ NEW: Show powerUp UI when FPS camera is activated
+     */
+    public showPowerUpUI(): void {
+        if (this.uiContainer) {
+            this.uiContainer.isVisible = true;
+        }
+    }
+
+    /**
+     * ⭐ NEW: Hide powerUp UI (for cleanup or when switching to top-down)
+     */
+    public hidePowerUpUI(): void {
+        if (this.uiContainer) {
+            this.uiContainer.isVisible = false;
+        }
+    }
+
+    /**
      * ⭐ HUD-STYLE UI: Update powerup UI position to stay as a HUD element at head level
+     * ⭐ NEW: Only show powerUp UI when in FPS mode
      */
     public updateCameraPosition(): void {
         if (!this.scene.activeCamera || !this.uiContainer) return;
@@ -406,8 +430,14 @@ export class PlayerPowerup {
         const camera = this.scene.activeCamera;
         const cameraPosition = camera.position;
         
-        // For FPS cameras, position UI like a HUD element at head level
-        if (camera.name && camera.name.includes('fpsCamera')) {
+        // ⭐ NEW: Check if we're in FPS mode by camera name
+        const isFPSMode = camera.name && camera.name.includes('fpsCamera');
+        
+        // ⭐ NEW: Only show powerUp UI in FPS mode
+        if (isFPSMode) {
+            // Show UI and position it for FPS mode
+            this.showPowerUpUI();
+            
             // Get camera forward direction
             const universalCamera = camera as BABYLON.UniversalCamera;
             const cameraTarget = universalCamera.getTarget();
@@ -430,12 +460,8 @@ export class PlayerPowerup {
             this.uiContainer.lookAt(cameraPosition);
             
         } else {
-            // For top-down camera, position as traditional HUD at top of screen
-            this.uiContainer.position = new BABYLON.Vector3(
-                cameraPosition.x, // Centered horizontally
-                cameraPosition.y - 8, // Top of screen
-                cameraPosition.z + 2 // Slightly forward
-            );
+            // ⭐ NEW: Hide powerUp UI completely in top-down mode
+            this.hidePowerUpUI();
         }
     }
 

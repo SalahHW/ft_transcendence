@@ -7,7 +7,7 @@ import { browserEventHandler } from '../webSocketClient/BrowserEventHandler.js';
 import { Ball } from '../ball/ball.js';
 import * as BABYLON from '@babylonjs/core';
 import { fetchWithSelfSigned } from '../utils/fetch.js';
-import { updatePlayerNames, updateScoresUI, updateScoresUIVersus, updatePlayerNamesVersus, updateGameStatus } from '../playerUi/playerUi.js';
+import { updatePlayerNames, updateScoresUI, updateScoresUIVersus, updatePlayerNamesVersus, updateGameStatus, updatePowerUpStatus } from '../playerUi/playerUi.js';
 import { handleWaitingForPlayers, stopForfeitWinnerPing } from '../ui/waitingStatusHandler.js';
 import { soundManager } from '../audio/soundManager.js';
 import { showSplashScreen } from '../ui/splashScreen.js';
@@ -340,6 +340,19 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
                     player2Powerup.updateState(state);
                 }
             });
+            
+            // ⭐ NEW: Update HTML powerUp status based on local player's state
+            const localPlayerPowerup = player1Powerup || player2Powerup;
+            if (localPlayerPowerup) {
+                const isFPSMode = cameraManager.isInFPSMode();
+                const powerUpState = {
+                    isAvailable: localPlayerPowerup.isAvailable,
+                    isActive: localPlayerPowerup.isActive,
+                    remainingCooldown: localPlayerPowerup.remainingCooldown,
+                    windowTimeLeft: localPlayerPowerup.windowTimeLeft
+                };
+                updatePowerUpStatus(isFPSMode, powerUpState);
+            }
         }
     });
 
@@ -497,19 +510,8 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
             
             console.log(`🎮 Set initial paddle positions: player1=${player1PositionZ}, player2=${player2PositionZ}`);
             
-            // Create powerup UI system for LOCAL player only
-            if (map.getScene) {
-                const isLocalPlayer1 = player1.playerId === localPlayerId;
-                
-                if (isLocalPlayer1) {
-                    player1Powerup = new PlayerPowerup(player1.playerId, map.getScene, 0);
-                    player2Powerup = null;
-                } else {
-                    player1Powerup = null;
-                    player2Powerup = new PlayerPowerup(player2.playerId, map.getScene, 1);
-                }
-                
-            }
+            // ⭐ REMOVED: PowerUp creation moved to after animation completion
+            // This ensures the 3D powerUp UI is not visible during the launch animation
         } catch (e) {
             console.error('Paddle creation failed:', e);
             return;
@@ -592,6 +594,20 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
 
                 cameraManager.switchToFPSAfterAnimation();
                 
+                // ⭐ NEW: Create powerUp UI for local player only after animation and FPS camera switch
+                if (map?.getScene && player1 && player2 && localPlayerId) {
+                    const isLocalPlayer1 = player1.playerId === localPlayerId;
+                    if (isLocalPlayer1) {
+                        player1Powerup = new PlayerPowerup(player1.playerId, map.getScene, 0);
+                        player1Powerup.showPowerUpUI();
+                        player2Powerup = null;
+                    } else {
+                        player1Powerup = null;
+                        player2Powerup = new PlayerPowerup(player2.playerId, map.getScene, 1);
+                        player2Powerup.showPowerUpUI();
+                    }
+                }
+                
                 // ⭐ FIX: Only send animationComplete - server will handle ball spawning when both players are ready
                 if (clientConnection) {
                     clientConnection.send({
@@ -612,6 +628,20 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
                 }
                 if (ball?.ballBody) {
                     ball.ballBody.isVisible = true;
+                }
+                
+                // ⭐ NEW: Create powerUp UI even if animation fails (FPS camera should still be active)
+                if (map?.getScene && player1 && player2 && localPlayerId) {
+                    const isLocalPlayer1 = player1.playerId === localPlayerId;
+                    if (isLocalPlayer1) {
+                        player1Powerup = new PlayerPowerup(player1.playerId, map.getScene, 0);
+                        player1Powerup.showPowerUpUI();
+                        player2Powerup = null;
+                    } else {
+                        player1Powerup = null;
+                        player2Powerup = new PlayerPowerup(player2.playerId, map.getScene, 1);
+                        player2Powerup.showPowerUpUI();
+                    }
                 }
                 
                 // ⭐ FIX: Only send animationComplete - server will handle ball spawning when both players are ready
@@ -915,6 +945,19 @@ function setupGameLoop(): void {
         }
         if (player2Powerup) {
             player2Powerup.updateCameraPosition();
+        }
+
+        // ⭐ NEW: Update HTML powerUp status based on camera mode and local player's powerUp state
+        const localPlayerPowerup = player1Powerup || player2Powerup;
+        if (localPlayerPowerup) {
+            const isFPSMode = cameraManager.isInFPSMode();
+            const powerUpState = {
+                isAvailable: localPlayerPowerup.isAvailable,
+                isActive: localPlayerPowerup.isActive,
+                remainingCooldown: localPlayerPowerup.remainingCooldown,
+                windowTimeLeft: localPlayerPowerup.windowTimeLeft
+            };
+            updatePowerUpStatus(isFPSMode, powerUpState);
         }
 
         // Update ball position and ensure it's visible

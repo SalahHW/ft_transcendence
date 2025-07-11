@@ -18,9 +18,10 @@ import { handleWaitingForPlayers } from '../ui/waitingStatusHandler.js';
 import { TournamentClientHandler } from '../gameMode/tournament/TournamentClientHandler.js';
 import { showSplashScreen } from '../ui/splashScreen.js';
 import { cameraManager } from '../camera/cameraManager.js';
-import { updatePlayerNamesVersus, updateScoresUIVersus } from '../playerUi/playerUi.js';
+import { updatePlayerNamesVersus, updateScoresUIVersus, updatePowerUpStatus } from '../playerUi/playerUi.js';
 import { frontendAssetDisposalManager } from '../assetManagement/FrontendAssetDisposalManager.js';
 import { soundManager } from '../audio/soundManager.js';
+import { PlayerPowerup } from '../player/playerPowerup.js';
 import * as BABYLON from '@babylonjs/core';
 
 export class GameClient {
@@ -45,6 +46,10 @@ export class GameClient {
     private renderLoopStopping: boolean = false;
     private renderLoopStopped: boolean = false;
     private renderLoopStopPromise: Promise<void> | null = null;
+    
+    // ⭐ POWERUP INTEGRATION: Add powerup UI instances
+    private player1Powerup: PlayerPowerup | null = null;
+    private player2Powerup: PlayerPowerup | null = null;
     constructor() {
         // Initialize the game client
     }
@@ -171,8 +176,6 @@ export class GameClient {
         
         console.log('🏆 Tournament game initialization starting...');
         
-        // Tournament game initialization
-        
         // Reset game state for clean start
         TournamentClientHandler.resetTournamentGameState({ 
             isGameOver: this.isGameOver, 
@@ -184,6 +187,16 @@ export class GameClient {
         this.roomId = matchData.roomId;
         this.localPlayerId = matchData.playerId;
         
+        // ⭐ NEW: Clean up existing powerUp instances before creating new ones
+        if (this.player1Powerup) {
+            this.player1Powerup.dispose();
+            this.player1Powerup = null;
+        }
+        if (this.player2Powerup) {
+            this.player2Powerup.dispose();
+            this.player2Powerup = null;
+        }
+
         // Create the game map if it doesn't exist
         if (!this.map) {
             console.log('🏆 Creating game map for tournament match...');
@@ -228,6 +241,9 @@ export class GameClient {
                 // Reset paddle positions
                 this.player1.setZ(0);
                 this.player2.setZ(0);
+                
+                // ⭐ NEW: Create powerup UI system for LOCAL player only
+                // This block is removed as per the edit hint.
             } catch (e) {
                 console.error('Tournament paddle creation failed:', e);
                 return;
@@ -311,6 +327,20 @@ export class GameClient {
                 
                 // CRITICAL: Switch to FPS perspective after animation
                 cameraManager.switchToFPSAfterAnimation();
+                
+                // ⭐ NEW: Create powerUp UI for local player only after animation and FPS camera switch
+                if (this.map?.getScene && this.player1 && this.player2 && this.localPlayerId) {
+                    const isLocalPlayer1 = this.player1.getPlayerId() === this.localPlayerId;
+                    if (isLocalPlayer1) {
+                        this.player1Powerup = new PlayerPowerup(this.player1.getPlayerId(), this.map.getScene, 0);
+                        this.player1Powerup.showPowerUpUI();
+                        this.player2Powerup = null;
+                    } else {
+                        this.player1Powerup = null;
+                        this.player2Powerup = new PlayerPowerup(this.player2.getPlayerId(), this.map.getScene, 1);
+                        this.player2Powerup.showPowerUpUI();
+                    }
+                }
                 
                 // Re-enforce visibility after animation completes (but NOT the ball)
                 if (this.player1?.paddleBody) {
@@ -458,6 +488,11 @@ export class GameClient {
             await this.handleGameEnd(gameEndData);
         });
 
+        // ⭐ NEW: Add powerup message handlers
+        this.clientConnection.onPowerupStateUpdate(this.handlePowerupStateUpdate.bind(this));
+        this.clientConnection.onPowerupActivated(this.handlePowerupActivated.bind(this));
+        this.clientConnection.onPowerupDeactivated(this.handlePowerupDeactivated.bind(this));
+
         // Handle waiting status and tournament advancement
         this.clientConnection.socket.addEventListener('message', async (event) => {
             try {
@@ -555,6 +590,16 @@ export class GameClient {
         this.isGameStarted = false;
         this.isIntroAnimationRunning = true;
         
+        // ⭐ NEW: Clean up existing powerUp instances before creating new ones
+        if (this.player1Powerup) {
+            this.player1Powerup.dispose();
+            this.player1Powerup = null;
+        }
+        if (this.player2Powerup) {
+            this.player2Powerup.dispose();
+            this.player2Powerup = null;
+        }
+        
         // Update UI with player names and scores
         updateScoresUIVersus(0, 0, playerName || 'Player', opponentName || 'Opponent');
 
@@ -580,6 +625,9 @@ export class GameClient {
             // Set paddle positions based on server data
             this.player1.setZ(player1PositionZ);
             this.player2.setZ(player2PositionZ);
+            
+            // ⭐ NEW: Create powerup UI system for LOCAL player only (consistent with initializeTournamentGame)
+            // This block is removed as per the edit hint.
             
         } catch (e) {
             console.error('Tournament paddle creation failed:', e);
@@ -635,6 +683,28 @@ export class GameClient {
 
                 cameraManager.switchToFPSAfterAnimation();
                 
+                // ⭐ NEW: Create powerUp UI for local player only after animation and FPS camera switch
+                if (this.map?.getScene && this.player1 && this.player2 && this.localPlayerId) {
+                    const isLocalPlayer1 = this.player1.getPlayerId() === this.localPlayerId;
+                    if (isLocalPlayer1) {
+                        this.player1Powerup = new PlayerPowerup(this.player1.getPlayerId(), this.map.getScene, 0);
+                        this.player1Powerup.showPowerUpUI();
+                        this.player2Powerup = null;
+                    } else {
+                        this.player1Powerup = null;
+                        this.player2Powerup = new PlayerPowerup(this.player2.getPlayerId(), this.map.getScene, 1);
+                        this.player2Powerup.showPowerUpUI();
+                    }
+                }
+                
+                // ⭐ NEW: Show powerUp UI after FPS camera is activated
+                if (this.player1Powerup) {
+                    this.player1Powerup.showPowerUpUI();
+                }
+                if (this.player2Powerup) {
+                    this.player2Powerup.showPowerUpUI();
+                }
+                
                 // ⭐ CRITICAL: Send animationComplete to server
                 if (this.clientConnection) {
                     this.clientConnection.send({
@@ -660,6 +730,14 @@ export class GameClient {
                 }
                 if (this.ball?.ballBody) {
                     this.ball.ballBody.isVisible = true;
+                }
+                
+                // ⭐ NEW: Show powerUp UI even if animation fails (FPS camera should still be active)
+                if (this.player1Powerup) {
+                    this.player1Powerup.showPowerUpUI();
+                }
+                if (this.player2Powerup) {
+                    this.player2Powerup.showPowerUpUI();
                 }
                 
                 // Still send animationComplete even if animation failed
@@ -859,6 +937,82 @@ export class GameClient {
         }
     }
 
+    // ⭐ NEW: Handle powerup state updates for tournament matches
+    private handlePowerupStateUpdate(msg: any): void {
+        if (msg.powerupStates && this.player1 && this.player2) {
+            Object.entries(msg.powerupStates).forEach(([pid, state]: [string, any]) => {
+                if (pid === this.player1!.getPlayerId() && this.player1Powerup) {
+                    this.player1Powerup.updateState(state);
+                } else if (pid === this.player2!.getPlayerId() && this.player2Powerup) {
+                    this.player2Powerup.updateState(state);
+                }
+            });
+            
+            // ⭐ NEW: Update HTML powerUp status based on local player's state
+            const localPlayerPowerup = this.player1Powerup || this.player2Powerup;
+            if (localPlayerPowerup) {
+                const isFPSMode = cameraManager.isInFPSMode();
+                const powerUpState = {
+                    isAvailable: localPlayerPowerup.isAvailable,
+                    isActive: localPlayerPowerup.isActive,
+                    remainingCooldown: localPlayerPowerup.remainingCooldown,
+                    windowTimeLeft: localPlayerPowerup.windowTimeLeft
+                };
+                updatePowerUpStatus(isFPSMode, powerUpState);
+            }
+        }
+    }
+
+    // ⭐ NEW: Handle powerup activation for tournament matches
+    private handlePowerupActivated(msg: any): void {
+        const isDefensive = msg.powerupType === 'defensive';
+        
+        if (msg.playerId && this.player1 && this.player2) {
+            if (msg.playerId === this.player1.getPlayerId() && this.player1Powerup) {
+                if (isDefensive) {
+                    this.player1Powerup.showDefensiveSuccessFeedback();
+                } else {
+                    this.player1Powerup.showSuccessFeedback();
+                }
+            } else if (msg.playerId === this.player2.getPlayerId() && this.player2Powerup) {
+                if (isDefensive) {
+                    this.player2Powerup.showDefensiveSuccessFeedback();
+                } else {
+                    this.player2Powerup.showSuccessFeedback();
+                }
+            }
+            
+            if (this.map && this.map.getScene) {
+                cameraManager.triggerCameraShake().catch(error => {
+                    console.warn('Failed to trigger camera shake:', error);
+                });
+            }
+        }
+        
+        if (this.ball && this.ball.ballPowerup) {
+            this.ball.ballPowerup.updateState({
+                isSpeedBoosted: true,
+                speedMultiplier: msg.ballSpeedMultiplier || 2.0,
+                activatedByPlayer: msg.playerId || null,
+                originalSpeed: msg.originalSpeed || 0,
+                isDefensive: isDefensive,
+                stackedSpeed: msg.stackedSpeed
+            });
+        }
+    }
+
+    // ⭐ NEW: Handle powerup deactivation for tournament matches
+    private handlePowerupDeactivated(msg: any): void {
+        if (this.ball && this.ball.ballPowerup) {
+            this.ball.ballPowerup.updateState({
+                isSpeedBoosted: false,
+                speedMultiplier: 1.0,
+                activatedByPlayer: null,
+                originalSpeed: 0
+            });
+        }
+    }
+
     private async handleGameEnd(gameEndData: any): Promise<void> {
         console.log('🎮 Game end detected, stopping render loop...');
         
@@ -1038,6 +1192,27 @@ export class GameClient {
             // Update camera system (CRITICAL for FPS mode)
             cameraManager.update();
 
+            // ⭐ NEW: Update powerUp UI position and HTML status for tournament matches
+            if (this.player1Powerup) {
+                this.player1Powerup.updateCameraPosition();
+            }
+            if (this.player2Powerup) {
+                this.player2Powerup.updateCameraPosition();
+            }
+
+            // ⭐ NEW: Update HTML powerUp status based on camera mode and local player's powerUp state
+            const localPlayerPowerup = this.player1Powerup || this.player2Powerup;
+            if (localPlayerPowerup) {
+                const isFPSMode = cameraManager.isInFPSMode();
+                const powerUpState = {
+                    isAvailable: localPlayerPowerup.isAvailable,
+                    isActive: localPlayerPowerup.isActive,
+                    remainingCooldown: localPlayerPowerup.remainingCooldown,
+                    windowTimeLeft: localPlayerPowerup.windowTimeLeft
+                };
+                updatePowerUpStatus(isFPSMode, powerUpState);
+            }
+
             // Render the scene
             if (this.map.getScene) {
                 this.map.getScene.render();
@@ -1111,6 +1286,16 @@ export class GameClient {
         this.isGameStarted = false;
         this.renderLoopStopped = false;
         this.renderLoopStopPromise = null;
+        
+        // ⭐ NEW: Clean up powerUp instances
+        if (this.player1Powerup) {
+            this.player1Powerup.dispose();
+            this.player1Powerup = null;
+        }
+        if (this.player2Powerup) {
+            this.player2Powerup.dispose();
+            this.player2Powerup = null;
+        }
     }
 
     public async leaveGame(): Promise<void> {
@@ -1150,5 +1335,15 @@ export class GameClient {
         this.localPlayerId = null;
         this.renderLoopStopped = false;
         this.renderLoopStopPromise = null;
+        
+        // ⭐ NEW: Clean up powerUp instances
+        if (this.player1Powerup) {
+            this.player1Powerup.dispose();
+            this.player1Powerup = null;
+        }
+        if (this.player2Powerup) {
+            this.player2Powerup.dispose();
+            this.player2Powerup = null;
+        }
     }
 } 
