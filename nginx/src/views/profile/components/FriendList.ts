@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/11 17:57:40 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/11 18:06:04 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,23 +39,28 @@ export class FriendList {
     private static isLoading: boolean = false;
 
     public static async render(): Promise<string> {
-        if (this.friends.length === 0 && !this.isLoading) {
-            await this.loadFriends();
-        }
+        try {
+            if (this.friends.length === 0 && !this.isLoading) {
+                await this.loadFriends();
+            }
 
-        if (this.isLoading) {
-            return this.renderLoadingState();
-        }
+            if (this.isLoading) {
+                return this.renderLoadingState();
+            }
 
-        const friendsHtml = this.friends.map(friend => this.createFriendListItem(friend)).join('');
-        return /* HTML */`
-            <div class="flex flex-col gap-2 h-full">
-                <div class="overflow-auto flex-[1] [mask-image:linear-gradient(to_bottom,transparent,black_2%,black_98%,transparent)] pt-2">
-                    ${friendsHtml.length > 0 ? friendsHtml : this.renderEmptyState()}
+            const friendsHtml = this.friends.map(friend => this.createFriendListItem(friend)).join('');
+            return /* HTML */`
+                <div class="flex flex-col gap-2 h-full">
+                    <div class="overflow-auto flex-[1] [mask-image:linear-gradient(to_bottom,transparent,black_2%,black_98%,transparent)] pt-2">
+                        ${friendsHtml.length > 0 ? friendsHtml : this.renderEmptyState()}
+                    </div>
+                    ${this.createAddFriendSection()}
                 </div>
-                ${this.createAddFriendSection()}
-            </div>
-        `;
+            `;
+        } catch (error) {
+            console.error('[FriendList] Error in render():', error);
+            return this.renderErrorState();
+        }
     }
 
     private static renderLoadingState(): string {
@@ -73,6 +78,17 @@ export class FriendList {
         return /* HTML */`
             <div class="flex items-center justify-center h-full text-gray-400">
                 <p>Aucun ami pour le moment</p>
+            </div>
+        `;
+    }
+
+    private static renderErrorState(): string {
+        return /* HTML */`
+            <div class="flex flex-col gap-2 h-full">
+                <div class="overflow-auto flex-[1] flex items-center justify-center">
+                    <div class="text-red-400">Erreur lors du chargement des amis</div>
+                </div>
+                ${this.createAddFriendSection()}
             </div>
         `;
     }
