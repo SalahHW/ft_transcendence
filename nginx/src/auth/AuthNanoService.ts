@@ -36,7 +36,7 @@ export default class AuthNanoService {
     return this._isLoggedIn!;
   }
 
-    public async getUser(): Promise<User> {
+  public async getUser(): Promise<User> {
     try {
       await this._ensureAuthStatusChecked();
 

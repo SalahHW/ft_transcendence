@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/12 17:01:53 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/12 17:56:14 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -98,8 +98,7 @@ export class FriendList {
             this.isLoading = true;
             const currentUser = await this.authService.getUser();
 
-            // Extraire l'ID utilisateur de la structure JWT
-            const userId = (currentUser as any)?.user?.sub;
+            const userId = currentUser.id;
 
             if (!userId) {
                 console.warn('Utilisateur non connecté ou ID manquant');
@@ -107,18 +106,16 @@ export class FriendList {
                 return;
             }
 
-            // Récupérer les amitiés de l'utilisateur
             const friendships = await this.friendsService.getUserFriendships(userId);
 
-            // Enrichir chaque amitié avec les informations utilisateur
             this.friends = await Promise.all(
                 friendships.map(async (friendship: Friendship) => {
                     try {
                         const user = await this.usersService.getUserById(friendship.friend_id);
                         return this.enrichFriend(friendship, user);
-                    } catch (error) {
+                    }
+                    catch (error) {
                         console.error(`Erreur lors de la récupération de l'utilisateur ${friendship.friend_id}:`, error);
-                        // Retourner un ami par défaut en cas d'erreur
                         return {
                             id: friendship.friend_id,
                             username: `User ${friendship.friend_id}`,
@@ -259,8 +256,7 @@ export class FriendList {
         try {
             const currentUser = await this.authService.getUser();
 
-            // Extraire l'ID utilisateur de la structure JWT
-            const currentUserId = (currentUser as any)?.user?.sub;
+            const currentUserId = currentUser.id;
 
             if (!currentUserId) {
                 console.error('Utilisateur non connecté');
@@ -268,7 +264,6 @@ export class FriendList {
                 return;
             }
 
-                                                // Chercher l'utilisateur par nom d'utilisateur
             let targetUser: any = null;
             try {
                 targetUser = await this.usersService.getUserByUsername(username);
