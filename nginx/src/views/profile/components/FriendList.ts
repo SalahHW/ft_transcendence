@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/11 18:58:48 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/12 12:39:07 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -156,15 +156,15 @@ export class FriendList {
     private static createFriendListItem(friend: EnrichedFriend): string {
         const statusColor = friend.status === 'online' ? UI_THEME.colors.green.light : UI_THEME.colors.red.light;
         return /* HTML */`
-            <div class="flex items-center justify-between p-2 rounded-lg mb-2 bg-black/20">
-                <div class="flex items-center gap-3">
-                    <div class="relative">
+            <div class="flex items-center justify-between p-2 rounded-lg mb-2 bg-black/20 overflow-x-auto min-w-0">
+                <div class="flex items-center gap-3 flex-shrink-0">
+                    <div class="relative flex-shrink-0">
                         <img src="${friend.avatarUrl}" alt="${friend.username} avatar" class="text-white w-12 h-12 rounded-lg object-cover">
                         <span class="absolute bottom-0 right-0 block h-3 w-3 rounded-full border-2 border-gray-800" style="background-color: ${statusColor}"></span>
                     </div>
-                    <span class="text-white font-medium">${friend.username}</span>
+                    <span class="text-white font-medium whitespace-nowrap">${friend.username}</span>
                 </div>
-                <div class="w-12 h-12">
+                <div class="w-12 h-12 flex-shrink-0">
                     ${createWinRateDonutChart({ wins: friend.wins, losses: friend.losses }, false)}
                 </div>
             </div>
@@ -276,8 +276,9 @@ export class FriendList {
             }
 
             const targetUser = users[0];
-            if (!targetUser.id) {
-                console.error('ID utilisateur manquant');
+            if (!targetUser || !targetUser.id) {
+                console.error('Utilisateur invalide ou ID manquant');
+                alert('Utilisateur invalide ou incomplet');
                 return;
             }
 
