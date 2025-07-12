@@ -1,9 +1,4 @@
 import UsersApi, { JwtUserPayload } from "../services/api/user.js";
-import Router from '../router/Router.js';
-import AvatarService from '../services/AvatarService.js';
-import FriendsService from '../services/FriendsService.js';
-import MatchHistoryService from '../services/MatchHistoryService.js';
-import UserProfileService from '../services/UserProfileService.js';
 
 export default class AuthNanoService {
 	private static _instance: AuthNanoService;
@@ -63,7 +58,13 @@ export default class AuthNanoService {
 			this._isLoggedIn = false;
 			this._stopRefreshLoop();
 
-			// Vider tous les caches des services lors de la déconnexion
+			// Clear all service caches on logout using dynamic imports to avoid circular dependencies.
+			const AvatarService = (await import('../services/AvatarService.js')).default;
+			const FriendsService = (await import('../services/FriendsService.js')).default;
+			const UserProfileService = (await import('../services/UserProfileService.js')).default;
+			const MatchHistoryService = (await import('../services/MatchHistoryService.js')).default;
+			const Router = (await import('../router/Router.js')).default;
+
 			AvatarService.getInstance().clearCache();
 			FriendsService.getInstance().clearCache();
 			UserProfileService.getInstance().clearCache();
@@ -75,7 +76,12 @@ export default class AuthNanoService {
 		}
 	}
 
-	public async register(data: {username: string; password: string; email: string; wallet: string; }): Promise<JwtUserPayload> {
+	public async register(data: {
+		username: string;
+		password: string;
+		email: string;
+		wallet: string;
+	}): Promise<JwtUserPayload> {
 		await this._usersApi.register(data.username, data.email, data.password, data.wallet);
 		await this.login(data.username, data.password);
 		return this._user!;
