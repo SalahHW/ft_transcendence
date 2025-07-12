@@ -6,12 +6,13 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/12 21:27:57 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/12 22:08:38 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 import MatchHistoryService from "../../../services/MatchHistoryService.js";
 import UserProfileService from "../../../services/UserProfileService.js";
+import AvatarServiceAPI from "../../../services/api/avatar.js";
 import { Match } from "../../../services/api/match.js";
 import { User } from "../../../services/api/user.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
@@ -20,6 +21,7 @@ export class MatchHistory {
 
     private static _matchHistoryService = MatchHistoryService.getInstance();
     private static _userProfileService = UserProfileService.getInstance();
+	private static _avatarApi = new AvatarServiceAPI();
 
     public static async render(): Promise<string> {
         try {
@@ -72,7 +74,13 @@ export class MatchHistory {
         const userWon = currentUser.wallet === match.winner;
         const resultText = userWon ? 'VICTORY' : 'DEFEAT';
         const resultColor = userWon ? UI_THEME.colors.green.light : UI_THEME.colors.red.light;
-        const userAvatar = '/assets/defaultAvatar.jpg';
+
+		let userAvatar = '/assets/defaultAvatar.jpg';
+		try {
+			if (currentUser.id)
+				userAvatar = await this._avatarApi.getUserAvatarUrl(currentUser.id);
+		} catch (error) { /* default avatar is already set */ }
+
         const opponentAvatar = '/assets/defaultAvatar.jpg';
         const bgColor = userWon ? UI_THEME.colors.green.dark : UI_THEME.colors.red.dark;
 

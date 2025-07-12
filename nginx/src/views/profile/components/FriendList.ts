@@ -6,12 +6,13 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/05/26 21:09:59 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/12 21:09:07 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/12 22:08:28 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 import FriendsService from "../../../services/FriendsService.js";
 import UsersApi, { User } from "../../../services/api/user.js";
+import AvatarServiceAPI from "../../../services/api/avatar.js";
 import { Friendship } from "../../../services/api/friends.js";
 import AuthNanoService from "../../../auth/AuthNanoService.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
@@ -36,6 +37,7 @@ export class FriendList {
     private static friends: EnrichedFriend[] = [];
     private static friendsService = FriendsService.getInstance();
     private static usersService = new UsersApi();
+    private static avatarServiceApi = new AvatarServiceAPI();
     private static isLoading: boolean = false;
     private static authNanoService = AuthNanoService.getInstance();
 
@@ -101,8 +103,12 @@ export class FriendList {
             this.friends = await Promise.all(
                 friendships.map(async (friendship: Friendship) => {
                     try {
-                        const user = await this.usersService.getUserById(friendship.friend_id);
-                        return this.enrichFriend(friendship, user);
+                        const [user, avatarUrl] = await Promise.all([
+                            this.usersService.getUserById(friendship.friend_id),
+                            this.avatarServiceApi.getUserAvatarUrl(friendship.friend_id)
+                                .catch(() => '/assets/defaultAvatar.jpg')
+                        ]);
+                        return this.enrichFriend(friendship, user, avatarUrl);
                     }
                     catch (error) {
                         console.error(`Erreur lors de la récupération de l'utilisateur ${friendship.friend_id}:`, error);
@@ -126,11 +132,11 @@ export class FriendList {
         }
     }
 
-    private static enrichFriend(friendship: Friendship, user: User): EnrichedFriend {
+    private static enrichFriend(friendship: Friendship, user: User, avatarUrl: string): EnrichedFriend {
         return {
             id: friendship.friend_id,
             username: user.username || `User ${friendship.friend_id}`,
-            avatarUrl: '/assets/defaultAvatar.jpg', // TODO: intégrer l'avatar service une fois connecté
+            avatarUrl: avatarUrl,
             status: 'offline', // Tous les amis sont offline comme demandé
             wins: 0, // TODO: intégrer les stats de match une fois le service connecté
             losses: 0, // TODO: intégrer les stats de match une fois le service connecté
