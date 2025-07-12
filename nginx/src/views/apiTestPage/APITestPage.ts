@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/27 19:14:29 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/11 15:06:01 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/12 21:31:07 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,6 +25,13 @@ import DeleteUserForm from "./userForms/DeleteUserForm.js";
 // Match forms
 import GetMatchForm from "./matchForms/GetMatchForm.js";
 import CreateMatchForm from "./matchForms/CreateMatchForm.js";
+import GetMatchesByPlayerForm from "./matchForms/GetMatchesByPlayerForm.js";
+import GetPlayerNameByAddressForm from "./matchForms/GetPlayerNameByAddressForm.js";
+
+// Tournament forms
+import ReportTournamentForm from "./tournamentForms/ReportTournamentForm.js";
+import GetTournamentByIdForm from "./tournamentForms/GetTournamentByIdForm.js";
+import GetTournamentsByWinnerForm from "./tournamentForms/GetTournamentsByWinnerForm.js";
 
 // Current user forms
 import GetCurrentUserForm from "./currentUserForms/GetCurrentUserForm.js";
@@ -89,7 +96,7 @@ export default class APITestPage extends ModalView {
 
 	private _renderLeftCardContent(): void {
 		const tabs = new Tabs(
-			"left-card-content", ["User API", "Match API", "Current User API", "Game API", "Avatar API", "Friends API"]
+			"left-card-content", ["User API", "Match API", "Tournament API", "Current User API", "Game API", "Avatar API", "Friends API"]
 		);
 
 		const userContainer = document.createElement('div');
@@ -104,27 +111,33 @@ export default class APITestPage extends ModalView {
 
 		this._renderMatchForms();
 
+		const tournamentContainer = document.createElement('div');
+		tournamentContainer.id = "tournament-forms-container";
+		tabs.setTabContent(2, tournamentContainer);
+
+		this._renderTournamentForms();
+
 		const currentUserContainer = document.createElement('div');
 		currentUserContainer.id = "current-user-form-container";
-		tabs.setTabContent(2, currentUserContainer);
+		tabs.setTabContent(3, currentUserContainer);
 
 		this._renderCurrentUserForms();
 
 		const gameContainer = document.createElement('div');
 		gameContainer.id = "game-forms-container";
-		tabs.setTabContent(3, gameContainer);
+		tabs.setTabContent(4, gameContainer);
 
 		this._renderGameForms();
 
 		const avatarContainer = document.createElement('div');
 		avatarContainer.id = "avatar-forms-container";
-		tabs.setTabContent(4, avatarContainer);
+		tabs.setTabContent(5, avatarContainer);
 
 		this._renderAvatarForms();
 
 		const friendsContainer = document.createElement('div');
 		friendsContainer.id = "friends-forms-container";
-		tabs.setTabContent(5, friendsContainer);
+		tabs.setTabContent(6, friendsContainer);
 
 		this._renderFriendsForms();
 	}
@@ -169,7 +182,7 @@ export default class APITestPage extends ModalView {
 
 	private _renderMatchForms(): void {
 		const tabs = new Tabs(
-			"match-forms-container", ["Get Match", "Create Match"]
+			"match-forms-container", ["Get by ID", "Get by Player", "Get Player Name", "Report Match"]
 		);
 
 		const getMatchContainer = document.createElement('div');
@@ -179,12 +192,53 @@ export default class APITestPage extends ModalView {
 		const getMatchForm = new GetMatchForm("get-match-form-container");
 		getMatchForm.render();
 
+		const getMatchesByPlayerContainer = document.createElement('div');
+		getMatchesByPlayerContainer.id = "get-matches-by-player-form-container";
+		tabs.setTabContent(1, getMatchesByPlayerContainer);
+
+		const getMatchesByPlayerForm = new GetMatchesByPlayerForm("get-matches-by-player-form-container");
+		getMatchesByPlayerForm.render();
+
+		const getPlayerNameContainer = document.createElement('div');
+		getPlayerNameContainer.id = "get-player-name-form-container";
+		tabs.setTabContent(2, getPlayerNameContainer);
+
+		const getPlayerNameForm = new GetPlayerNameByAddressForm("get-player-name-form-container");
+		getPlayerNameForm.render();
+
 		const createMatchContainer = document.createElement('div');
 		createMatchContainer.id = "create-match-form-container";
-		tabs.setTabContent(1, createMatchContainer);
+		tabs.setTabContent(3, createMatchContainer);
 
 		const createMatchForm = new CreateMatchForm("create-match-form-container");
 		createMatchForm.render();
+	}
+
+	private _renderTournamentForms(): void {
+		const tabs = new Tabs(
+			"tournament-forms-container", ["Report", "Get by ID", "Get by Winner"]
+		);
+
+		const reportTournamentContainer = document.createElement('div');
+		reportTournamentContainer.id = "report-tournament-form-container";
+		tabs.setTabContent(0, reportTournamentContainer);
+
+		const reportTournamentForm = new ReportTournamentForm("report-tournament-form-container");
+		reportTournamentForm.render();
+
+		const getTournamentByIdContainer = document.createElement('div');
+		getTournamentByIdContainer.id = "get-tournament-by-id-form-container";
+		tabs.setTabContent(1, getTournamentByIdContainer);
+
+		const getTournamentByIdForm = new GetTournamentByIdForm("get-tournament-by-id-form-container");
+		getTournamentByIdForm.render();
+
+		const getTournamentsByWinnerContainer = document.createElement('div');
+		getTournamentsByWinnerContainer.id = "get-tournaments-by-winner-form-container";
+		tabs.setTabContent(2, getTournamentsByWinnerContainer);
+
+		const getTournamentsByWinnerForm = new GetTournamentsByWinnerForm("get-tournaments-by-winner-form-container");
+		getTournamentsByWinnerForm.render();
 	}
 
 	private _renderCurrentUserForms(): void {
@@ -210,7 +264,7 @@ export default class APITestPage extends ModalView {
 		registerContainer.id = "register-form-container";
 		tabs.setTabContent(2, registerContainer);
 
-		const registerUserForm = new RegisterUserForm("register-form-container");
+		const registerUserForm = new RegisterUserForm("register-user-form-container");
 		registerUserForm.render();
 	}
 
