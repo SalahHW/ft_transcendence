@@ -45,18 +45,18 @@ function movePaddle(player, direction) {
 export async function registerApiRoutes(fastify) {
 
   // GET /api/players: Return list of connected players with usernames
-  fastify.get('/api/players', async (reply) => {
+  fastify.get('/api/players', async (request, reply) => {
     try {
       console.log('API request: GET /api/players');
       const playerList = playerManager.getPlayersSummary();
-      return reply.status(HTTP_STATUS.OK).send({
+      return reply.code(HTTP_STATUS.OK).send({
         status: 'success',
         data: playerList,
         count: playerList.length,
       });
     } catch (error) {
       console.error('Error in /api/players:', error);
-      return reply.status(500).send({
+      return reply.code(500).send({
         status: 'error',
         message: 'Internal server error',
       });
@@ -72,14 +72,14 @@ export async function registerApiRoutes(fastify) {
       const player = playerManager.registerPlayerWithUsername(username);
       
       console.log(`Created player ${player.id} with username ${username}`);
-      return reply.status(201).send({
+      return reply.code(201).send({
         status: 'success',
         data: { id: player.id, username: player.username },
       });
     } catch (error) {
       console.error('Error in POST /api/players:', error);
       const status = error.message.includes('Invalid username') ? HTTP_STATUS.BAD_REQUEST : 500;
-      return reply.status(status).send({
+      return reply.code(status).send({
         status: 'error',
         message: error.message || 'Internal server error',
       });
@@ -98,13 +98,31 @@ export async function registerApiRoutes(fastify) {
       const player = playerManager.registerPlayerWithUsername(username);
       
       // Add player to tournament waiting room
-      const tournamentData = await tournamentManager.addPlayerToTournament(player.id, username);
+      let tournamentData;
+      try {
+        tournamentData = await tournamentManager.addPlayerToTournament(player.id, username);
+      } catch (tournamentError) {
+        console.error(`🏆 Error adding player ${username} to tournament:`, tournamentError);
+        
+        // ⭐ CRITICAL FIX: If tournament registration fails, try to clean up stale data and retry
+        console.log(`🏆 Attempting to clean up stale tournament data and retry for player ${username}`);
+        try {
+          await tournamentManager.cleanupManager.cleanupStaleWaitingRoomData();
+          
+          // Retry tournament registration after cleanup
+          tournamentData = await tournamentManager.addPlayerToTournament(player.id, username);
+          console.log(`🏆 Tournament registration successful after cleanup for player ${username}`);
+        } catch (retryError) {
+          console.error(`🏆 Tournament registration failed even after cleanup for player ${username}:`, retryError);
+          throw new Error(`Failed to join tournament after cleanup: ${retryError.message}`);
+        }
+      }
       
       console.log(`Created tournament player ${player.id} with username ${username}`);
       console.log(`🏆 Player ${username} added to tournament waiting room ${tournamentData.waitingRoomId} (${tournamentData.playerCount}/4)`);
       
               // Return WebSocket connection information for the client
-        return reply.status(201).send({
+        return reply.code(201).send({
           status: 'success',
           data: { 
             id: player.id, 
@@ -118,7 +136,7 @@ export async function registerApiRoutes(fastify) {
     } catch (error) {
       console.error('Error in POST /api/tournaments:', error);
       const status = error.message.includes('Invalid username') ? HTTP_STATUS.BAD_REQUEST : 500;
-      return reply.status(status).send({
+      return reply.code(status).send({
         status: 'error',
         message: error.message || 'Internal server error',
       });
@@ -126,13 +144,13 @@ export async function registerApiRoutes(fastify) {
   });
 
   // GET /api/tournaments/waiting-rooms: Get all tournament waiting room information
-  fastify.get('/api/tournaments/waiting-rooms', async (reply) => {
+  fastify.get('/api/tournaments/waiting-rooms', async (request, reply) => {
     try {
       console.log('API request: GET /api/tournaments/waiting-rooms');
       const waitingRoomCounts = tournamentManager.getAllWaitingRoomCounts();
       const stats = tournamentManager.getTournamentStats();
       
-      return reply.status(HTTP_STATUS.OK).send({
+      return reply.code(HTTP_STATUS.OK).send({
         status: 'success',
         data: {
           waitingRooms: waitingRoomCounts,
@@ -141,7 +159,7 @@ export async function registerApiRoutes(fastify) {
       });
     } catch (error) {
       console.error('Error in GET /api/tournaments/waiting-rooms:', error);
-      return reply.status(500).send({
+      return reply.code(500).send({
         status: 'error',
         message: 'Internal server error',
       });
@@ -156,19 +174,19 @@ export async function registerApiRoutes(fastify) {
       
       const waitingRoomData = tournamentManager.getWaitingRoomPlayerCount(id);
       if (!waitingRoomData) {
-        return reply.status(404).send({
+        return reply.code(404).send({
           status: 'error',
           message: 'Tournament waiting room not found',
         });
       }
       
-      return reply.status(HTTP_STATUS.OK).send({
+      return reply.code(HTTP_STATUS.OK).send({
         status: 'success',
         data: waitingRoomData,
       });
     } catch (error) {
       console.error(`Error in GET /api/tournaments/waiting-rooms/${request.params.id}:`, error);
-      return reply.status(500).send({
+      return reply.code(500).send({
         status: 'error',
         message: 'Internal server error',
       });
@@ -184,7 +202,7 @@ export async function registerApiRoutes(fastify) {
       console.log(`API request: DELETE /api/tournaments/players/${id} (username: ${username})`);
       
       if (!username) {
-        return reply.status(HTTP_STATUS.BAD_REQUEST).send({
+        return reply.code(HTTP_STATUS.BAD_REQUEST).send({
           status: 'error',
           message: 'Username is required in request body',
         });
@@ -193,19 +211,19 @@ export async function registerApiRoutes(fastify) {
       const result = await tournamentManager.removePlayerFromTournament(id, username);
       
       if (result.success) {
-        return reply.status(HTTP_STATUS.OK).send({
+        return reply.code(HTTP_STATUS.OK).send({
           status: 'success',
           data: result,
         });
       } else {
-        return reply.status(404).send({
+        return reply.code(404).send({
           status: 'error',
           message: result.message,
         });
       }
     } catch (error) {
       console.error(`Error in DELETE /api/tournaments/players/${request.params.id}:`, error);
-      return reply.status(500).send({
+      return reply.code(500).send({
         status: 'error',
         message: 'Internal server error',
       });
@@ -221,7 +239,7 @@ export async function registerApiRoutes(fastify) {
       console.log(`API request: POST /api/tournaments/players/${id}/leave (username: ${username})`);
       
       if (!username) {
-        return reply.status(HTTP_STATUS.BAD_REQUEST).send({
+        return reply.code(HTTP_STATUS.BAD_REQUEST).send({
           status: 'error',
           message: 'Username is required in request body',
         });
@@ -240,7 +258,7 @@ export async function registerApiRoutes(fastify) {
       }
       
       if (!foundRoom) {
-        return reply.status(404).send({
+        return reply.code(404).send({
           status: 'error',
           message: `Player ${username} not found in any tournament waiting room`,
         });
@@ -250,7 +268,7 @@ export async function registerApiRoutes(fastify) {
       const { disconnectionDetector } = await import('../server/disconnect/DisconnectionDetector.js');
       disconnectionDetector.handleExplicitLeave(id, foundRoom);
       
-      return reply.status(HTTP_STATUS.OK).send({
+      return reply.code(HTTP_STATUS.OK).send({
         status: 'success',
         data: {
           message: `Player ${username} left tournament waiting room`,
@@ -259,7 +277,7 @@ export async function registerApiRoutes(fastify) {
       });
     } catch (error) {
       console.error(`Error in POST /api/tournaments/players/${request.params.id}/leave:`, error);
-      return reply.status(500).send({
+      return reply.code(500).send({
         status: 'error',
         message: 'Internal server error',
       });
@@ -275,7 +293,7 @@ export async function registerApiRoutes(fastify) {
       console.log(`API request: POST /api/tournaments/players/${id}/browser-event (username: ${username}, event: ${eventType})`);
       
       if (!username || !eventType) {
-        return reply.status(HTTP_STATUS.BAD_REQUEST).send({
+        return reply.code(HTTP_STATUS.BAD_REQUEST).send({
           status: 'error',
           message: 'Username and eventType are required in request body',
         });
@@ -294,7 +312,7 @@ export async function registerApiRoutes(fastify) {
       }
       
       if (!foundRoom) {
-        return reply.status(404).send({
+        return reply.code(404).send({
           status: 'error',
           message: `Player ${username} not found in any tournament waiting room`,
         });
@@ -304,7 +322,7 @@ export async function registerApiRoutes(fastify) {
       const { disconnectionDetector } = await import('../server/disconnect/DisconnectionDetector.js');
       disconnectionDetector.handleBrowserEvent(id, foundRoom, eventType);
       
-      return reply.status(HTTP_STATUS.OK).send({
+      return reply.code(HTTP_STATUS.OK).send({
         status: 'success',
         data: {
           message: `Browser event ${eventType} handled for player ${username}`,
@@ -313,7 +331,7 @@ export async function registerApiRoutes(fastify) {
       });
     } catch (error) {
       console.error(`Error in POST /api/tournaments/players/${request.params.id}/browser-event:`, error);
-      return reply.status(500).send({
+      return reply.code(500).send({
         status: 'error',
         message: 'Internal server error',
       });
@@ -329,7 +347,7 @@ export async function registerApiRoutes(fastify) {
       console.log(`API request: POST /api/tournaments/players/${id}/activity (username: ${username})`);
       
       if (!username) {
-        return reply.status(HTTP_STATUS.BAD_REQUEST).send({
+        return reply.code(HTTP_STATUS.BAD_REQUEST).send({
           status: 'error',
           message: 'Username is required in request body',
         });
@@ -348,7 +366,7 @@ export async function registerApiRoutes(fastify) {
       }
       
       if (!foundRoom) {
-        return reply.status(404).send({
+        return reply.code(404).send({
           status: 'error',
           message: `Player ${username} not found in any tournament waiting room`,
         });
@@ -357,7 +375,7 @@ export async function registerApiRoutes(fastify) {
       // Update player activity
       tournamentManager.updatePlayerActivity(id, foundRoom);
       
-      return reply.status(HTTP_STATUS.OK).send({
+      return reply.code(HTTP_STATUS.OK).send({
         status: 'success',
         data: {
           message: `Activity updated for player ${username}`,
@@ -366,7 +384,7 @@ export async function registerApiRoutes(fastify) {
       });
     } catch (error) {
       console.error(`Error in POST /api/tournaments/players/${id}/activity:`, error);
-      return reply.status(500).send({
+      return reply.code(500).send({
         status: 'error',
         message: 'Internal server error',
       });
@@ -387,7 +405,7 @@ export async function registerApiRoutes(fastify) {
       
       const isReady = playerManager.setPlayerReady(id);
       
-      return reply.status(200).send({
+      return reply.code(200).send({
         status: 'success',
         message: 'Player ready status updated',
         data: { playerId: id, isReady }
@@ -395,7 +413,7 @@ export async function registerApiRoutes(fastify) {
     } catch (error) {
       console.error('Error in POST /api/players/:id/ready:', error);
       const status = error.message.includes('not found') ? 404 : 500;
-      return reply.status(status).send({
+      return reply.code(status).send({
         status: 'error',
         message: error.message || 'Internal server error',
       });
@@ -408,9 +426,15 @@ export async function registerApiRoutes(fastify) {
     if (!player) {
       return { error: { status: 404, message: 'Player not found' } };
     }
-    if (!player.isConnected()) {
-      return { error: { status: 400, message: 'Player not connected to game' } };
+    
+    // ⭐ FIX: Allow paddle movement for API-registered players even without WebSocket
+    // This enables CLI control via HTTP API as required by the assignment
+    if (!player.username) {
+      return { error: { status: 400, message: 'Player must have a username' } };
     }
+    
+    // Only require WebSocket connection for real-time game features
+    // Paddle movement via HTTP API should work for CLI control
     return { player };
   };
 
@@ -421,7 +445,7 @@ export async function registerApiRoutes(fastify) {
       const validation = validatePaddleRequest(id);
       
       if (validation.error) {
-        return reply.status(validation.error.status).send({
+        return reply.code(validation.error.status).send({
           status: 'error',
           message: validation.error.message
         });
@@ -429,14 +453,14 @@ export async function registerApiRoutes(fastify) {
 
       movePaddle(validation.player, 'up');
       
-      return reply.status(200).send({
+      return reply.code(200).send({
         status: 'success',
         message: 'Paddle moved up',
         data: { playerId: id, direction: 'up', roomId: validation.player.roomId }
       });
     } catch (error) {
       console.error('Error in POST /api/players/:id/paddle/up:', error);
-      return reply.status(500).send({
+      return reply.code(500).send({
         status: 'error',
         message: error.message || 'Internal server error',
       });
@@ -450,7 +474,7 @@ export async function registerApiRoutes(fastify) {
       const validation = validatePaddleRequest(id);
       
       if (validation.error) {
-        return reply.status(validation.error.status).send({
+        return reply.code(validation.error.status).send({
           status: 'error',
           message: validation.error.message
         });
@@ -458,14 +482,14 @@ export async function registerApiRoutes(fastify) {
 
       movePaddle(validation.player, 'down');
       
-      return reply.status(200).send({
+      return reply.code(200).send({
         status: 'success',
         message: 'Paddle moved down',
         data: { playerId: id, direction: 'down', roomId: validation.player.roomId }
       });
     } catch (error) {
       console.error('Error in POST /api/players/:id/paddle/down:', error);
-      return reply.status(500).send({
+      return reply.code(500).send({
         status: 'error',
         message: error.message || 'Internal server error',
       });
@@ -483,7 +507,7 @@ export async function registerApiRoutes(fastify) {
       const missingFields = requiredFields.filter(field => !matchData[field]);
       
       if (missingFields.length > 0) {
-        return reply.status(400).send({
+        return reply.code(400).send({
           status: 'error',
           message: `Missing required fields: ${missingFields.join(', ')}`,
         });
@@ -492,14 +516,14 @@ export async function registerApiRoutes(fastify) {
       // Forward match data to other services
       await notifyOtherServices(matchData);
       
-      return reply.status(200).send({
+      return reply.code(200).send({
         status: 'success',
         message: 'Match results reported successfully',
         data: { matchId: matchData.roomId }
       });
     } catch (error) {
       console.error('Error in POST /api/matches/results:', error);
-      return reply.status(500).send({
+      return reply.code(500).send({
         status: 'error',
         message: 'Failed to report match results',
       });

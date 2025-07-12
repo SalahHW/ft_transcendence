@@ -443,8 +443,9 @@ export function initializeGame(playerId: string, gameType: '1v1' | 'tournament' 
         updateGameStatus('Preparing match...');
         
         try {
-            // Show splash screen for 3 seconds
-            await showSplashScreen(currentPlayerName, opponentDisplayName, 3000);
+            // Show splash screen for 3 seconds with VERSUS match type
+            const { showSplashScreen, MatchType } = await import('../ui/splashScreen.js');
+            await showSplashScreen(currentPlayerName, opponentDisplayName, 3000, MatchType.VERSUS);
         } catch (error) {
             console.error('Error showing splash screen:', error);
             // Continue with game initialization even if splash screen fails

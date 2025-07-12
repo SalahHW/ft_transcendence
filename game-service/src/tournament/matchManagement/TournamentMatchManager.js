@@ -47,7 +47,6 @@ export class TournamentMatchManager {
             opponentName: index === 0 ? player1.username : player0.username,
             role: index, // 0 for player0, 1 for player1
             matchType: 'tournament_semi_final',
-            // ⭐ FIX: Include initial paddle positions to ensure synchronization
             playerPositionZ: player.positionZ || 0,
             opponentPositionZ: index === 0 ? player1.positionZ || 0 : player0.positionZ || 0
           };
@@ -159,10 +158,8 @@ export class TournamentMatchManager {
       return false;
     }
     
-    // ⭐ FIX: Determine if this is a forfeit winner scenario
     const isForfeitWinner = matchData && matchData.matchType === 'tournament_forfeit';
     
-    // Store the match result
     if (!waitingRoomData.semiFinalResults) {
       waitingRoomData.semiFinalResults = {};
     }

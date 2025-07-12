@@ -7,7 +7,8 @@ import * as BABYLON from '@babylonjs/core';
 import { browserEventHandler } from "../../webSocketClient/BrowserEventHandler.js";
 import { stopForfeitWinnerPing } from "../../ui/waitingStatusHandler.js";
 import { frontendAssetDisposalManager } from "../../assetManagement/FrontendAssetDisposalManager.js";
-import { removeSplashScreen, isSplashScreenActive } from "../../ui/splashScreen.js";
+import { removeSplashScreen, isSplashScreenActive, MatchType } from "../../ui/splashScreen.js";
+import { soundManager } from "../../audio/soundManager.js";
 
 export class TournamentClientHandler {
   /**
@@ -89,13 +90,25 @@ export class TournamentClientHandler {
       gameState.player1 = null;
       gameState.player2 = null;
       
-      // Update status with specific final type
-      if (message.finalType === 'winner') {
-        updateGameStatus('🥇 You advanced to the Winner Final!');
-      } else if (message.finalType === 'loser') {
-        updateGameStatus('🥉 You advanced to the Loser Final!');
+      // Play semi-final advancement sounds based on final type
+      // ⭐ FIX: Only play semi-final sounds for actual semi-final advancements, not forfeit scenarios
+      if (message.matchData?.matchType === 'tournament_forfeit') {
+        // This is a forfeit scenario, don't play semi-final sounds
+        console.log('🏆 Forfeit scenario detected, skipping semi-final sounds');
+        updateGameStatus('🎉 You advanced to the final due to opponent disconnect!');
       } else {
-        updateGameStatus('🎉 You advanced to the final!');
+        // This is an actual semi-final advancement, play appropriate sounds
+        if (message.finalType === 'winner') {
+          soundManager.playSound('semiFinalWin', 1.0);
+          updateGameStatus('🥇 You advanced to the Winner Final!');
+        } else if (message.finalType === 'loser') {
+          soundManager.playSound('semiFinalLose', 1.0);
+          updateGameStatus('🥉 You advanced to the Loser Final!');
+        } else {
+          // Fallback for unknown final type
+          soundManager.playSound('semiFinalWin', 1.0);
+          updateGameStatus('🎉 You advanced to the final!');
+        }
       }
     } else if (message.status === 'final_match_complete') {
       // Individual final match is complete
@@ -261,15 +274,20 @@ export class TournamentClientHandler {
       message.matchType === 'tournament_loser_final'
     )) {
       let matchTypeText = '';
+      let matchType = MatchType.VERSUS; // Default fallback
+      
       switch (message.matchType) {
         case 'tournament_semi_final':
           matchTypeText = '🏆 Tournament Semi-Final';
+          matchType = MatchType.SEMI_FINALS;
           break;
         case 'tournament_winner_final':
           matchTypeText = '🥇 Winner Final';
+          matchType = MatchType.WINNER_FINALS;
           break;
         case 'tournament_loser_final':
           matchTypeText = '🥉 Loser Final';
+          matchType = MatchType.LOSER_FINALS;
           break;
       }
       
@@ -280,7 +298,7 @@ export class TournamentClientHandler {
       try {
         const { showSplashScreen } = await import('../../ui/splashScreen.js');
         console.log('🏆 Showing splash screen for tournament match...');
-        await showSplashScreen(message.playerName, message.opponentName, 3000);
+        await showSplashScreen(message.playerName, message.opponentName, 3000, matchType);
         console.log('🏆 Splash screen completed');
       } catch (error) {
         console.error('Error showing tournament splash screen:', error);

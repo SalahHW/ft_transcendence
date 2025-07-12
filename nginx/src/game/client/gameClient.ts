@@ -16,7 +16,6 @@ import { playerPaddle } from '../player/player.js';
 import { Ball } from '../ball/ball.js';
 import { handleWaitingForPlayers } from '../ui/waitingStatusHandler.js';
 import { TournamentClientHandler } from '../gameMode/tournament/TournamentClientHandler.js';
-import { showSplashScreen } from '../ui/splashScreen.js';
 import { cameraManager } from '../camera/cameraManager.js';
 import { updatePlayerNamesVersus, updateScoresUIVersus, updatePowerUpStatus } from '../playerUi/playerUi.js';
 import { frontendAssetDisposalManager } from '../assetManagement/FrontendAssetDisposalManager.js';
