@@ -3,9 +3,10 @@
  * Handles player operations in tournament waiting rooms
  */
 
-import { gameStateManager } from '../../game/GameStateManager.js';
-import { TournamentConfig, TournamentPhases } from '../constants.js';
+import { TournamentConfig } from '../constants.js';
 import { TournamentRoomFactory } from '../rooms/TournamentRoomFactory.js';
+import { TournamentPhases } from '../constants.js';
+import { gameStateManager } from '../../game/GameStateManager.js';
 
 export class TournamentPlayerManager {
   constructor(waitingRooms, disconnectHandler) {
@@ -44,15 +45,23 @@ export class TournamentPlayerManager {
       }
       
       // Remove the old player from the waiting room
-      const disconnectHandler = await this.getDisconnectHandler();
-      disconnectHandler.handleWaitingRoomDisconnect(existingPlayer.playerId, existingPlayer.waitingRoomId, 'player_replaced');
-      
-      // Wait a moment for the cleanup to complete
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Check if the waiting room still exists after cleanup
-      if (!this.waitingRooms.has(existingPlayer.waitingRoomId)) {
-        console.log(`🏆 Waiting room ${existingPlayer.waitingRoomId} was cleaned up, will create new one or find available`);
+      try {
+        const disconnectHandler = await this.getDisconnectHandler();
+        disconnectHandler.handleWaitingRoomDisconnect(existingPlayer.playerId, existingPlayer.waitingRoomId, 'player_replaced');
+        
+        // Wait a moment for the cleanup to complete
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Check if the waiting room still exists after cleanup
+        if (!this.waitingRooms.has(existingPlayer.waitingRoomId)) {
+          console.log(`🏆 Waiting room ${existingPlayer.waitingRoomId} was cleaned up, will create new one or find available`);
+        }
+      } catch (error) {
+        console.error(`🏆 Error removing existing player ${username} from waiting room ${existingPlayer.waitingRoomId}:`, error);
+        
+        // ⭐ CRITICAL FIX: If cleanup fails, force remove the stale data to prevent blocking new joins
+        console.log(`🏆 Force removing stale waiting room data for ${existingPlayer.waitingRoomId} due to cleanup failure`);
+        this.waitingRooms.delete(existingPlayer.waitingRoomId);
       }
     }
     
@@ -183,6 +192,19 @@ export class TournamentPlayerManager {
     for (const [waitingRoomId, waitingRoomData] of this.waitingRooms) {
       const player = waitingRoomData.players.find(p => p.username === username);
       if (player) {
+        // ⭐ CRITICAL FIX: Check if the waiting room still exists in game state
+        // This prevents issues where players are found but rooms were cleaned up after tournament completion
+        const room = gameStateManager.getRoom(waitingRoomId);
+        if (!room) {
+          console.log(`🏆 Found player ${username} in waiting room data but room ${waitingRoomId} no longer exists (tournament completed). Cleaning up stale data.`);
+          
+          // Clean up stale waiting room data
+          this.waitingRooms.delete(waitingRoomId);
+          
+          // Continue searching in other waiting rooms
+          continue;
+        }
+        
         return {
           playerId: player.id,
           username: player.username,
@@ -292,4 +314,4 @@ export class TournamentPlayerManager {
     
     return { shouldCleanup: false };
   }
-} 
+}

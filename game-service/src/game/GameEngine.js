@@ -46,7 +46,7 @@ export class GameEngine {
   /**
    * Force send ball update to room
    */
-  sendBallUpdateForced(roomId) {
+  async sendBallUpdateForced(roomId) {
     const room = this.stateManager.getRoom(roomId);
     if (!room || room.players.length !== 2) {
       console.warn(`Cannot send forced ballUpdate for room ${roomId}: invalid state`, {
@@ -88,7 +88,6 @@ export class GameEngine {
     const json = JSON.stringify(message);
     const room = this.stateManager.getRoom(roomId) || { players: [] };
     
-    // Only filter for connected players when sending, do NOT mutate room.players
     const connectedPlayers = room.players.filter(p => p.ws && p.ws.readyState === 1);
     
     connectedPlayers.forEach(({ ws, id }) => {
@@ -184,6 +183,9 @@ export class GameEngine {
     console.log(`🎮 Starting game for room ${roomId}`);
     room.setReady();
     console.log(`🎮 Room ${roomId} set ready, gameStarted: ${room.gameStarted}`);
+    
+    // ⭐ NEW: Reset ball spawn trigger for new game
+    gameStateManager.resetBallSpawnTrigger(roomId);
     
     // Set player states to LAUNCH_ANIMATION when game starts
     room.players.forEach((p, i) => {
@@ -413,7 +415,7 @@ export class GameEngine {
     console.log('='.repeat(60));
   }
 
-  _attemptBallUpdate(roomId, attempt = 1) {
+  async _attemptBallUpdate(roomId, attempt = 1) {
     const room = this.stateManager.getRoom(roomId);
     if (!room || room.ballUpdateSent || attempt > 5) return;
 
@@ -426,7 +428,7 @@ export class GameEngine {
     if (room.players.length === 2 && animationCompleteCount >= 2) {
       // Both players have completed animation - send ball update
       console.log(`🎮 Both players completed animation in room ${roomId}, sending ball update`);
-      this.sendBallUpdateForced(roomId);
+      await this.sendBallUpdateForced(roomId);
     } else if (room.players.length === 2 && animationCompleteCount < 2) {
       // Wait for animation completion
       console.log(`🎮 Waiting for animation completion in room ${roomId} (${animationCompleteCount}/2 players ready)`);

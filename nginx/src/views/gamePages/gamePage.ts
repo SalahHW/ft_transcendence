@@ -44,7 +44,7 @@ export default class GamePage {
 							<div class="text-xl font-medium text-gray-300">
 								<span class="text-yellow-400 font-mono">hypershot</span>
 								<span class="text-white mx-2">:</span>
-								<span class="font-mono text-yellow-300">D</span>
+								<span class="font-mono text-yellow-300">A</span>
 							</div>
 
 							<!-- Scores Section - Center -->
@@ -84,7 +84,9 @@ export default class GamePage {
 
 		// Handle window resize for canvas - store reference for cleanup
 		this._resizeHandler = this._handleResize.bind(this);
-		window.addEventListener('resize', this._resizeHandler);
+		if (this._resizeHandler) {
+			window.addEventListener('resize', this._resizeHandler);
+		}
 	}
 
 	private _leaveGame(): void {

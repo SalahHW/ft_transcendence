@@ -26,13 +26,21 @@ export class PlayerPowerup {
     public isActive: boolean = false;
     public remainingCooldown: number = 0;
     public windowTimeLeft: number = 0;
+    
+    // ⭐ NEW: Track first appearance for initial animation
+    private isFirstAppearance: boolean = true;
+    private initialAnimationComplete: boolean = false;
 
-        constructor(playerId: string, scene: BABYLON.Scene, playerRole: number = 0) {
+    constructor(playerId: string, scene: BABYLON.Scene, playerRole: number = 0) {
         this.playerId = playerId;
         this.scene = scene;
         this.playerRole = playerRole;
         this.createVisualElements();
-        this.updateVisuals(); // Ensure initial state is reflected visually
+        
+        // ⭐ NEW: Start with powerUp UI hidden - will be shown only when FPS camera is activated
+        if (this.uiContainer) {
+            this.uiContainer.isVisible = false;
+        }
     }
 
     private createVisualElements(): void {
@@ -61,7 +69,7 @@ export class PlayerPowerup {
         // ⭐ HORIZONTAL POWERUP BAR: Create main powerup progress bar (horizontal)
         this.cooldownBar = BABYLON.MeshBuilder.CreateBox(
             `powerup-bar-${this.playerId}`,
-            { width: 3, height: 0.2, depth: 0.1 }, // ⭐ HORIZONTAL: width=3 (long), height=0.2 (thin but visible), depth=0.1 (flat)
+            { width: 4.30, height: 0.2, depth: 0.1 }, // ⭐ HORIZONTAL: width=3 (long), height=0.2 (thin but visible), depth=0.1 (flat)
             this.scene
         );
         this.cooldownBar.parent = this.uiContainer;
@@ -70,7 +78,11 @@ export class PlayerPowerup {
         
         const cooldownMaterial = new BABYLON.StandardMaterial(`powerup-bar-mat-${this.playerId}`, this.scene);
         cooldownMaterial.emissiveColor = new BABYLON.Color3(0.4, 0.4, 0.4); // Start grey (unavailable)
+        cooldownMaterial.disableLighting = true; // ⭐ ADD THIS LINE
         this.cooldownBar.material = cooldownMaterial;
+        
+        // ⭐ NEW: Start bar at 0% width for first appearance animation
+        this.cooldownBar.scaling.x = 0;
         
         // Create activation ring (visible during activation window)
         this.activationRing = BABYLON.MeshBuilder.CreateTorus(
@@ -398,7 +410,71 @@ export class PlayerPowerup {
     }
 
     /**
+     * ⭐ NEW: Show powerUp UI when FPS camera is activated
+     */
+    public showPowerUpUI(): void {
+        if (this.uiContainer) {
+            this.uiContainer.isVisible = true;
+            
+            // ⭐ NEW: Trigger initial appearance animation on first show
+            if (this.isFirstAppearance && !this.initialAnimationComplete) {
+                this.playInitialAppearanceAnimation();
+            }
+        }
+    }
+
+    /**
+     * ⭐ NEW: Hide powerUp UI (for cleanup or when switching to top-down)
+     */
+    public hidePowerUpUI(): void {
+        if (this.uiContainer) {
+            this.uiContainer.isVisible = false;
+        }
+    }
+
+    /**
+     * ⭐ NEW: Play initial appearance animation - bar grows from empty to full
+     */
+    private playInitialAppearanceAnimation(): void {
+        if (!this.cooldownBar || this.initialAnimationComplete) return;
+        
+        // Set initial state: gray color, 0% width
+        const barMaterial = this.cooldownBar.material as BABYLON.StandardMaterial;
+        barMaterial.emissiveColor = new BABYLON.Color3(0.4, 0.4, 0.4); // Gray (unavailable)
+        this.cooldownBar.scaling.x = 0; // Start empty
+        
+        // Create animation to grow from 0% to 100% width
+        const initialAnimation = new BABYLON.Animation(
+            "initialBarGrow",
+            "scaling.x",
+            60, // 60 FPS
+            BABYLON.Animation.ANIMATIONTYPE_FLOAT,
+            BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+        );
+        
+        const keys = [
+            { frame: 0, value: 0 },      // Start at 0% width
+            { frame: 30, value: 0.5 },   // Half way at 30 frames (0.5 seconds)
+            { frame: 60, value: 1 }      // Full width at 60 frames (1 second)
+        ];
+        initialAnimation.setKeys(keys);
+        
+        this.cooldownBar.animations = [initialAnimation];
+        
+        // Start the animation
+        this.scene.beginAnimation(this.cooldownBar, 0, 60, false, 1, () => {
+            // Animation complete callback
+            this.initialAnimationComplete = true;
+            this.isFirstAppearance = false;
+            
+            // Now update to the actual current state
+            this.updateVisuals();
+        });
+    }
+
+    /**
      * ⭐ HUD-STYLE UI: Update powerup UI position to stay as a HUD element at head level
+     * ⭐ NEW: Only show powerUp UI when in FPS mode
      */
     public updateCameraPosition(): void {
         if (!this.scene.activeCamera || !this.uiContainer) return;
@@ -406,8 +482,14 @@ export class PlayerPowerup {
         const camera = this.scene.activeCamera;
         const cameraPosition = camera.position;
         
-        // For FPS cameras, position UI like a HUD element at head level
-        if (camera.name && camera.name.includes('fpsCamera')) {
+        // ⭐ NEW: Check if we're in FPS mode by camera name
+        const isFPSMode = camera.name && camera.name.includes('fpsCamera');
+        
+        // ⭐ NEW: Only show powerUp UI in FPS mode
+        if (isFPSMode) {
+            // Show UI and position it for FPS mode
+            this.showPowerUpUI();
+            
             // Get camera forward direction
             const universalCamera = camera as BABYLON.UniversalCamera;
             const cameraTarget = universalCamera.getTarget();
@@ -415,8 +497,8 @@ export class PlayerPowerup {
             const cameraRight = BABYLON.Vector3.Cross(cameraForward, BABYLON.Vector3.Up()).normalize();
             
             // ⭐ HUD POSITIONING: Position like a HUD element at head level, slightly above center
-            const distanceFromCamera = 4; // Close enough to feel like HUD
-            const verticalOffset = -1; // Slightly above center (head level)
+            const distanceFromCamera = 2; // Close enough to feel like HUD
+            const verticalOffset = -2; // Slightly above center (head level)
             const horizontalOffset = 0; // Centered horizontally
             
             const uiPosition = cameraPosition
@@ -430,17 +512,18 @@ export class PlayerPowerup {
             this.uiContainer.lookAt(cameraPosition);
             
         } else {
-            // For top-down camera, position as traditional HUD at top of screen
-            this.uiContainer.position = new BABYLON.Vector3(
-                cameraPosition.x, // Centered horizontally
-                cameraPosition.y - 8, // Top of screen
-                cameraPosition.z + 2 // Slightly forward
-            );
+            // ⭐ NEW: Hide powerUp UI completely in top-down mode
+            this.hidePowerUpUI();
         }
     }
 
     private updateVisuals(): void {
         if (!this.cooldownBar || !this.activationRing) return;
+        
+        // ⭐ NEW: Don't update visuals if initial animation is still running
+        if (this.isFirstAppearance && !this.initialAnimationComplete) {
+            return;
+        }
         
         const barMaterial = this.cooldownBar.material as BABYLON.StandardMaterial;
         
@@ -475,7 +558,7 @@ export class PlayerPowerup {
             this.activationRing.isVisible = false;
             
             // Calculate progress: starts at 0 (empty) and grows to 1 (full)
-            const maxCooldown = 7000; // 15 seconds in ms
+            const maxCooldown = 7000; // 7 seconds in ms
             const cooldownProgress = 1 - (this.remainingCooldown / maxCooldown); // Invert so it grows
             this.cooldownBar.scaling.x = Math.max(0.05, cooldownProgress); // Minimum 5% so it's visible (horizontal scaling)
             
@@ -513,5 +596,9 @@ export class PlayerPowerup {
             this.uiContainer.dispose();
             this.uiContainer = null;
         }
+        
+        // ⭐ NEW: Reset animation flags
+        this.isFirstAppearance = true;
+        this.initialAnimationComplete = false;
     }
 }

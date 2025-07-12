@@ -99,6 +99,8 @@ export default async function userRoutes(fastify) {
             id: { type: "number" },
             username: { type: "string" },
             email: { type: "string" },
+            wallet: { type: "string" },
+            authenticationMethod: { type: "string" },
           },
         },
         404: {
@@ -134,6 +136,8 @@ export default async function userRoutes(fastify) {
             id: { type: "number" },
             username: { type: "string" },
             email: { type: "string" },
+            wallet: { type: "string" },
+            authenticationMethod: { type: "string" },
           },
         },
         404: {

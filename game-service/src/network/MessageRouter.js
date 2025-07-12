@@ -157,7 +157,7 @@ export class MessageRouter {
   /**
    * Handle animation complete messages
    */
-  _handleAnimationComplete(msg, playerId, roomId) {
+  async _handleAnimationComplete(msg, playerId, roomId) {
     // Add player to animation status
     const statusSize = gameStateManager.addPlayerToAnimationStatus(roomId, playerId);
     
@@ -178,17 +178,23 @@ export class MessageRouter {
       console.log(`⚠️ WARNING: Player ${playerId} completed animation in WAITING room ${roomId} instead of semi-final room!`);
     }
     
-    // ⭐ FIX: Trigger ball spawning when both players have completed animation
-    if (statusSize >= 2 && room && room.players.length >= 2) {
+    // ⭐ FIX: Atomic check to prevent race conditions - only trigger ball spawn once
+    if (statusSize >= 2 && room && room.players.length >= 2 && !gameStateManager.isBallSpawnTriggered(roomId)) {
       console.log(`🎮 Both players completed animation in room ${roomId}, triggering ball spawn`);
       
-      // Import gameEngine dynamically to avoid circular dependencies
-      import('../game/GameEngine.js').then(({ gameEngine }) => {
+      // ⭐ CRITICAL: Mark ball spawn as triggered BEFORE processing to prevent race conditions
+      gameStateManager.setBallSpawnTriggered(roomId);
+      
+      try {
+        // Import gameEngine dynamically to avoid circular dependencies
+        const { gameEngine } = await import('../game/GameEngine.js');
         // Send ball update to trigger spawning
-        gameEngine.sendBallUpdateForced(roomId);
-      }).catch(error => {
+        await gameEngine.sendBallUpdateForced(roomId);
+      } catch (error) {
         console.error(`❌ Error importing gameEngine for ball spawn in room ${roomId}:`, error);
-      });
+        // ⭐ FIX: Reset trigger on error so retry is possible
+        gameStateManager.resetBallSpawnTrigger(roomId);
+      }
     }
   }
 

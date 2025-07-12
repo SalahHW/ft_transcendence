@@ -7,6 +7,7 @@ export class GameStateManager {
     this.gameRooms = new Map();
     this.players = new Map();
     this.animationStatus = new Map();
+    this.ballSpawnTriggered = new Map(); // ⭐ NEW: Track ball spawn triggers to prevent race conditions
   }
 
   /**
@@ -83,6 +84,8 @@ export class GameStateManager {
     if (!this.animationStatus.has(roomId)) {
       this.animationStatus.set(roomId, new Set());
     }
+    // ⭐ NEW: Reset ball spawn trigger when initializing animation status
+    this.ballSpawnTriggered.set(roomId, false);
     return this.animationStatus.get(roomId);
   }
 
@@ -104,6 +107,7 @@ export class GameStateManager {
   clearAnimationStatus(roomId) {
     if (this.animationStatus.has(roomId)) {
       this.animationStatus.delete(roomId);
+      this.ballSpawnTriggered.delete(roomId); // ⭐ NEW: Clear ball spawn trigger
       this.initializeAnimationStatus(roomId); // Re-initialize with empty set
       console.log(`Cleared animation status for room ${roomId}`);
     }
@@ -115,6 +119,29 @@ export class GameStateManager {
   getAnimationStatusForRoom(roomId) {
     const roomAnimStatus = this.animationStatus.get(roomId);
     return roomAnimStatus ? Array.from(roomAnimStatus) : [];
+  }
+
+  /**
+   * ⭐ NEW: Check if ball spawn has been triggered for a room
+   */
+  isBallSpawnTriggered(roomId) {
+    return this.ballSpawnTriggered.get(roomId) || false;
+  }
+
+  /**
+   * ⭐ NEW: Mark ball spawn as triggered for a room
+   */
+  setBallSpawnTriggered(roomId) {
+    this.ballSpawnTriggered.set(roomId, true);
+    console.log(`🎮 Ball spawn marked as triggered for room ${roomId}`);
+  }
+
+  /**
+   * ⭐ NEW: Reset ball spawn trigger for a room (useful for new games)
+   */
+  resetBallSpawnTrigger(roomId) {
+    this.ballSpawnTriggered.set(roomId, false);
+    console.log(`🎮 Ball spawn trigger reset for room ${roomId}`);
   }
 
   /**

@@ -26,6 +26,25 @@ export class PlayerInput {
       return false;
     }
 
+    // ⭐ FIX: Check if player is in a state where input should be blocked
+    const player = this.playerManager.getPlayer(playerId);
+    if (!player) {
+      console.warn(`Cannot handle key press: player ${playerId} not found`);
+      return false;
+    }
+
+    // ⭐ CRITICAL: Block input during animation or waiting states
+    const roomId = player.roomId;
+    if (roomId) {
+      const animationStatus = this.playerManager.stateManager.getAnimationStatusForRoom(roomId);
+      const isInAnimationPhase = animationStatus.length < 2;
+      
+      if (isInAnimationPhase) {
+        console.log(`🎬 Blocking input for player ${playerId}: still in animation phase`);
+        return false;
+      }
+    }
+
     const success = this.playerManager.handlePlayerKeyPress(playerId, direction);
     
     if (success) {
@@ -42,6 +61,25 @@ export class PlayerInput {
   processKeyUp(playerId, direction) {
     if (!this._validateDirection(direction)) {
       return false;
+    }
+
+    // ⭐ FIX: Check if player is in a state where input should be blocked
+    const player = this.playerManager.getPlayer(playerId);
+    if (!player) {
+      console.warn(`Cannot handle key release: player ${playerId} not found`);
+      return false;
+    }
+
+    // ⭐ CRITICAL: Block input during animation or waiting states
+    const roomId = player.roomId;
+    if (roomId) {
+      const animationStatus = this.playerManager.stateManager.getAnimationStatusForRoom(roomId);
+      const isInAnimationPhase = animationStatus.length < 2;
+      
+      if (isInAnimationPhase) {
+        console.log(`🎬 Blocking input for player ${playerId}: still in animation phase`);
+        return false;
+      }
     }
 
     const success = this.playerManager.handlePlayerKeyRelease(playerId, direction);
