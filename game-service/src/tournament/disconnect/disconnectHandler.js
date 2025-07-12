@@ -236,13 +236,26 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
    * Award forfeit win to remaining player in tournament matches
    */
   async awardTournamentForfeitWin(room, roomId, winner, loser, reason, context) {
-    console.log(`🏆 Awarding tournament forfeit win: ${winner.username} defeats ${loser.username} in ${room.metadata?.roomType}`);// Update disconnection tracking in waiting room data
+    console.log(`🏆 Awarding tournament forfeit win: ${winner.username} defeats ${loser.username} in ${room.metadata?.roomType}`);
+    
+    // Update disconnection tracking in waiting room data
     const waitingRoomId = room.metadata?.waitingRoomId;
     if (waitingRoomId) {
       await this.updateTournamentDisconnectionStatus(waitingRoomId, loser.id, true);
     }
+    
+    // Check for singleInEachFinals scenario before creating match data
+    const singleInEachFinals = await this.checkSingleInEachFinalsScenario(waitingRoomId);
+    
+    if (singleInEachFinals) {
+      console.log(`🏆 Single in each finals scenario detected - handling both players`);
+      await this.handleSingleInEachFinalsScenario(room, roomId, winner, loser, reason, context);
+      return;
+    }
+    
     // Mark game as over immediately
     room.isGameOver = true;
+    
     // Create tournament match data
     const matchData = await this.createTournamentForfeitMatchData(room, roomId, winner, loser, reason, context);
     
@@ -263,6 +276,209 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   }
 
   /**
+   * Check if we're in the singleInEachFinals scenario
+   */
+  async checkSingleInEachFinalsScenario(waitingRoomId) {
+    if (!waitingRoomId) return false;
+    
+    try {
+      const { tournamentManager } = await import('../TournamentManager.js');
+      const waitingRoomData = tournamentManager.waitingRooms.get(waitingRoomId);
+      if (!waitingRoomData) return false;
+      
+      const numberOfDisconnectedPlayers = waitingRoomData.disconnectedPlayers.length;
+      const numberOfConnectedPlayers = waitingRoomData.players.filter(p => p.connected).length;
+      
+      // Get winner final room from tournament data
+      const winnerFinal = waitingRoomData.tournamentRooms.winnerFinal;
+      const winnerFinalRoom = winnerFinal ? gameStateManager.getRoom(winnerFinal.id) : null;
+      const winnerFinalPlayerCount = winnerFinalRoom ? winnerFinalRoom.players.length : 0;
+      
+      // Get loser final room from tournament data
+      const loserFinal = waitingRoomData.tournamentRooms.loserFinal;
+      const loserFinalRoom = loserFinal ? gameStateManager.getRoom(loserFinal.id) : null;
+      const loserFinalPlayerCount = loserFinalRoom ? loserFinalRoom.players.length : 0;
+      
+      return Boolean(numberOfConnectedPlayers === 2 && winnerFinalPlayerCount === 0 &&
+        loserFinalPlayerCount === 1 && numberOfDisconnectedPlayers === 2);
+    } catch (error) {
+      console.error(`🏆 Error checking singleInEachFinals scenario:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Handle the singleInEachFinals scenario - assign 1st and 3rd place
+   */
+  async handleSingleInEachFinalsScenario(room, roomId, forfeitWinner, forfeitLoser, reason, context) {
+    console.log(`🏆 Handling singleInEachFinals scenario - assigning 1st and 3rd place`);
+    
+    const waitingRoomId = room.metadata?.waitingRoomId;
+    if (!waitingRoomId) {
+      console.error(`🏆 No waiting room ID for singleInEachFinals scenario`);
+      return;
+    }
+    
+    try {
+      const { tournamentManager } = await import('../TournamentManager.js');
+      const waitingRoomData = tournamentManager.waitingRooms.get(waitingRoomId);
+      if (!waitingRoomData) {
+        console.error(`🏆 No waiting room data for singleInEachFinals scenario`);
+        return;
+      }
+      
+      // Find the waiting loser in the loser final room
+      const loserFinal = waitingRoomData.tournamentRooms.loserFinal;
+      const loserFinalRoom = loserFinal ? gameStateManager.getRoom(loserFinal.id) : null;
+      const waitingLoser = loserFinalRoom && loserFinalRoom.players.length === 1 ? loserFinalRoom.players[0] : null;
+      
+      if (!waitingLoser) {
+        console.error(`🏆 Could not find waiting loser in loser final room`);
+        return;
+      }
+      
+      console.log(`🏆 Found waiting loser: ${waitingLoser.username} (${waitingLoser.id})`);
+      
+      // Create match data for forfeit winner (1st place)
+      const winnerMatchData = await this.createTournamentForfeitMatchData(room, roomId, forfeitWinner, forfeitLoser, reason, context);
+      
+      // Create match data for waiting loser (3rd place)
+      const thirdPlaceMatchData = await this.createTournamentThirdPlaceMatchData(room, roomId, waitingLoser, reason, context);
+      
+      // Send messages sequentially to avoid race conditions
+      
+      // 1. Send winner message first (1st place)
+      console.log(`🏆 Sending 1st place message to forfeit winner: ${forfeitWinner.username}`);
+      await this.sendTournamentCompletionMessage(forfeitWinner, winnerMatchData, 'winner_final');
+      
+      // 2. Send loser message second (3rd place)
+      console.log(`🏆 Sending 3rd place message to waiting loser: ${waitingLoser.username}`);
+      await this.sendTournamentCompletionMessage(waitingLoser, thirdPlaceMatchData, 'loser_final');
+      
+      // 3. Close both connections
+      console.log(`🏆 Closing connections for both players`);
+      if (forfeitWinner.ws && forfeitWinner.ws.readyState === 1) {
+        forfeitWinner.ws.close(1000, 'Tournament placement determined - 1st place');
+      }
+      if (waitingLoser.ws && waitingLoser.ws.readyState === 1) {
+        waitingLoser.ws.close(1000, 'Tournament placement determined - 3rd place');
+      }
+      
+      // 4. Update tournament state
+      await this.updateTournamentDisconnectionStatus(waitingRoomId, forfeitWinner.id, true);
+      await this.updateTournamentDisconnectionStatus(waitingRoomId, waitingLoser.id, true);
+      
+      // 5. Log both match completions
+      LogUtils.logMatchCompletion(winnerMatchData);
+      LogUtils.logMatchCompletion(thirdPlaceMatchData);
+      
+      // 6. Report results to external APIs
+      this.reportTournamentForfeitResults(winnerMatchData);
+      this.reportTournamentForfeitResults(thirdPlaceMatchData);
+      
+      // 7. Store tournament results
+      if (!waitingRoomData.finalResults) {
+        waitingRoomData.finalResults = {};
+      }
+      waitingRoomData.finalResults['winner_final'] = { 
+        winner: forfeitWinner, 
+        loser: forfeitWinner, 
+        isForfeit: true 
+      };
+      waitingRoomData.finalResults['loser_final'] = { 
+        winner: waitingLoser, 
+        loser: waitingLoser, 
+        isForfeit: true 
+      };
+      
+      // 8. Clean up game state and rooms
+      console.log(`🏆 Cleaning up game state and rooms for singleInEachFinals scenario`);
+      
+      // Mark the current room as game over
+      room.isGameOver = true;
+      
+      // Immediately dispose ball to prevent movement
+      await this.immediatelyDisposeBall(room, roomId);
+      
+      // Clean up both players from the game
+      this.cleanupPlayerConnection(forfeitWinner.id);
+      this.cleanupPlayerConnection(waitingLoser.id);
+      
+      // Remove players from their respective rooms
+      if (room.players) {
+        room.players = room.players.filter(p => p.id !== forfeitWinner.id && p.id !== forfeitLoser.id);
+      }
+      
+      // Clean up loser final room if it exists
+      if (loserFinalRoom && loserFinalRoom.players) {
+        loserFinalRoom.players = loserFinalRoom.players.filter(p => p.id !== waitingLoser.id);
+      }
+      
+      // Schedule cleanup for both rooms
+      this.scheduleTournamentRoomCleanup(roomId, 5000);
+      if (loserFinal && loserFinal.id !== roomId) {
+        this.scheduleTournamentRoomCleanup(loserFinal.id, 5000);
+      }
+      
+      // 9. Send tournament completion message to all players
+      try {
+        tournamentManager.communicationManager._sendTournamentCompletionMessage(waitingRoomId, winnerMatchData);
+        console.log(`🏆 Tournament completion message sent to all players`);
+      } catch (error) {
+        console.error(`🏆 Error sending tournament completion message:`, error);
+      }
+      
+      // 10. Mark tournament as finished and schedule full cleanup
+      waitingRoomData.phase = 'FINISHED';
+      
+      // Schedule full tournament cleanup after a delay to allow players to see results
+      setTimeout(() => {
+        try {
+          tournamentManager.cleanupManager.cleanupWaitingRoom(waitingRoomId);
+          console.log(`🏆 Full tournament cleanup scheduled for waiting room ${waitingRoomId}`);
+        } catch (error) {
+          console.error(`🏆 Error scheduling full tournament cleanup:`, error);
+        }
+      }, 10000); // 10 seconds delay to allow players to see results
+      
+      console.log(`🏆 SingleInEachFinals scenario completed successfully`);
+      
+    } catch (error) {
+      console.error(`🏆 Error handling singleInEachFinals scenario:`, error);
+    }
+  }
+
+  /**
+   * Send tournament completion message to a player
+   */
+  async sendTournamentCompletionMessage(player, matchData, tournamentPhase) {
+    if (!player.ws || player.ws.readyState !== 1) {
+      console.error(`🏆 Player ${player.username} WebSocket not ready for completion message`);
+      return;
+    }
+    
+    try {
+      const message = {
+        type: 'tournamentAdvancement',
+        status: 'final_match_complete',
+        playerPlacement: tournamentPhase === 'winner_final' ? 1 : 3,
+        isWinner: tournamentPhase === 'winner_final',
+        opponentName: 'Tournament',
+        message: tournamentPhase === 'winner_final' 
+          ? '🏆 Tournament complete! You are the CHAMPION! 🥇'
+          : '🏆 Tournament complete! You finished 3rd place!',
+        showSplashScreen: tournamentPhase === 'winner_final',
+        matchData: matchData
+      };
+      
+      player.ws.send(JSON.stringify(message));
+      console.log(`🏆 Sent ${tournamentPhase} completion message to ${player.username}`);
+    } catch (error) {
+      console.error(`🏆 Failed to send completion message to ${player.username}:`, error);
+    }
+  }
+
+  /**
    * Create match data for tournament forfeit scenarios
    */
   async createTournamentForfeitMatchData(room, roomId, winner, loser, reason, context) {
@@ -270,6 +486,12 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     const waitingRoomId = room.metadata?.waitingRoomId;
     let numberOfDisconnectedPlayers = 0;
     let numberOfConnectedPlayers = 0;
+    let winnerFinalRoom = null;
+    let loserFinalRoom = null;
+    let winnerFinalExists = false;
+    let loserFinalExists = false;
+    let winnerFinalPlayerCount = 0;
+    let loserFinalPlayerCount = 0;
     
     if (waitingRoomId) {
       try {
@@ -278,6 +500,21 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
         if (waitingRoomData) {
           numberOfDisconnectedPlayers = waitingRoomData.disconnectedPlayers.length;
           numberOfConnectedPlayers = waitingRoomData.players.filter(p => p.connected).length;
+          
+          // Get winner final room from tournament data
+          const winnerFinal = waitingRoomData.tournamentRooms.winnerFinal;
+          if (winnerFinal) {
+            winnerFinalRoom = gameStateManager.getRoom(winnerFinal.id);
+            winnerFinalExists = !!winnerFinalRoom;
+            winnerFinalPlayerCount = winnerFinalRoom ? winnerFinalRoom.players.length : 0;
+          }
+          // Get loser final room from tournament data
+          const loserFinal = waitingRoomData.tournamentRooms.loserFinal;
+          if (loserFinal) {
+            loserFinalRoom = gameStateManager.getRoom(loserFinal.id);
+            loserFinalExists = !!loserFinalRoom;
+            loserFinalPlayerCount = loserFinalRoom ? loserFinalRoom.players.length : 0;
+          }
         }
       } catch (error) {
         console.error(`🏆 Error getting tournament player counts:`, error);
@@ -287,16 +524,22 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     const matchEndTime = TimeUtils.getCurrentTimestamp();
     const isSinglePlayerForfeitSemi = Boolean(numberOfDisconnectedPlayers === 3 && numberOfConnectedPlayers === 1);
     if (isSinglePlayerForfeitSemi) {
-      room.metadata.tournamentPhase = 'winner_final';
-      room.metadata.roomType = 'winner_final';
+      if (loserFinalPlayerCount == 2) {
+        room.metadata.tournamentPhase = 'loser_final';
+        room.metadata.roomType = 'loser_final';
+      }
+      else {
+        room.metadata.tournamentPhase = 'winner_final';
+        room.metadata.roomType = 'winner_final';
+      }
     }
     const matchStartTime = room.startTime || matchEndTime;
     
     return {
       roomId,
       matchType: this.matchType,
-      tournamentPhase: isSinglePlayerForfeitSemi ? 'winner_final' : room.metadata?.tournamentPhase,
-      tournamentRoomType: isSinglePlayerForfeitSemi ? 'winner_final' : room.metadata?.tournamentPhase,
+      tournamentPhase: (isSinglePlayerForfeitSemi  ? 'winner_final' : room.metadata?.tournamentPhase),
+      tournamentRoomType: (isSinglePlayerForfeitSemi ? 'winner_final' : room.metadata?.tournamentPhase),
       waitingRoomId: room.metadata?.waitingRoomId,
       matchStartTime,
       matchEndTime,
@@ -320,6 +563,48 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
         disconnectionType: reason,
         context: context,
         tournamentPhase: isSinglePlayerForfeitSemi ? 'winner_final' : room.metadata?.tournamentPhase,
+      },
+      matchType: 'tournament_forfeit',
+      disconnectionReason: reason,
+      serverTime: Date.now()
+    };
+  }
+
+  /**
+   * Create match data for tournament third place scenarios
+   */
+  async createTournamentThirdPlaceMatchData(room, roomId, waitingLoser, reason, context) {
+    const matchEndTime = TimeUtils.getCurrentTimestamp();
+    const matchStartTime = room.startTime || matchEndTime;
+    
+    return {
+      roomId,
+      matchType: this.matchType,
+      tournamentPhase: 'loser_final',
+      tournamentRoomType: 'loser_final',
+      waitingRoomId: room.metadata?.waitingRoomId,
+      matchStartTime,
+      matchEndTime,
+      matchDuration: TimeUtils.calculateMatchDuration(matchStartTime, matchEndTime),
+      winner: {
+        id: waitingLoser.id,
+        username: waitingLoser.username || 'Anonymous',
+        score: 0 // 3rd place gets 0 score
+      },
+      loser: {
+        id: waitingLoser.id,
+        username: waitingLoser.username || 'Anonymous',
+        score: 0 // 3rd place gets 0 score
+      },
+      gameStats: {
+        totalRebounds: 0,
+        finalScore: '0-0',
+        ballSpeed: 0,
+        lastHitBy: null,
+        forfeitReason: this.getTournamentForfeitReasonText(reason, context, 'loser_final'),
+        disconnectionType: reason,
+        context: context,
+        tournamentPhase: 'loser_final',
       },
       matchType: 'tournament_forfeit',
       disconnectionReason: reason,

@@ -243,33 +243,38 @@ export class TournamentTransferManager {
         return;
       }
       
-      // Transfer winner to winner final
-      if (winnerPlayer.ws && winnerPlayer.ws.readyState === 1) {
-        // Remove player from semi-final room
-        const semiFinalRoom = gameStateManager.getRoom(semiFinalRoomId);
-        if (semiFinalRoom) {
-          semiFinalRoom.players = semiFinalRoom.players.filter(p => p.id !== winnerPlayer.id);
+      // Check if no winner finals scenario should be handled
+      if (this.shouldHandleNoWinnerFinalsScenario(waitingRoomId, winner)) {
+        await this.handleNoWinnerFinalsScenario(waitingRoomId, winner);
+      } else {
+        // Transfer winner to winner final (normal flow)
+        if (winnerPlayer.ws && winnerPlayer.ws.readyState === 1) {
+          // Remove player from semi-final room
+          const semiFinalRoom = gameStateManager.getRoom(semiFinalRoomId);
+          if (semiFinalRoom) {
+            semiFinalRoom.players = semiFinalRoom.players.filter(p => p.id !== winnerPlayer.id);
+          }
+          
+          // ⭐ FIX: Reset player state for new game before transfer
+          winnerPlayer.resetForNewGame();
+          
+          // Add player to winner final room
+          winnerFinal.addPlayer(winnerPlayer);
+          winnerPlayer.assignToRoom(winnerFinal.id, 0); // Role will be reassigned when finals start
+          winnerPlayer.ws.roomId = winnerFinal.id;
+          
+          console.log(`🏆 Added ${winnerPlayer.username} to winner final room. Room now has ${winnerFinal.players.length} players`);
+          
+          // Send advancement message
+          this.tournamentManager.communicationManager.sendToPlayer(winnerFinal.id, winnerPlayer.id, {
+            type: 'tournamentAdvancement',
+            status: 'transferred_to_final',
+            finalType: 'winner',
+            message: '🎉 You advanced to the Winner Final!'
+          });
+          
+          console.log(`🏆 Transferred winner ${winnerPlayer.username} to winner final`);
         }
-        
-        // ⭐ FIX: Reset player state for new game before transfer
-        winnerPlayer.resetForNewGame();
-        
-        // Add player to winner final room
-        winnerFinal.addPlayer(winnerPlayer);
-        winnerPlayer.assignToRoom(winnerFinal.id, 0); // Role will be reassigned when finals start
-        winnerPlayer.ws.roomId = winnerFinal.id;
-        
-        console.log(`🏆 Added ${winnerPlayer.username} to winner final room. Room now has ${winnerFinal.players.length} players`);
-        
-        // Send advancement message
-        this.tournamentManager.communicationManager.sendToPlayer(winnerFinal.id, winnerPlayer.id, {
-          type: 'tournamentAdvancement',
-          status: 'transferred_to_final',
-          finalType: 'winner',
-          message: '🎉 You advanced to the Winner Final!'
-        });
-        
-        console.log(`🏆 Transferred winner ${winnerPlayer.username} to winner final`);
       }
       
       // Check if forfeit loser final scenario should be handled
@@ -470,11 +475,13 @@ export class TournamentTransferManager {
     // 1. Winner final is full (2 players) OR has been played to completion
     // 2. Disconnected players = 1 AND connected players = 3
     // 3. Loser final has no active players
-    const isWinnerFinalFull = winnerFinal.players.length === 2;
+    const winnerFinalRoom = gameStateManager.getRoom(winnerFinal.id);
+    const isWinnerFinalFull = winnerFinalRoom && winnerFinalRoom.players.length === 2;
     const isWinnerFinalComplete = waitingRoomData.finalResults?.winner_final;
     const disconnectedCount = waitingRoomData.disconnectedPlayers.length;
     const connectedCount = this.getConnectedPlayerCount(waitingRoomId);
-    const isLoserFinalEmpty = loserFinal.players.length === 0;
+    const loserFinalRoom = gameStateManager.getRoom(loserFinal.id);
+    const isLoserFinalEmpty = !loserFinalRoom || loserFinalRoom.players.length === 0;
 
     const shouldAssignThirdPlace = Boolean(
       (isWinnerFinalFull || isWinnerFinalComplete) &&
@@ -483,6 +490,38 @@ export class TournamentTransferManager {
       isLoserFinalEmpty
     );
     return shouldAssignThirdPlace;
+  }
+
+  /**
+   * Check if no winner finals scenario should be handled
+   */
+  shouldHandleNoWinnerFinalsScenario(waitingRoomId, winner) {
+    const waitingRoomData = this.tournamentManager.waitingRooms.get(waitingRoomId);
+    if (!waitingRoomData) return false;
+
+    const winnerFinal = waitingRoomData.tournamentRooms.winnerFinal;
+    const loserFinal = waitingRoomData.tournamentRooms.loserFinal;
+
+    // Check conditions:
+    // 1. Winner final is empty OR not complete OR room doesn't exist in game state
+    // 2. Disconnected players = 1 AND connected players = 3
+    // 3. Loser final is full (2 players)
+    const winnerFinalRoom = gameStateManager.getRoom(winnerFinal.id);
+    const isWinnerFinalEmpty = !winnerFinalRoom || winnerFinalRoom.players.length === 0;
+    const isWinnerFinalNotComplete = !waitingRoomData.finalResults?.winner_final;
+    const disconnectedCount = waitingRoomData.disconnectedPlayers.length;
+    const connectedCount = this.getConnectedPlayerCount(waitingRoomId);
+    const loserFinalRoom = gameStateManager.getRoom(loserFinal.id);
+    const isLoserFinalFull = loserFinalRoom && loserFinalRoom.players.length === 2;
+
+    const shouldAssignFirstPlace = Boolean(
+      !winnerFinalRoom &&
+      isWinnerFinalEmpty &&
+      isWinnerFinalNotComplete &&
+      disconnectedCount === 1 &&
+      connectedCount === 3 
+    );
+    return shouldAssignFirstPlace;
   }
 
   /**
@@ -540,6 +579,66 @@ export class TournamentTransferManager {
     waitingRoomData.finalResults['loser_final'] = { 
       winner: loser, // 3rd place
       loser: loser, // 4th place (same player due to forfeit)
+      isForfeit: true 
+    };
+  }
+
+  /**
+   * Handle no winner finals scenario - assign 1st place to winner instead of transferring to winner final
+   */
+  async handleNoWinnerFinalsScenario(waitingRoomId, winner) {
+    const waitingRoomData = this.tournamentManager.waitingRooms.get(waitingRoomId);
+    if (!waitingRoomData) {
+      console.error(`🏆 Waiting room data not found for no winner finals scenario`);
+      return;
+    }
+
+    // Find the actual player object
+    const winnerPlayer = this._findPlayerInAnyTournamentRoom(waitingRoomId, winner.id);
+    if (!winnerPlayer) {
+      console.error(`🏆 Could not find winner player object for no winner finals scenario`);
+      return;
+    }
+
+    // Remove player from their current room
+    const currentRoom = gameStateManager.getRoom(winnerPlayer.ws?.roomId);
+    if (currentRoom) {
+      currentRoom.players = currentRoom.players.filter(p => p.id !== winnerPlayer.id);
+    }
+
+    // Mark player as disconnected in waiting room data
+    this.updatePlayerDisconnectionStatus(waitingRoomId, winnerPlayer.id, true);
+
+    // Send 1st place completion message with splash screen
+    if (winnerPlayer.ws && winnerPlayer.ws.readyState === 1) {
+      try {
+        winnerPlayer.ws.send(JSON.stringify({
+          type: 'tournamentAdvancement',
+          status: 'final_match_complete',
+          playerPlacement: 1,
+          isWinner: true,
+          opponentName: 'Tournament',
+          message: '🏆 Tournament complete! You are the CHAMPION! 🥇',
+          showSplashScreen: true
+        }));
+
+        // Close WebSocket connection for 1st place player
+        console.log(`🏆 Closing WebSocket connection for 1st place player ${winnerPlayer.username} (${winnerPlayer.id})`);
+        winnerPlayer.ws.close(1000, 'Tournament placement determined - 1st place');
+      } catch (error) {
+        console.error(`Failed to send 1st place completion to ${winnerPlayer.username}:`, error);
+      }
+    }
+
+    // Store the result for tournament completion
+    if (!waitingRoomData.finalResults) {
+      waitingRoomData.finalResults = {};
+    }
+    
+    // Create a result for the winner final
+    waitingRoomData.finalResults['winner_final'] = { 
+      winner: winner, // 1st place
+      loser: winner, // 2nd place (same player due to no opponent)
       isForfeit: true 
     };
   }

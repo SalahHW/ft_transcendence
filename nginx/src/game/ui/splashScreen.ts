@@ -7,16 +7,64 @@ let currentSplashScreenResolve: (() => void) | null = null;
 let currentSplashScreenTimeout: NodeJS.Timeout | null = null;
 
 /**
+ * Match type enum for splash screen indicators
+ */
+export enum MatchType {
+    VERSUS = 'versus',
+    SEMI_FINALS = 'semi_finals',
+    WINNER_FINALS = 'winner_finals',
+    LOSER_FINALS = 'loser_finals'
+}
+
+/**
+ * Get display text for match type
+ */
+function getMatchTypeDisplayText(matchType: MatchType): string {
+    switch (matchType) {
+        case MatchType.VERSUS:
+            return 'VERSUS';
+        case MatchType.SEMI_FINALS:
+            return 'SEMI_FINALS';
+        case MatchType.WINNER_FINALS:
+            return 'WINNER_FINALS';
+        case MatchType.LOSER_FINALS:
+            return 'LOSER_FINALS';
+        default:
+            return 'VERSUS';
+    }
+}
+
+/**
+ * Get color for match type indicator
+ */
+function getMatchTypeColor(matchType: MatchType): string {
+    switch (matchType) {
+        case MatchType.VERSUS:
+            return '#3b82f6'; // Blue
+        case MatchType.SEMI_FINALS:
+            return '#f59e0b'; // Orange
+        case MatchType.WINNER_FINALS:
+            return '#10b981'; // Green
+        case MatchType.LOSER_FINALS:
+            return '#ef4444'; // Red
+        default:
+            return '#3b82f6'; // Blue
+    }
+}
+
+/**
  * Create and display a splash screen showing opponent information
  * @param currentPlayerName - Current player's name
  * @param opponentName - Opponent's name
  * @param duration - How long to display the splash screen in milliseconds (default: 3000ms)
+ * @param matchType - Type of match (versus, semi_finals, winner_finals, loser_finals)
  * @returns Promise that resolves when splash screen is complete
  */
 export function showSplashScreen(
     currentPlayerName: string, 
     opponentName: string, 
-    duration: number = 3000
+    duration: number = 3000,
+    matchType: MatchType = MatchType.VERSUS
 ): Promise<void> {
     // If there's already a splash screen running, interrupt it
     if (currentSplashScreenPromise) {
@@ -79,6 +127,14 @@ export function showSplashScreen(
                 0%, 100% { opacity: 1; }
                 50% { opacity: 0.6; }
             }
+            @keyframes glow {
+                0%, 100% { 
+                    text-shadow: 0 0 20px currentColor;
+                }
+                50% { 
+                    text-shadow: 0 0 30px currentColor, 0 0 40px currentColor;
+                }
+            }
         `;
         document.head.appendChild(styleSheet);
 
@@ -88,9 +144,24 @@ export function showSplashScreen(
         title.style.cssText = `
             font-size: 3rem;
             font-weight: bold;
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
             color: #fff;
             text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        `;
+
+        // Match Type Indicator
+        const matchTypeIndicator = document.createElement('div');
+        const matchTypeText = getMatchTypeDisplayText(matchType);
+        const matchTypeColor = getMatchTypeColor(matchType);
+        matchTypeIndicator.textContent = matchTypeText;
+        matchTypeIndicator.style.cssText = `
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 2rem;
+            color: ${matchTypeColor};
+            text-shadow: 0 0 10px ${matchTypeColor};
+            animation: glow 2s ease-in-out infinite;
+            letter-spacing: 2px;
         `;
 
         // Player vs Opponent
@@ -138,6 +209,7 @@ export function showSplashScreen(
 
         // Assemble splash content
         splashContent.appendChild(title);
+        splashContent.appendChild(matchTypeIndicator);
         splashContent.appendChild(matchup);
         splashContent.appendChild(loadingText);
         splashOverlay.appendChild(splashContent);

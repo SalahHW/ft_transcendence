@@ -154,4 +154,71 @@ export function updateGameStatus(message: string): void {
     if (statusElement) {
         statusElement.textContent = message;
     }
+}
+
+/**
+ * ⭐ NEW: Update powerUp status in HTML UI - only visible in FPS mode
+ * @param isFPSMode - Whether the player is currently in FPS mode
+ * @param powerUpState - Current powerUp state information
+ */
+export function updatePowerUpStatus(isFPSMode: boolean, powerUpState?: {
+    isAvailable: boolean;
+    isActive: boolean;
+    remainingCooldown: number;
+    windowTimeLeft: number;
+}): void {
+    // Find the powerUp status element (the hypershot control div)
+    const powerUpElement = document.querySelector('.text-xl.font-medium.text-gray-300') as HTMLElement;
+    
+    if (!powerUpElement) {
+        console.warn('PowerUp status element not found');
+        return;
+    }
+    
+    // ⭐ NEW: Only show powerUp status when in FPS mode
+    if (isFPSMode) {
+        powerUpElement.style.display = 'block';
+        
+        if (powerUpState) {
+            let statusText = '';
+            let statusColor = 'text-yellow-300';
+            
+            if (powerUpState.isActive) {
+                // Active state - show activation window time
+                const windowSeconds = Math.ceil(powerUpState.windowTimeLeft / 1000);
+                statusText = `ACTIVE (${windowSeconds}s)`;
+                statusColor = 'text-orange-400';
+            } else if (powerUpState.remainingCooldown > 0) {
+                // Cooldown state - show remaining cooldown
+                const cooldownSeconds = Math.ceil(powerUpState.remainingCooldown / 1000);
+                statusText = `COOLDOWN (${cooldownSeconds}s)`;
+                statusColor = 'text-red-400';
+            } else if (powerUpState.isAvailable) {
+                // Available state
+                statusText = 'READY';
+                statusColor = 'text-green-400';
+            } else {
+                // Unavailable state (not enough ball rebounds)
+                statusText = 'LOCKED';
+                statusColor = 'text-gray-400';
+            }
+            
+            // Update the powerUp status display
+            powerUpElement.innerHTML = `
+                <span class="text-yellow-400 font-mono">hypershot</span>
+                <span class="text-white mx-2">:</span>
+                <span class="font-mono ${statusColor}">${statusText}</span>
+            `;
+        } else {
+            // Default state when no powerUp data available
+            powerUpElement.innerHTML = `
+                <span class="text-yellow-400 font-mono">hypershot</span>
+                <span class="text-white mx-2">:</span>
+                <span class="font-mono text-yellow-300">A</span>
+            `;
+        }
+    } else {
+        // ⭐ NEW: Hide powerUp status when in top-down mode
+        powerUpElement.style.display = 'none';
+    }
 } 
