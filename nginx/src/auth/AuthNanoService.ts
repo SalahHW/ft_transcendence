@@ -1,4 +1,9 @@
 import UsersApi, { JwtUserPayload } from "../services/api/user.js";
+import Router from '../router/Router.js';
+import AvatarService from '../services/AvatarService.js';
+import FriendsService from '../services/FriendsService.js';
+import MatchHistoryService from '../services/MatchHistoryService.js';
+import UserProfileService from '../services/UserProfileService.js';
 
 export default class AuthNanoService {
 	private static _instance: AuthNanoService;
@@ -57,9 +62,16 @@ export default class AuthNanoService {
 			this._user = null;
 			this._isLoggedIn = false;
 			this._stopRefreshLoop();
+
+			// Vider tous les caches des services lors de la déconnexion
+			AvatarService.getInstance().clearCache();
+			FriendsService.getInstance().clearCache();
+			UserProfileService.getInstance().clearCache();
+			MatchHistoryService.getInstance().clearCache();
+			Router.getInstance().clearAllRouteCaches();
 		} catch (error) {
-			console.error("Logout API call failed:", error);
-			throw new Error("Logout failed. Please try again.");
+			console.error('Logout API call failed:', error);
+			throw new Error('Logout failed. Please try again.');
 		}
 	}
 

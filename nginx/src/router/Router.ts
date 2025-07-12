@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: Invalid Date        by              +#+  #+#    #+#             */
-/*   Updated: 2025/07/09 20:59:47 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/13 00:22:45 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -115,6 +115,24 @@ export default class Router {
       Router._instance = new Router();
     }
     return Router._instance;
+  }
+
+  public clearAllRouteCaches(): void {
+    this._routes.forEach((route) => {
+      if (route.cache) {
+        if (typeof route.cache.cleanup === 'function') {
+          try {
+            route.cache.cleanup();
+          } catch (error) {
+            console.error(
+              `Error during ${route.path} route cleanup on logout:`,
+              error,
+            );
+          }
+        }
+        route.cache = undefined;
+      }
+    });
   }
 
   private _executeHandler(path: string) {
