@@ -10,6 +10,7 @@ export default class MatchHistoryService {
     private _matchApi = new MatchServiceAPI();
     private _matchHistoryCache: Match[] | null = null;
     private _tournamentHistoryCache: Tournament[] | null = null;
+    private _userNameCache: Map<string, string> = new Map();
 
     private constructor() {}
 
@@ -68,6 +69,7 @@ export default class MatchHistoryService {
     public clearCache(): void {
         this._matchHistoryCache = null;
         this._tournamentHistoryCache = null;
+        this._userNameCache.clear();
     }
 
     /**
@@ -86,6 +88,22 @@ export default class MatchHistoryService {
         const txHash = await this._matchApi.reportMatch(match);
         this._matchHistoryCache = null; // Invalidate cache
         return txHash;
+    }
+
+    /**
+     * Gets a user's name by their wallet address, with caching.
+     * @param address The wallet address.
+     * @returns A promise that resolves to the username.
+     */
+    public async getUserNameByAddress(address: string): Promise<string> {
+        if (this._userNameCache.has(address)) {
+            return this._userNameCache.get(address)!;
+        }
+
+        const userName = await this._matchApi.getPlayerNameByAddress(address);
+        this._userNameCache.set(address, userName);
+
+        return userName;
     }
 
     /**
