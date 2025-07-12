@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/12 22:08:38 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/13 00:18:49 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,13 +30,9 @@ export class MatchHistory {
                 this._userProfileService.getUserProfile()
             ]);
 
-            if (matches.length === 0) {
-                return /* HTML */`
-                    <div class="flex flex-col h-full justify-center items-center">
-                        <p class="text-white">No match history found.</p>
-                    </div>
-                `;
-            }
+            if (matches.length === 0)
+				return this.renderEmptyState();
+
             const matchesHtmlPromises = matches.map((match: Match) => this.createMatchHistoryItem(match, user));
             const matchesHtml = (await Promise.all(matchesHtmlPromises)).join('');
             return /* HTML */`
@@ -48,13 +44,32 @@ export class MatchHistory {
             `;
         } catch (error) {
             console.error("Error rendering MatchHistory:", error);
-            return /* HTML */`
-                <div class="flex flex-col h-full justify-center items-center">
-                    <p class="text-red-500">Error loading match history.</p>
-                </div>
-            `;
+			if (error instanceof Error) {
+				console.error("Error name:", error.name);
+				console.error("Error message:", error.message);
+				if (error.stack) {
+					console.error("Error stack:", error.stack);
+				}
+			}
+			return this.renderErrorState();
         }
     }
+
+	private static renderEmptyState(): string {
+		return /* HTML */`
+			<div class="flex flex-col h-full justify-center items-center">
+				<p class="text-gray-400">Aucun historique de match.</p>
+			</div>
+		`;
+	}
+
+	private static renderErrorState(): string {
+		return /* HTML */`
+			<div class="flex flex-col h-full justify-center items-center">
+				<p class="text-red-500">Erreur au chargement de l'historique des matchs.</p>
+			</div>
+		`;
+	}
 
     private static async createMatchHistoryItem(match: Match, currentUser: User): Promise<string> {
         const isCurrentUserPlayer1 = match.player1 === currentUser.wallet;

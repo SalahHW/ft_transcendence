@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/12 22:26:34 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/13 00:22:52 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -210,7 +210,6 @@ export class UserProfile {
                                     username: currentUsername,
                                     email: currentEmail
                                 });
-                                // The service has updated its cache automatically.
                             } catch (error) {
                                 console.error("Error updating profile:", error);
                                 this._showNotification("Erreur lors de la mise à jour du profil", "error");
@@ -220,7 +219,7 @@ export class UserProfile {
 
                         if (avatarChanged && newAvatarFile) {
                             try {
-                                await this._avatarService.updateCurrentUserAvatar(newAvatarFile);
+                                await this._avatarService.uploadOrUpdateCurrentUserAvatar(newAvatarFile);
                             } catch (error) {
                                 console.error("Error updating avatar:", error);
                                 this._showNotification("Erreur lors de la mise à jour de l'avatar", "error");

@@ -76,6 +76,27 @@ export default class AvatarService {
     }
 
     /**
+     * Uploads a new avatar or updates an existing one for the current user.
+     * It checks if an avatar exists and calls the appropriate API method.
+     * @param file - The new File or Blob to upload.
+     */
+    public async uploadOrUpdateCurrentUserAvatar(file: File | Blob): Promise<void> {
+        const userId = await this._getUserId();
+        try {
+            // Try to get the avatar URL to see if it exists.
+            await this._avatarApi.getUserAvatarUrl(userId);
+            // If it exists, update it.
+            await this._avatarApi.updateUserAvatar(userId, file);
+        } catch (error) {
+            // If it fails with a "not found" style error, it means we need to create one.
+            // A more robust solution might check the error status code (e.g., 404).
+            await this._avatarApi.uploadUserAvatar(userId, file);
+        } finally {
+            this.clearCache();
+        }
+    }
+
+    /**
      * Deletes the current user's avatar.
      * After deleting, the local cache is cleared.
      * @returns A promise that resolves when the avatar is deleted.
