@@ -47,18 +47,7 @@ class Client {
   }
 }
 
-let server;
-
-if (isDev) {
-  server = http.createServer();
-  if (isDev) console.log(`Development mode: using HTTP server`);
-} else {
-  const serverOptions = {
-    key: fs.readFileSync("./ssl/privkey.pem"),
-    cert: fs.readFileSync("./ssl/fullchain.pem"),
-  };
-  server = https.createServer(serverOptions);
-}
+const server = http.createServer();
 
 const wss = new WebSocketServer({ server });
 
