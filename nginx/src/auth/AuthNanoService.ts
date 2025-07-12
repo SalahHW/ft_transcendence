@@ -1,4 +1,4 @@
-import UsersApi, { User, JwtUserPayload } from "../services/api/user.js";
+import UsersApi, { JwtUserPayload } from "../services/api/user.js";
 
 export default class AuthNanoService {
 	private static _instance: AuthNanoService;
@@ -38,18 +38,9 @@ export default class AuthNanoService {
 		return this._isLoggedIn!;
 	}
 
-	public async getUser(): Promise<User> {
-		try {
-			await this._ensureAuthStatusChecked();
-
-			if (!this._user) {
-				throw new Error("User not authenticated or missing ID");
-			}
-			return (await this._usersApi.getUserById(this._user.sub));
-		} catch (error) {
-			console.error("getUser() error:", error);
-			throw error;
-		}
+	public async getJwtPayload(): Promise<JwtUserPayload | null> {
+		await this._ensureAuthStatusChecked();
+		return this._user;
 	}
 
 	public async login(username: string, password: string): Promise<JwtUserPayload> {
