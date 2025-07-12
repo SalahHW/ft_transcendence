@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:41:03 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/12 16:59:20 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/12 19:32:31 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,26 @@
 export enum AuthenticationMethod {
   CREDENTIALS = "credentials",
   WALLET = "wallet",
+}
+
+/**
+ * JWT User payload - the user data inside the JWT token
+ */
+export interface JwtUserPayload {
+  sub: number;           // Subject (user ID)
+  username: string;
+  role: string;
+  aud: string;           // Audience
+  iss: string;           // Issuer
+  iat: number;           // Issued at
+  exp: number;           // Expiration time
+}
+
+/**
+ * JWT response from /me endpoint
+ */
+export interface JwtResponse {
+  user: JwtUserPayload;
 }
 
 /**
@@ -36,8 +56,6 @@ export interface User {
   password?: string | null;
   wallet?: string;
   authenticationMethod?: AuthenticationMethod;
-  matchesId?: number[];
-  createdAt?: Date;
 }
 
 /**
@@ -86,16 +104,16 @@ export default class UsersApi {
   }
 
   /**
-   * Gets the current user
-   * @returns A promise that resolves to the current user
+   * Gets the current user JWT payload
+   * @returns A promise that resolves to the JWT user payload
    * @returns `null` if the user is not logged in
    */
-  async getCurrentUser(): Promise<User | null> {
+  async getCurrentUser(): Promise<JwtUserPayload | null> {
     const response = await fetch(`${this._host}${this._mePath}`, {
       method: "GET",
     });
     if (response.status === 404 || response.status === 401) return null;
-    const responseData = await response.json();
+    const responseData: JwtResponse = await response.json();
     if (response.status === 200) return responseData.user;
     else
       throw new Error(
