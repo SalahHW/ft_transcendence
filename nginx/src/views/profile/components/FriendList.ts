@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/12 12:39:07 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/12 13:25:46 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -269,13 +269,13 @@ export class FriendList {
             }
 
             // Chercher l'utilisateur par nom d'utilisateur
-            const users = await this.usersService.getUsersByUsername(username);
-            if (!users || users.length === 0) {
+            const user = await this.usersService.getUserByUsername(username);
+            if (!user) {
                 alert(`Utilisateur "${username}" introuvable`);
                 return;
             }
 
-            const targetUser = users[0];
+            const targetUser = user;
             if (!targetUser || !targetUser.id) {
                 console.error('Utilisateur invalide ou ID manquant');
                 alert('Utilisateur invalide ou incomplet');
