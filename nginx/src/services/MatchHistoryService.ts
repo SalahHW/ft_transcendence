@@ -1,14 +1,15 @@
 import UserProfileService from './UserProfileService.js';
-import MatchServiceAPI, { Match } from './api/match.js';
+import MatchServiceAPI, { Match, Tournament } from './api/match.js';
 
 /**
- * Service to manage user match history, including caching.
+ * Service to manage user match and tournament history, including caching.
  */
 export default class MatchHistoryService {
     private static _instance: MatchHistoryService;
     private _userProfileService = UserProfileService.getInstance();
     private _matchApi = new MatchServiceAPI();
     private _matchHistoryCache: Match[] | null = null;
+    private _tournamentHistoryCache: Tournament[] | null = null;
 
     private constructor() {}
 
@@ -30,25 +31,47 @@ export default class MatchHistoryService {
         }
 
         const userProfile = await this._userProfileService.getUserProfile();
-        if (!userProfile?.username) {
-            throw new Error("User not authenticated or username is missing.");
+        if (!userProfile?.wallet) {
+            throw new Error("User not authenticated or wallet address is missing.");
         }
 
-        const matchHistory = await this._matchApi.getMatchesByPlayer(userProfile.username);
+        const matchHistory = await this._matchApi.getMatchesByPlayer(userProfile.wallet);
         this._matchHistoryCache = matchHistory;
 
         return matchHistory;
     }
 
     /**
-     * Clears the local cache for the match history.
+     * Gets the full tournament history for the current user.
+     * Implements a simple cache-on-read strategy.
+     * @returns A promise that resolves to the user's tournament history.
      */
-    public clearCache(): void {
-        this._matchHistoryCache = null;
+    public async getTournamentHistory(): Promise<Tournament[]> {
+        if (this._tournamentHistoryCache) {
+            return this._tournamentHistoryCache;
+        }
+
+        const userProfile = await this._userProfileService.getUserProfile();
+        if (!userProfile?.wallet) {
+            throw new Error("User not authenticated or wallet address is missing.");
+        }
+
+        const tournamentHistory = await this._matchApi.getTournamentsByWinner(userProfile.wallet);
+        this._tournamentHistoryCache = tournamentHistory;
+
+        return tournamentHistory;
     }
 
     /**
-     * Reports a match and invalidates the cache.
+     * Clears the local caches for match and tournament history.
+     */
+    public clearCache(): void {
+        this._matchHistoryCache = null;
+        this._tournamentHistoryCache = null;
+    }
+
+    /**
+     * Reports a match and invalidates the match history cache.
      * @param match - The match data to report.
      * @returns The transaction hash.
      */
@@ -61,7 +84,23 @@ export default class MatchHistoryService {
         winner: string;
     }): Promise<string> {
         const txHash = await this._matchApi.reportMatch(match);
-        this.clearCache(); // Invalidate cache after reporting a new match
+        this._matchHistoryCache = null; // Invalidate cache
+        return txHash;
+    }
+
+    /**
+     * Reports a tournament and invalidates the tournament history cache.
+     * @param tournament - The tournament data to report.
+     * @returns The transaction hash.
+     */
+    public async reportTournament(tournament: {
+        endTimestamp: number;
+        matchIds: number[];
+        winner: string;
+        tournamentTokenIds: number[];
+    }): Promise<string> {
+        const txHash = await this._matchApi.reportTournament(tournament);
+        this._tournamentHistoryCache = null; // Invalidate cache
         return txHash;
     }
 }
