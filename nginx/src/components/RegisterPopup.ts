@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/16 16:30:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/09 20:57:29 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/12 17:01:43 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -68,13 +68,6 @@ export default class RegisterPopup extends ModalView {
             class="${UI_THEME.components.input}"
           />
         </div>
-
-        <input
-          type="hidden"
-          id="popup-container-authentication-method-register"
-          value="credentials"
-          name="authenticationMethod"
-        />
 
         <div>
           <input
@@ -153,7 +146,6 @@ export default class RegisterPopup extends ModalView {
         username,
         email,
         password,
-        authenticationMethod,
         wallet,
       });
 

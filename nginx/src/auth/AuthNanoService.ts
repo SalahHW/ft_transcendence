@@ -42,11 +42,11 @@ export default class AuthNanoService {
   }
 
   public async login(username: string, password: string): Promise<User> {
-    const user = await this._usersApi.login(username, password);
-    this._user = user;
+    await this._usersApi.login(username, password);
+    this._user = await this._usersApi.getCurrentUser();
     this._isLoggedIn = true;
     this._startRefreshLoop();
-    return user;
+    return this._user!;
   }
 
   public async logout(): Promise<void> {
@@ -61,28 +61,13 @@ export default class AuthNanoService {
     }
   }
 
-  public async register(data: {
+        public async register(data: {
     username: string;
     password: string;
     email: string;
-    authenticationMethod: string;
     wallet: string;
   }): Promise<User> {
-    const response = await fetch(`${this._host}/users`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({}));
-      const errorMessage =
-        errorBody?.error || `Failed to register: ${response.statusText}`;
-      const error: any = new Error(errorMessage);
-      error.response = response;
-      throw error;
-    }
-
+    await this._usersApi.register(data.username, data.email, data.password, data.wallet);
     return this.login(data.username, data.password);
   }
 
@@ -91,38 +76,13 @@ export default class AuthNanoService {
       const wallet = await this._getWalletAddress();
       if (!wallet) throw new Error("No wallet detected");
 
-      const challengeRes = await fetch(
-        `${this._host}/wallet/challenge?wallet=${wallet}`
-      );
-      if (!challengeRes.ok) {
-        const errorText = await challengeRes.text();
-        throw new Error(`Failed to get challenge: ${errorText}`);
-      }
-
-      const { challenge, timestamp } = await challengeRes.json();
+      const { challenge, timestamp } = await this._usersApi.getWalletChallenge(wallet);
       if (!challenge || !timestamp)
         throw new Error("Invalid challenge response");
 
       const signature = await this._signMessage(challenge, wallet);
 
-      const registerRes = await fetch(
-        `${this._host}/register/wallet`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            wallet,
-            username,
-            signature,
-            timestamp,
-          }),
-        }
-      );
-
-      if (!registerRes.ok) {
-        const errorText = await registerRes.text();
-        throw new Error(`Wallet registration failed: ${errorText}`);
-      }
+      await this._usersApi.registerWithWallet(username, wallet, signature, timestamp);
 
       this._user = await this._usersApi.getCurrentUser();
       this._isLoggedIn = true;
@@ -162,37 +122,13 @@ export default class AuthNanoService {
       const wallet = await this._getWalletAddress();
       if (!wallet) throw new Error("No wallet detected");
 
-      const challengeRes = await fetch(
-        `${this._host}/wallet/challenge?wallet=${wallet}`
-      );
-      if (!challengeRes.ok) {
-        const errorText = await challengeRes.text();
-        throw new Error(`Failed to get challenge: ${errorText}`);
-      }
-
-      const { challenge, timestamp } = await challengeRes.json();
+      const { challenge, timestamp } = await this._usersApi.getWalletChallenge(wallet);
       if (!challenge || !timestamp)
         throw new Error("Invalid challenge response");
 
       const signature = await this._signMessage(challenge, wallet);
 
-      const loginRes = await fetch(
-        `${this._host}/login/wallet`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            wallet,
-            signature,
-            timestamp,
-          }),
-        }
-      );
-
-      if (!loginRes.ok) {
-        const errorText = await loginRes.text();
-        throw new Error(`Wallet login failed: ${errorText}`);
-      }
+      await this._usersApi.loginWithWallet(wallet, signature, timestamp);
 
       this._user = await this._usersApi.getCurrentUser();
       this._isLoggedIn = true;
