@@ -36,9 +36,18 @@ export default class AuthNanoService {
     return this._isLoggedIn!;
   }
 
-  public async getUser(): Promise<User | null> {
-    await this._ensureAuthStatusChecked();
-    return this._user;
+    public async getUser(): Promise<User> {
+    try {
+      await this._ensureAuthStatusChecked();
+
+      if (!this._user || !this._user.id) {
+        throw new Error("User not authenticated or missing ID");
+      }
+      return (await this._usersApi.getUserById(this._user.id));
+    } catch (error) {
+      console.error("getUser() error:", error);
+      throw error;
+    }
   }
 
   public async login(username: string, password: string): Promise<User> {
@@ -61,7 +70,7 @@ export default class AuthNanoService {
     }
   }
 
-        public async register(data: {
+  public async register(data: {
     username: string;
     password: string;
     email: string;
