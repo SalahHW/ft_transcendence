@@ -521,7 +521,6 @@ export class TournamentTransferManager {
       disconnectedCount === 1 &&
       connectedCount === 3 
     );
-    console.log(`🏆 X X X X X X X X ATTEND QUOI NWF ?????? X X X X X X X X `);
     return shouldAssignFirstPlace;
   }
 
