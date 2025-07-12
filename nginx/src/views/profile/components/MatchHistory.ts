@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 00:18:49 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/13 00:56:06 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,10 +25,13 @@ export class MatchHistory {
 
     public static async render(): Promise<string> {
         try {
-            const [matches, user] = await Promise.all([
-                this._matchHistoryService.getMatchHistory(),
-                this._userProfileService.getUserProfile()
-            ]);
+			const user = await this._userProfileService.getUserProfile();
+			if (!user || !user.wallet) {
+				console.error("User not authenticated or wallet address is missing.");
+				return this.renderErrorState();
+			}
+
+            const matches = await this._matchHistoryService.getMatchHistory(user.wallet);
 
             if (matches.length === 0)
 				return this.renderEmptyState();

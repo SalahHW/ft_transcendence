@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:41:07 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/12 21:26:49 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/13 01:00:53 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,14 +55,21 @@ export default class MatchServiceAPI {
 	 * @returns A promise that resolves to an array of matches
 	 */
 	async getMatchesByPlayer(address: string): Promise<Match[]> {
-		const response = await fetch(`${this._baseUrl}/match/player/${address}`, {
-			method: "GET"
-		});
-		const data = await response.json();
-		if (response.status === 200 && data.success)
-			return data.matches;
-		else
-			throw new Error(`Failed to fetch matches by player:\n${JSON.stringify(data, null, 2)}`);
+		try {
+			const response = await fetch(`${this._baseUrl}/match/player/${address}`, {
+				method: "GET"
+			});
+			const data = await response.json();
+			if (response.status === 200 && data.success)
+				return data.matches;
+			else
+				throw new Error(`Failed to fetch matches by player:\n${JSON.stringify(data, null, 2)}`);
+		} catch (error) {
+			if (error instanceof Error && error.message.includes("Player not found.")) {
+				return []; // Return empty array if player not found
+			}
+			throw error; // Re-throw other errors
+		}
 	}
 
 	/**

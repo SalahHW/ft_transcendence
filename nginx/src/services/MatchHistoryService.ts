@@ -26,17 +26,16 @@ export default class MatchHistoryService {
      * Implements a simple cache-on-read strategy.
      * @returns A promise that resolves to the user's match history.
      */
-    public async getMatchHistory(): Promise<Match[]> {
+    public async getMatchHistory(walletAddress: string): Promise<Match[]> {
         if (this._matchHistoryCache) {
             return this._matchHistoryCache;
         }
 
-        const userProfile = await this._userProfileService.getUserProfile();
-        if (!userProfile?.wallet) {
-            throw new Error("User not authenticated or wallet address is missing.");
+        if (!walletAddress) {
+            throw new Error("Wallet address is missing.");
         }
 
-        const matchHistory = await this._matchApi.getMatchesByPlayer(userProfile.wallet);
+        const matchHistory = await this._matchApi.getMatchesByPlayer(walletAddress);
         this._matchHistoryCache = matchHistory;
 
         return matchHistory;
@@ -47,17 +46,16 @@ export default class MatchHistoryService {
      * Implements a simple cache-on-read strategy.
      * @returns A promise that resolves to the user's tournament history.
      */
-    public async getTournamentHistory(): Promise<Tournament[]> {
+    public async getTournamentHistory(walletAddress: string): Promise<Tournament[]> {
         if (this._tournamentHistoryCache) {
             return this._tournamentHistoryCache;
         }
 
-        const userProfile = await this._userProfileService.getUserProfile();
-        if (!userProfile?.wallet) {
-            throw new Error("User not authenticated or wallet address is missing.");
+        if (!walletAddress) {
+            throw new Error("Wallet address is missing.");
         }
 
-        const tournamentHistory = await this._matchApi.getTournamentsByWinner(userProfile.wallet);
+        const tournamentHistory = await this._matchApi.getTournamentsByWinner(walletAddress);
         this._tournamentHistoryCache = tournamentHistory;
 
         return tournamentHistory;
