@@ -88,7 +88,6 @@ export class GameEngine {
     const json = JSON.stringify(message);
     const room = this.stateManager.getRoom(roomId) || { players: [] };
     
-    // Only filter for connected players when sending, do NOT mutate room.players
     const connectedPlayers = room.players.filter(p => p.ws && p.ws.readyState === 1);
     
     connectedPlayers.forEach(({ ws, id }) => {

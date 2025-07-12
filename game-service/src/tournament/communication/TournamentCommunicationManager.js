@@ -70,8 +70,6 @@ export class TournamentCommunicationManager {
                 message: `🏆 Tournament complete! You finished ${this._getPlacementText(playerPlacement)}!`
               }));
               
-              // Close the WebSocket connection after sending completion message
-              // This prevents keep-alive messages from disconnected players
               console.log(`🏆 Closing WebSocket connection for player ${player.username} (${player.id}) after tournament completion`);
               player.ws.close(1000, 'Tournament completed');
               
@@ -94,7 +92,6 @@ export class TournamentCommunicationManager {
       }
     }, 100); // Small delay to ensure completion messages are sent first
     
-    // ⭐ FIX: Also close any remaining WebSocket connections that might be lingering
     setTimeout(() => {
       this._forceCleanupRemainingConnections(waitingRoomId, finalStandings);
     }, 5000); // 5 second delay to allow normal completion messages to be sent

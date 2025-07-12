@@ -33,15 +33,9 @@ export class TournamentMatchManager {
       const player0 = semiFinalA.players[0];
       const player1 = semiFinalA.players[1];
       
-      // Starting Semi-Final A
-      
-      // ⭐ FIX: Update server-side roles to match client-side roles
-      console.log(`🏆 SEMI-FINAL A - Before role update - Player0 role: ${player0.role}, Player1 role: ${player1.role}`);
       player0.assignToRoom(semiFinalA.id, 0); // Player0 gets role 0
       player1.assignToRoom(semiFinalA.id, 1); // Player1 gets role 1
-      console.log(`🏆 SEMI-FINAL A - After role update - Player0 role: ${player0.role}, Player1 role: ${player1.role}`);
       
-      // Send game initialization to both players
       [player0, player1].forEach((player, index) => {
         if (player.ws && player.ws.readyState === 1) {
           const gameInitData = {
@@ -78,10 +72,8 @@ export class TournamentMatchManager {
       // Starting Semi-Final B
       
       // ⭐ FIX: Update server-side roles to match client-side roles
-      console.log(`🏆 SEMI-FINAL B - Before role update - Player2 role: ${player2.role}, Player3 role: ${player3.role}`);
       player2.assignToRoom(semiFinalB.id, 0); // Player2 gets role 0
       player3.assignToRoom(semiFinalB.id, 1); // Player3 gets role 1
-      console.log(`🏆 SEMI-FINAL B - After role update - Player2 role: ${player2.role}, Player3 role: ${player3.role}`);
       
       // Send game initialization to both players
       [player2, player3].forEach((player, index) => {
@@ -158,7 +150,6 @@ export class TournamentMatchManager {
       return false;
     }
     
-    console.log(`🏆 X X X X X X X X ATTEND QUOI SSF ?????? X X X X X X X X `);
     // Find the actual player objects
     const winnerPlayer = this._findPlayerInRoom(roomId, winner.id);
     const loserPlayer = this._findPlayerInRoom(roomId, loser.id);
@@ -503,9 +494,6 @@ export class TournamentMatchManager {
     const loserA = semiFinalAResult.loser;
     const loserB = semiFinalBResult.loser;
     
-    console.log(`🏆 Starting loser final: ${loserA.username} vs ${loserB.username}`);
-    console.log(`🏆 Loser final room players: [${loserFinal.players.map(p => `${p.username}(${p.id})`).join(', ')}]`);
-    
     // ⭐ FIX: Use room order to determine players and roles
     if (loserFinal.players.length !== 2) {
       console.error(`🏆 Loser final room must have exactly 2 players, found ${loserFinal.players.length}`);
@@ -515,19 +503,14 @@ export class TournamentMatchManager {
     const player0 = loserFinal.players[0]; // First player in room gets role 0
     const player1 = loserFinal.players[1]; // Second player in room gets role 1
     
-    console.log(`🏆 Using room order - Player0: ${player0.username}(${player0.id}), Player1: ${player1.username}(${player1.id})`);
     
     // ⭐ FIX: Reset both players for clean start
-    console.log(`🏆 LOSER FINAL - Before reset - Player0 positionZ: ${player0.positionZ}, Player1 positionZ: ${player1.positionZ}`);
     player0.resetForNewGame();
     player1.resetForNewGame();
-    console.log(`🏆 LOSER FINAL - After reset - Player0 positionZ: ${player0.positionZ}, Player1 positionZ: ${player1.positionZ}`);
     
     // ⭐ FIX: Update server-side roles to match room order
-    console.log(`🏆 LOSER FINAL - Before role update - Player0 role: ${player0.role}, Player1 role: ${player1.role}`);
     player0.assignToRoom(loserFinal.id, 0); // First player gets role 0
     player1.assignToRoom(loserFinal.id, 1); // Second player gets role 1
-    console.log(`🏆 LOSER FINAL - After role update - Player0 role: ${player0.role}, Player1 role: ${player1.role}`);
     
     // Send game initialization to both players
     [player0, player1].forEach((player, index) => {

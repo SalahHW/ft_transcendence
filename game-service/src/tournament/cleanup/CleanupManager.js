@@ -107,13 +107,10 @@ export class TournamentCleanupManager {
   async cleanupWaitingRoom(waitingRoomId) {
     console.log(`🏆 Cleaning up waiting room ${waitingRoomId}`);
     
-    // Get waiting room data for asset disposal
     const waitingRoomData = this.waitingRooms.get(waitingRoomId);
     
-    // Clean up transfer locks for this tournament
     transferLockManager.cleanupTournament(waitingRoomId);
     
-    // Clean up all tournament assets
     if (waitingRoomData) {
       await assetDisposalManager.disposeAtTournamentEndWithData(waitingRoomId, waitingRoomData);
     } else {
@@ -149,7 +146,6 @@ export class TournamentCleanupManager {
     
     // Clean up stuck tournaments
     for (const waitingRoomId of stuckTournaments) {
-      console.log(`🏆 Force cleaning up stuck tournament ${waitingRoomId}`);
       await this.cleanupWaitingRoom(waitingRoomId);
     }
     

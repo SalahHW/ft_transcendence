@@ -764,13 +764,11 @@ export function leaveGame(): void {
     
     // ⭐ FIX: Properly dispose ball assets before leaving game
     if (ball && !ball.isDisposed) {
-        console.log('🧹 1v1: Disposing ball assets during leave game');
         ball.dispose();
     }
     
     // ⭐ FIX: Dispose map assets
     if (map && map.dispose) {
-        console.log('🧹 1v1: Disposing map assets during leave game');
         map.dispose();
     }
     
@@ -933,7 +931,6 @@ function setupGameLoop(): void {
             } else if (isDownPressed && !isUpPressed) {
                 localPlayer.move(1, deltaTime);
             }
-            // ✅ REMOVED: No more paddlePosition messages - keyboard controls handle input
         }
 
         // Update camera system
@@ -998,20 +995,17 @@ export function setupJoinGameButton(gameType: '1v1' | 'tournament' = '1v1'): voi
             
             try {
                 const players = await checkAvailablePlayers();
-                
                 if (players.length < 2) {
                     updateGameStatus('Not enough players registered. Please wait for more players.');
                     joinGameBtn.disabled = false;
                     return;
                 }
-
                 const availablePlayers = players.filter(p => !p.readyToPlay);
                 if (availablePlayers.length === 0) {
                     updateGameStatus('All players are already in game. Please wait.');
                     joinGameBtn.disabled = false;
                     return;
                 }
-
                 const playerId = availablePlayers[0].id;
                 updateGameStatus('Joining game...');
                 

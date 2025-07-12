@@ -24,27 +24,17 @@ export class TournamentHandler {
    */
   async handleTournament(): Promise<void> {
     try {
-      // Show loading state
-      // TournamentUI.showTournamentLoading();
-      
       const playerData = await registerCurrentUserForTournament();
       
       if (!this.cache.cache) {
         this.cache.cache = new GamePage("app-container");
       }
       this.cache.cache.render();
-      
-      // Create game client instance for tournament
       this.gameClient = new GameClient();
       
-      // Establish WebSocket connection for tournament waiting room
       if (playerData.websocketUrl) {
         const tournamentWs = this.webSocketManager.establishConnection(playerData);
-        
-        // Store WebSocket connection for later use
         (this.cache.cache as any).tournamentWs = tournamentWs;
-        
-        // Pass the WebSocket connection to the game client
         this.gameClient.setWebSocketConnection(tournamentWs);
       }
       

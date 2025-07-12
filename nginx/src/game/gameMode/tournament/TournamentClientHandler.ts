@@ -286,27 +286,19 @@ export class TournamentClientHandler {
         console.error('Error showing tournament splash screen:', error);
       }
       
-      // ⭐ CRITICAL FIX: Check if tournament advancement has been received to prevent race conditions
       if (gameClient && typeof gameClient.initializeTournamentGame === 'function') {
-        console.log('🏆 GameClient and initializeTournamentGame method available');
         
         // Check if the game client has already received a tournament advancement message
         if ((gameClient as any).tournamentAdvancementReceived) {
-          console.log('🏆 Tournament advancement flag is true');
           
-          // ⭐ FIX: Reset the flag for finals to allow game initialization
           if (message.matchType === 'tournament_winner_final' || message.matchType === 'tournament_loser_final') {
-            console.log('🏆 Finals starting, resetting tournament advancement flag to allow game initialization');
             (gameClient as any).tournamentAdvancementReceived = false;
           } else {
-            console.log('🏆 Tournament advancement already received, skipping game initialization to prevent race condition');
             return;
           }
         } else {
           console.log('🏆 Tournament advancement flag is false, proceeding with game initialization');
         }
-        
-        console.log('🏆 Calling gameClient.initializeTournamentGame...');
         
         // ⭐ CRITICAL FIX: Add error handling and retry logic for game initialization
         try {

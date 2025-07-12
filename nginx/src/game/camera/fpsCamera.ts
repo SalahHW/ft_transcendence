@@ -46,18 +46,12 @@ export class FPSCamera {
      */
     private setupCameraOffsets(): void {
         if (this.isPlayer1) {
-            // Player 1 is on the right side (X: +19.5), looking left
-            // Fixed camera position (doesn't move with paddle)
             this.fixedCameraPosition = new BABYLON.Vector3(19, 3, 0); // Behind paddle, stable
             this.fixedTargetPosition = new BABYLON.Vector3(0, 2, 0); // Look at center field
         } else {
-            // Player 2 is on the left side (X: -19.5), looking right  
-            // Fixed camera position (doesn't move with paddle)
             this.fixedCameraPosition = new BABYLON.Vector3(-19, 3, 0); // Behind paddle, stable
             this.fixedTargetPosition = new BABYLON.Vector3(0, 2, 0); // Look at center field
         }
-        
-        // Z offset to maintain relative positioning to paddle
         this.cameraOffset = new BABYLON.Vector3(0, 0, 0); // No offset from paddle center in Z
         this.targetOffset = new BABYLON.Vector3(0, 0, 0);
     }
@@ -66,17 +60,12 @@ export class FPSCamera {
      * Create and configure the FPS camera
      */
     private createFPSCamera(): void {
-        // Use fixed camera position for stability
         const initialPosition = this.fixedCameraPosition.clone();
-        
-        // Create camera
         this.camera = new BABYLON.UniversalCamera(
             `fpsCamera_${this.isPlayer1 ? 'P1' : 'P2'}`,
             initialPosition,
             this.scene
         );
-
-        // Configure camera
         this.configureCameraSettings();
         this.updateCameraTarget();
         
@@ -89,15 +78,9 @@ export class FPSCamera {
     private configureCameraSettings(): void {
         // Attach controls but disable mouse input for now (we want controlled movement)
         this.camera.attachControl(this.canvas, false);
-        
-        // Remove all default input controls
         this.camera.inputs.removeMouse();
         this.camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
-        
-        // Set field of view for good game visibility
         this.camera.fov = 110 * Math.PI / 180; // 110 degrees
-        
-        // Set camera limits
         this.camera.minZ = 0.1;
         this.camera.maxZ = 1000;
     }
@@ -288,9 +271,6 @@ export class FPSCamera {
         this.camera.position.x = this.originalShakePosition.x + shakeX;
         this.camera.position.y = this.originalShakePosition.y + shakeY;
         this.camera.position.z = this.originalShakePosition.z + shakeZ;
-        
-        // 🎯 Target stays completely fixed - no shake applied to target
-        // This creates proper "head shake" while maintaining focus on the same point
     }
 
     /**
@@ -298,12 +278,7 @@ export class FPSCamera {
      */
     private stopShake(): void {
         if (!this.isShaking) return;
-        
         this.isShaking = false;
-        
-        // Target never changed during shake, so no need to restore it
-        // Position will be restored by the normal update loop
-        // (it will set X and Y to fixed positions, Z will continue following paddle)
     }
 
     /**
