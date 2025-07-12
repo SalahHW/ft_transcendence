@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:41:07 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/12 21:23:26 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/12 21:26:49 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -182,5 +182,21 @@ export default class MatchServiceAPI {
 			return data.tournaments;
 		else
 			throw new Error(`Failed to fetch tournaments by winner:\n${JSON.stringify(data, null, 2)}`);
+	}
+
+	/**
+	 * Get a player's name by their address
+	 * @param address - The player's wallet address
+	 * @returns A promise that resolves to the player's name
+	 */
+	async getPlayerNameByAddress(address: string): Promise<string> {
+		const response = await fetch(`${this._baseUrl}/player/${address}`, {
+			method: "GET"
+		});
+		const data = await response.json();
+		if (response.status === 200 && data.success)
+			return data.name;
+		else
+			throw new Error(`Failed to fetch player name by address:\n${JSON.stringify(data, null, 2)}`);
 	}
 }

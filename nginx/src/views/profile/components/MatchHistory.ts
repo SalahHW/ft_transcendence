@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/12 21:13:45 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/12 21:27:57 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,7 +35,8 @@ export class MatchHistory {
                     </div>
                 `;
             }
-            const matchesHtml = matches.map((match: Match) => this.createMatchHistoryItem(match, user)).join('');
+            const matchesHtmlPromises = matches.map((match: Match) => this.createMatchHistoryItem(match, user));
+            const matchesHtml = (await Promise.all(matchesHtmlPromises)).join('');
             return /* HTML */`
                 <div class="flex flex-col h-full">
                     <div class="overflow-auto flex-[1] [mask-image:linear-gradient(to_bottom,transparent,black_2%,black_98%,transparent)] pt-2">
@@ -53,11 +54,20 @@ export class MatchHistory {
         }
     }
 
-    private static createMatchHistoryItem(match: Match, currentUser: User): string {
-        const isPlayer1 = match.player1 === currentUser.username;
-        const userScore = isPlayer1 ? match.player1Score : match.player2Score;
-        const opponentScore = isPlayer1 ? match.player2Score : match.player1Score;
-        const opponentUsername = isPlayer1 ? match.player2 : match.player1;
+    private static async createMatchHistoryItem(match: Match, currentUser: User): Promise<string> {
+        const isCurrentUserPlayer1 = match.player1 === currentUser.wallet;
+        const userScore = isCurrentUserPlayer1 ? match.player1Score : match.player2Score;
+        const opponentScore = isCurrentUserPlayer1 ? match.player2Score : match.player1Score;
+        const opponentAddress = isCurrentUserPlayer1 ? match.player2 : match.player1;
+
+        let opponentUsername = 'Unknown';
+        if (opponentAddress) {
+            try {
+                opponentUsername = await this._matchHistoryService.getUserNameByAddress(opponentAddress);
+            } catch (error) {
+                console.error(`Could not fetch username for address: ${opponentAddress}`, error);
+            }
+        }
 
         const userWon = currentUser.wallet === match.winner;
         const resultText = userWon ? 'VICTORY' : 'DEFEAT';
@@ -80,9 +90,9 @@ export class MatchHistory {
                     <div class="font-bold text-lg text-center w-1/3 flex flex-col justify-center items-center">
                         <span class="font-bold text-2xl" style="color: ${resultColor}">${resultText}</span>
                         <div>
-                            <span class="w-8 text-right text-white">${userScore}</span>
+                            <span class="w-8 text-right text-white">${userScore ?? '?'}</span>
                             <span class="mx-2 text-white">-</span>
-                            <span class="w-8 text-left text-white">${opponentScore}</span>
+                            <span class="w-8 text-left text-white">${opponentScore ?? '?'}</span>
                         </div>
                     </div>
                     <div class="flex items-center justify-end w-1/3">
