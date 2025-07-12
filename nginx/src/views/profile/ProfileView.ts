@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/22 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/12 21:01:46 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/12 21:19:37 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -76,14 +76,14 @@ export default class ProfileView extends ModalView {
 		}
 	}
 
-	public updateMatchHistory(): void {
+	public async updateMatchHistory(): Promise<void> {
 		const matchHistoryContainer = this._contentContainer.querySelector('#match-history');
 		if (!matchHistoryContainer) {
 			console.error('Match history container not found');
 			return;
 		}
 
-		matchHistoryContainer.innerHTML = MatchHistory.render();
+		matchHistoryContainer.innerHTML = await MatchHistory.render();
 	}
 
 	public async updateFriendList(): Promise<void> {
