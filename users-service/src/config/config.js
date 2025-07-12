@@ -5,7 +5,9 @@ export const DB_PATH = isDev
   ? process.env.DEV_DB_PATH
   : process.env.USERS_DB_PATH;
 export const JWT_SERVICE_PORT = process.env.JWT_SERVICE_PORT;
-export const JWT_SERVICE_HOST = process.env.JWT_SERVICE_HOST;
+export const JWT_SERVICE_HOST = isDev
+  ? "localhost"
+  : process.env.JWT_SERVICE_HOST;
 
 if (!PORT) {
   console.error("Unable to load port from environment variables");
