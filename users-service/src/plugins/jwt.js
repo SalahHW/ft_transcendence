@@ -1,7 +1,6 @@
-const jwtServiceUrl = "http://jwt";
-const jwtServicePort = 3005;
+import { JWT_SERVICE_HOST, JWT_SERVICE_PORT } from "../config/config.js";
 
-const baseUrl = `${jwtServiceUrl}:${jwtServicePort}`;
+const baseUrl = `http://${JWT_SERVICE_HOST}:${JWT_SERVICE_PORT}`;
 const signUrl = `${baseUrl}/sign`;
 const verifyUrl = `${baseUrl}/verify`;
 
