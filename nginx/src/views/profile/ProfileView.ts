@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/22 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/11 18:57:00 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/12 21:01:46 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,20 +43,37 @@ export default class ProfileView extends ModalView {
 				</div>
 			</div>
 		`;
-		this.updateProfile();
+		await this.updateProfile();
 		this.updateMatchHistory();
 		await this.updateFriendList();
 	}
 
-	public updateProfile(): void {
+	public async updateProfile(): Promise<void> {
 		const profileContainer = this._contentContainer.querySelector('#profile');
 		if (!profileContainer) {
 			console.error('Profile container not found');
 			return;
 		}
 
-		profileContainer.innerHTML = UserProfile.render();
-		UserProfile.addEventListeners();
+		try {
+			// Afficher un loader pendant le chargement
+			profileContainer.innerHTML = /* HTML */`
+				<div class="flex items-center justify-center h-full">
+					<div class="text-white">Chargement du profil...</div>
+				</div>
+			`;
+
+			// Charger et afficher le profil
+			profileContainer.innerHTML = await UserProfile.render();
+			await UserProfile.addEventListeners();
+		} catch (error) {
+			console.error('Error updating profile:', error);
+			profileContainer.innerHTML = /* HTML */`
+				<div class="flex items-center justify-center h-full">
+					<div class="text-red-500">Erreur lors du chargement du profil</div>
+				</div>
+			`;
+		}
 	}
 
 	public updateMatchHistory(): void {
