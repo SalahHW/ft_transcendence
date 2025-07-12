@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:42:38 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/05 14:55:23 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/12 16:58:55 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,6 +35,10 @@ export default class RegisterUserForm {
 				</div>
 
 				<div>
+					<input type="text" id="register-user-form-wallet" placeholder="Wallet (required)" class="${UI_THEME.components.input}">
+				</div>
+
+				<div>
 					<input type="password" id="register-user-form-password" placeholder="Password (required)" class="${UI_THEME.components.input}">
 				</div>
 
@@ -58,9 +62,10 @@ export default class RegisterUserForm {
 			const usernameInput = document.getElementById("register-user-form-username") as HTMLInputElement;
 			const passwordInput = document.getElementById("register-user-form-password") as HTMLInputElement;
 			const emailInput = document.getElementById("register-user-form-email") as HTMLInputElement;
+			const walletInput = document.getElementById("register-user-form-wallet") as HTMLInputElement;
 
-			if (!usernameInput.value || !passwordInput.value || !emailInput.value) {
-				console.warn("Please provide username, email and password");
+			if (!usernameInput.value || !passwordInput.value || !emailInput.value || !walletInput.value) {
+				console.warn("Please provide username, email, password and wallet");
 				return;
 			}
 
@@ -69,8 +74,7 @@ export default class RegisterUserForm {
 					username: usernameInput.value,
 					password: passwordInput.value,
 					email: emailInput.value,
-					authenticationMethod: "local",
-					wallet: ""
+					wallet: walletInput.value
 				});
 				console.log(response);
 			}

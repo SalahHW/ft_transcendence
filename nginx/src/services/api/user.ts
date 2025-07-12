@@ -6,36 +6,56 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:41:03 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/12 13:24:19 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/12 19:32:31 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 /**
- * Enum for user roles
+ * Authentication method for user
  */
-export enum UserRole {
-  USER = "user",
-  ADMIN = "admin",
-  MODERATOR = "moderator",
+export enum AuthenticationMethod {
+  CREDENTIALS = "credentials",
+  WALLET = "wallet",
+}
+
+/**
+ * JWT User payload - the user data inside the JWT token
+ */
+export interface JwtUserPayload {
+  sub: number;           // Subject (user ID)
+  username: string;
+  role: string;
+  aud: string;           // Audience
+  iss: string;           // Issuer
+  iat: number;           // Issued at
+  exp: number;           // Expiration time
+}
+
+/**
+ * JWT response from /me endpoint
+ */
+export interface JwtResponse {
+  user: JwtUserPayload;
 }
 
 /**
  * User object.
  * @property `id` - The user's ID
  * @property `username` - The user's username
- * @property `email` - The user's email
+ * @property `email` - The user's email (nullable for wallet authentication)
+ * @property `password` - The user's password (nullable for wallet authentication)
+ * @property `wallet` - The user's wallet address
+ * @property `authenticationMethod` - The authentication method used
  * @property `createdAt` - The date and time the user was created
- * @property `role` - Permission level of the user
  * @property `matchesId` - The IDs of the matches the user has played (not match objects avoid surcharge. Use `MatchServiceAPI` to get match objects)
  */
 export interface User {
   id?: number;
   username?: string;
-  email?: string;
-  password?: string;
-  matcheId?: number[];
-  createdAt?: Date;
-  role?: UserRole;
+  email?: string | null;
+  password?: string | null;
+  wallet?: string;
+  authenticationMethod?: AuthenticationMethod;
 }
 
 /**
@@ -84,17 +104,17 @@ export default class UsersApi {
   }
 
   /**
-   * Gets the current user
-   * @returns A promise that resolves to the current user
+   * Gets the current user JWT payload
+   * @returns A promise that resolves to the JWT user payload
    * @returns `null` if the user is not logged in
    */
-  async getCurrentUser(): Promise<User | null> {
+  async getCurrentUser(): Promise<JwtUserPayload | null> {
     const response = await fetch(`${this._host}${this._mePath}`, {
       method: "GET",
     });
-    if (response.status === 404) return null;
-    const responseData = await response.json();
-    if (response.status === 200) return responseData;
+    if (response.status === 404 || response.status === 401) return null;
+    const responseData: JwtResponse = await response.json();
+    if (response.status === 200) return responseData.user;
     else
       throw new Error(
         `failed to get current user:\n${JSON.stringify(responseData, null, 2)}`
@@ -143,14 +163,14 @@ export default class UsersApi {
   /**
    * Deletes a user by ID
    * @param id - The ID of the user to delete
-   * @returns A promise that resolves to the deleted user
+   * @returns A promise that resolves when the user is deleted
    */
   async deleteUser(id: number): Promise<void> {
     const response = await fetch(`${this._usersBaseUrl}/${id}`, {
       method: "DELETE",
     });
     const responseData = await response.json();
-    if (response.status === 204) return;
+    if (response.status === 200 && responseData.success) return;
     else
       throw new Error(
         `failed to delete user:\n${JSON.stringify(responseData, null, 2)}`
@@ -182,9 +202,9 @@ export default class UsersApi {
    * Logs in a user
    * @param username - The username of the user to login
    * @param password - The password of the user to login
-   * @returns A promise that resolves to the logged in user
+   * @returns A promise that resolves when login is successful
    */
-  async login(username: string, password: string): Promise<User> {
+  async login(username: string, password: string): Promise<void> {
     const response = await fetch(`${this._host}${this._loginPath}`, {
       method: "POST",
       headers: {
@@ -193,7 +213,8 @@ export default class UsersApi {
       body: JSON.stringify({ username, password }),
     });
     const responseData = await response.json();
-    if (response.status === 200) return responseData;
+    if (response.status === 200)
+      return;
     else
       throw new Error(
         `failed to login:\n${JSON.stringify(responseData, null, 2)}`
@@ -202,14 +223,14 @@ export default class UsersApi {
 
   /**
    * Logs out the current user
-   * @returns A promise that resolves to the logged out user
+   * @returns A promise that resolves when logout is successful
    */
   async logout(): Promise<void> {
     const response = await fetch(`${this._host}${this._logoutPath}`, {
       method: "POST",
     });
     const responseData = await response.json();
-    if (response.status === 200) return responseData;
+    if (response.status === 200) return;
     else {
       throw new Error(
         `failed to logout:\n${JSON.stringify(responseData, null, 2)}`
@@ -218,16 +239,18 @@ export default class UsersApi {
   }
 
   /**
-   * Registers a new user
+   * Registers a new user with credentials
    * @param username - The username of the user to register
-   * @param password - The password of the user to register
    * @param email - The email of the user to register
+   * @param password - The password of the user to register
+   * @param wallet - The wallet address of the user (required)
    * @returns A promise that resolves to the registered user
    */
   async register(
     username: string,
     email: string,
-    password: string
+    password: string,
+    wallet: string
   ): Promise<User> {
     const response = await fetch(`${this._host}${this._registerPath}`, {
       method: "POST",
@@ -238,6 +261,8 @@ export default class UsersApi {
         username,
         email,
         password,
+        authenticationMethod: "credentials",
+        wallet,
       }),
     });
     const responseData = await response.json();
@@ -245,6 +270,88 @@ export default class UsersApi {
     else
       throw new Error(
         `failed to register:\n${JSON.stringify(responseData, null, 2)}`
+      );
+  }
+
+  /**
+   * Registers a new user with wallet
+   * @param username - The username of the user to register
+   * @param wallet - The wallet address of the user
+   * @param signature - The signature from the wallet
+   * @param timestamp - The timestamp of the challenge
+   * @returns A promise that resolves to the registered user
+   */
+  async registerWithWallet(
+    username: string,
+    wallet: string,
+    signature: string,
+    timestamp: string
+  ): Promise<User> {
+    const response = await fetch(`${this._host}/register/wallet`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username,
+        wallet,
+        signature,
+        timestamp,
+      }),
+    });
+    const responseData = await response.json();
+    if (response.status === 201) return responseData;
+    else
+      throw new Error(
+        `failed to register with wallet:\n${JSON.stringify(responseData, null, 2)}`
+      );
+  }
+
+  /**
+   * Logs in a user with wallet
+   * @param wallet - The wallet address of the user
+   * @param signature - The signature from the wallet
+   * @param timestamp - The timestamp of the challenge
+   * @returns A promise that resolves when login is successful
+   */
+  async loginWithWallet(
+    wallet: string,
+    signature: string,
+    timestamp: string
+  ): Promise<void> {
+    const response = await fetch(`${this._host}/login/wallet`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        wallet,
+        signature,
+        timestamp,
+      }),
+    });
+    const responseData = await response.json();
+    if (response.status === 200) return;
+    else
+      throw new Error(
+        `failed to login with wallet:\n${JSON.stringify(responseData, null, 2)}`
+      );
+  }
+
+  /**
+   * Gets a challenge for wallet authentication
+   * @param wallet - The wallet address
+   * @returns A promise that resolves to the challenge data
+   */
+  async getWalletChallenge(wallet: string): Promise<{ challenge: string; timestamp: string }> {
+    const response = await fetch(`${this._host}/wallet/challenge?wallet=${wallet}`, {
+      method: "GET",
+    });
+    const responseData = await response.json();
+    if (response.status === 200) return responseData;
+    else
+      throw new Error(
+        `failed to get wallet challenge:\n${JSON.stringify(responseData, null, 2)}`
       );
   }
 }

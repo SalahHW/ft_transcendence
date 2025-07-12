@@ -1,246 +1,195 @@
-import UsersApi, { User } from "../services/api/user.js";
+import UsersApi, { JwtUserPayload } from "../services/api/user.js";
 
 export default class AuthNanoService {
-  private static _instance: AuthNanoService;
-  private _usersApi: UsersApi = new UsersApi();
-  private _user: User | null = null;
-  private _isLoggedIn: boolean | null = null; // null means auth status not checked yet
-  private _refreshInterval: ReturnType<typeof setInterval> | null = null;
-  private _host: string = `${window.location.protocol}//${window.location.host}`;
+	private static _instance: AuthNanoService;
+	private _usersApi: UsersApi = new UsersApi();
+	private _user: JwtUserPayload | null = null;
+	private _isLoggedIn: boolean | null = null; // null means we haven't checked yet
+	private _refreshInterval: ReturnType<typeof setInterval> | null = null;
+	private _host: string = `${window.location.protocol}//${window.location.host}`;
 
-  private constructor() {}
+	private constructor() {}
 
-  public static getInstance(): AuthNanoService {
-    if (!AuthNanoService._instance) {
-      AuthNanoService._instance = new AuthNanoService();
-    }
-    return AuthNanoService._instance;
-  }
+	public static getInstance(): AuthNanoService {
+		if (!AuthNanoService._instance) {
+			AuthNanoService._instance = new AuthNanoService();
+		}
+		return AuthNanoService._instance;
+	}
 
-  private async _ensureAuthStatusChecked(): Promise<void> {
-    if (this._isLoggedIn === null) {
-      try {
-        this._user = await this._usersApi.getCurrentUser();
-        this._isLoggedIn = !!this._user;
+	private async _ensureAuthStatusChecked(): Promise<void> {
+		if (this._isLoggedIn === null) {
+			try {
+				this._user = await this._usersApi.getCurrentUser();
+				this._isLoggedIn = !!this._user;
+				if (this._isLoggedIn)
+					this._startRefreshLoop();
+			}
+			catch (error) {
+				console.error("Failed to check auth status", error);
+				this._user = null;
+				this._isLoggedIn = false;
+			}
+		}
+	}
 
-        if (this._isLoggedIn) {
-          this._startRefreshLoop();
-        }
-      } catch (error) {
-        console.error("Failed to check auth status", error);
-        this._user = null;
-        this._isLoggedIn = false;
-      }
-    }
-  }
+	public async isLoggedIn(): Promise<boolean> {
+		await this._ensureAuthStatusChecked();
+		return this._isLoggedIn!;
+	}
 
-  public async isLoggedIn(): Promise<boolean> {
-    await this._ensureAuthStatusChecked();
-    return this._isLoggedIn!;
-  }
+	public async getJwtPayload(): Promise<JwtUserPayload | null> {
+		await this._ensureAuthStatusChecked();
+		return this._user;
+	}
 
-  public async getUser(): Promise<User | null> {
-    await this._ensureAuthStatusChecked();
-    return this._user;
-  }
+	public async login(username: string, password: string): Promise<JwtUserPayload> {
+		await this._usersApi.login(username, password);
+		this._user = await this._usersApi.getCurrentUser();
+		this._isLoggedIn = true;
+		this._startRefreshLoop();
+		return this._user!;
+	}
 
-  public async login(username: string, password: string): Promise<User> {
-    const user = await this._usersApi.login(username, password);
-    this._user = user;
-    this._isLoggedIn = true;
-    this._startRefreshLoop();
-    return user;
-  }
+	public async logout(): Promise<void> {
+		try {
+			await this._usersApi.logout();
+			this._user = null;
+			this._isLoggedIn = false;
+			this._stopRefreshLoop();
 
-  public async logout(): Promise<void> {
-    try {
-      await this._usersApi.logout();
-      this._user = null;
-      this._isLoggedIn = false;
-      this._stopRefreshLoop();
-    } catch (error) {
-      console.error("Logout API call failed:", error);
-      throw new Error("Logout failed. Please try again.");
-    }
-  }
+			// Clear all service caches on logout using dynamic imports to avoid circular dependencies.
+			const AvatarService = (await import('../services/AvatarService.js')).default;
+			const FriendsService = (await import('../services/FriendsService.js')).default;
+			const UserProfileService = (await import('../services/UserProfileService.js')).default;
+			const MatchHistoryService = (await import('../services/MatchHistoryService.js')).default;
+			const Router = (await import('../router/Router.js')).default;
 
-  public async register(data: {
-    username: string;
-    password: string;
-    email: string;
-    authenticationMethod: string;
-    wallet: string;
-  }): Promise<User> {
-    const response = await fetch(`${this._host}/users`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+			AvatarService.getInstance().clearCache();
+			FriendsService.getInstance().clearCache();
+			UserProfileService.getInstance().clearCache();
+			MatchHistoryService.getInstance().clearCache();
+			Router.getInstance().clearAllRouteCaches();
+		} catch (error) {
+			console.error('Logout API call failed:', error);
+			throw new Error('Logout failed. Please try again.');
+		}
+	}
 
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({}));
-      const errorMessage =
-        errorBody?.error || `Failed to register: ${response.statusText}`;
-      const error: any = new Error(errorMessage);
-      error.response = response;
-      throw error;
-    }
+	public async register(data: {
+		username: string;
+		password: string;
+		email: string;
+		wallet: string;
+	}): Promise<JwtUserPayload> {
+		await this._usersApi.register(data.username, data.email, data.password, data.wallet);
+		await this.login(data.username, data.password);
+		return this._user!;
+	}
 
-    return this.login(data.username, data.password);
-  }
+	public async registerWithWallet(username: string): Promise<void> {
+		try {
+			const wallet = await this._getWalletAddress();
+			if (!wallet) throw new Error("No wallet detected");
 
-  public async registerWithWallet(username: string): Promise<void> {
-    try {
-      const wallet = await this._getWalletAddress();
-      if (!wallet) throw new Error("No wallet detected");
+			const { challenge, timestamp } = await this._usersApi.getWalletChallenge(wallet);
+			if (!challenge || !timestamp)
+				throw new Error("Invalid challenge response");
 
-      const challengeRes = await fetch(
-        `${this._host}/wallet/challenge?wallet=${wallet}`
-      );
-      if (!challengeRes.ok) {
-        const errorText = await challengeRes.text();
-        throw new Error(`Failed to get challenge: ${errorText}`);
-      }
+			const signature = await this._signMessage(challenge, wallet);
 
-      const { challenge, timestamp } = await challengeRes.json();
-      if (!challenge || !timestamp)
-        throw new Error("Invalid challenge response");
+			await this._usersApi.registerWithWallet(username, wallet, signature, timestamp);
 
-      const signature = await this._signMessage(challenge, wallet);
+			this._user = await this._usersApi.getCurrentUser();
+			this._isLoggedIn = true;
+			this._startRefreshLoop();
+		} catch (error) {
+			console.error("registerWithWallet() error:", error);
+			throw error;
+		}
+	}
 
-      const registerRes = await fetch(
-        `${this._host}/register/wallet`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            wallet,
-            username,
-            signature,
-            timestamp,
-          }),
-        }
-      );
+	private async _getWalletAddress(): Promise<string | null> {
+		const ethereum = (window as any).ethereum;
+		if (!ethereum) throw new Error("MetaMask not detected");
 
-      if (!registerRes.ok) {
-        const errorText = await registerRes.text();
-        throw new Error(`Wallet registration failed: ${errorText}`);
-      }
+		const accounts: string[] = await ethereum.request({
+			method: "eth_requestAccounts",
+		});
+		return accounts[0] || null;
+	}
 
-      this._user = await this._usersApi.getCurrentUser();
-      this._isLoggedIn = true;
-      this._startRefreshLoop();
-    } catch (error) {
-      console.error("registerWithWallet() error:", error);
-      throw error;
-    }
-  }
+	private async _signMessage(
+		message: string,
+		address: string
+	): Promise<string> {
+		const ethereum = (window as any).ethereum;
+		if (!ethereum) throw new Error("Ethereum provider not available");
 
-  public async loginWithWallet(): Promise<void> {
-    try {
-      const wallet = await this._getWalletAddress();
-      if (!wallet) throw new Error("No wallet detected");
+		const signature: string = await ethereum.request({
+			method: "personal_sign",
+			params: [message, address],
+		});
+		return signature;
+	}
 
-      const challengeRes = await fetch(
-        `${this._host}/wallet/challenge?wallet=${wallet}`
-      );
-      if (!challengeRes.ok) {
-        const errorText = await challengeRes.text();
-        throw new Error(`Failed to get challenge: ${errorText}`);
-      }
+	public async loginWithWallet(): Promise<void> {
+		try {
+			const wallet = await this._getWalletAddress();
+			if (!wallet) throw new Error("No wallet detected");
 
-      const { challenge, timestamp } = await challengeRes.json();
-      if (!challenge || !timestamp)
-        throw new Error("Invalid challenge response");
+			const { challenge, timestamp } = await this._usersApi.getWalletChallenge(wallet);
+			if (!challenge || !timestamp)
+				throw new Error("Invalid challenge response");
 
-      const signature = await this._signMessage(challenge, wallet);
+			const signature = await this._signMessage(challenge, wallet);
 
-      const loginRes = await fetch(
-        `${this._host}/login/wallet`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            wallet,
-            signature,
-            timestamp,
-          }),
-        }
-      );
+			await this._usersApi.loginWithWallet(wallet, signature, timestamp);
 
-      if (!loginRes.ok) {
-        const errorText = await loginRes.text();
-        throw new Error(`Wallet login failed: ${errorText}`);
-      }
+			this._user = await this._usersApi.getCurrentUser();
+			this._isLoggedIn = true;
+			this._startRefreshLoop();
+		} catch (error) {
+			console.error("loginWithWallet() error:", error);
+			throw error;
+		}
+	}
 
-      this._user = await this._usersApi.getCurrentUser();
-      this._isLoggedIn = true;
-      this._startRefreshLoop();
-    } catch (error) {
-      console.error("loginWithWallet() error:", error);
-      throw error;
-    }
-  }
+	private _startRefreshLoop() {
+		if (this._refreshInterval) return;
 
-  private async _getWalletAddress(): Promise<string | null> {
-    const ethereum = (window as any).ethereum;
-    if (!ethereum) throw new Error("MetaMask not detected");
+		this._refreshInterval = setInterval(async () => {
+			try {
+				const res = await fetch(`${this._host}/refresh`, {
+					method: "POST",
+					credentials: "include",
+				});
 
-    const accounts: string[] = await ethereum.request({
-      method: "eth_requestAccounts",
-    });
-    return accounts[0] || null;
-  }
+				if (res.status === 401) {
+					console.warn("Token expired. Logging out...");
+					await this.logout();
+					return;
+				}
 
-  private async _signMessage(
-    message: string,
-    address: string
-  ): Promise<string> {
-    const ethereum = (window as any).ethereum;
-    if (!ethereum) throw new Error("Ethereum provider not available");
+				if (!res.ok) {
+					console.warn(`[REFRESH] Failed with status ${res.status}`);
+					return;
+				}
 
-    const signature: string = await ethereum.request({
-      method: "personal_sign",
-      params: [message, address],
-    });
-    return signature;
-  }
+				console.info("[REFRESH] Token refreshed successfully");
+			} catch (err) {
+				console.error(
+					"[REFRESH] Network or server error during token refresh:",
+					err
+				);
+			}
+		}, 240_000);
+	}
 
-  private _startRefreshLoop() {
-    if (this._refreshInterval) return;
-
-    this._refreshInterval = setInterval(async () => {
-      try {
-        const res = await fetch(`${this._host}/refresh`, {
-          method: "POST",
-          credentials: "include",
-        });
-
-        if (res.status === 401) {
-          console.warn("Token expired. Logging out...");
-          await this.logout();
-          return;
-        }
-
-        if (!res.ok) {
-          console.warn(`[REFRESH] Failed with status ${res.status}`);
-          return;
-        }
-
-        console.info("[REFRESH] Token refreshed successfully");
-      } catch (err) {
-        console.error(
-          "[REFRESH] Network or server error during token refresh:",
-          err
-        );
-      }
-    }, 240_000); // 4 minutes
-  }
-
-  private _stopRefreshLoop() {
-    if (this._refreshInterval) {
-      clearInterval(this._refreshInterval);
-      this._refreshInterval = null;
-    }
-  }
+	private _stopRefreshLoop() {
+		if (this._refreshInterval) {
+			clearInterval(this._refreshInterval);
+			this._refreshInterval = null;
+		}
+	}
 }

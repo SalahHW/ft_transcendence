@@ -27,8 +27,13 @@ export default class AvatarServiceAPI {
 			method: "GET"
 		});
 		if (response.status !== 200) {
-			const responseData = await response.json();
-			throw new Error(`Failed to retrieve avatar:\n${JSON.stringify(responseData, null, 2)}`);
+			const responseText = await response.text();
+			try {
+				const responseData = JSON.parse(responseText);
+				throw new Error(`Failed to retrieve avatar:\n${JSON.stringify(responseData, null, 2)}`);
+			} catch (jsonError) {
+				throw new Error(`Failed to retrieve avatar: ${response.status} ${response.statusText}. Response: ${responseText}`);
+			}
 		}
 		// The avatar is served as a file, so return the URL
 		return `${this._avatarsBaseUrl}/id/${userId}`;
@@ -49,8 +54,13 @@ export default class AvatarServiceAPI {
 			body: formData
 		});
 		if (response.status !== 201) {
-			const responseData = await response.json();
-			throw new Error(`Failed to upload avatar:\n${JSON.stringify(responseData, null, 2)}`);
+			const responseText = await response.text();
+			try {
+				const responseData = JSON.parse(responseText);
+				throw new Error(`Failed to upload avatar:\n${JSON.stringify(responseData, null, 2)}`);
+			} catch (jsonError) {
+				throw new Error(`Failed to upload avatar: ${response.status} ${response.statusText}. Response: ${responseText}`);
+			}
 		}
 	}
 
@@ -69,8 +79,13 @@ export default class AvatarServiceAPI {
 			body: formData
 		});
 		if (response.status !== 200) {
-			const responseData = await response.json();
-			throw new Error(`Failed to update avatar:\n${JSON.stringify(responseData, null, 2)}`);
+			const responseText = await response.text();
+			try {
+				const responseData = JSON.parse(responseText);
+				throw new Error(`Failed to update avatar:\n${JSON.stringify(responseData, null, 2)}`);
+			} catch (jsonError) {
+				throw new Error(`Failed to update avatar: ${response.status} ${response.statusText}. Response: ${responseText}`);
+			}
 		}
 	}
 
@@ -84,8 +99,13 @@ export default class AvatarServiceAPI {
 			method: "DELETE"
 		});
 		if (response.status !== 200) {
-			const responseData = await response.json();
-			throw new Error(`Failed to delete avatar:\n${JSON.stringify(responseData, null, 2)}`);
+			const responseText = await response.text();
+			try {
+				const responseData = JSON.parse(responseText);
+				throw new Error(`Failed to delete avatar:\n${JSON.stringify(responseData, null, 2)}`);
+			} catch (jsonError) {
+				throw new Error(`Failed to delete avatar: ${response.status} ${response.statusText}. Response: ${responseText}`);
+			}
 		}
 	}
 }

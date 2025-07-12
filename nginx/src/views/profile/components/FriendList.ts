@@ -5,13 +5,15 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/01/27 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/12 13:28:59 by edelarbr         ###   ########.fr       */
+/*   Created: 2024/05/26 21:09:59 by edelarbr          #+#    #+#             */
+/*   Updated: 2025/07/13 00:38:13 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-import FriendsServiceAPI, { Friendship } from "../../../services/api/friends.js";
+import FriendsService from "../../../services/FriendsService.js";
 import UsersApi, { User } from "../../../services/api/user.js";
+import AvatarServiceAPI from "../../../services/api/avatar.js";
+import { Friendship } from "../../../services/api/friends.js";
 import AuthNanoService from "../../../auth/AuthNanoService.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 import { createWinRateDonutChart } from "./WinRateDonutChart.js";
@@ -33,10 +35,11 @@ interface EnrichedFriend {
 export class FriendList {
     private static isAddFriendExpanded: boolean = false;
     private static friends: EnrichedFriend[] = [];
-    private static friendsService = new FriendsServiceAPI();
+    private static friendsService = FriendsService.getInstance();
     private static usersService = new UsersApi();
-    private static authService = AuthNanoService.getInstance();
+    private static avatarServiceApi = new AvatarServiceAPI();
     private static isLoading: boolean = false;
+    private static authNanoService = AuthNanoService.getInstance();
 
     public static async render(): Promise<string> {
         try {
@@ -96,29 +99,19 @@ export class FriendList {
     private static async loadFriends(): Promise<void> {
         try {
             this.isLoading = true;
-            const currentUser = await this.authService.getUser();
-
-            // Extraire l'ID utilisateur de la structure JWT
-            const userId = (currentUser as any)?.user?.sub;
-
-            if (!userId) {
-                console.warn('Utilisateur non connecté ou ID manquant');
-                this.friends = [];
-                return;
-            }
-
-            // Récupérer les amitiés de l'utilisateur
-            const friendships = await this.friendsService.getUserFriendships(userId);
-
-            // Enrichir chaque amitié avec les informations utilisateur
+            const friendships = await this.friendsService.getFriends();
             this.friends = await Promise.all(
                 friendships.map(async (friendship: Friendship) => {
                     try {
-                        const user = await this.usersService.getUserById(friendship.friend_id);
-                        return this.enrichFriend(friendship, user);
-                    } catch (error) {
+                        const [user, avatarUrl] = await Promise.all([
+                            this.usersService.getUserById(friendship.friend_id),
+                            this.avatarServiceApi.getUserAvatarUrl(friendship.friend_id)
+                                .catch(() => '/assets/defaultAvatar.jpg')
+                        ]);
+                        return this.enrichFriend(friendship, user, avatarUrl);
+                    }
+                    catch (error) {
                         console.error(`Erreur lors de la récupération de l'utilisateur ${friendship.friend_id}:`, error);
-                        // Retourner un ami par défaut en cas d'erreur
                         return {
                             id: friendship.friend_id,
                             username: `User ${friendship.friend_id}`,
@@ -139,16 +132,16 @@ export class FriendList {
         }
     }
 
-    private static enrichFriend(friendship: Friendship, user: User): EnrichedFriend {
+    private static enrichFriend(friendship: Friendship, user: User, avatarUrl: string): EnrichedFriend {
         return {
             id: friendship.friend_id,
             username: user.username || `User ${friendship.friend_id}`,
-            avatarUrl: '/assets/defaultAvatar.jpg', // TODO: intégrer l'avatar service une fois connecté
+            avatarUrl: avatarUrl,
             status: 'offline', // Tous les amis sont offline comme demandé
             wins: 0, // TODO: intégrer les stats de match une fois le service connecté
             losses: 0, // TODO: intégrer les stats de match une fois le service connecté
             authenticationMethod: user.email ? 'credentials' : 'wallet',
-            email: user.email,
+            email: user.email || undefined,
             created_at: friendship.created_at
         };
     }
@@ -156,13 +149,13 @@ export class FriendList {
     private static createFriendListItem(friend: EnrichedFriend): string {
         const statusColor = friend.status === 'online' ? UI_THEME.colors.green.light : UI_THEME.colors.red.light;
         return /* HTML */`
-            <div class="flex items-center justify-between p-2 rounded-lg mb-2 bg-black/20 overflow-x-auto min-w-0">
-                <div class="flex items-center gap-3 flex-shrink-0">
+            <div class="flex items-center justify-between p-2 rounded-lg mb-2 bg-black/20 overflow-hidden">
+                <div class="flex items-center gap-3 min-w-0">
                     <div class="relative flex-shrink-0">
                         <img src="${friend.avatarUrl}" alt="${friend.username} avatar" class="text-white w-12 h-12 rounded-lg object-cover">
                         <span class="absolute bottom-0 right-0 block h-3 w-3 rounded-full border-2 border-gray-800" style="background-color: ${statusColor}"></span>
                     </div>
-                    <span class="text-white font-medium whitespace-nowrap">${friend.username}</span>
+                    <span class="text-white font-medium truncate">${friend.username}</span>
                 </div>
                 <div class="w-12 h-12 flex-shrink-0">
                     ${createWinRateDonutChart({ wins: friend.wins, losses: friend.losses }, false)}
@@ -257,10 +250,8 @@ export class FriendList {
         }
 
         try {
-            const currentUser = await this.authService.getUser();
-
-            // Extraire l'ID utilisateur de la structure JWT
-            const currentUserId = (currentUser as any)?.user?.sub;
+            const jwtPayload = await this.authNanoService.getJwtPayload();
+            const currentUserId = jwtPayload?.sub;
 
             if (!currentUserId) {
                 console.error('Utilisateur non connecté');
@@ -268,26 +259,17 @@ export class FriendList {
                 return;
             }
 
-                                    // Chercher l'utilisateur par nom d'utilisateur
-            console.log('Recherche de l\'utilisateur:', username);
-
             let targetUser: any = null;
             try {
                 targetUser = await this.usersService.getUserByUsername(username);
-                console.log('Utilisateur trouvé:', targetUser);
             } catch (error) {
                 console.error('Erreur lors de la recherche de l\'utilisateur:', error);
                 alert(`Utilisateur "${username}" introuvable`);
                 return;
             }
 
-            console.log('Target user:', targetUser);
-            console.log('Target user ID:', targetUser?.id);
-            console.log('Type de targetUser:', typeof targetUser);
-
             if (!targetUser || !targetUser.id) {
                 console.error('Utilisateur invalide ou ID manquant');
-                console.error('targetUser:', targetUser);
                 alert('Utilisateur invalide ou incomplet');
                 return;
             }
@@ -304,28 +286,27 @@ export class FriendList {
                 return;
             }
 
-            // Créer l'amitié
-            await this.friendsService.createFriendship(currentUserId, targetUser.id);
+            await this.friendsService.addFriend(targetUser.id);
 
-            // Recharger la liste des amis
             await this.loadFriends();
 
             // Reset du formulaire
             friendUsernameInput.value = '';
             this.toggleAddFriendMode();
 
-            // Rafraîchir l'affichage si nous sommes dans un contexte où c'est possible
             const container = document.querySelector('.flex.flex-col.gap-2.h-full');
             if (container) {
                 container.innerHTML = await this.render();
                 this.addEventListeners();
             }
 
-        } catch (error) {
+        }
+        catch (error) {
             console.error('Erreur lors de l\'ajout de l\'ami:', error);
             if (error instanceof Error) {
                 alert(`Erreur: ${error.message}`);
-            } else {
+            }
+            else {
                 alert('Erreur lors de l\'ajout de l\'ami');
             }
         }
@@ -345,7 +326,6 @@ export class FriendList {
         }
     }
 
-    // Méthode publique pour forcer le rechargement des amis
     public static async refreshFriends(): Promise<void> {
         await this.loadFriends();
     }

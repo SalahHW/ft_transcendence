@@ -6,15 +6,15 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:41:07 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/11 18:01:27 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/13 01:00:53 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 /**
  * Match object.
  * @property `matchId` - The match's ID
- * @property `player1` - The name of the first player
- * @property `player2` - The name of the second player
+ * @property `player1` - The address of the first player
+ * @property `player2` - The address of the second player
  * @property `player1Score` - The score of the first player
  * @property `player2Score` - The score of the second player
  * @property `winner` - The address of the winner
@@ -29,6 +29,20 @@ export interface Match {
 }
 
 /**
+ * Tournament object.
+ * @property `tournamentId` - The tournament's ID
+ * @property `endTimestamp` - The end timestamp of the tournament
+ * @property `matchIds` - The IDs of the matches in the tournament
+ * @property `winner` - The address of the winner
+ */
+export interface Tournament {
+	tournamentId?: number;
+	endTimestamp?: number;
+	matchIds?: number[];
+	winner?: string;
+}
+
+/**
  * Match service API (blockchain-service).
  * Toutes les méthodes correspondent aux routes exposées par le backend Fastify du blockchain-service.
  */
@@ -36,19 +50,26 @@ export default class MatchServiceAPI {
 	private _baseUrl: string = `${window.location.protocol}//${window.location.host}`; // Port du blockchain-service
 
 	/**
-	 * Get all matches played by a player (by name)
-	 * @param name - The player's name
+	 * Get all matches played by a player (by address)
+	 * @param address - The player's address
 	 * @returns A promise that resolves to an array of matches
 	 */
-	async getMatchesByPlayer(name: string): Promise<Match[]> {
-		const response = await fetch(`${this._baseUrl}/match/player/${encodeURIComponent(name)}`, {
-			method: "GET"
-		});
-		const data = await response.json();
-		if (response.status === 200 && data.success)
-			return data.matches;
-		else
-			throw new Error(`Failed to fetch matches by player:\n${JSON.stringify(data, null, 2)}`);
+	async getMatchesByPlayer(address: string): Promise<Match[]> {
+		try {
+			const response = await fetch(`${this._baseUrl}/match/player/${address}`, {
+				method: "GET"
+			});
+			const data = await response.json();
+			if (response.status === 200 && data.success)
+				return data.matches;
+			else
+				throw new Error(`Failed to fetch matches by player:\n${JSON.stringify(data, null, 2)}`);
+		} catch (error) {
+			if (error instanceof Error && error.message.includes("Player not found.")) {
+				return []; // Return empty array if player not found
+			}
+			throw error; // Re-throw other errors
+		}
 	}
 
 	/**
@@ -86,6 +107,9 @@ export default class MatchServiceAPI {
 	/**
 	 * Report a new match (declare a match on-chain)
 	 * @param match - The match object to report
+	 * @property {string} player1 - Address of player 1
+	 * @property {string} player2 - Address of player 2
+	 * @property {string} winner - Address of the winner
 	 * @returns A promise that resolves to the transaction hash
 	 */
 	async reportMatch(match: {
@@ -108,5 +132,78 @@ export default class MatchServiceAPI {
 			return data.transactionHash;
 		else
 			throw new Error(`Failed to report match:\n${JSON.stringify(data, null, 2)}`);
+	}
+
+	/**
+	 * Report a new tournament (declare a tournament on-chain)
+	 * @param tournament - The tournament object to report
+	 * @returns A promise that resolves to the transaction hash
+	 */
+	async reportTournament(tournament: {
+		endTimestamp: number;
+		matchIds: number[];
+		winner: string; // address
+		tournamentTokenIds: number[];
+	}): Promise<string> {
+		const response = await fetch(`${this._baseUrl}/report-tournament`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify(tournament)
+		});
+		const data = await response.json();
+		if (response.status === 200 && data.success)
+			return data.transactionHash;
+		else
+			throw new Error(`Failed to report tournament:\n${JSON.stringify(data, null, 2)}`);
+	}
+
+	/**
+	 * Get a tournament by its ID
+	 * @param tournamentId - The tournament ID
+	 * @returns A promise that resolves to the tournament
+	 */
+	async getTournamentById(tournamentId: number): Promise<Tournament> {
+		const response = await fetch(`${this._baseUrl}/tournament/${tournamentId}`, {
+			method: "GET"
+		});
+		const data = await response.json();
+		if (response.status === 200 && data.success)
+			return data.tournament;
+		else
+			throw new Error(`Failed to fetch tournament by id:\n${JSON.stringify(data, null, 2)}`);
+	}
+
+	/**
+	 * Get all tournaments won by an address
+	 * @param address - The winner's address
+	 * @returns A promise that resolves to an array of tournaments
+	 */
+	async getTournamentsByWinner(address: string): Promise<Tournament[]> {
+		const response = await fetch(`${this._baseUrl}/tournament/winner/${address}`, {
+			method: "GET"
+		});
+		const data = await response.json();
+		if (response.status === 200 && data.success)
+			return data.tournaments;
+		else
+			throw new Error(`Failed to fetch tournaments by winner:\n${JSON.stringify(data, null, 2)}`);
+	}
+
+	/**
+	 * Get a player's name by their address
+	 * @param address - The player's wallet address
+	 * @returns A promise that resolves to the player's name
+	 */
+	async getPlayerNameByAddress(address: string): Promise<string> {
+		const response = await fetch(`${this._baseUrl}/player/${address}`, {
+			method: "GET"
+		});
+		const data = await response.json();
+		if (response.status === 200 && data.success)
+			return data.name;
+		else
+			throw new Error(`Failed to fetch player name by address:\n${JSON.stringify(data, null, 2)}`);
 	}
 }

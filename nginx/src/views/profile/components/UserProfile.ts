@@ -6,186 +6,308 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/11 15:13:58 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/13 00:22:52 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-import { mockProfile } from "../../../services/api/mockProfile/mockProfile.js";
+import UserProfileService from "../../../services/UserProfileService.js";
+import AvatarService from "../../../services/AvatarService.js";
 import { createWinRateDonutChart } from "./WinRateDonutChart.js";
 
+const UPLOAD_ICON_SVG = `<svg width="48" height="48" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="white" stroke-linecap="round" stroke-width="1.5"><path d="M17 9.002c2.175.012 3.353.109 4.121.877C22 10.758 22 12.172 22 15v1c0 2.829 0 4.243-.879 5.122C20.243 22 18.828 22 16 22H8c-2.828 0-4.243 0-5.121-.878C2 20.242 2 18.829 2 16v-1c0-2.828 0-4.242.879-5.121c.768-.768 1.946-.865 4.121-.877" opacity=".5"/><path stroke-linejoin="round" d="M12 15V2m0 0l3 3.5M12 2L9 5.5"/></g></svg>`;
+const DELETE_ICON_SVG = `<svg width="48" height="48" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m18 9l-.84 8.398c-.127 1.273-.19 1.909-.48 2.39a2.5 2.5 0 0 1-1.075.973C15.098 21 14.46 21 13.18 21h-2.36c-1.279 0-1.918 0-2.425-.24a2.5 2.5 0 0 1-1.076-.973c-.288-.48-.352-1.116-.48-2.389L6 9m7.5 6.5v-5m-3 5v-5m-6-4h4.615m0 0l.386-2.672c.112-.486.516-.828.98-.828h3.038c.464 0 .867.342.98.828l.386 2.672m-5.77 0h5.77m0 0H19.5"/></svg>`;
+
+
 export class UserProfile {
+    private static _userProfileService = UserProfileService.getInstance();
+    private static _avatarService = AvatarService.getInstance();
+
     private static truncateWallet(wallet: string): string {
         if (!wallet || wallet.length <= 10) return wallet;
         return `${wallet.slice(0, 5)}...${wallet.slice(-5)}`;
     }
 
-    public static render(): string {
-        return /* HTML */`
-            <div class="flex gap-2 h-full overflow-auto">
-                <div id="avatar-container" class="relative flex-[1] rounded-lg p-4 aspect-square">
-                    <img id="avatar-img" src="${mockProfile.avatar.url}" alt="Profile Picture" class="w-full h-full object-cover text-white rounded-lg transition-all duration-300">
-                    <div id="avatar-overlay" class="absolute inset-4 bg-black/50 rounded-lg flex items-center justify-center opacity-0 transition-opacity duration-300 cursor-pointer pointer-events-none">
-						<svg width="48" height="48" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="white" stroke-linecap="round" stroke-width="1.5"><path d="M17 9.002c2.175.012 3.353.109 4.121.877C22 10.758 22 12.172 22 15v1c0 2.829 0 4.243-.879 5.122C20.243 22 18.828 22 16 22H8c-2.828 0-4.243 0-5.121-.878C2 20.242 2 18.829 2 16v-1c0-2.828 0-4.242.879-5.121c.768-.768 1.946-.865 4.121-.877" opacity=".5"/><path stroke-linejoin="round" d="M12 15V2m0 0l3 3.5M12 2L9 5.5"/></g></svg>
+    public static async render(): Promise<string> {
+        try {
+            const [user, avatarUrl] = await Promise.all([
+                this._userProfileService.getUserProfile(),
+                this._avatarService.getCurrentUserAvatarUrl()
+            ]);
+
+            // Placeholders for matches. These would eventually come from their own services.
+            const matches = { totalwins: 0, totallosses: 0 };
+
+            return /* HTML */`
+                <div class="flex gap-2 h-full overflow-auto">
+                    <div id="avatar-container" class="relative flex-[1] rounded-lg p-4 aspect-square">
+                        <img id="avatar-img" src="${avatarUrl}" alt="Profile Picture" class="w-full h-full object-cover text-white rounded-lg transition-all duration-300">
+                        <div id="avatar-overlay" class="absolute inset-4 bg-black/50 rounded-lg flex items-center justify-center opacity-0 transition-opacity duration-300 cursor-pointer pointer-events-none">
+							<!-- Icon will be injected here -->
+                        </div>
+                        <input type="file" id="avatar-upload-input" class="hidden" accept="image/*">
                     </div>
-					<input type="file" id="avatar-upload-input" class="hidden" accept="image/*">
-                </div>
-                <div class="flex-[2] rounded-lg p-4 flex flex-col justify-start items-start">
-                    <div id="username-wrapper" class="flex items-center gap-2 mb-4">
-                        <h2 class="text-4xl font-bold text-white">${mockProfile.user.username}</h2>
+                    <div class="flex-[2] rounded-lg p-4 flex flex-col justify-start items-start">
+                        <div id="username-wrapper" class="flex items-center gap-2 mb-4">
+                            <h2 class="text-4xl font-bold text-white">${user.username || 'Unknown'}</h2>
+                        </div>
+                        ${
+                            user.authenticationMethod === "credentials" && user.email ?
+                                `<div id="email-wrapper" class="flex items-center gap-2 mb-4">
+                                    <p class="text-gray-500">${user.email}</p>
+                                </div>`
+                                : ''
+                        }
+                        <div class="flex items-center gap-2 mb-4">
+                            <p class="text-gray-500">${user.wallet ? UserProfile.truncateWallet(user.wallet) : 'No wallet'}</p>
+                        </div>
                     </div>
-                    ${
-                        mockProfile.user.authenticationMethod === "credentials" ?
-                            `<div id="email-wrapper" class="flex items-center gap-2 mb-4">
-                                <p class="text-gray-500">${mockProfile.user.email}</p>
-                            </div>`
-                            : ''
-                    }
-                    <div class="flex items-center gap-2 mb-4">
-                        <p class="text-gray-500">${UserProfile.truncateWallet(mockProfile.user.wallet)}</p>
+                    <div class="flex flex-col gap-2 p-4 w-12">
+                        <button id="edit-profile-btn" class="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center text-white transition-colors duration-200">
+                            ✏️
+                        </button>
+                    </div>
+                    <div class="flex-[1] rounded-lg p-4 aspect-square flex">
+                        ${createWinRateDonutChart({
+                            wins: matches.totalwins,
+                            losses: matches.totallosses
+                        })}
                     </div>
                 </div>
-                <div class="flex flex-col gap-2 p-4 w-12">
-                    <button id="edit-profile-btn" class="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center text-white transition-colors duration-200">
-                        ✏️
-                    </button>
+            `;
+        } catch (error) {
+            console.error("Error rendering UserProfile:", error);
+            return /* HTML */`
+                <div class="flex gap-2 h-full overflow-auto">
+                    <div class="flex-[1] rounded-lg p-4 flex items-center justify-center">
+                        <p class="text-red-500">Erreur lors du chargement du profil utilisateur</p>
+                    </div>
                 </div>
-                <div class="flex-[1] rounded-lg p-4 aspect-square flex">
-                    ${createWinRateDonutChart({
-                        wins: mockProfile.matches.totalwins,
-                        losses: mockProfile.matches.totallosses
-                    })}
-                </div>
-            </div>
-        `;
+            `;
+        }
     }
 
-    public static addEventListeners(): void {
+    public static async addEventListeners(): Promise<void> {
         const editButton = document.getElementById('edit-profile-btn');
         const usernameWrapper = document.getElementById('username-wrapper');
-        const emailWrapper = document.getElementById('email-wrapper'); // This can be null
+        const emailWrapper = document.getElementById('email-wrapper');
         const avatarContainer = document.getElementById('avatar-container');
         const avatarImg = document.getElementById('avatar-img') as HTMLImageElement;
         const avatarOverlay = document.getElementById('avatar-overlay');
         const avatarUploadInput = document.getElementById('avatar-upload-input') as HTMLInputElement;
 
-        if (!editButton || !usernameWrapper || !avatarContainer || !avatarImg || !avatarOverlay || !avatarUploadInput) return;
+        if (!editButton || !usernameWrapper || !avatarContainer || !avatarImg || !avatarOverlay || !avatarUploadInput)
+            return;
 
-        const originalAvatarSrc = avatarImg.src;
-        let newAvatarFile: File | null = null;
-        let objectUrlToRevoke: string | null = null;
+        try {
+            // We get the user data directly from the service when listeners are added.
+            const [user, originalAvatarSrc] = await Promise.all([
+                this._userProfileService.getUserProfile(),
+                this._avatarService.getCurrentUserAvatarUrl()
+            ]);
+            let newAvatarFile: File | null = null;
+            let objectUrlToRevoke: string | null = null;
+            let isDefaultAvatar = originalAvatarSrc.includes('defaultAvatar.jpg');
 
-        const handleAvatarClick = () => avatarUploadInput.click();
-
-        const handleFileSelect = () => {
-            if (avatarUploadInput.files && avatarUploadInput.files[0]) {
-                newAvatarFile = avatarUploadInput.files[0];
-                if (objectUrlToRevoke) {
-                    URL.revokeObjectURL(objectUrlToRevoke);
+            const updateAvatarOverlay = () => {
+                if (avatarOverlay) {
+                    avatarOverlay.innerHTML = isDefaultAvatar ? UPLOAD_ICON_SVG : DELETE_ICON_SVG;
                 }
-                objectUrlToRevoke = URL.createObjectURL(newAvatarFile);
-                avatarImg.src = objectUrlToRevoke;
-            }
-        };
+            };
 
-        const editHandler = () => {
-            const originalUsername = usernameWrapper.querySelector('h2')?.textContent || '';
-            const originalEmail = emailWrapper?.querySelector('p')?.textContent || '';
+            updateAvatarOverlay();
 
-            // --- Username Input ---
-            const usernameH2 = usernameWrapper.querySelector('h2');
-            if (usernameH2) {
-                const h2Rect = usernameH2.getBoundingClientRect();
-                usernameWrapper.innerHTML = `<input name="username" type="text" value="${originalUsername}" class="text-4xl font-bold text-white bg-black/20 border border-white/20 rounded-lg focus:outline-none focus:bg-black/30 w-full max-w-full transition-all duration-200 p-2">`;
-                const usernameInput = usernameWrapper.querySelector('input');
-                if (usernameInput) {
-                    usernameInput.style.height = `${h2Rect.height}px`;
-                    usernameInput.style.boxSizing = 'border-box';
-                    usernameInput.focus();
-                    usernameInput.setSelectionRange(originalUsername.length, originalUsername.length);
-                }
-            }
-
-            // --- Email Input ---
-            if (emailWrapper) {
-                const emailP = emailWrapper.querySelector('p');
-                if (emailP) {
-                    const pRect = emailP.getBoundingClientRect();
-                    emailWrapper.innerHTML = `<input name="email" type="email" value="${originalEmail}" class="text-gray-200 bg-black/20 border border-white/20 rounded-lg focus:outline-none focus:bg-black/30 w-full max-w-full transition-all duration-200 p-2 text-base">`;
-                    const emailInput = emailWrapper.querySelector('input');
-                    if (emailInput) {
-                        emailInput.style.height = `${pRect.height}px`;
-                        emailInput.style.boxSizing = 'border-box';
-                    }
-                }
-            }
-
-            // --- Avatar Edit Mode ---
-            avatarImg.style.filter = 'brightness(50%)';
-            avatarOverlay.style.opacity = '1';
-            avatarOverlay.style.pointerEvents = 'auto';
-            avatarOverlay.addEventListener('click', handleAvatarClick);
-            avatarUploadInput.addEventListener('change', handleFileSelect);
-
-            editButton.innerHTML = '✔️';
-
-            const finishEditing = (save: boolean) => {
-                // --- Username ---
-                const usernameInput = usernameWrapper.querySelector('input[name="username"]') as HTMLInputElement;
-                const newUsername = save && usernameInput?.value ? usernameInput.value : originalUsername;
-                usernameWrapper.innerHTML = `<h2 class="text-4xl font-bold text-white">${newUsername}</h2>`;
-
-                // --- Email ---
-                if (emailWrapper) {
-                    const emailInput = emailWrapper.querySelector('input[name="email"]') as HTMLInputElement;
-                    const newEmail = save && emailInput?.value ? emailInput.value : originalEmail;
-                    emailWrapper.innerHTML = `<p class="text-gray-500">${newEmail}</p>`;
-                }
-
-                // --- Avatar ---
-                avatarImg.style.filter = 'brightness(100%)';
-                avatarOverlay.style.opacity = '0';
-                avatarOverlay.style.pointerEvents = 'none';
-                avatarOverlay.removeEventListener('click', handleAvatarClick);
-                avatarUploadInput.removeEventListener('change', handleFileSelect);
-
-                if (save) {
-                    // In a real app, you'd upload newAvatarFile here if it's not null.
-                    // For now, the new image preview remains. We'll clear the old object URL if a new save happens.
-                    if (newAvatarFile) {
-                        // `objectUrlToRevoke` for the saved image should be kept until the next change or page unload.
-                    }
+            const handleAvatarClick = () => {
+                if (isDefaultAvatar) {
+                    avatarUploadInput.click();
                 } else {
-                    // Revert to original image if canceled
-                    avatarImg.src = originalAvatarSrc;
-                    if (objectUrlToRevoke) {
-                        URL.revokeObjectURL(objectUrlToRevoke);
-                        objectUrlToRevoke = null;
+                    if (confirm("Voulez-vous vraiment supprimer votre avatar et utiliser celui par défaut ?")) {
+                        deleteAvatar();
                     }
-                    newAvatarFile = null;
-                }
-
-                editButton.innerHTML = '✏️';
-                editButton.removeEventListener('click', saveHandler);
-                document.removeEventListener('keydown', keydownHandler);
-                editButton.addEventListener('click', editHandler);
-            };
-
-            const saveHandler = () => finishEditing(true);
-            const keydownHandler = (e: KeyboardEvent) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    finishEditing(true);
-                }
-                if (e.key === 'Escape') {
-                    finishEditing(false);
                 }
             };
 
-            editButton.removeEventListener('click', editHandler);
-            editButton.addEventListener('click', saveHandler, { once: true });
-            document.addEventListener('keydown', keydownHandler);
-        };
+            const deleteAvatar = async () => {
+                try {
+                    await this._avatarService.deleteCurrentUserAvatar();
+                    const newAvatarUrl = await this._avatarService.getCurrentUserAvatarUrl();
+                    avatarImg.src = `${newAvatarUrl}?t=${new Date().getTime()}`;
+                    isDefaultAvatar = true;
+                    updateAvatarOverlay();
+                    this._showNotification("Avatar supprimé avec succès !", "success");
+                } catch (error) {
+                    console.error("Error deleting avatar:", error);
+                    this._showNotification("Erreur lors de la suppression de l'avatar", "error");
+                }
+            };
 
-        editButton.addEventListener('click', editHandler);
+            const handleFileSelect = () => {
+                const file = avatarUploadInput.files?.[0];
+                if (file) {
+                    newAvatarFile = file;
+                    if (objectUrlToRevoke) URL.revokeObjectURL(objectUrlToRevoke);
+                    objectUrlToRevoke = URL.createObjectURL(file);
+                    avatarImg.src = objectUrlToRevoke;
+                    isDefaultAvatar = false;
+                    updateAvatarOverlay();
+                }
+            };
+
+            const editHandler = () => {
+                const originalUsername = user.username || '';
+                const originalEmail = user.email || '';
+
+                // Create username input
+                const usernameH2 = usernameWrapper.querySelector('h2');
+                if (usernameH2) {
+                    const h2Rect = usernameH2.getBoundingClientRect();
+                    usernameWrapper.innerHTML = `<input name="username" type="text" value="${originalUsername}" class="text-4xl font-bold text-white bg-black/20 border border-white/20 rounded-lg focus:outline-none focus:bg-black/30 w-full max-w-full transition-all duration-200 p-2">`;
+                    const input = usernameWrapper.querySelector('input');
+                    if (input) {
+                        input.style.height = `${h2Rect.height}px`;
+                        input.style.boxSizing = 'border-box';
+                        input.focus();
+                        input.setSelectionRange(originalUsername.length, originalUsername.length);
+                    }
+                }
+
+                // Create email input if email wrapper exists
+                if (emailWrapper) {
+                    const emailP = emailWrapper.querySelector('p');
+                    if (emailP) {
+                        const pRect = emailP.getBoundingClientRect();
+                        emailWrapper.innerHTML = `<input name="email" type="email" value="${originalEmail}" class="text-gray-200 bg-black/20 border border-white/20 rounded-lg focus:outline-none focus:bg-black/30 w-full max-w-full transition-all duration-200 p-2 text-base">`;
+                        const input = emailWrapper.querySelector('input');
+                        if (input) {
+                            input.style.height = `${pRect.height}px`;
+                            input.style.boxSizing = 'border-box';
+                        }
+                    }
+                }
+
+                // Enable avatar editing
+                avatarImg.style.filter = 'brightness(50%)';
+                avatarOverlay.style.opacity = '1';
+                avatarOverlay.style.pointerEvents = 'auto';
+                avatarOverlay.addEventListener('click', handleAvatarClick);
+                avatarUploadInput.addEventListener('change', handleFileSelect);
+
+                editButton.innerHTML = '✔️';
+
+                const finishEditing = async (save: boolean) => {
+                    const usernameInput = usernameWrapper.querySelector('input[name="username"]') as HTMLInputElement;
+                    const emailInput = emailWrapper?.querySelector('input[name="email"]') as HTMLInputElement;
+
+                    const currentUsername = usernameInput?.value?.trim() || originalUsername;
+                    const currentEmail = emailInput?.value?.trim() || originalEmail;
+
+                    if (save) {
+                        const dataChanged = currentUsername !== originalUsername || currentEmail !== originalEmail;
+                        const avatarChanged = newAvatarFile !== null;
+
+                        if (dataChanged) {
+                            try {
+                                await this._userProfileService.updateUserProfile({
+                                    username: currentUsername,
+                                    email: currentEmail
+                                });
+                            } catch (error) {
+                                console.error("Error updating profile:", error);
+                                this._showNotification("Erreur lors de la mise à jour du profil", "error");
+                                save = false; // Revert on error
+                            }
+                        }
+
+                        if (avatarChanged && newAvatarFile) {
+                            try {
+                                await this._avatarService.uploadOrUpdateCurrentUserAvatar(newAvatarFile);
+                            } catch (error) {
+                                console.error("Error updating avatar:", error);
+                                this._showNotification("Erreur lors de la mise à jour de l'avatar", "error");
+                                save = false; // Revert on error
+                            }
+                        }
+
+                        if ((dataChanged || avatarChanged) && save) {
+                            this._showNotification("Profil mis à jour avec succès!", "success");
+                        }
+                    }
+
+                    // Restore UI
+                    const finalUsername = save ? currentUsername : originalUsername;
+                    const finalEmail = save ? currentEmail : originalEmail;
+
+                    usernameWrapper.innerHTML = `<h2 class="text-4xl font-bold text-white">${finalUsername}</h2>`;
+
+                    if (emailWrapper) {
+                        emailWrapper.innerHTML = `<p class="text-gray-500">${finalEmail}</p>`;
+                    }
+
+                    // Reset avatar state
+                    avatarImg.style.filter = 'brightness(100%)';
+                    avatarOverlay.style.opacity = '0';
+                    avatarOverlay.style.pointerEvents = 'none';
+                    avatarOverlay.removeEventListener('click', handleAvatarClick);
+                    avatarUploadInput.removeEventListener('change', handleFileSelect);
+
+                    if (!save) {
+                        avatarImg.src = originalAvatarSrc;
+                    } else if (newAvatarFile) {
+						const newAvatarUrl = await this._avatarService.getCurrentUserAvatarUrl();
+						avatarImg.src = `${newAvatarUrl}?t=${new Date().getTime()}`;
+						isDefaultAvatar = newAvatarUrl.includes('defaultAvatar.jpg');
+						updateAvatarOverlay();
+					}
+
+					if (objectUrlToRevoke) {
+						URL.revokeObjectURL(objectUrlToRevoke);
+						objectUrlToRevoke = null;
+					}
+					newAvatarFile = null;
+
+                    editButton.innerHTML = '✏️';
+                    editButton.removeEventListener('click', saveHandler);
+                    document.removeEventListener('keydown', keydownHandler);
+                    editButton.addEventListener('click', editHandler);
+                };
+
+                const saveHandler = () => finishEditing(true);
+                const keydownHandler = (e: KeyboardEvent) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        finishEditing(true);
+                    }
+                    if (e.key === 'Escape') {
+                        finishEditing(false);
+                    }
+                };
+
+                editButton.removeEventListener('click', editHandler);
+                editButton.addEventListener('click', saveHandler, { once: true });
+                document.addEventListener('keydown', keydownHandler);
+            };
+
+            editButton.addEventListener('click', editHandler);
+        } catch (error) {
+            console.error("Error setting up event listeners:", error);
+        }
+    }
+
+    private static _showNotification(message: string, type: 'success' | 'error'): void {
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg text-white z-50 transition-all duration-300 ${
+            type === 'success' ? 'bg-green-500' : 'bg-red-500'
+        }`;
+        notification.textContent = message;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
     }
 }

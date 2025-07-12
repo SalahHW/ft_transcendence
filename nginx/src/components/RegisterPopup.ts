@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/16 16:30:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/09 20:57:29 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/12 17:10:18 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -69,13 +69,6 @@ export default class RegisterPopup extends ModalView {
           />
         </div>
 
-        <input
-          type="hidden"
-          id="popup-container-authentication-method-register"
-          value="credentials"
-          name="authenticationMethod"
-        />
-
         <div>
           <input
             type="text"
@@ -128,9 +121,6 @@ export default class RegisterPopup extends ModalView {
     const passwordInput = document.getElementById(
       "popup-container-password-register"
     ) as HTMLInputElement;
-    const authenticationMethodInput = document.getElementById(
-      "popup-container-authentication-method-register"
-    ) as HTMLInputElement;
     const walletInput = document.getElementById(
       "popup-container-wallet-register"
     ) as HTMLInputElement;
@@ -138,10 +128,9 @@ export default class RegisterPopup extends ModalView {
     const username = usernameInput.value.trim();
     const email = emailInput.value.trim();
     const password = passwordInput.value;
-    const authenticationMethod = authenticationMethodInput.value;
     const wallet = walletInput.value.trim();
 
-    if (!username || !email || !password || !authenticationMethod || !wallet) {
+    if (!username || !email || !password || !wallet) {
       this._showError("Please fill in all fields.");
       return;
     }
@@ -153,7 +142,6 @@ export default class RegisterPopup extends ModalView {
         username,
         email,
         password,
-        authenticationMethod,
         wallet,
       });
 
