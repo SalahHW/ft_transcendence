@@ -6,44 +6,27 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/05/26 21:09:59 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 00:38:13 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/13 17:13:42 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-import FriendsService from "../../../services/FriendsService.js";
-import UsersApi, { User } from "../../../services/api/user.js";
-import AvatarServiceAPI from "../../../services/api/avatar.js";
-import { Friendship } from "../../../services/api/friends.js";
+import FriendsService, { EnrichedFriend } from "../../../services/FriendsService.js";
+import UsersApi from "../../../services/api/user.js";
 import AuthNanoService from "../../../auth/AuthNanoService.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 import { createWinRateDonutChart } from "./WinRateDonutChart.js";
-
-// Interface pour un ami enrichi avec les informations utilisateur
-interface EnrichedFriend {
-    id: number;
-    username: string;
-    avatarUrl: string;
-    status: 'online' | 'offline';
-    wins: number;
-    losses: number;
-    authenticationMethod?: string;
-    email?: string;
-    wallet?: string;
-    created_at: string;
-}
 
 export class FriendList {
     private static isAddFriendExpanded: boolean = false;
     private static friends: EnrichedFriend[] = [];
     private static friendsService = FriendsService.getInstance();
     private static usersService = new UsersApi();
-    private static avatarServiceApi = new AvatarServiceAPI();
-    private static isLoading: boolean = false;
+    private static isLoading: boolean = true;
     private static authNanoService = AuthNanoService.getInstance();
 
     public static async render(): Promise<string> {
         try {
-            if (this.friends.length === 0 && !this.isLoading) {
+            if (this.friends.length === 0) {
                 await this.loadFriends();
             }
 
@@ -62,6 +45,7 @@ export class FriendList {
             `;
         } catch (error) {
             console.error('[FriendList] Error in render():', error);
+			this.isLoading = false;
             return this.renderErrorState();
         }
     }
@@ -97,53 +81,16 @@ export class FriendList {
     }
 
     private static async loadFriends(): Promise<void> {
+		this.isLoading = true;
         try {
-            this.isLoading = true;
-            const friendships = await this.friendsService.getFriends();
-            this.friends = await Promise.all(
-                friendships.map(async (friendship: Friendship) => {
-                    try {
-                        const [user, avatarUrl] = await Promise.all([
-                            this.usersService.getUserById(friendship.friend_id),
-                            this.avatarServiceApi.getUserAvatarUrl(friendship.friend_id)
-                                .catch(() => '/assets/defaultAvatar.jpg')
-                        ]);
-                        return this.enrichFriend(friendship, user, avatarUrl);
-                    }
-                    catch (error) {
-                        console.error(`Erreur lors de la récupération de l'utilisateur ${friendship.friend_id}:`, error);
-                        return {
-                            id: friendship.friend_id,
-                            username: `User ${friendship.friend_id}`,
-                            avatarUrl: '/assets/defaultAvatar.jpg',
-                            status: 'offline' as const,
-                            wins: 0,
-                            losses: 0,
-                            created_at: friendship.created_at
-                        };
-                    }
-                })
-            );
+            this.friends = await this.friendsService.getEnrichedFriends();
         } catch (error) {
             console.error('Erreur lors du chargement des amis:', error);
             this.friends = [];
+			throw error; // Renvoyer l'erreur pour que render() puisse l'attraper
         } finally {
             this.isLoading = false;
         }
-    }
-
-    private static enrichFriend(friendship: Friendship, user: User, avatarUrl: string): EnrichedFriend {
-        return {
-            id: friendship.friend_id,
-            username: user.username || `User ${friendship.friend_id}`,
-            avatarUrl: avatarUrl,
-            status: 'offline', // Tous les amis sont offline comme demandé
-            wins: 0, // TODO: intégrer les stats de match une fois le service connecté
-            losses: 0, // TODO: intégrer les stats de match une fois le service connecté
-            authenticationMethod: user.email ? 'credentials' : 'wallet',
-            email: user.email || undefined,
-            created_at: friendship.created_at
-        };
     }
 
     private static createFriendListItem(friend: EnrichedFriend): string {
@@ -296,6 +243,8 @@ export class FriendList {
 
             const container = document.querySelector('.flex.flex-col.gap-2.h-full');
             if (container) {
+                this.isLoading = true;
+                this.friends = []; // Vider le cache local pour forcer le rechargement
                 container.innerHTML = await this.render();
                 this.addEventListeners();
             }
@@ -328,5 +277,10 @@ export class FriendList {
 
     public static async refreshFriends(): Promise<void> {
         await this.loadFriends();
+        const container = document.querySelector('.flex.flex-col.gap-2.h-full');
+        if (container) {
+            container.innerHTML = await this.render();
+            this.addEventListeners();
+        }
     }
 }

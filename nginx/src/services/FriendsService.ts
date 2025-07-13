@@ -1,14 +1,30 @@
 import AuthNanoService from '../auth/AuthNanoService.js';
-import FriendsServiceAPI, { Friendship } from './api/friends.js';
+import FriendsServiceAPI from './api/friends.js';
+import UsersApi, { User } from './api/user.js';
+import AvatarServiceAPI from './api/avatar.js';
+import MatchServiceAPI from './api/match.js';
+
+export interface EnrichedFriend {
+    id: number;
+    username: string;
+    avatarUrl: string;
+    status: 'online' | 'offline'; // Le statut sera 'offline' par défaut
+    wins: number;
+    losses: number;
+    wallet?: string;
+}
 
 /**
- * Service to manage user friends data, including caching.
+ * Service to manage the current user's friends list, including caching.
  */
 export default class FriendsService {
     private static _instance: FriendsService;
     private _authService = AuthNanoService.getInstance();
     private _friendsApi = new FriendsServiceAPI();
-    private _friendsCache: Friendship[] | null = null;
+    private _usersApi = new UsersApi();
+    private _avatarApi = new AvatarServiceAPI();
+    private _matchApi = new MatchServiceAPI();
+    private _enrichedFriendsCache: EnrichedFriend[] | null = null;
 
     private constructor() {}
 
@@ -19,7 +35,7 @@ export default class FriendsService {
         return FriendsService._instance;
     }
 
-    private async _getCurrentUserId(): Promise<number> {
+    private async _getUserId(): Promise<number> {
         const jwtPayload = await this._authService.getJwtPayload();
         if (!jwtPayload?.sub) {
             throw new Error("User not authenticated or user ID is missing.");
@@ -27,49 +43,99 @@ export default class FriendsService {
         return jwtPayload.sub;
     }
 
-    /**
-     * Gets the list of friends for the current user.
-     * Implements a simple cache-on-read strategy.
-     * @returns A promise that resolves to the list of friendships.
-     */
-    public async getFriends(): Promise<Friendship[]> {
-        if (this._friendsCache !== null) {
-            return this._friendsCache;
+    public async getEnrichedFriends(): Promise<EnrichedFriend[]> {
+        if (this._enrichedFriendsCache) {
+            return this._enrichedFriendsCache;
         }
 
-        const userId = await this._getCurrentUserId();
-        const friends = await this._friendsApi.getUserFriendships(userId);
-        this._friendsCache = friends;
+        const userId = await this._getUserId();
+        const friendships = await this._friendsApi.getUserFriendships(userId);
 
-        return friends;
+        if (friendships.length === 0) {
+            return [];
+        }
+
+        const enrichedFriends = await Promise.all(
+            friendships.map(async (friendship) => {
+                try {
+                    const friendUser = await this._usersApi.getUserById(friendship.friend_id);
+                    const avatarUrl = await this._avatarApi.getUserAvatarUrl(friendUser.id!)
+                        .catch(() => '/assets/defaultAvatar.jpg');
+
+                    let wins = 0;
+                    let losses = 0;
+                    if (friendUser.wallet) {
+                        const matches = await this._matchApi.getMatchesByPlayer(friendUser.wallet);
+                        matches.forEach(match => {
+                            if (match.winner === friendUser.wallet) {
+                                wins++;
+                            } else {
+                                losses++;
+                            }
+                        });
+                    }
+
+                    return {
+                        id: friendUser.id!,
+                        username: friendUser.username!,
+                        avatarUrl,
+                        status: 'offline' as const,
+                        wins,
+                        losses,
+                        wallet: friendUser.wallet
+                    };
+                } catch (error) {
+                    console.error(`Failed to enrich friend data for friend ID ${friendship.friend_id}`, error);
+                    // Retourner un objet partiel pour ne pas bloquer toute la liste
+                    return {
+                        id: friendship.friend_id,
+                        username: `User ${friendship.friend_id}`,
+                        avatarUrl: '/assets/defaultAvatar.jpg',
+                        status: 'offline' as const,
+                        wins: 0,
+                        losses: 0
+                    };
+                }
+            })
+        );
+
+        this._enrichedFriendsCache = enrichedFriends;
+        return enrichedFriends;
     }
 
     /**
-     * Adds a friend for the current user.
+     * Gets the list of friend IDs for the current user.
+     * @returns A promise that resolves to an array of friend IDs.
+     */
+    public async getFriends(): Promise<any[]> {
+        const userId = await this._getUserId();
+        return this._friendsApi.getUserFriendships(userId);
+    }
+
+    /**
+     * Adds a friend to the current user's friend list.
      * @param friendId - The ID of the user to befriend.
-     * @returns A promise that resolves when the friendship is created.
      */
     public async addFriend(friendId: number): Promise<void> {
-        const userId = await this._getCurrentUserId();
+        const userId = await this._getUserId();
         await this._friendsApi.createFriendship(userId, friendId);
         this.clearCache();
     }
 
     /**
-     * Removes a friend for the current user.
+     * Removes a friend from the current user's friend list.
      * @param friendId - The ID of the friend to remove.
-     * @returns A promise that resolves when the friendship is deleted.
      */
     public async removeFriend(friendId: number): Promise<void> {
-        const userId = await this._getCurrentUserId();
+        const userId = await this._getUserId();
         await this._friendsApi.deleteFriendship(userId, friendId);
         this.clearCache();
     }
 
     /**
-     * Clears the local cache for the user's friends list.
+     * Clears the local cache for the friends list.
      */
     public clearCache(): void {
-        this._friendsCache = null;
+        this._enrichedFriendsCache = null;
     }
 }
