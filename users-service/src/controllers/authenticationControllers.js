@@ -1,7 +1,11 @@
 import { createUser } from "./userControllers.js";
 import { readUserByUsername } from "../models/userModels.js";
 import { comparePassword } from "../utils/password.js";
-import { setAuthCookies } from "../plugins/jwt.js";
+import {
+  signAccessToken,
+  signRefreshToken,
+  setAuthCookies,
+} from "../plugins/jwt.js";
 
 export const registerUser = async (request, reply) => {
   return createUser(request, reply);
