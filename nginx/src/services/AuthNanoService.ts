@@ -1,4 +1,5 @@
 import UsersApi, { JwtUserPayload } from "../services/api/user.js";
+import CacheManager from './CacheManager.js';
 
 export default class AuthNanoService {
 	private static _instance: AuthNanoService;
@@ -48,6 +49,14 @@ export default class AuthNanoService {
 		this._user = await this._usersApi.getCurrentUser();
 		this._isLoggedIn = true;
 		this._startRefreshLoop();
+
+				// Trigger cache invalidation event for login
+		const cacheManager = CacheManager.getInstance();
+		cacheManager.triggerEvent({
+			type: 'USER_LOGIN',
+			data: { userId: this._user?.sub, username: this._user?.username }
+		});
+
 		return this._user!;
 	}
 
@@ -58,18 +67,12 @@ export default class AuthNanoService {
 			this._isLoggedIn = false;
 			this._stopRefreshLoop();
 
-			// Clear all service caches on logout using dynamic imports to avoid circular dependencies.
-			const AvatarService = (await import('../services/AvatarService.js')).default;
-			const FriendsService = (await import('../services/FriendsService.js')).default;
-			const UserProfileService = (await import('../services/UserProfileService.js')).default;
-			const MatchHistoryService = (await import('../services/MatchHistoryService.js')).default;
-			const Router = (await import('../router/Router.js')).default;
-
-			AvatarService.getInstance().clearCache();
-			FriendsService.getInstance().clearCache();
-			UserProfileService.getInstance().clearCache();
-			MatchHistoryService.getInstance().clearCache();
-			Router.getInstance().clearAllRouteCaches();
+			// Trigger cache invalidation event for logout
+			const cacheManager = CacheManager.getInstance();
+			cacheManager.triggerEvent({
+				type: 'USER_LOGOUT',
+				data: { timestamp: Date.now() }
+			});
 		} catch (error) {
 			console.error('Logout API call failed:', error);
 			throw new Error('Logout failed. Please try again.');
