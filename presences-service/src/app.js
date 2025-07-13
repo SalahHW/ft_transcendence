@@ -119,7 +119,6 @@ function broadcastDisconnection(disconnectedClient) {
     userInfo: disconnectedClient.getPublicInfo(),
   };
 
-  // Envoyer le message à tous les clients restants
   for (const client of connectedClients) {
     client.send(message);
   }
@@ -141,7 +140,6 @@ function broadcastConnection(newClient) {
 
   let totalOtherClients = 0;
 
-  // Envoyer le message à tous les autres clients (pas le nouveau client)
   for (const client of connectedClients) {
     if (client.userId !== newClient.userId) {
       totalOtherClients++;
@@ -149,7 +147,6 @@ function broadcastConnection(newClient) {
     }
   }
 
-  // Envoyer également un message de confirmation au nouveau client
   const confirmationMessage = {
     type: "connection_success",
     connectedUsers: connectedClients.map((c) => c.userId),
