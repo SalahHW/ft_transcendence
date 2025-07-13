@@ -2,6 +2,7 @@ import UserProfileService from './UserProfileService.js';
 import MatchServiceAPI, { Match, Tournament } from './api/match.js';
 import UsersApi from './api/user.js';
 import AvatarServiceAPI from './api/avatar.js';
+import CacheManager, { CacheableService } from './CacheManager.js';
 
 export interface EnrichedMatch {
 	match: Match;
@@ -22,7 +23,7 @@ export interface EnrichedMatchHistory {
 /**
  * Service to manage user match and tournament history, including caching.
  */
-export default class MatchHistoryService {
+export default class MatchHistoryService implements CacheableService {
     private static _instance: MatchHistoryService;
     private _userProfileService = UserProfileService.getInstance();
     private _matchApi = new MatchServiceAPI();
@@ -31,8 +32,18 @@ export default class MatchHistoryService {
     private _enrichedMatchHistoryCache: EnrichedMatchHistory | null = null;
     private _tournamentHistoryCache: Tournament[] | null = null;
     private _userNameCache: Map<string, string> = new Map();
+    public readonly serviceName = 'MatchHistoryService';
 
-    private constructor() {}
+    private constructor() {
+        // Register with CacheManager
+        const cacheManager = CacheManager.getInstance();
+        cacheManager.registerService(this, [
+            'USER_LOGIN',
+            'USER_LOGOUT',
+            'MATCH_REPORTED',
+            'AVATAR_UPDATED'
+        ]);
+    }
 
     public static getInstance(): MatchHistoryService {
         if (!MatchHistoryService._instance) {
@@ -164,7 +175,14 @@ export default class MatchHistoryService {
         winner: string;
     }): Promise<string> {
         const txHash = await this._matchApi.reportMatch(match);
-        this._enrichedMatchHistoryCache = null; // Invalidate cache
+
+        // Trigger cache invalidation event
+        const cacheManager = CacheManager.getInstance();
+        cacheManager.triggerEvent({
+            type: 'MATCH_REPORTED',
+            data: { matchId: match.matchId, winner: match.winner }
+        });
+
         return txHash;
     }
 

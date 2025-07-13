@@ -6,13 +6,14 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/05/26 21:09:59 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 17:13:42 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/13 17:19:13 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 import FriendsService, { EnrichedFriend } from "../../../services/FriendsService.js";
 import UsersApi from "../../../services/api/user.js";
 import AuthNanoService from "../../../auth/AuthNanoService.js";
+import CacheManager from "../../../services/CacheManager.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 import { createWinRateDonutChart } from "./WinRateDonutChart.js";
 
@@ -23,6 +24,7 @@ export class FriendList {
     private static usersService = new UsersApi();
     private static isLoading: boolean = true;
     private static authNanoService = AuthNanoService.getInstance();
+    private static cacheManager = CacheManager.getInstance();
 
     public static async render(): Promise<string> {
         try {
@@ -235,6 +237,10 @@ export class FriendList {
 
             await this.friendsService.addFriend(targetUser.id);
 
+            // Note: Le cache est automatiquement invalidé par le service via CacheManager
+            // Mais on peut aussi le faire manuellement si nécessaire
+            // this.cacheManager.clearServiceCache('FriendsService');
+
             await this.loadFriends();
 
             // Reset du formulaire
@@ -282,5 +288,21 @@ export class FriendList {
             container.innerHTML = await this.render();
             this.addEventListeners();
         }
+    }
+
+    /**
+     * Force refresh all caches (useful for debugging or manual refresh)
+     */
+    public static forceRefreshAllCaches(): void {
+        this.cacheManager.clearAllCaches();
+        console.log('[FriendList] All caches cleared manually');
+    }
+
+    /**
+     * Get cache statistics (useful for debugging)
+     */
+    public static getCacheStats(): void {
+        const stats = this.cacheManager.getStats();
+        console.log('[FriendList] Cache stats:', stats);
     }
 }

@@ -3,6 +3,7 @@ import FriendsServiceAPI from './api/friends.js';
 import UsersApi, { User } from './api/user.js';
 import AvatarServiceAPI from './api/avatar.js';
 import MatchServiceAPI from './api/match.js';
+import CacheManager, { CacheableService } from './CacheManager.js';
 
 export interface EnrichedFriend {
     id: number;
@@ -17,7 +18,7 @@ export interface EnrichedFriend {
 /**
  * Service to manage the current user's friends list, including caching.
  */
-export default class FriendsService {
+export default class FriendsService implements CacheableService {
     private static _instance: FriendsService;
     private _authService = AuthNanoService.getInstance();
     private _friendsApi = new FriendsServiceAPI();
@@ -25,8 +26,18 @@ export default class FriendsService {
     private _avatarApi = new AvatarServiceAPI();
     private _matchApi = new MatchServiceAPI();
     private _enrichedFriendsCache: EnrichedFriend[] | null = null;
+    public readonly serviceName = 'FriendsService';
 
-    private constructor() {}
+    private constructor() {
+        // Register with CacheManager
+        const cacheManager = CacheManager.getInstance();
+        cacheManager.registerService(this, [
+            'USER_LOGIN',
+            'USER_LOGOUT',
+            'FRIEND_ADDED',
+            'FRIEND_REMOVED'
+        ]);
+    }
 
     public static getInstance(): FriendsService {
         if (!FriendsService._instance) {
@@ -113,13 +124,26 @@ export default class FriendsService {
     }
 
     /**
+     * Clears the local cache for the friends list.
+     */
+    public clearCache(): void {
+        this._enrichedFriendsCache = null;
+    }
+
+    /**
      * Adds a friend to the current user's friend list.
      * @param friendId - The ID of the user to befriend.
      */
     public async addFriend(friendId: number): Promise<void> {
         const userId = await this._getUserId();
         await this._friendsApi.createFriendship(userId, friendId);
-        this.clearCache();
+
+        // Trigger cache invalidation event
+        const cacheManager = CacheManager.getInstance();
+        cacheManager.triggerEvent({
+            type: 'FRIEND_ADDED',
+            data: { friendId, userId }
+        });
     }
 
     /**
@@ -129,13 +153,12 @@ export default class FriendsService {
     public async removeFriend(friendId: number): Promise<void> {
         const userId = await this._getUserId();
         await this._friendsApi.deleteFriendship(userId, friendId);
-        this.clearCache();
-    }
 
-    /**
-     * Clears the local cache for the friends list.
-     */
-    public clearCache(): void {
-        this._enrichedFriendsCache = null;
+        // Trigger cache invalidation event
+        const cacheManager = CacheManager.getInstance();
+        cacheManager.triggerEvent({
+            type: 'FRIEND_REMOVED',
+            data: { friendId, userId }
+        });
     }
 }
