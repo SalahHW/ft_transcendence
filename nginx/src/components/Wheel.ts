@@ -120,6 +120,12 @@ export default class Wheel {
 					return;
 				}
 
+				// Empêcher l'affichage de la wheel sur les pages de jeu
+				const currentPath = this._router.getCurrentPath();
+				if (currentPath.includes('/tournament') || currentPath.includes('/1v1')) {
+					return;
+				}
+
 				event.preventDefault();
 				await this.showWheel();
 			}
