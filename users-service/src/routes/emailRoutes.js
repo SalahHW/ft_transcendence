@@ -1,4 +1,5 @@
 import * as emailControllers from "../controllers/emailControllers.js";
+import * as meControllers from "../controllers/meControllers.js";
 
 export default async function emailRoutes(fastify) {
   fastify.route({
@@ -9,10 +10,12 @@ export default async function emailRoutes(fastify) {
         type: "object",
         required: ["email"],
         properties: {
-          email: { type: "string", format: "email" }
-        }
-      }
+          email: { type: "string", format: "email" },
+        },
+        additionalProperties: false,
+      },
     },
-    handler: emailControllers.updateEmail
-  })
+    preHandler: meControllers.verifyAuthentication,
+    handler: emailControllers.updateEmail,
+  });
 }
