@@ -1,4 +1,4 @@
-import AuthNanoService from '../AuthNanoService.js';
+import AuthService from '../AuthNanoService.js';
 
 /**
  * Type pour les événements de présence reçus du serveur WebSocket.
@@ -19,7 +19,7 @@ export type PresenceCallback = (userId: number, status: 'online' | 'offline') =>
  */
 export default class PresenceService {
   private static _instance: PresenceService;
-  private _authService = AuthNanoService.getInstance();
+  private _authService = AuthService.getInstance();
   private _webSocket: WebSocket | null = null;
   private _reconnectAttempts = 0;
   private readonly _maxReconnectAttempts = 5;

@@ -1,4 +1,4 @@
-import AuthNanoService from './AuthNanoService.js';
+import AuthService from './AuthNanoService.js';
 import FriendsServiceAPI from './api/friends.js';
 import UsersApi from './api/user.js';
 import AvatarServiceAPI from './api/avatar.js';
@@ -20,7 +20,7 @@ export interface EnrichedFriend {
  */
 export default class FriendsService implements CacheableService {
     private static _instance: FriendsService;
-    private _authService = AuthNanoService.getInstance();
+    private _authService = AuthService.getInstance();
     private _friendsApi = new FriendsServiceAPI();
     private _usersApi = new UsersApi();
     private _avatarApi = new AvatarServiceAPI();

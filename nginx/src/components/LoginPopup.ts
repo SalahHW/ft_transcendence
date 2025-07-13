@@ -1,11 +1,11 @@
-import AuthNanoService from "../services/AuthNanoService.js";
+import AuthService from "../services/AuthNanoService.js";
 import { UI_THEME } from "../style/tailwindClasses.js";
 import { buttonHTML } from "./button.js";
 import ModalView from "./ModalView.js";
 import { setButtonLoading } from "./PopUpUtils";
 
 export default class LoginPopup extends ModalView {
-  private _authService: AuthNanoService;
+  private _authService: AuthService;
 
   constructor() {
     super({
@@ -13,7 +13,7 @@ export default class LoginPopup extends ModalView {
       maxWidth: "36rem",
       contentContainerClasses: "p-8 mx-4",
     });
-    this._authService = AuthNanoService.getInstance();
+    this._authService = AuthService.getInstance();
   }
 
   public show(): void {

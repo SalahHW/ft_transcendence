@@ -1,4 +1,4 @@
-import AuthNanoService from './AuthNanoService.js';
+import AuthService from './AuthNanoService.js';
 import AvatarServiceAPI from './api/avatar.js';
 import CacheManager, { CacheableService } from './CacheManager.js';
 
@@ -7,7 +7,7 @@ import CacheManager, { CacheableService } from './CacheManager.js';
  */
 export default class AvatarService implements CacheableService {
     private static _instance: AvatarService;
-    private _authService = AuthNanoService.getInstance();
+    private _authService = AuthService.getInstance();
     private _avatarApi = new AvatarServiceAPI();
     private _avatarUrlCache: string | null = null;
     private _defaultAvatarUrl: string = '/assets/defaultAvatar.jpg';

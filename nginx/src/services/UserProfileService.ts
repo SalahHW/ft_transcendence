@@ -1,4 +1,4 @@
-import AuthNanoService from './AuthNanoService.js';
+import AuthService from './AuthNanoService.js';
 import UsersApi, { User } from './api/user.js';
 import CacheManager, { CacheableService } from './CacheManager.js';
 import AvatarService from './AvatarService.js';
@@ -15,7 +15,7 @@ export interface EnrichedUser extends User {
  */
 export default class UserProfileService implements CacheableService {
     private static _instance: UserProfileService;
-    private _authService = AuthNanoService.getInstance();
+    private _authService = AuthService.getInstance();
     private _usersApi = new UsersApi();
     private _avatarService = AvatarService.getInstance();
     private _matchApi = new MatchServiceAPI();

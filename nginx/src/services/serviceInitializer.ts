@@ -4,7 +4,7 @@ import FriendsService from './FriendsService.js';
 import MatchHistoryService from './MatchHistoryService.js';
 import UserProfileService from './UserProfileService.js';
 import PresenceService from './webSocket/presence.js';
-import AuthNanoService from './AuthNanoService.js';
+import AuthService from './AuthNanoService.js';
 
 export function initializeServices(): void {
     console.log("Initializing services...");
@@ -17,8 +17,9 @@ export function initializeServices(): void {
         MatchHistoryService.getInstance();
         UserProfileService.getInstance();
         const presenceService = PresenceService.getInstance();
+        const authService = AuthService.getInstance();
 
-        AuthNanoService.getInstance().isLoggedIn().then(loggedIn => {
+        authService.isLoggedIn().then(loggedIn => {
             if (loggedIn) {
                 presenceService.connect();
             }

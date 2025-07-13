@@ -25,18 +25,6 @@ class App {
       console.log(error);
     }
 
-    try {
-      const auth = AuthService.getInstance();
-      const loggedIn = await auth.isLoggedIn();
-      if (loggedIn)
-        console.info("[INIT] Active session detected. Refresh loop started.");
-      else
-        console.info("[INIT] No active session found.");
-    }
-    catch (err) {
-      console.warn("[INIT] Error during session initialization:", err);
-    }
-
     new Wheel("wheel-container");
 
     console.log("Application initialized successfully.");

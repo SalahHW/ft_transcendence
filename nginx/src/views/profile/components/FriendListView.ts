@@ -1,6 +1,6 @@
 import FriendsService, { EnrichedFriend } from "../../../services/FriendsService.js";
 import UsersApi from "../../../services/api/user.js";
-import AuthNanoService from "../../../services/AuthNanoService.js";
+import AuthService from "../../../services/AuthNanoService.js";
 import CacheManager from "../../../services/CacheManager.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 import { createWinRateDonutChart } from "./WinRateDonutChart.js";
@@ -11,7 +11,7 @@ export class FriendListView {
     private static friendsService = FriendsService.getInstance();
     private static usersService = new UsersApi();
     private static isLoading: boolean = true;
-    private static authNanoService = AuthNanoService.getInstance();
+    private static authNanoService = AuthService.getInstance();
     private static cacheManager = CacheManager.getInstance();
 
     public static async render(): Promise<string> {
