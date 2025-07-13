@@ -1,35 +1,50 @@
-import AuthNanoService from "../AuthNanoService.js";
+import AuthNanoService from '../AuthNanoService.js';
 
+/**
+ * Type pour les événements de présence reçus du serveur WebSocket.
+ */
 interface Payload {
-  type: string;
-  message: string;
+  type: 'user_connected' | 'user_disconnected' | 'connection_success';
+  userId: number;
   connectedUsers: number[];
 }
 
-export default class Presence {
-  private _webSocket: WebSocket | null = null;
-  private static _instance: Presence;
+/**
+ * Type pour la fonction de callback qui sera appelée lors d'un changement de présence.
+ */
+export type PresenceCallback = (userId: number, status: 'online' | 'offline') => void;
+
+/**
+ * Service singleton pour gérer la connexion au service de présence via WebSocket.
+ */
+export default class PresenceService {
+  private static _instance: PresenceService;
   private _authService = AuthNanoService.getInstance();
+  private _webSocket: WebSocket | null = null;
+  private _reconnectAttempts = 0;
+  private readonly _maxReconnectAttempts = 5;
+  private readonly _reconnectDelay = 1000;
   private _url = `${window.location.protocol}//${window.location.host}/presences'`;
 
   private _connectedUsers = new Set<number>();
+  private _callbacks: PresenceCallback[] = [];
 
   private constructor() {}
 
-  public static getInstance(): Presence {
-    if (!Presence._instance) {
-      Presence._instance = new Presence();
+  public static getInstance(): PresenceService {
+    if (!PresenceService._instance) {
+      PresenceService._instance = new PresenceService();
     }
-    return Presence._instance;
+    return PresenceService._instance;
   }
 
-  public async connect() {
+  public async connect(): Promise<void> {
     if (this._webSocket && this._webSocket.readyState === WebSocket.OPEN) {
-      console.log("WebSocket already connected");
+      console.log('[PresenceService] Already connected.');
       return;
     }
-    else if (this._webSocket) {
-      return;
+    if (this._webSocket) {
+        return;
     }
 
     try {
@@ -38,53 +53,106 @@ export default class Presence {
         console.warn('[PresenceService] User not authenticated, connection aborted.');
         return;
       }
+
       this._webSocket = new WebSocket(this._url);
-    }
-    catch (error) {
+      this._setupWebSocketHandlers(jwtPayload.sub);
+
+    } catch (error) {
       console.error('[PresenceService] Connection failed due to authentication error:', error);
     }
   }
+
+  private _setupWebSocketHandlers(userId: number): void {
+    if (!this._webSocket) return;
+
+    this._webSocket.onopen = () => {
+      console.log('[PresenceService] WebSocket connection established.');
+      this._reconnectAttempts = 0;
+      this._webSocket!.send(JSON.stringify({ userId, message: 'init' }));
+    };
+
+    this._webSocket.onmessage = (event) => {
+      try {
+        const data: Payload = JSON.parse(event.data);
+        this._handlePresenceEvent(data);
+      } catch (error) {
+        console.error('[PresenceService] Error parsing message:', error);
+      }
+    };
+
+    this._webSocket.onclose = () => {
+      console.warn('[PresenceService] WebSocket connection closed.');
+      this._webSocket = null;
+      this._connectedUsers.forEach(id => this._notifyCallbacks(id, 'offline'));
+      this._connectedUsers.clear();
+      this._scheduleReconnect();
+    };
+
+    this._webSocket.onerror = (error) => {
+      console.error('[PresenceService] WebSocket error:', error);
+
+    };
+  }
+
+  private _handlePresenceEvent(event: Payload): void {
+    switch (event.type) {
+      case 'connection_success':
+        this._connectedUsers = new Set(event.connectedUsers);
+        this._connectedUsers.forEach(id => this._notifyCallbacks(id, 'online'));
+        break;
+      case 'user_connected':
+        this._connectedUsers.add(event.userId);
+        this._notifyCallbacks(event.userId, 'online');
+        break;
+      case 'user_disconnected':
+        this._connectedUsers.delete(event.userId);
+        this._notifyCallbacks(event.userId, 'offline');
+        break;
+    }
+  }
+
+  private _notifyCallbacks(userId: number, status: 'online' | 'offline'): void {
+    this._callbacks.forEach(callback => {
+      try {
+        callback(userId, status);
+      } catch (error) {
+        console.error('[PresenceService] Error in presence callback:', error);
+      }
+    });
+  }
+
+  private _scheduleReconnect(): void {
+    if (this._reconnectAttempts >= this._maxReconnectAttempts) {
+      console.error('[PresenceService] Maximum reconnection attempts reached.');
+      return;
+    }
+
+    this._reconnectAttempts++;
+    const delay = this._reconnectDelay * Math.pow(2, this._reconnectAttempts - 1);
+
+    console.log(`[PresenceService] Reconnecting in ${delay}ms...`);
+    setTimeout(() => this.connect(), delay);
+  }
+
+  public disconnect(): void {
+    if (this._webSocket) {
+      this._reconnectAttempts = this._maxReconnectAttempts;
+      this._webSocket.close();
+    }
+  }
+
+  public isUserOnline(userId: number): boolean {
+    return this._connectedUsers.has(userId);
+  }
+
+  public onPresenceChange(callback: PresenceCallback): void {
+    this._callbacks.push(callback);
+  }
+
+  public offPresenceChange(callback: PresenceCallback): void {
+    const index = this._callbacks.indexOf(callback);
+    if (index > -1) {
+      this._callbacks.splice(index, 1);
+    }
+  }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// const url = `${window.location.protocol}//${window.location.host}/presences'`;
-// const devUrl = "http://localhost:3002";
-
-// export function createWebSocket() {
-//   console.log(devUrl);
-//   const webSocket = new WebSocket(devUrl);
-//   webSocket.onmessage = (event) => {
-//     console.log(event.data);
-//     const data = JSON.parse(event.data);
-//     console.log(data.connectedUsers);
-//     const connectedUsers = data.connectedUsers;
-//     // const [ connectedUsers ] = data;
-
-//   console.log("WebSocket created");
-
-//   webSocket.addEventListener("error", (event) => {
-//     console.log("WebSocket error: ", event);
-//   });
-// }
-
-// // export async function sendMessage(webSocket: WebSocket, message: string): void {
-// //   await webSocket.send(message);
-// // }

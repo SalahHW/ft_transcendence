@@ -16,32 +16,28 @@ class App {
   private async initializeApp(): Promise<void> {
     console.log("Initializing application...");
 
-    initializeServices();
-
-    const router = Router.getInstance();
-    router.init();
+    try {
+      initializeServices();
+      const router = Router.getInstance();
+      router.init();
+    }
+    catch (error) {
+      console.log(error);
+    }
 
     try {
       const auth = AuthService.getInstance();
       const loggedIn = await auth.isLoggedIn();
-      if (loggedIn) {
+      if (loggedIn)
         console.info("[INIT] Active session detected. Refresh loop started.");
-      } else {
+      else
         console.info("[INIT] No active session found.");
-      }
-    } catch (err) {
+    }
+    catch (err) {
       console.warn("[INIT] Error during session initialization:", err);
     }
 
     new Wheel("wheel-container");
-
-    try {
-      Presence.getInstance();
-      console.log(`[WS] Presence service inistialized successfully`)
-    }
-    catch (err) {
-      console.log(`[WS] ${err}`);
-    }
 
     console.log("Application initialized successfully.");
   }

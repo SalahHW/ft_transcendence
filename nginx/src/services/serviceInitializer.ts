@@ -3,19 +3,32 @@ import AvatarService from './AvatarService.js';
 import FriendsService from './FriendsService.js';
 import MatchHistoryService from './MatchHistoryService.js';
 import UserProfileService from './UserProfileService.js';
+import PresenceService from './webSocket/presence.js';
+import AuthNanoService from './AuthNanoService.js';
 
 export function initializeServices(): void {
     console.log("Initializing services...");
 
-    CacheManager.getInstance();
+    try {
+        CacheManager.getInstance();
 
-    AvatarService.getInstance();
-    FriendsService.getInstance();
-    MatchHistoryService.getInstance();
-    UserProfileService.getInstance();
+        AvatarService.getInstance();
+        FriendsService.getInstance();
+        MatchHistoryService.getInstance();
+        UserProfileService.getInstance();
+        const presenceService = PresenceService.getInstance();
 
-    console.log("Services initialized and registered with CacheManager.");
+        AuthNanoService.getInstance().isLoggedIn().then(loggedIn => {
+            if (loggedIn) {
+                presenceService.connect();
+            }
+        });
 
-    const cacheStats = CacheManager.getInstance().getStats();
-    console.log(`[CacheManager] Initial Stats: ${cacheStats.services} services registered, monitoring ${cacheStats.events} events.`);
+        console.log("Services initialized and registered with CacheManager.");
+        const cacheStats = CacheManager.getInstance().getStats();
+        console.log(`[CacheManager] Initial Stats: ${cacheStats.services} services registered, monitoring ${cacheStats.events} events.`);
+    }
+    catch ( error ) {
+        console.log(error);
+    }
 }
