@@ -4,8 +4,8 @@ export default class AuthNanoService {
   private static _instance: AuthNanoService;
   private _usersApi: UsersApi = new UsersApi();
   private _user: User | null = null;
-  private _isLoggedIn: boolean | null = null; // null means auth status not checked yet
-  private _refreshInterval: ReturnType<typeof setInterval> | null = null;
+  private _isLoggedIn: boolean | null = null;
+  private _refreshIntervalId: ReturnType<typeof setInterval> | null = null;
 
   private constructor() {}
 
@@ -21,7 +21,6 @@ export default class AuthNanoService {
       try {
         this._user = await this._usersApi.getCurrentUser();
         this._isLoggedIn = !!this._user;
-
         if (this._isLoggedIn) {
           this._startRefreshLoop();
         }
@@ -181,6 +180,44 @@ export default class AuthNanoService {
     }
   }
 
+  private async _refreshAccessToken(): Promise<void> {
+    try {
+      const response = await fetch(
+        "https://elsalmatjori.com:16443/refreshAccessToken",
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        console.error("Token refresh failed:", await response.text());
+        this._user = null;
+        this._isLoggedIn = false;
+        this._stopRefreshLoop();
+      } else {
+        console.log("Access token refreshed successfully");
+      }
+    } catch (error) {
+      console.error("Token refresh exception:", error);
+    }
+  }
+
+  private _startRefreshLoop(): void {
+    if (this._refreshIntervalId) return;
+
+    this._refreshIntervalId = setInterval(() => {
+      this._refreshAccessToken();
+    }, 0.15 * 60 * 1000);
+  }
+
+  private _stopRefreshLoop(): void {
+    if (this._refreshIntervalId) {
+      clearInterval(this._refreshIntervalId);
+      this._refreshIntervalId = null;
+    }
+  }
+
   private async _getWalletAddress(): Promise<string | null> {
     const ethereum = (window as any).ethereum;
     if (!ethereum) throw new Error("MetaMask not detected");
@@ -203,43 +240,5 @@ export default class AuthNanoService {
       params: [message, address],
     });
     return signature;
-  }
-
-  private _startRefreshLoop() {
-    if (this._refreshInterval) return;
-
-    this._refreshInterval = setInterval(async () => {
-      try {
-        const res = await fetch("https://elsalmatjori.com:16443/refresh", {
-          method: "POST",
-          credentials: "include",
-        });
-
-        if (res.status === 401) {
-          console.warn("Token expired. Logging out...");
-          await this.logout();
-          return;
-        }
-
-        if (!res.ok) {
-          console.warn(`[REFRESH] Failed with status ${res.status}`);
-          return;
-        }
-
-        console.info("[REFRESH] Token refreshed successfully");
-      } catch (err) {
-        console.error(
-          "[REFRESH] Network or server error during token refresh:",
-          err
-        );
-      }
-    }, 240_000); // 4 minutes
-  }
-
-  private _stopRefreshLoop() {
-    if (this._refreshInterval) {
-      clearInterval(this._refreshInterval);
-      this._refreshInterval = null;
-    }
   }
 }

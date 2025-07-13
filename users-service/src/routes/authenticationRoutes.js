@@ -23,7 +23,7 @@ export default async function authenticationRoutes(fastify) {
     method: "GET",
     url: "/me",
     handler: async (request, reply) => {
-      const token = request.cookies?.token;
+      const token = request.cookies?.access_token;
       if (!token) {
         return reply
           .code(401)

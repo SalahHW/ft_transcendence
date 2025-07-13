@@ -19,7 +19,7 @@ export const signRefreshToken = async (request, reply) => {
     const token = await reply.jwtSign(payload, { expiresIn: "7d" });
     return reply.code(200).send({ token });
   } catch (error) {
-    console.error(error);
+    console.error("Refresh token generation failed:", error.message);
     return reply.code(500).send({
       error: "Failed to generate token",
       cause: error.message,

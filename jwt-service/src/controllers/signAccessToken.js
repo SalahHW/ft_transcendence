@@ -1,4 +1,4 @@
-export const signToken = async (request, reply) => {
+export const signAccessToken = async (request, reply) => {
   const { sub, username, aud } = request.body;
 
   if (!sub || !username || !aud)
@@ -10,7 +10,7 @@ export const signToken = async (request, reply) => {
   const payload = {
     sub,
     username,
-    role: "user",
+    role: "access_token",
     aud,
     iss: "jwt-service",
   };

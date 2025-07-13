@@ -1,6 +1,7 @@
 import { createUser } from "./userControllers.js";
 import { readUserByUsername } from "../models/userModels.js";
 import { comparePassword } from "../utils/password.js";
+import { setAuthCookies } from "../plugins/jwt.js";
 
 export const registerUser = async (request, reply) => {
   return createUser(request, reply);
@@ -25,22 +26,23 @@ export const loginUser = async (request, reply) => {
       return reply.code(401).send({ error: "Invalid password" });
     }
 
-    const accessToken = await request.server.signToken({
+    const accessToken = await signAccessToken({
       sub: user.id,
       username: user.username,
       aud: "users-service",
       exp: "5m",
-      type: "access",
+      type: "access_token",
     });
 
-    const refreshToken = await request.server.signRefreshToken({
+    const refreshToken = await signRefreshToken({
       sub: user.id,
       username: user.username,
       aud: "users-service",
       exp: "7d",
-      type: "refresh",
+      type: "refresh_token",
     });
-    request.server.setAuthCookies(reply, accessToken, refreshToken);
+
+    setAuthCookies(reply, accessToken, refreshToken);
 
     return reply.code(200).send({ id: user.id, username: user.username });
   } catch (error) {
@@ -52,11 +54,16 @@ export const loginUser = async (request, reply) => {
 
 export const logoutUser = async (request, reply) => {
   reply
-    .clearCookie("token", {
+    .clearCookie("access_token", {
       httpOnly: true,
-      // secure: process.env.NODE_ENV === "production",
-      secure: false, // TODO: Update .env to set production mode
-      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+      path: "/",
+    })
+    .clearCookie("refresh_token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
       path: "/",
     })
     .code(200)

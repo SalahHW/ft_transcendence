@@ -2,11 +2,11 @@ const jwtServiceUrl = "http://jwt";
 const jwtServicePort = 3005;
 
 const baseUrl = `${jwtServiceUrl}:${jwtServicePort}`;
-const signUrl = `${baseUrl}/sign`;
-const refreshUrl = `${baseUrl}/refresh`;
+const signUrl = `${baseUrl}/signAccessToken`;
+const refreshUrl = `${baseUrl}/signRefreshToken`;
 const verifyUrl = `${baseUrl}/verify`;
 
-export async function signToken(payload) {
+export async function signAccessToken(payload) {
   try {
     const response = await fetch(signUrl, {
       method: "POST",
@@ -81,17 +81,17 @@ export async function verifyToken(token) {
 
 export function setAuthCookies(reply, accessToken, refreshToken) {
   reply
-    .setCookie("token", accessToken, {
+    .setCookie("access_token", accessToken, {
       path: "/",
       httpOnly: true,
-      sameSite: "Strict",
+      sameSite: "None",
       secure: true,
       maxAge: 300,
     })
     .setCookie("refresh_token", refreshToken, {
       path: "/",
       httpOnly: true,
-      sameSite: "Strict",
+      sameSite: "None",
       secure: true,
       maxAge: 604800,
     });

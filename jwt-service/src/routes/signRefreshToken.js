@@ -1,9 +1,9 @@
 import { signRefreshToken } from "../controllers/signRefreshToken.js";
 
-export default async function refreshRoute(fastify) {
+export default async function signRefreshTokenRoute(fastify) {
   fastify.route({
     method: "POST",
-    url: "/refresh",
+    url: "/signRefreshToken",
     handler: signRefreshToken,
   });
 }

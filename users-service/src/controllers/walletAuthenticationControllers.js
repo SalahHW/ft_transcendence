@@ -1,5 +1,9 @@
 import * as userModels from "../models/userModels.js";
-import { signToken } from "../plugins/jwt.js";
+import {
+  signAccessToken,
+  signRefreshToken,
+  setAuthCookies,
+} from "../plugins/jwt.js";
 import { recoverPersonalSignature } from "@metamask/eth-sig-util";
 import axios from "axios";
 
@@ -60,23 +64,23 @@ export async function registerWithWallet(request, reply) {
       throw new Error("Blockchain registration failed");
     }
 
-    const accessToken = await request.server.signToken({
+    const accessToken = await signAccessToken({
       sub: user.id,
       username: user.username,
       aud: "users-service",
       exp: "5m",
-      type: "access",
+      type: "access_token",
     });
 
-    const refreshToken = await request.server.signRefreshToken({
+    const refreshToken = await signRefreshToken({
       sub: user.id,
       username: user.username,
       aud: "users-service",
       exp: "7d",
-      type: "refresh",
+      type: "refresh_token",
     });
 
-    request.server.setAuthCookies(reply, accessToken, refreshToken);
+    setAuthCookies(reply, accessToken, refreshToken);
 
     return reply.code(201).send({ id: user.id, username });
   } catch (err) {
@@ -127,23 +131,23 @@ export async function loginWithWallet(request, reply) {
       return reply.code(401).send({ error: "Invalid signature" });
     }
 
-    const accessToken = await request.server.signToken({
+    const accessToken = await signAccessToken({
       sub: user.id,
       username: user.username,
       aud: "users-service",
       exp: "5m",
-      type: "access",
+      type: "access_token",
     });
 
-    const refreshToken = await request.server.signRefreshToken({
+    const refreshToken = await signRefreshToken({
       sub: user.id,
       username: user.username,
       aud: "users-service",
       exp: "7d",
-      type: "refresh",
+      type: "refresh_token",
     });
 
-    request.server.setAuthCookies(reply, accessToken, refreshToken);
+    setAuthCookies(reply, accessToken, refreshToken);
 
     return reply.code(200).send({ id: user.id, username: user.username });
   } catch (err) {
