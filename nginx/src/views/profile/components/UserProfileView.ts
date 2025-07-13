@@ -80,8 +80,8 @@ export class UserProfileView {
 			return;
 
 		try {
-			const user = await this._userProfileService.getEnrichedUserProfile();
-			const originalAvatarSrc = user.avatarUrl;
+			let user = await this._userProfileService.getEnrichedUserProfile();
+			let originalAvatarSrc = user.avatarUrl;
 
 			let newAvatarFile: File | null = null;
 			let objectUrlToRevoke: string | null = null;
@@ -220,12 +220,12 @@ export class UserProfileView {
 						}
 					}
 
-					const updatedUser = await this._userProfileService.getEnrichedUserProfile();
+					user = await this._userProfileService.getEnrichedUserProfile();
 
-					usernameWrapper.innerHTML = `<h2 class="text-4xl font-bold text-white">${updatedUser.username}</h2>`;
+					usernameWrapper.innerHTML = `<h2 class="text-4xl font-bold text-white">${user.username}</h2>`;
 
-					if (emailWrapper && updatedUser.email) {
-						emailWrapper.innerHTML = `<p class="text-gray-500">${updatedUser.email}</p>`;
+					if (emailWrapper && user.email) {
+						emailWrapper.innerHTML = `<p class="text-gray-500">${user.email}</p>`;
 					}
 
 					avatarImg.style.filter = 'brightness(100%)';
@@ -244,7 +244,9 @@ export class UserProfileView {
 					}
 
 					editButton.innerHTML = '✏️';
-					editButton.addEventListener('click', editHandler);
+					editButton.removeEventListener('click', saveHandler);
+					document.removeEventListener('keydown', keydownHandler);
+					setupEditListener();
 					isFinishing = false;
 				};
 
@@ -262,7 +264,12 @@ export class UserProfileView {
 				document.addEventListener('keydown', keydownHandler);
 			};
 
-			editButton.addEventListener('click', editHandler);
+			const setupEditListener = () => {
+				editButton.addEventListener('click', editHandler);
+			};
+
+			setupEditListener();
+
 		} catch (error) {
 			console.error("Error setting up event listeners:", error);
 		}
