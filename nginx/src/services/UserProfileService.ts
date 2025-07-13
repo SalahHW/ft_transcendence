@@ -1,4 +1,4 @@
-import AuthNanoService from '../auth/AuthNanoService.js';
+import AuthNanoService from './AuthNanoService.js';
 import UsersApi, { User } from './api/user.js';
 
 /**

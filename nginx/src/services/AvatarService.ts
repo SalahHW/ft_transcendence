@@ -1,4 +1,4 @@
-import AuthNanoService from '../auth/AuthNanoService.js';
+import AuthNanoService from './AuthNanoService.js';
 import AvatarServiceAPI from './api/avatar.js';
 import CacheManager, { CacheableService } from './CacheManager.js';
 
@@ -14,7 +14,6 @@ export default class AvatarService implements CacheableService {
     public readonly serviceName = 'AvatarService';
 
     private constructor() {
-        // Register with CacheManager
         const cacheManager = CacheManager.getInstance();
         cacheManager.registerService(this, [
             'USER_LOGIN',
