@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   FriendList.ts                                      :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/05/26 21:09:59 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 19:11:29 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 import FriendsService, { EnrichedFriend } from "../../../services/FriendsService.js";
 import UsersApi from "../../../services/api/user.js";
 import AuthNanoService from "../../../services/AuthNanoService.js";
@@ -56,7 +44,7 @@ export class FriendList {
         return /* HTML */`
             <div class="flex flex-col gap-2 h-full">
                 <div class="overflow-auto flex-[1] flex items-center justify-center">
-                    <div class="text-gray-400">Chargement des amis...</div>
+                    <div class="text-gray-400">Loading friends...</div>
                 </div>
                 ${this.createAddFriendSection()}
             </div>
@@ -66,7 +54,7 @@ export class FriendList {
     private static renderEmptyState(): string {
         return /* HTML */`
             <div class="flex items-center justify-center h-full text-gray-400">
-                <p>Aucun ami pour le moment</p>
+                <p>No friends yet</p>
             </div>
         `;
     }
@@ -75,7 +63,7 @@ export class FriendList {
         return /* HTML */`
             <div class="flex flex-col gap-2 h-full">
                 <div class="overflow-auto flex-[1] flex items-center justify-center">
-                    <div class="text-red-400">Erreur lors du chargement des amis</div>
+                    <div class="text-red-400">Error loading friends</div>
                 </div>
                 ${this.createAddFriendSection()}
             </div>
@@ -87,9 +75,9 @@ export class FriendList {
         try {
             this.friends = await this.friendsService.getEnrichedFriends();
         } catch (error) {
-            console.error('Erreur lors du chargement des amis:', error);
+            console.error('Error loading friends:', error);
             this.friends = [];
-			throw error; // Renvoyer l'erreur pour que render() puisse l'attraper
+			throw error;
         } finally {
             this.isLoading = false;
         }
@@ -120,7 +108,7 @@ export class FriendList {
                     <input
                         id="friend-username-input"
                         type="text"
-                        placeholder="Nom d'utilisateur..."
+                        placeholder="Username..."
                         class="${UI_THEME.components.friendList.addFriendInput}"
                     >
                     <button id="add-friend-btn" class="${UI_THEME.components.friendList.addFriendButton}">
@@ -153,13 +141,11 @@ export class FriendList {
 
         if (!addFriendBtn) return;
 
-        // Supprimer les anciens event listeners
         addFriendBtn.replaceWith(addFriendBtn.cloneNode(true));
         const newAddFriendBtn = document.getElementById('add-friend-btn');
         if (!newAddFriendBtn) return;
 
         if (this.isAddFriendExpanded) {
-            // Mode étendu : le bouton confirme l'ajout ou l'input envoie le formulaire
             newAddFriendBtn.addEventListener('click', () => this.handleAddFriend());
 
             if (friendUsernameInput) {
@@ -178,7 +164,6 @@ export class FriendList {
                 });
             }
         } else {
-            // Mode réduit : le bouton ouvre le champ d'input
             newAddFriendBtn.addEventListener('click', () => this.toggleAddFriendMode());
         }
     }
@@ -203,8 +188,8 @@ export class FriendList {
             const currentUserId = jwtPayload?.sub;
 
             if (!currentUserId) {
-                console.error('Utilisateur non connecté');
-                alert('Vous devez être connecté pour ajouter un ami');
+                console.error('User not logged in');
+                alert('You must be logged in to add a friend');
                 return;
             }
 
@@ -212,26 +197,25 @@ export class FriendList {
             try {
                 targetUser = await this.usersService.getUserByUsername(username);
             } catch (error) {
-                console.error('Erreur lors de la recherche de l\'utilisateur:', error);
-                alert(`Utilisateur "${username}" introuvable`);
+                console.error('Error searching for user:', error);
+                alert(`User "${username}" not found`);
                 return;
             }
 
             if (!targetUser || !targetUser.id) {
-                console.error('Utilisateur invalide ou ID manquant');
-                alert('Utilisateur invalide ou incomplet');
+                console.error('Invalid user or missing ID');
+                alert('Invalid or incomplete user');
                 return;
             }
 
             if (targetUser.id === currentUserId) {
-                alert('Vous ne pouvez pas vous ajouter comme ami');
+                alert("You can't add yourself as a friend");
                 return;
             }
 
-            // Vérifier si l'amitié existe déjà
             const isAlreadyFriend = this.friends.some(friend => friend.id === targetUser.id);
             if (isAlreadyFriend) {
-                alert(`${username} est déjà dans votre liste d'amis`);
+                alert(`${username} is already in your friends list`);
                 return;
             }
 
@@ -239,26 +223,25 @@ export class FriendList {
 
             await this.loadFriends();
 
-            // Reset du formulaire
             friendUsernameInput.value = '';
             this.toggleAddFriendMode();
 
             const container = document.querySelector('.flex.flex-col.gap-2.h-full');
             if (container) {
                 this.isLoading = true;
-                this.friends = []; // Vider le cache local pour forcer le rechargement
+                this.friends = [];
                 container.innerHTML = await this.render();
                 this.addEventListeners();
             }
 
         }
         catch (error) {
-            console.error('Erreur lors de l\'ajout de l\'ami:', error);
+            console.error('Error adding friend:', error);
             if (error instanceof Error) {
-                alert(`Erreur: ${error.message}`);
+                alert(`Error: ${error.message}`);
             }
             else {
-                alert('Erreur lors de l\'ajout de l\'ami');
+                alert('Error adding friend');
             }
         }
     }

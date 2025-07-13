@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   CacheManager.ts                                    :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/07/13 16:50:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 20:02:53 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 export interface CacheableService {
     clearCache(): void;
     serviceName: string;
@@ -28,7 +16,7 @@ export interface CacheEvent {
 export default class CacheManager {
     private static _instance: CacheManager;
     private _services: Map<string, CacheableService> = new Map();
-    private _eventHandlers: Map<string, string[]> = new Map(); // event -> serviceNames[]
+    private _eventHandlers: Map<string, string[]> = new Map();
     private _cache: Map<string, { data: any; timestamp: number; ttl: number }> = new Map();
 
     private constructor() {
@@ -50,7 +38,6 @@ export default class CacheManager {
     public registerService(service: CacheableService, events: string[] = []): void {
         this._services.set(service.serviceName, service);
 
-        // Register event handlers
         events.forEach(event => {
             if (!this._eventHandlers.has(event)) {
                 this._eventHandlers.set(event, []);
@@ -166,14 +153,12 @@ export default class CacheManager {
      * Setup default event handlers for common application events
      */
     private _setupEventHandlers(): void {
-        // Listen for authentication events
         window.addEventListener('storage', (e) => {
             if (e.key === 'auth_token' && !e.newValue) {
                 this.triggerEvent({ type: 'USER_LOGOUT' });
             }
         });
 
-        // Listen for online/offline events
         window.addEventListener('online', () => {
             this.triggerEvent({ type: 'USER_LOGIN' });
         });

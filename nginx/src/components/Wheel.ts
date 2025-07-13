@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Wheel.ts                                           :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/06/05 16:41:12 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 19:00:05 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 import Router from "../router/Router.js";
 import { UI_THEME } from "../style/tailwindClasses.js";
 import AuthService from "../services/AuthNanoService.js";
@@ -30,7 +18,7 @@ interface Option {
 
 export default class Wheel {
   private _element: HTMLElement;
-  private _optionHistory: Option[][] = []; // Pour naviguer dans les sous-menus
+  private _optionHistory: Option[][] = [];
   private _selectedIndex: number = 0;
   private _isVisible: boolean = false;
   private _userIsLoggedIn: boolean = false;
@@ -155,13 +143,11 @@ export default class Wheel {
     if (!selectedOption) return;
 
     if (selectedOption.subMenu && selectedOption.subMenu.length > 0) {
-      // Naviguer vers le sous-menu
       this._optionHistory.push(this._wheelOptions);
       this._wheelOptions = selectedOption.subMenu;
       this._selectedIndex = 0;
       this._renderWheel();
     } else if (selectedOption.onClick) {
-      // Exécuter l'action
       await selectedOption.onClick();
       this.hideWheel();
     }
@@ -200,7 +186,6 @@ export default class Wheel {
       this._element.classList.add("flex");
       this._renderWheel();
 
-      // Animation d'entrée
       requestAnimationFrame(() => {
         this._element.classList.add("opacity-100", "scale-100");
         this._element.classList.remove("opacity-0", "scale-95");
@@ -217,7 +202,6 @@ export default class Wheel {
 
     this._isVisible = false;
 
-    // Animation de sortie
     this._element.classList.add("opacity-0", "scale-95");
     this._element.classList.remove("opacity-100", "scale-100");
 
@@ -228,13 +212,11 @@ export default class Wheel {
   }
 
   public render(): void {
-    // Structure de base de la roue avec les styles centralisés
     this._element.className = UI_THEME.components.overlay;
 
     this._element.innerHTML = `
 			<div class="wheel-content relative select-none">
 				<svg class="wheel-svg select-none" width="960" height="960" viewBox="0 0 960 960" style="user-select: none; -webkit-user-select: none; -moz-user-select: none;">
-					<!-- Le contenu sera généré dynamiquement -->
 				</svg>
 			</div>
 		`;
@@ -247,18 +229,16 @@ export default class Wheel {
     const centerX = 480;
     const centerY = 480;
     const radius = 360;
-    const innerRadius = 90; // Réduit de moitié (180 → 90)
+    const innerRadius = 90;
     const optionCount = this._wheelOptions.length;
 
-		// Nettoyer le SVG
 		svg.innerHTML = "";
 
     if (optionCount === 0) return;
 
     const angleStep = (2 * Math.PI) / optionCount;
-    const startAngle = -Math.PI / 2; // Commencer en haut
+    const startAngle = -Math.PI / 2;
 
-		// Créer le cercle central avec les styles centralisés
 		const centerCircle = document.createElementNS(
 			"http://www.w3.org/2000/svg",
 			"circle"
@@ -274,7 +254,6 @@ export default class Wheel {
 			"cursor-pointer transition-all duration-200 hover:fill-gray-600/90"
 		);
 
-		// Gestionnaire de clic pour revenir en arrière
 		centerCircle.addEventListener("click", () => {
 			this._goBack();
 		});
@@ -287,7 +266,6 @@ export default class Wheel {
 
       const isSelected = index === this._selectedIndex;
 
-      // Calculer les points du segment
       const x1 = centerX + Math.cos(angle1) * innerRadius;
       const y1 = centerY + Math.sin(angle1) * innerRadius;
       const x2 = centerX + Math.cos(angle1) * radius;
@@ -297,7 +275,6 @@ export default class Wheel {
       const x4 = centerX + Math.cos(angle2) * innerRadius;
       const y4 = centerY + Math.sin(angle2) * innerRadius;
 
-			// Créer le segment
 			const path = document.createElementNS(
 				"http://www.w3.org/2000/svg",
 				"path"
@@ -332,13 +309,11 @@ export default class Wheel {
 				"cursor-pointer transition-all duration-200 hover:fill-gray-600/90"
 			);
 
-			// Gestionnaire de clic
 			path.addEventListener("click", async () => {
 				this._selectedIndex = index;
 				await this._selectOption();
 			});
 
-			// Gestionnaire de survol
 			path.addEventListener("mouseenter", () => {
 				if (!isSelected) {
 					this._selectedIndex = index;
@@ -348,13 +323,11 @@ export default class Wheel {
 
       svg.appendChild(path);
 
-      // Ajouter le texte et l'icône
       const textAngle = angle1 + angleStep / 2;
       const textRadius = (radius + innerRadius) / 2;
       const textX = centerX + Math.cos(textAngle) * textRadius;
       const textY = centerY + Math.sin(textAngle) * textRadius;
 
-			// Créer un groupe pour le texte et l'icône
 			const textGroup = document.createElementNS(
 				"http://www.w3.org/2000/svg",
 				"g"
@@ -364,7 +337,6 @@ export default class Wheel {
 			textGroup.style.webkitUserSelect = "none";
 			(textGroup.style as any).MozUserSelect = "none";
 
-			// Icône
 			if (option.icon) {
 				const iconText = document.createElementNS(
 					"http://www.w3.org/2000/svg",
@@ -387,7 +359,6 @@ export default class Wheel {
 				textGroup.appendChild(iconText);
 			}
 
-			// Label
 			const label = document.createElementNS(
 				"http://www.w3.org/2000/svg",
 				"text"
@@ -411,7 +382,6 @@ export default class Wheel {
       svg.appendChild(textGroup);
     });
 
-		// Ajouter un petit indicateur au centre si on est dans un sous-menu
 		if (this._optionHistory.length > 0) {
 			const backIndicator = document.createElementNS(
 				"http://www.w3.org/2000/svg",

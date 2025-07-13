@@ -5,7 +5,7 @@ export default class AuthNanoService {
 	private static _instance: AuthNanoService;
 	private _usersApi: UsersApi = new UsersApi();
 	private _user: JwtUserPayload | null = null;
-	private _isLoggedIn: boolean | null = null; // null means we haven't checked yet
+	private _isLoggedIn: boolean | null = null;
 	private _refreshInterval: ReturnType<typeof setInterval> | null = null;
 	private _host: string = `${window.location.protocol}//${window.location.host}`;
 
@@ -50,7 +50,6 @@ export default class AuthNanoService {
 		this._isLoggedIn = true;
 		this._startRefreshLoop();
 
-				// Trigger cache invalidation event for login
 		const cacheManager = CacheManager.getInstance();
 		cacheManager.triggerEvent({
 			type: 'USER_LOGIN',
@@ -67,7 +66,6 @@ export default class AuthNanoService {
 			this._isLoggedIn = false;
 			this._stopRefreshLoop();
 
-			// Trigger cache invalidation event for logout
 			const cacheManager = CacheManager.getInstance();
 			cacheManager.triggerEvent({
 				type: 'USER_LOGOUT',

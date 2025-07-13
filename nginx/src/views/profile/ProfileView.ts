@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   ProfileView.ts                                     :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/06/22 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/12 21:19:37 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 import ModalView from "../../components/ModalView.js";
 import { UserProfile } from "./components/UserProfile.js";
 import { MatchHistory } from "./components/MatchHistory.js";
@@ -23,7 +11,6 @@ export default class ProfileView extends ModalView {
 			height: '70vh'
 		});
 
-		// Initialize asynchronously after construction
 		this.init();
 	}
 
@@ -56,21 +43,19 @@ export default class ProfileView extends ModalView {
 		}
 
 		try {
-			// Afficher un loader pendant le chargement
 			profileContainer.innerHTML = /* HTML */`
 				<div class="flex items-center justify-center h-full">
-					<div class="text-white">Chargement du profil...</div>
+					<div class="text-white">Loading profile...</div>
 				</div>
 			`;
 
-			// Charger et afficher le profil
 			profileContainer.innerHTML = await UserProfile.render();
 			await UserProfile.addEventListeners();
 		} catch (error) {
 			console.error('Error updating profile:', error);
 			profileContainer.innerHTML = /* HTML */`
 				<div class="flex items-center justify-center h-full">
-					<div class="text-red-500">Erreur lors du chargement du profil</div>
+					<div class="text-red-500">Error loading profile</div>
 				</div>
 			`;
 		}

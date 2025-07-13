@@ -9,7 +9,7 @@ export interface EnrichedFriend {
     id: number;
     username: string;
     avatarUrl: string;
-    status: 'online' | 'offline'; // Le statut sera 'offline' par défaut
+    status: 'online' | 'offline';
     wins: number;
     losses: number;
     wallet?: string;
@@ -29,7 +29,6 @@ export default class FriendsService implements CacheableService {
     public readonly serviceName = 'FriendsService';
 
     private constructor() {
-        // Register with CacheManager
         const cacheManager = CacheManager.getInstance();
         cacheManager.registerService(this, [
             'USER_LOGIN',
@@ -98,7 +97,6 @@ export default class FriendsService implements CacheableService {
                     };
                 } catch (error) {
                     console.error(`Failed to enrich friend data for friend ID ${friendship.friend_id}`, error);
-                    // Retourner un objet partiel pour ne pas bloquer toute la liste
                     return {
                         id: friendship.friend_id,
                         username: `User ${friendship.friend_id}`,
@@ -139,7 +137,6 @@ export default class FriendsService implements CacheableService {
         const userId = await this._getUserId();
         await this._friendsApi.createFriendship(userId, friendId);
 
-        // Trigger cache invalidation event
         const cacheManager = CacheManager.getInstance();
         cacheManager.triggerEvent({
             type: 'FRIEND_ADDED',
@@ -155,7 +152,6 @@ export default class FriendsService implements CacheableService {
         const userId = await this._getUserId();
         await this._friendsApi.deleteFriendship(userId, friendId);
 
-        // Trigger cache invalidation event
         const cacheManager = CacheManager.getInstance();
         cacheManager.triggerEvent({
             type: 'FRIEND_REMOVED',

@@ -172,7 +172,6 @@ export default class MatchHistoryService implements CacheableService {
     }): Promise<string> {
         const txHash = await this._matchApi.reportMatch(match);
 
-        // Trigger cache invalidation event
         const cacheManager = CacheManager.getInstance();
         cacheManager.triggerEvent({
             type: 'MATCH_ADDED',

@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   MatchHistory.ts                                    :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/01/27 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 16:23:21 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 import MatchHistoryService, { EnrichedMatch, EnrichedMatchHistory } from "../../../services/MatchHistoryService.js";
 import UserProfileService from "../../../services/UserProfileService.js";
 import { User } from "../../../services/api/user.js";
@@ -58,7 +46,7 @@ export class MatchHistory {
 	private static renderEmptyState(): string {
 		return /* HTML */`
 			<div class="flex flex-col h-full justify-center items-center">
-				<p class="text-gray-400">Aucun historique de match.</p>
+				<p class="text-gray-400">No match history.</p>
 			</div>
 		`;
 	}
@@ -66,7 +54,7 @@ export class MatchHistory {
 	private static renderErrorState(): string {
 		return /* HTML */`
 			<div class="flex flex-col h-full justify-center items-center">
-				<p class="text-red-500">Erreur au chargement de l'historique des matchs.</p>
+				<p class="text-red-500">Error loading match history.</p>
 			</div>
 		`;
 	}

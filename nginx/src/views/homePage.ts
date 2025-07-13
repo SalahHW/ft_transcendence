@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   homePage.ts                                        :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/26 20:42:50 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/21 17:14:00 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 export default class HomePage {
 	private _container: HTMLElement;
 
@@ -22,25 +10,18 @@ export default class HomePage {
 	render(): void {
 		this._container.innerHTML = /* HTML */ `
 			<div class="relative w-full h-screen bg-black">
-				<!-- Game Screenshot Background -->
 				<svg class="w-full h-full opacity-70 blur-xs" viewBox="0 0 1400 700" xmlns="http://www.w3.org/2000/svg">
-					<!-- Black background -->
 					<rect width="1400" height="700" fill="#000000"/>
 
-					<!-- Gray game court -->
 					<rect x="140" y="120" width="1120" height="460" fill="#bbbbbb"/>
 
-					<!-- Left paddle (blue) - centered vertically -->
 					<rect x="90" y="265" width="50" height="170" fill="#00aaff"/>
 
-					<!-- Right paddle (red) - centered vertically -->
 					<rect x="1260" y="265" width="50" height="170" fill="#ff061e"/>
 
-					<!-- White ball -->
 					<circle cx="700" cy="350" r="15" fill="#ffffff"/>
 				</svg>
 
-				<!-- Blinking text overlay -->
 				<div class="absolute inset-0 flex items-center justify-center">
 					<div class="flex items-center space-x-2 animate-pulse">
 						<span class="text-black text-4xl">Hold shift</span>

@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   customTerminal.ts                                  :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/26 20:42:23 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/05 15:04:48 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 
 export default class CustomTerminal {
@@ -24,7 +12,6 @@ export default class CustomTerminal {
 	private _keydownHandler!: (event: KeyboardEvent) => void;
 
 	constructor(containerId: string) {
-		// If there's already an instance, just update its container and return
 		if (CustomTerminal._instance) {
 			CustomTerminal._instance._updateContainer(containerId);
 			return CustomTerminal._instance;
@@ -37,15 +24,12 @@ export default class CustomTerminal {
 
 		this._createTerminal();
 
-		// Store the instance for global access
 		CustomTerminal._instance = this;
 
-		// Only override console methods if not already done
 		if (!CustomTerminal._isConsoleOverridden) {
 			this._overrideConsoleMethods();
 		}
 
-		// Create keyboard event handler for Ctrl+L
 		this._keydownHandler = (event: KeyboardEvent) => {
 			if (event.ctrlKey && event.key === 'l') {
 				event.preventDefault();
@@ -67,14 +51,11 @@ export default class CustomTerminal {
 	}
 
 	private _overrideConsoleMethods(): void {
-		// Save the original console methods
 		CustomTerminal._originalConsoleLog = console.log;
 		CustomTerminal._originalConsoleError = console.error;
 		CustomTerminal._originalConsoleWarn = console.warn;
 
-		// Override console methods with recursion prevention
 		console.log = (...data: any[]) => {
-			// **CRITICAL**: Prevent infinite recursion
 			if (CustomTerminal._loggingInProgress) {
 				CustomTerminal._originalConsoleLog.apply(console, data);
 				return;
@@ -82,10 +63,8 @@ export default class CustomTerminal {
 
 			CustomTerminal._loggingInProgress = true;
 			try {
-				// Call the original console.log
 				CustomTerminal._originalConsoleLog.apply(console, data);
 
-				// Log to our terminal
 				if (CustomTerminal._instance) {
 					const message = data.map(item =>
 						typeof item === 'object' ? JSON.stringify(item, null, 2) : String(item)
@@ -94,7 +73,6 @@ export default class CustomTerminal {
 					CustomTerminal._instance.log(message);
 				}
 			} catch (error) {
-				// Fallback to original console in case of error
 				CustomTerminal._originalConsoleLog.apply(console, data);
 			} finally {
 				CustomTerminal._loggingInProgress = false;
@@ -102,7 +80,6 @@ export default class CustomTerminal {
 		};
 
 		console.error = (...data: any[]) => {
-			// **CRITICAL**: Prevent infinite recursion
 			if (CustomTerminal._loggingInProgress) {
 				CustomTerminal._originalConsoleError.apply(console, data);
 				return;
@@ -110,10 +87,8 @@ export default class CustomTerminal {
 
 			CustomTerminal._loggingInProgress = true;
 			try {
-				// Call the original console.error
 				CustomTerminal._originalConsoleError.apply(console, data);
 
-				// Log to our terminal with error styling
 				if (CustomTerminal._instance) {
 					const message = data.map(item =>
 						typeof item === 'object' ? JSON.stringify(item, null, 2) : String(item)
@@ -122,7 +97,6 @@ export default class CustomTerminal {
 					CustomTerminal._instance.logError(message);
 				}
 			} catch (error) {
-				// Fallback to original console in case of error
 				CustomTerminal._originalConsoleError.apply(console, data);
 			} finally {
 				CustomTerminal._loggingInProgress = false;
@@ -130,7 +104,6 @@ export default class CustomTerminal {
 		};
 
 		console.warn = (...data: any[]) => {
-			// **CRITICAL**: Prevent infinite recursion
 			if (CustomTerminal._loggingInProgress) {
 				CustomTerminal._originalConsoleWarn.apply(console, data);
 				return;
@@ -138,10 +111,8 @@ export default class CustomTerminal {
 
 			CustomTerminal._loggingInProgress = true;
 			try {
-				// Call the original console.warn
 				CustomTerminal._originalConsoleWarn.apply(console, data);
 
-				// Log to our terminal with warning styling
 				if (CustomTerminal._instance) {
 					const message = data.map(item =>
 						typeof item === 'object' ? JSON.stringify(item, null, 2) : String(item)
@@ -150,7 +121,6 @@ export default class CustomTerminal {
 					CustomTerminal._instance.logWarn(message);
 				}
 			} catch (error) {
-				// Fallback to original console.warn in case of error
 				CustomTerminal._originalConsoleWarn.apply(console, data);
 			} finally {
 				CustomTerminal._loggingInProgress = false;
@@ -160,7 +130,6 @@ export default class CustomTerminal {
 		CustomTerminal._isConsoleOverridden = true;
 	}
 
-	// Method to restore the original console methods
 	static restoreConsoleLog(): void {
 		if (CustomTerminal._isConsoleOverridden) {
 			if (CustomTerminal._originalConsoleLog) {
@@ -175,7 +144,6 @@ export default class CustomTerminal {
 			CustomTerminal._isConsoleOverridden = false;
 		}
 
-		// Remove keyboard event listener if instance exists
 		if (CustomTerminal._instance) {
 			document.removeEventListener('keydown', CustomTerminal._instance._keydownHandler);
 			CustomTerminal._instance = null;
@@ -202,7 +170,6 @@ export default class CustomTerminal {
 
 		this._outputElement = document.getElementById('terminal-output') as HTMLElement;
 
-		// Add event listener for clear button
 		const clearButton = document.getElementById('terminal-clear-btn');
 		if (clearButton) {
 			clearButton.addEventListener('click', () => this.clear());
@@ -215,7 +182,6 @@ export default class CustomTerminal {
 		line.textContent = message;
 		this._outputElement.appendChild(line);
 
-		// Auto-scroll to bottom
 		this._outputElement.scrollTop = this._outputElement.scrollHeight;
 	}
 
@@ -233,7 +199,6 @@ export default class CustomTerminal {
 		img.style.margin = "8px 0";
 		this._outputElement.appendChild(img);
 
-		// Auto-scroll to bottom
 		this._outputElement.scrollTop = this._outputElement.scrollHeight;
 	}
 
@@ -243,7 +208,6 @@ export default class CustomTerminal {
 		line.textContent = `${message}`;
 		this._outputElement.appendChild(line);
 
-		// Auto-scroll to bottom
 		this._outputElement.scrollTop = this._outputElement.scrollHeight;
 	}
 
@@ -253,7 +217,6 @@ export default class CustomTerminal {
 		line.textContent = `${message}`;
 		this._outputElement.appendChild(line);
 
-		// Auto-scroll to bottom
 		this._outputElement.scrollTop = this._outputElement.scrollHeight;
 	}
 
@@ -262,7 +225,6 @@ export default class CustomTerminal {
 	}
 
 	render(): void {
-		// Just in case we need to re-render later
 		this._createTerminal();
 	}
 }

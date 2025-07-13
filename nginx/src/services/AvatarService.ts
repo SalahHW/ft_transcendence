@@ -70,7 +70,6 @@ export default class AvatarService implements CacheableService {
         const userId = await this._getUserId();
         await this._avatarApi.uploadUserAvatar(userId, file);
 
-        // Trigger cache invalidation event
         const cacheManager = CacheManager.getInstance();
         cacheManager.triggerEvent({
             type: 'AVATAR_UPDATED',
@@ -88,7 +87,6 @@ export default class AvatarService implements CacheableService {
         const userId = await this._getUserId();
         await this._avatarApi.updateUserAvatar(userId, file);
 
-        // Trigger cache invalidation event
         const cacheManager = CacheManager.getInstance();
         cacheManager.triggerEvent({
             type: 'AVATAR_UPDATED',
@@ -104,17 +102,12 @@ export default class AvatarService implements CacheableService {
     public async uploadOrUpdateCurrentUserAvatar(file: File | Blob): Promise<void> {
         const userId = await this._getUserId();
         try {
-            // Try to get the avatar URL to see if it exists.
             await this._avatarApi.getUserAvatarUrl(userId);
-            // If it exists, update it.
             await this._avatarApi.updateUserAvatar(userId, file);
         } catch (error) {
-            // If it fails with a "not found" style error, it means we need to create one.
-            // A more robust solution might check the error status code (e.g., 404).
             await this._avatarApi.uploadUserAvatar(userId, file);
         }
 
-        // Trigger cache invalidation event
         const cacheManager = CacheManager.getInstance();
         cacheManager.triggerEvent({
             type: 'AVATAR_UPDATED',

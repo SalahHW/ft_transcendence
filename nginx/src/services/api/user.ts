@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   user.ts                                            :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/26 20:41:03 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 19:27:42 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 /**
  * Authentication method for user
  */
@@ -22,13 +10,13 @@ export enum AuthenticationMethod {
  * JWT User payload - the user data inside the JWT token
  */
 export interface JwtUserPayload {
-  sub: number;           // Subject (user ID)
+  sub: number;
   username: string;
   role: string;
-  aud: string;           // Audience
-  iss: string;           // Issuer
-  iat: number;           // Issued at
-  exp: number;           // Expiration time
+  aud: string;
+  iss: string;
+  iat: number;
+  exp: number;
 }
 
 /**

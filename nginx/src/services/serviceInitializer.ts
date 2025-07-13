@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   serviceInitializer.ts                              :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/07/13 17:35:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 18:03:51 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 import CacheManager from './CacheManager.js';
 import AvatarService from './AvatarService.js';
 import FriendsService from './FriendsService.js';
