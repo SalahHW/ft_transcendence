@@ -1,4 +1,5 @@
 import * as userModels from "../models/userModels.js";
+import * as emailModels from "../models/emailModels.js";
 import { createEmail } from "./emailControllers.js";
 import { createPassword } from "./passwordControllers.js";
 import axios from "axios";
@@ -21,7 +22,7 @@ export async function createUser(request, reply) {
       return reply.code(409).send({ error: "Username already exists" });
 
     if (authenticationMethod === "credentials") {
-      const emailTaken = await userModels.emailExists(email);
+      const emailTaken = await emailModels.emailExists(email);
       if (emailTaken)
         return reply.code(409).send({ error: "Email already exists" });
     }
