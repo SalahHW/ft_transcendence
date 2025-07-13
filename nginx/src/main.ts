@@ -6,13 +6,13 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:42:53 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/23 14:25:38 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/13 14:45:50 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 import Wheel from "./components/Wheel.js";
 import Router from "./router/Router.js";
-import AuthService from "./auth/AuthNanoService.js";
+import AuthService from "./services/AuthNanoService.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const router = Router.getInstance();

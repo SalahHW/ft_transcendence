@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:41:03 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/12 19:32:31 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/13 14:32:04 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -139,24 +139,44 @@ export default class UsersApi {
   }
 
   /**
-   * Updates a user by ID
-   * @param id - The ID of the user to update
-   * @param user - The updated user object
+   * Updates a user's username
+   * @param username - The new username
    * @returns A promise that resolves to the updated user
    */
-  async updateUser(id: number, user: User): Promise<User> {
-    const response = await fetch(`${this._usersBaseUrl}/${id}`, {
+  async updateUsername(username: string): Promise<User> {
+    const response = await fetch(`${this._usersBaseUrl}/username`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(user),
+      body: JSON.stringify({ username }),
     });
     const responseData = await response.json();
     if (response.status === 200) return responseData;
     else
       throw new Error(
-        `failed to update user:\n${JSON.stringify(responseData, null, 2)}`
+        `failed to update username:\n${JSON.stringify(responseData, null, 2)}`
+      );
+  }
+
+  /**
+   * Updates a user's email
+   * @param email - The new email
+   * @returns A promise that resolves to the updated user
+   */
+  async updateEmail(email: string): Promise<User> {
+    const response = await fetch(`${this._usersBaseUrl}/email`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }),
+    });
+    const responseData = await response.json();
+    if (response.status === 200) return responseData;
+    else
+      throw new Error(
+        `failed to update email:\n${JSON.stringify(responseData, null, 2)}`
       );
   }
 

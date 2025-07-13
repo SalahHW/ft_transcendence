@@ -1,4 +1,4 @@
-import UsersApi, { JwtUserPayload } from "../services/api/user.js";
+import UsersApi, { JwtUserPayload } from "./api/user.js";
 
 export default class AuthNanoService {
 	private static _instance: AuthNanoService;
@@ -59,10 +59,10 @@ export default class AuthNanoService {
 			this._stopRefreshLoop();
 
 			// Clear all service caches on logout using dynamic imports to avoid circular dependencies.
-			const AvatarService = (await import('../services/AvatarService.js')).default;
-			const FriendsService = (await import('../services/FriendsService.js')).default;
-			const UserProfileService = (await import('../services/UserProfileService.js')).default;
-			const MatchHistoryService = (await import('../services/MatchHistoryService.js')).default;
+			const AvatarService = (await import('./AvatarService.js')).default;
+			const FriendsService = (await import('./FriendsService.js')).default;
+			const UserProfileService = (await import('./UserProfileService.js')).default;
+			const MatchHistoryService = (await import('./MatchHistoryService.js')).default;
 			const Router = (await import('../router/Router.js')).default;
 
 			AvatarService.getInstance().clearCache();

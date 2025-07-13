@@ -1,5 +1,5 @@
 import ModalView from "./ModalView.js";
-import AuthNanoService from "../auth/AuthNanoService.js";
+import AuthNanoService from "../services/AuthNanoService.js";
 import { UI_THEME } from "../style/tailwindClasses.js";
 import { buttonHTML } from "./button.js";
 import { loadingSpinnerHTML } from "./loadingSpinner";
