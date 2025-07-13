@@ -3,5 +3,7 @@ import * as jwtPlugin from "./jwt.js";
 
 export default fp(async function (fastify, options) {
   fastify.decorate("signToken", jwtPlugin.signToken);
+  fastify.decorate("signRefreshToken", jwtPlugin.signRefreshToken);
   fastify.decorate("verifyToken", jwtPlugin.verifyToken);
+  fastify.decorate("setAuthCookies", jwtPlugin.setAuthCookies);
 });

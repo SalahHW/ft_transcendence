@@ -25,32 +25,24 @@ export const loginUser = async (request, reply) => {
       return reply.code(401).send({ error: "Invalid password" });
     }
 
-    const token = await request.server.signToken({
+    const accessToken = await request.server.signToken({
       sub: user.id,
       username: user.username,
       aud: "users-service",
+      exp: "5m",
+      type: "access",
     });
 
-    reply.setCookie("token", token, {
-      httpOnly: true,
-      // secure: process.env.NODE_ENV === "production",
-      secure: true, // TODO: Update .env to set production mode
-      sameSite: "strict",
-      path: "/",
-      maxAge: 300,
+    const refreshToken = await request.server.signRefreshToken({
+      sub: user.id,
+      username: user.username,
+      aud: "users-service",
+      exp: "7d",
+      type: "refresh",
     });
+    request.server.setAuthCookies(reply, accessToken, refreshToken);
 
-    reply
-      .setCookie("refresh_token", token, {
-        httpOnly: true,
-        // secure: process.env.NODE_ENV === "production",
-        secure: true, // TODO: Update .env to set production mode
-        sameSite: "strict",
-        path: "/",
-        maxAge: 604800, // 7 days
-      })
-      .code(200)
-      .send({ message: "Login successful" });
+    return reply.code(200).send({ id: user.id, username: user.username });
   } catch (error) {
     return reply
       .code(500)
