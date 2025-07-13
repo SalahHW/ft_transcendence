@@ -1,12 +1,12 @@
 import UserProfileService from "../../../services/UserProfileService.js";
-import AvatarService from "../../../services/AvatarService.js";
 import { createWinRateDonutChart } from "./WinRateDonutChart.js";
+import AvatarService from "../../../services/AvatarService.js";
 
 const UPLOAD_ICON_SVG = `<svg width="48" height="48" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="white" stroke-linecap="round" stroke-width="1.5"><path d="M17 9.002c2.175.012 3.353.109 4.121.877C22 10.758 22 12.172 22 15v1c0 2.829 0 4.243-.879 5.122C20.243 22 18.828 22 16 22H8c-2.828 0-4.243 0-5.121-.878C2 20.242 2 18.829 2 16v-1c0-2.828 0-4.242.879-5.121c.768-.768 1.946-.865 4.121-.877" opacity=".5"/><path stroke-linejoin="round" d="M12 15V2m0 0l3 3.5M12 2L9 5.5"/></g></svg>`;
 const DELETE_ICON_SVG = `<svg width="48" height="48" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m18 9l-.84 8.398c-.127 1.273-.19 1.909-.48 2.39a2.5 2.5 0 0 1-1.075.973C15.098 21 14.46 21 13.18 21h-2.36c-1.279 0-1.918 0-2.425-.24a2.5 2.5 0 0 1-1.076-.973c-.288-.48-.352-1.116-.48-2.389L6 9m7.5 6.5v-5m-3 5v-5m-6-4h4.615m0 0l.386-2.672c.112-.486.516-.828.98-.828h3.038c.464 0 .867.342.98.828l.386 2.672m-5.77 0h5.77m0 0H19.5"/></svg>`;
 
 
-export class UserProfile {
+export class UserProfileView {
 	private static _userProfileService = UserProfileService.getInstance();
 	private static _avatarService = AvatarService.getInstance();
 
@@ -17,17 +17,12 @@ export class UserProfile {
 
 	public static async render(): Promise<string> {
 		try {
-			const [user, avatarUrl] = await Promise.all([
-				this._userProfileService.getUserProfile(),
-				this._avatarService.getCurrentUserAvatarUrl()
-			]);
-
-			const matches = { totalwins: 0, totallosses: 0 }; // todo: get matches from service
+			const user = await this._userProfileService.getEnrichedUserProfile();
 
 			return /* HTML */`
 				<div class="flex gap-2 h-full overflow-auto">
 					<div id="avatar-container" class="relative flex-[1] rounded-lg p-4 aspect-square">
-						<img id="avatar-img" src="${avatarUrl}" alt="Profile Picture" class="w-full h-full object-cover text-white rounded-lg transition-all duration-300">
+						<img id="avatar-img" src="${user.avatarUrl}" alt="Profile Picture" class="w-full h-full object-cover text-white rounded-lg transition-all duration-300">
 						<div id="avatar-overlay" class="absolute inset-4 bg-black/50 rounded-lg flex items-center justify-center opacity-0 transition-opacity duration-300 cursor-pointer pointer-events-none">
 						</div>
 						<input type="file" id="avatar-upload-input" class="hidden" accept="image/*">
@@ -44,7 +39,7 @@ export class UserProfile {
 								: ''
 						}
 						<div class="flex items-center gap-2 mb-4">
-							<p class="text-gray-500">${user.wallet ? UserProfile.truncateWallet(user.wallet) : 'No wallet'}</p>
+							<p class="text-gray-500">${user.wallet ? UserProfileView.truncateWallet(user.wallet) : 'No wallet'}</p>
 						</div>
 					</div>
 					<div class="flex flex-col gap-2 p-4 w-12">
@@ -54,8 +49,8 @@ export class UserProfile {
 					</div>
 					<div class="flex-[1] rounded-lg p-4 aspect-square flex">
 						${createWinRateDonutChart({
-							wins: matches.totalwins,
-							losses: matches.totallosses
+							wins: user.totalWins,
+							losses: user.totalLosses
 						})}
 					</div>
 				</div>
@@ -85,11 +80,9 @@ export class UserProfile {
 			return;
 
 		try {
-			// We get the user data directly from the service when listeners are added.
-			const [user, originalAvatarSrc] = await Promise.all([
-				this._userProfileService.getUserProfile(),
-				this._avatarService.getCurrentUserAvatarUrl()
-			]);
+			const user = await this._userProfileService.getEnrichedUserProfile();
+			const originalAvatarSrc = user.avatarUrl;
+
 			let newAvatarFile: File | null = null;
 			let objectUrlToRevoke: string | null = null;
 			let isDefaultAvatar = originalAvatarSrc.includes('defaultAvatar.jpg');
@@ -227,7 +220,7 @@ export class UserProfile {
 						}
 					}
 
-					const updatedUser = await this._userProfileService.getUserProfile();
+					const updatedUser = await this._userProfileService.getEnrichedUserProfile();
 
 					usernameWrapper.innerHTML = `<h2 class="text-4xl font-bold text-white">${updatedUser.username}</h2>`;
 

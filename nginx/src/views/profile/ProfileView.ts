@@ -1,7 +1,19 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   ProfileView.ts                                     :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/06/22 10:00:00 by edelarbr          #+#    #+#             */
+/*   Updated: 2025/07/13 22:00:41 by edelarbr         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 import ModalView from "../../components/ModalView.js";
-import { UserProfile } from "./components/UserProfile.js";
-import { MatchHistory } from "./components/MatchHistory.js";
-import { FriendList } from "./components/FriendList.js";
+import { UserProfileView } from "./components/UserProfileView.js";
+import { MatchHistoryView } from "./components/MatchHistoryView.js";
+import { FriendListView } from "./components/FriendListView.js";
 
 export default class ProfileView extends ModalView {
 
@@ -11,6 +23,7 @@ export default class ProfileView extends ModalView {
 			height: '70vh'
 		});
 
+		// Initialize asynchronously after construction
 		this.init();
 	}
 
@@ -43,19 +56,21 @@ export default class ProfileView extends ModalView {
 		}
 
 		try {
+			// Afficher un loader pendant le chargement
 			profileContainer.innerHTML = /* HTML */`
 				<div class="flex items-center justify-center h-full">
-					<div class="text-white">Loading profile...</div>
+					<div class="text-white">Chargement du profil...</div>
 				</div>
 			`;
 
-			profileContainer.innerHTML = await UserProfile.render();
-			await UserProfile.addEventListeners();
+			// Charger et afficher le profil
+			profileContainer.innerHTML = await UserProfileView.render();
+			await UserProfileView.addEventListeners();
 		} catch (error) {
 			console.error('Error updating profile:', error);
 			profileContainer.innerHTML = /* HTML */`
 				<div class="flex items-center justify-center h-full">
-					<div class="text-red-500">Error loading profile</div>
+					<div class="text-red-500">Erreur lors du chargement du profil</div>
 				</div>
 			`;
 		}
@@ -68,7 +83,7 @@ export default class ProfileView extends ModalView {
 			return;
 		}
 
-		matchHistoryContainer.innerHTML = await MatchHistory.render();
+		matchHistoryContainer.innerHTML = await MatchHistoryView.render();
 	}
 
 	public async updateFriendList(): Promise<void> {
@@ -78,7 +93,7 @@ export default class ProfileView extends ModalView {
 			return;
 		}
 
-		friendListContainer.innerHTML = await FriendList.render();
-		FriendList.addEventListeners();
+		friendListContainer.innerHTML = await FriendListView.render();
+		FriendListView.addEventListeners();
 	}
 }

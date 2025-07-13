@@ -1,16 +1,15 @@
 import MatchHistoryService, { EnrichedMatch, EnrichedMatchHistory } from "../../../services/MatchHistoryService.js";
 import UserProfileService from "../../../services/UserProfileService.js";
-import { User } from "../../../services/api/user.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 
-export class MatchHistory {
+export class MatchHistoryView {
 
     private static _matchHistoryService = MatchHistoryService.getInstance();
     private static _userProfileService = UserProfileService.getInstance();
 
     public static async render(): Promise<string> {
         try {
-			const user = await this._userProfileService.getUserProfile();
+			const user = await this._userProfileService.getEnrichedUserProfile();
 			if (!user || !user.wallet) {
 				console.error("User not authenticated or wallet address is missing.");
 				return this.renderErrorState();
@@ -59,7 +58,7 @@ export class MatchHistory {
 		`;
 	}
 
-    private static async createMatchHistoryItem(enrichedMatch: EnrichedMatch, currentUser: User, userAvatar: string): Promise<string> {
+    private static async createMatchHistoryItem(enrichedMatch: EnrichedMatch, currentUser: any, userAvatar: string): Promise<string> {
 		const { match, opponent, isWin } = enrichedMatch;
         const userScore = match.player1 === currentUser.wallet ? match.player1Score : match.player2Score;
         const opponentScore = match.player1 === currentUser.wallet ? match.player2Score : match.player1Score;

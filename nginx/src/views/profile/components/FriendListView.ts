@@ -5,7 +5,7 @@ import CacheManager from "../../../services/CacheManager.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 import { createWinRateDonutChart } from "./WinRateDonutChart.js";
 
-export class FriendList {
+export class FriendListView {
     private static isAddFriendExpanded: boolean = false;
     private static friends: EnrichedFriend[] = [];
     private static friendsService = FriendsService.getInstance();

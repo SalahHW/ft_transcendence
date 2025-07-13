@@ -62,7 +62,7 @@ export default class MatchHistoryService implements CacheableService {
             throw new Error("Wallet address is missing.");
         }
 
-		const currentUser = await this._userProfileService.getUserProfile();
+		const currentUser = await this._userProfileService.getEnrichedUserProfile();
 		if (!currentUser) {
 			throw new Error("Current user profile not found.");
 		}
