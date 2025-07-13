@@ -33,14 +33,35 @@ export async function readEmail(request, reply) {
 
 export async function updateEmail(request, reply) {
   const { email } = request.body;
+  const userId = request.user.sub;
 
-  if (!email) {
-    return reply.code(400).send({ error: "Email is required" });
-  }
   try {
-    const newEmail = await emailModels.updateEmail(email);
-    const updatedEmail = createEmail(newEmail);
-    return reply.code(200).send(updatedEmail);
+    const currentEmail = await emailModels.readEmail(userId);
+
+    if (!currentEmail) {
+      return reply.code(404).send({
+        error: "User not found",
+        message: "User does not exist",
+      });
+    }
+    if (currentEmail === email.toLowerCase()) {
+      return reply.code(200).send({ email: email, message: "Email unchanged" });
+    }
+    const emailUsed = await emailModels.emailExists(email);
+    if (emailUsed) {
+      return reply.code(409).send({
+        error: "Email already exists",
+        message: "Email address is already used",
+      });
+    }
+    const newEmail = await emailModels.updateEmail(userId, email);
+    if (!newEmail) {
+      return reply.code(404).send({
+        error: "User not found",
+        message: "Unable to update email: user does not exist",
+      });
+    }
+    return reply.code(200).send(newEmail);
   } catch (error) {
     return reply.code(500).send({
       error: "Failed to update the email",
