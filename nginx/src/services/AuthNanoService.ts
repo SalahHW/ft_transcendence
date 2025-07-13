@@ -106,6 +106,12 @@ export default class AuthNanoService {
 			this._user = await this._usersApi.getCurrentUser();
 			this._isLoggedIn = true;
 			this._startRefreshLoop();
+
+			const cacheManager = CacheManager.getInstance();
+			cacheManager.triggerEvent({
+				type: 'USER_LOGIN',
+				data: { userId: this._user?.sub, username: this._user?.username }
+			});
 		} catch (error) {
 			console.error("registerWithWallet() error:", error);
 			throw error;
@@ -152,6 +158,12 @@ export default class AuthNanoService {
 			this._user = await this._usersApi.getCurrentUser();
 			this._isLoggedIn = true;
 			this._startRefreshLoop();
+
+			const cacheManager = CacheManager.getInstance();
+			cacheManager.triggerEvent({
+				type: 'USER_LOGIN',
+				data: { userId: this._user?.sub, username: this._user?.username }
+			});
 		} catch (error) {
 			console.error("loginWithWallet() error:", error);
 			throw error;

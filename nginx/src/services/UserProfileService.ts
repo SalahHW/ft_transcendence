@@ -1,16 +1,25 @@
 import AuthNanoService from './AuthNanoService.js';
 import UsersApi, { User } from './api/user.js';
+import CacheManager, { CacheableService } from './CacheManager.js';
 
 /**
  * Service to manage user profile data, including caching.
  */
-export default class UserProfileService {
+export default class UserProfileService implements CacheableService {
     private static _instance: UserProfileService;
     private _authService = AuthNanoService.getInstance();
     private _usersApi = new UsersApi();
     private _userProfileCache: User | null = null;
+    public readonly serviceName = 'UserProfileService';
 
-    private constructor() {}
+    private constructor() {
+        const cacheManager = CacheManager.getInstance();
+        cacheManager.registerService(this, [
+            'USER_LOGIN',
+            'USER_LOGOUT',
+            'PROFILE_UPDATED'
+        ]);
+    }
 
     public static getInstance(): UserProfileService {
         if (!UserProfileService._instance) {
@@ -52,7 +61,11 @@ export default class UserProfileService {
         }
         try {
             const updatedUser = await this._usersApi.updateUsername(username);
-            this._userProfileCache = updatedUser;
+            const cacheManager = CacheManager.getInstance();
+            cacheManager.triggerEvent({
+                type: 'PROFILE_UPDATED',
+                data: { userId: updatedUser.id, username: updatedUser.username }
+            });
             return updatedUser;
         } catch (error) {
             throw new Error(`Failed to update username: ${error}`);
@@ -72,7 +85,11 @@ export default class UserProfileService {
 
         try {
             const updatedUser = await this._usersApi.updateEmail(email);
-            this._userProfileCache = updatedUser;
+            const cacheManager = CacheManager.getInstance();
+            cacheManager.triggerEvent({
+                type: 'PROFILE_UPDATED',
+                data: { userId: updatedUser.id, email: updatedUser.email }
+            });
             return updatedUser;
         } catch (error) {
             throw new Error(`Failed to update email: ${error}`);

@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/13 16:50:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 18:05:19 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/13 20:02:53 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,7 @@ export interface CacheableService {
 }
 
 export interface CacheEvent {
-    type: 'USER_LOGIN' | 'USER_LOGOUT' | 'MATCH_REPORTED' | 'MATCH_ADDED' | 'FRIEND_ADDED' | 'FRIEND_REMOVED' | 'AVATAR_UPDATED' | 'PROFILE_UPDATED';
+    type: 'USER_LOGIN' | 'USER_LOGOUT' | 'MATCH_REPORTED' | 'MATCH_ADDED' | 'FRIEND_ADDED' | 'FRIEND_REMOVED' | 'AVATAR_UPDATED' | 'PROFILE_UPDATED' | 'TOURNAMENT_REPORTED';
     data?: any;
 }
 

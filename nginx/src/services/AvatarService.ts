@@ -112,9 +112,14 @@ export default class AvatarService implements CacheableService {
             // If it fails with a "not found" style error, it means we need to create one.
             // A more robust solution might check the error status code (e.g., 404).
             await this._avatarApi.uploadUserAvatar(userId, file);
-        } finally {
-            this.clearCache();
         }
+
+        // Trigger cache invalidation event
+        const cacheManager = CacheManager.getInstance();
+        cacheManager.triggerEvent({
+            type: 'AVATAR_UPDATED',
+            data: { userId }
+        });
     }
 
     /**
@@ -125,7 +130,12 @@ export default class AvatarService implements CacheableService {
     public async deleteCurrentUserAvatar(): Promise<void> {
         const userId = await this._getUserId();
         await this._avatarApi.deleteUserAvatar(userId);
-        this.clearCache();
+
+        const cacheManager = CacheManager.getInstance();
+        cacheManager.triggerEvent({
+            type: 'AVATAR_UPDATED',
+            data: { userId }
+        });
     }
 
     /**

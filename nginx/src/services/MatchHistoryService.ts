@@ -36,7 +36,8 @@ export default class MatchHistoryService implements CacheableService {
             'USER_LOGIN',
             'USER_LOGOUT',
             'MATCH_ADDED',
-            'AVATAR_UPDATED'
+            'AVATAR_UPDATED',
+            'TOURNAMENT_REPORTED'
         ]);
     }
 
@@ -209,7 +210,13 @@ export default class MatchHistoryService implements CacheableService {
         tournamentTokenIds: number[];
     }): Promise<string> {
         const txHash = await this._matchApi.reportTournament(tournament);
-        this._tournamentHistoryCache = null; // Invalidate cache
+
+        const cacheManager = CacheManager.getInstance();
+        cacheManager.triggerEvent({
+            type: 'TOURNAMENT_REPORTED',
+            data: { winner: tournament.winner }
+        });
+
         return txHash;
     }
 }
