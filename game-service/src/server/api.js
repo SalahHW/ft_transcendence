@@ -539,12 +539,6 @@ async function notifyOtherServices(matchData) {
       url: process.env.USERS_SERVICE_URL || 'http://users:3000',
       endpoints: ['/api/matches/completed']
     }
-    // ⭐ FIX: Removed stats-service as it's not defined in docker-compose
-    // {
-    //   name: 'stats-service', 
-    //   url: process.env.STATS_SERVICE_URL || 'http://localhost:3002',
-    //   endpoints: ['/api/player-stats', '/api/match-history']
-    // }
   ];
 
   const notifications = services.flatMap(service => 

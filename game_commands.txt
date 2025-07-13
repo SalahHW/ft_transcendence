@@ -5,88 +5,99 @@
 # =============================
 
 # Register Player 1 (riri)
-curl -s -X POST http://localhost:8081/api/players \
+curl -s -X POST https://elsalmatjori.com:8443/api/game/players \
   -H "Content-Type: application/json" \
-  -d '{"username": "riri"}' | jq -r '.data.id'
+  -d '{"username": "riri"}' | jq -r 'if .data and .data.id then .data.id else .message // .error // empty end'
 
 
 # Register Player 2 (fifi)  
-curl -s -X POST http://localhost:8081/api/players \
+curl -s -X POST https://elsalmatjori.com:8443/api/game/players \
   -H "Content-Type: application/json" \
-  -d '{"username": "fifi"}' | jq -r '.data.id'
+  -d '{"username": "fifi"}' | jq -r 'if .data and .data.id then .data.id else .message // .error // empty end'
 
 # Set Player 1 ready
-curl -X POST http://localhost:8081/api/players/$PLAYER1ID/ready \
+curl -X POST https://elsalmatjori.com:8443/api/game/players/$PLAYER1ID/ready \
   -H "Content-Type: application/json" \
   -d '{}'
 
 # Set Player 2 ready
-curl -X POST http://localhost:8081/api/players/$PLAYER2ID/ready \
+curl -X POST https://elsalmatjori.com:8443/api/game/players/$PLAYER2ID/ready \
   -H "Content-Type: application/json" \
   -d '{}'
 
 echo "Both players are now ready!"
 
-## STEP 3: Connect Players via WebSocket (REQUIRED!)
+## STEP 2: Connect Players via WebSocket (REQUIRED!)
 # ==================================================
 # You MUST open these in separate terminals for the game to start
 
 # Terminal 1: Connect Player 1
-wscat -c ws://localhost:8081/ws?playerId=$PLAYER1
+wscat -c wss://elsalmatjori.com:8443/api/game/ws?playerId=$PLAYER1
 
 # Terminal 2: Connect Player 2  
-wscat -c ws://localhost:8081/ws?playerId=$PLAYER2
+wscat -c wss://elsalmatjori.com:8443/api/game/ws?playerId=$PLAYER2
 
 # Once both players connect, you should see messages like:
 # - "waitingForPlayers"
 # - "init" (when game starts)
 # - Player names should show "riri vs fifi" and "fifi vs riri"
 
+## STEP 3: MANUALLY TRIGGER BALL SPAWN (CRITICAL FOR CURL TESTING!)
+# ===================================================================
+# After both players connect and you see "init" messages, send these in the WebSocket terminals:
+
+# In Player 1's WebSocket terminal (wscat), send:
+{"type":"animationComplete"}
+
+# In Player 2's WebSocket terminal (wscat), send:
+{"type":"animationComplete"}
+
+# You should see the ball appear and start moving after both messages are sent.
+
 ## STEP 4: Control Paddles (Use these in NEW terminals)
 # =====================================================
 
 # 🎮 PLAYER 1 (riri) CONTROLS:
 # Move riri's paddle UP (1 unit per command)
-curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/up
+curl -X POST https://elsalmatjori.com:8443/api/game/players/$PLAYER1/paddle/up
 
 # Move riri's paddle DOWN (1 unit per command)
-curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/down
+curl -X POST https://elsalmatjori.com:8443/api/game/players/$PLAYER1/paddle/down
 
-# 💡 NOTE: Each HTTP command moves paddle exactly 1 unit.
 # No need to stop - each command is a discrete movement!
 
 # 🎮 PLAYER 2 (fifi) CONTROLS:
 # Move fifi's paddle UP (1 unit per command)
-curl -X POST http://localhost:8081/api/players/$PLAYER2/paddle/up
+curl -X POST https://elsalmatjori.com:8443/api/game/players/$PLAYER2/paddle/up
 
 # Move fifi's paddle DOWN (1 unit per command)
-curl -X POST http://localhost:8081/api/players/$PLAYER2/paddle/down
+curl -X POST https://elsalmatjori.com:8443/api/game/players/$PLAYER2/paddle/down
 
 ## RAPID MOVEMENT EXAMPLES:
 # =========================
 
 # Move paddle up 3 units quickly
-curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/up && \
-curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/up && \
-curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/up
+curl -X POST https://elsalmajori.games:8443/api/game/players/$PLAYER1/paddle/up && \
+curl -X POST https://elsalmajori.games:8443/api/game/players/$PLAYER1/paddle/up && \
+curl -X POST https://elsalmajori.games:8443/api/game/players/$PLAYER1/paddle/up
 
 # Move paddle down 5 units with small delays
-for i in {1..5}; do curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/down; sleep 0.1; done
+for i in {1..5}; do curl -X POST https://elsalmajori.games:8443/api/game/players/$PLAYER1/paddle/down; sleep 0.1; done
 
 ## QUICK TESTING COMMANDS:
 # ========================
 
 # Check if players are registered
-curl -X GET http://localhost:8081/api/players | jq
+curl -X GET https://elsalmatjori.com:8443/api/game/players | jq # pretty print, shows error if any
 
 # Test paddle movement pattern (Player 1 goes up 3 times, then down 3 times)
-curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/up && \
-curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/up && \
-curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/up && \
+curl -X POST https://elsalmatjori.com:8443/api/game/players/$PLAYER1/paddle/up | jq -r 'if .data then .data else .message // .error // empty end' && \
+curl -X POST https://elsalmatjori.com:8443/api/game/players/$PLAYER1/paddle/up | jq -r 'if .data then .data else .message // .error // empty end' && \
+curl -X POST https://elsalmatjori.com:8443/api/game/players/$PLAYER1/paddle/up | jq -r 'if .data then .data else .message // .error // empty end' && \
 sleep 1 && \
-curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/down && \
-curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/down && \
-curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/down
+curl -X POST https://elsalmatjori.com:8443/api/game/players/$PLAYER1/paddle/down | jq -r 'if .data then .data else .message // .error // empty end' && \
+curl -X POST https://elsalmatjori.com:8443/api/game/players/$PLAYER1/paddle/down | jq -r 'if .data then .data else .message // .error // empty end' && \
+curl -X POST https://elsalmatjori.com:8443/api/game/players/$PLAYER1/paddle/down | jq -r 'if .data then .data else .message // .error // empty end'
 
 ## AUTOMATED GAME SETUP SCRIPT:
 # =============================
@@ -97,28 +108,32 @@ echo "🎮 Setting up Pong game..."
 
 # Register players
 echo "Registering players..."
-PLAYER1=$(curl -s -X POST http://localhost:8081/api/players -H "Content-Type: application/json" -d '{"username": "riri"}' | jq -r '.data.id')
-PLAYER2=$(curl -s -X POST http://localhost:8081/api/players -H "Content-Type: application/json" -d '{"username": "fifi"}' | jq -r '.data.id')
+PLAYER1=$(curl -s -X POST https://elsalmatjori.com:8443/api/game/players -H "Content-Type: application/json" -d '{"username": "riri"}' | jq -r 'if .data and .data.id then .data.id else .message // .error // empty end')
+PLAYER2=$(curl -s -X POST https://elsalmatjori.com:8443/api/game/players -H "Content-Type: application/json" -d '{"username": "fifi"}' | jq -r 'if .data and .data.id then .data.id else .message // .error // empty end')
 
 echo "✅ Player 1 (riri): $PLAYER1"
 echo "✅ Player 2 (fifi): $PLAYER2"
 
 # Set ready
 echo "Setting players ready..."
-curl -s -X POST http://localhost:8081/api/players/$PLAYER1/ready -H "Content-Type: application/json" -d '{}'
-curl -s -X POST http://localhost:8081/api/players/$PLAYER2/ready -H "Content-Type: application/json" -d '{}'
+curl -s -X POST https://elsalmatjori.com:8443/api/game/players/$PLAYER1/ready -H "Content-Type: application/json" -d '{}'
+curl -s -X POST https://elsalmatjori.com:8443/api/game/players/$PLAYER2/ready -H "Content-Type: application/json" -d '{}'
 
 echo "✅ Players are ready!"
 echo ""
 echo "🔌 Now connect via WebSocket in separate terminals:"
-echo "Terminal 1: wscat -c ws://localhost:8081/ws?playerId=$PLAYER1"
-echo "Terminal 2: wscat -c ws://localhost:8081/ws?playerId=$PLAYER2"
+echo "Terminal 1: wscat -c wss://elsalmatjori.com:8443/api/game/ws?playerId=$PLAYER1"
+echo "Terminal 2: wscat -c wss://elsalmatjori.com:8443/api/game/ws?playerId=$PLAYER2"
+echo ""
+echo "🎮 After both players connect and you see 'init' messages, send in WebSocket terminals:"
+echo "Player 1 terminal: {\"type\":\"animationComplete\"}"
+echo "Player 2 terminal: {\"type\":\"animationComplete\"}"
 echo ""
 echo "🎮 Then control paddles with these commands:"
-echo "Player 1 UP:    curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/up"
-echo "Player 1 DOWN:  curl -X POST http://localhost:8081/api/players/$PLAYER1/paddle/down"
-echo "Player 2 UP:    curl -X POST http://localhost:8081/api/players/$PLAYER2/paddle/up"
-echo "Player 2 DOWN:  curl -X POST http://localhost:8081/api/players/$PLAYER2/paddle/down"
+echo "Player 1 UP:    curl -X POST https://elsalmatjori.com:8443/api/game/players/$PLAYER1/paddle/up"
+echo "Player 1 DOWN:  curl -X POST https://elsalmatjori.com:8443/api/game/players/$PLAYER1/paddle/down"
+echo "Player 2 UP:    curl -X POST https://elsalmatjori.com:8443/api/game/players/$PLAYER2/paddle/up"
+echo "Player 2 DOWN:  curl -X POST https://elsalmatjori.com:8443/api/game/players/$PLAYER2/paddle/down"
 echo ""
 echo "💡 Each command moves paddle 1 unit. Paddle boundaries: -7.5 to +7.5"
 
@@ -126,7 +141,7 @@ echo "💡 Each command moves paddle 1 unit. Paddle boundaries: -7.5 to +7.5"
 # ================
 
 # If players don't connect properly:
-# 1. Check server is running on port 8081
+# 1. Check server is running on https://elsalmatjori.com:8443
 # 2. Make sure both WebSocket terminals are connected
 # 3. Check for any error messages in the WebSocket terminals
 
@@ -135,20 +150,27 @@ echo "💡 Each command moves paddle 1 unit. Paddle boundaries: -7.5 to +7.5"
 # 2. Check the player IDs are correct
 # 3. Verify the game has started (you should see "init" message)
 
+# If ball doesn't appear:
+# 1. Make sure BOTH players sent animationComplete messages
+# 2. Check WebSocket terminals for any error messages
+# 3. Verify both players are in the same room
+
 # Expected WebSocket message flow:
 # 1. Connection opens
 # 2. Server sends setUsername confirmation  
 # 3. Server sends waitingForPlayers message
 # 4. When 2nd player connects, server sends "init" message
-# 5. Game starts - you can now control paddles!
+# 5. Send animationComplete messages (BOTH players)
+# 6. Ball spawns and game starts - you can now control paddles!
 
 ## EXAMPLE GAME SESSION:
 # =====================
 # 1. Run the setup script
 # 2. Connect both players via WebSocket
 # 3. Wait for "init" message in both terminals
-# 4. Use curl commands to move paddles
-# 5. Watch the game play out in real-time!
+# 4. Send animationComplete messages in both WebSocket terminals
+# 5. Use curl commands to move paddles
+# 6. Watch the game play out in real-time!
 
 # Game ends when one player reaches 11 points
 # You'll see "gameEnd" message with winner information
@@ -168,4 +190,7 @@ echo "💡 Each command moves paddle 1 unit. Paddle boundaries: -7.5 to +7.5"
 # ✅ Score updates
 # ✅ Game state management
 
-# But once connected, you can use simple curl commands for paddle control! 🎮 
+# ⭐ FIXED: Paddle commands now work via HTTP API for CLI control!
+# ✅ You can use simple curl commands for paddle control once players are connected via WebSocket
+# ✅ The API validation has been updated to allow HTTP paddle control for CLI usage 
+# ⭐ NEW: Manual animationComplete messages required for ball spawning when testing with curl! 
