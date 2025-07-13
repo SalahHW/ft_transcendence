@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/05/26 21:09:59 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 00:38:13 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/13 14:45:50 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,7 @@ import FriendsService from "../../../services/FriendsService.js";
 import UsersApi, { User } from "../../../services/api/user.js";
 import AvatarServiceAPI from "../../../services/api/avatar.js";
 import { Friendship } from "../../../services/api/friends.js";
-import AuthNanoService from "../../../auth/AuthNanoService.js";
+import AuthNanoService from "../../../services/AuthNanoService.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 import { createWinRateDonutChart } from "./WinRateDonutChart.js";
 

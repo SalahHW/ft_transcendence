@@ -6,13 +6,13 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/05 16:41:12 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/11 18:56:52 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/13 14:45:50 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 import Router from "../router/Router.js";
 import { UI_THEME } from "../style/tailwindClasses.js";
-import AuthService from "../auth/AuthNanoService.js";
+import AuthService from "../services/AuthNanoService.js";
 
 interface Option {
   label: string;
