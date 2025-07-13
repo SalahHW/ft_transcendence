@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 14:43:33 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/13 19:58:04 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -193,7 +193,15 @@ export class UserProfile {
 
                 editButton.innerHTML = '✔️';
 
+                let isFinishing = false;
                 const finishEditing = async (save: boolean) => {
+                    if (isFinishing) return;
+                        isFinishing = true;
+
+                    // Clean up listeners immediately to prevent re-entrancy
+                    document.removeEventListener('keydown', keydownHandler);
+                    editButton.removeEventListener('click', saveHandler);
+
                     const usernameInput = usernameWrapper.querySelector('input[name="username"]') as HTMLInputElement;
                     const emailInput = emailWrapper?.querySelector('input[name="email"]') as HTMLInputElement;
 
@@ -266,18 +274,21 @@ export class UserProfile {
                     }
 
                     editButton.innerHTML = '✏️';
-                    editButton.removeEventListener('click', saveHandler);
                     editButton.addEventListener('click', editHandler);
+                    isFinishing = false;
                 };
 
                 const saveHandler = () => finishEditing(true);
                 const keydownHandler = (e: KeyboardEvent) => {
-                    if (e.key === 'Enter') finishEditing(true);
+                    if (e.key === 'Enter') {
+                        e.preventDefault(); // Prevent form submission if it's in a form
+                        finishEditing(true);
+                    }
                     if (e.key === 'Escape') finishEditing(false);
                 };
 
                 editButton.removeEventListener('click', editHandler);
-                editButton.addEventListener('click', saveHandler, { once: true });
+                editButton.addEventListener('click', saveHandler);
                 document.addEventListener('keydown', keydownHandler);
             };
 
