@@ -2,6 +2,7 @@ import Wheel from "./components/Wheel.js";
 import Router from "./router/Router.js";
 import AuthService from "./services/AuthNanoService.js";
 import { initializeServices } from "./services/serviceInitializer.js";
+import Presence from "./services/webSocket/presence.js";
 
 /**
  * Main application class.
@@ -33,6 +34,14 @@ class App {
     }
 
     new Wheel("wheel-container");
+
+    try {
+      Presence.getInstance();
+      console.log(`[WS] Presence service inistialized successfully`)
+    }
+    catch (err) {
+      console.log(`[WS] ${err}`);
+    }
 
     console.log("Application initialized successfully.");
   }
