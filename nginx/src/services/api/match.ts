@@ -6,9 +6,23 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:41:07 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 01:00:53 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/13 18:29:18 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
+const mapMatchArrayToMatchObject = (match: any[]): Match => {
+	if (!match || !Array.isArray(match)) {
+		return match as Match;
+	}
+	return {
+		player1: match[0],
+		player2: match[1],
+		winner: match[2],
+		player1Score: parseInt(match[3], 10),
+		player2Score: parseInt(match[4], 10),
+		matchId: parseInt(match[5], 10),
+	};
+};
 
 /**
  * Match object.
@@ -61,7 +75,7 @@ export default class MatchServiceAPI {
 			});
 			const data = await response.json();
 			if (response.status === 200 && data.success)
-				return data.matches;
+				return data.matches.map(mapMatchArrayToMatchObject);
 			else
 				throw new Error(`Failed to fetch matches by player:\n${JSON.stringify(data, null, 2)}`);
 		} catch (error) {
@@ -83,7 +97,7 @@ export default class MatchServiceAPI {
 		});
 		const data = await response.json();
 		if (response.status === 200 && data.success)
-			return data.matches;
+			return data.matches.map(mapMatchArrayToMatchObject);
 		else
 			throw new Error(`Failed to fetch matches by winner:\n${JSON.stringify(data, null, 2)}`);
 	}
@@ -99,7 +113,7 @@ export default class MatchServiceAPI {
 		});
 		const data = await response.json();
 		if (response.status === 200 && data.success)
-			return data.match;
+			return mapMatchArrayToMatchObject(data.match);
 		else
 			throw new Error(`Failed to fetch match by id:\n${JSON.stringify(data, null, 2)}`);
 	}
