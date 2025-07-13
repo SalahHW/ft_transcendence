@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:41:03 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/12 19:32:31 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/13 16:15:31 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -191,6 +191,27 @@ export default class UsersApi {
     else
       throw new Error(
         `failed to get users by username:\n${JSON.stringify(
+          responseData,
+          null,
+          2
+        )}`
+      );
+  }
+
+  /**
+   * Gets a user by wallet address
+   * @param wallet - The wallet address of the user to get
+   * @returns A promise that resolves to the user
+   */
+  async getUserByWallet(wallet: string): Promise<User> {
+    const response = await fetch(`${this._usersBaseUrl}/wallet/${wallet}`, {
+      method: "GET",
+    });
+    const responseData = await response.json();
+    if (response.status === 200) return responseData;
+    else
+      throw new Error(
+        `failed to get user by wallet:\n${JSON.stringify(
           responseData,
           null,
           2
