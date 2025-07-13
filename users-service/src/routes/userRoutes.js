@@ -152,48 +152,48 @@ export default async function userRoutes(fastify) {
     handler: userControllers.readUserByUsername,
   });
 
-  fastify.route({
-    method: "PUT",
-    url: "/users/:id",
-    schema: {
-      summary: "Update a user",
-      description: "Updates a user's information by their unique ID.",
-      params: {
-        type: "object",
-        properties: {
-          id: { type: "number", description: "User's unique ID." },
-        },
-        required: ["id"],
-      },
-      body: {
-        type: "object",
-        properties: {
-          username: { type: "string" },
-          password: { type: "string" },
-          email: { type: "string", format: "email" },
-        },
-      },
-      response: {
-        200: {
-          description: "User updated successfully.",
-          type: "object",
-          properties: {
-            id: { type: "number" },
-            username: { type: "string" },
-            email: { type: "string" },
-          },
-        },
-        404: {
-          description: "User not found.",
-          type: "object",
-          properties: {
-            error: { type: "string" },
-          },
-        },
-      },
-    },
-    handler: userControllers.updateUser,
-  });
+  // fastify.route({
+  //   method: "PUT",
+  //   url: "/users/:id",
+  //   schema: {
+  //     summary: "Update a user",
+  //     description: "Updates a user's information by their unique ID.",
+  //     params: {
+  //       type: "object",
+  //       properties: {
+  //         id: { type: "number", description: "User's unique ID." },
+  //       },
+  //       required: ["id"],
+  //     },
+  //     body: {
+  //       type: "object",
+  //       properties: {
+  //         username: { type: "string" },
+  //         password: { type: "string" },
+  //         email: { type: "string", format: "email" },
+  //       },
+  //     },
+  //     response: {
+  //       200: {
+  //         description: "User updated successfully.",
+  //         type: "object",
+  //         properties: {
+  //           id: { type: "number" },
+  //           username: { type: "string" },
+  //           email: { type: "string" },
+  //         },
+  //       },
+  //       404: {
+  //         description: "User not found.",
+  //         type: "object",
+  //         properties: {
+  //           error: { type: "string" },
+  //         },
+  //       },
+  //     },
+  //   },
+  //   handler: userControllers.updateUser,
+  // });
 
   fastify.route({
     method: "DELETE",

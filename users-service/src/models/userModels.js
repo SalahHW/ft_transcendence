@@ -132,20 +132,6 @@ export const userExists = async (username) => {
   }
 };
 
-export const emailExists = async (email) => {
-  const query = `
-    SELECT 1 FROM credentials_auth
-    WHERE email = ?
-    LIMIT 1
-  `;
-  try {
-    const result = await database.get(query, [email.toLowerCase()]);
-    return !!result;
-  } catch (error) {
-    throw translateSqliteError(error);
-  }
-};
-
 export const walletExists = async (wallet) => {
   const query = `
     SELECT 1 FROM users
