@@ -6,11 +6,10 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/16 16:30:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 18:59:31 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/13 19:30:13 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-import AuthNanoService from "../services/AuthNanoService.js";
 import AuthNanoService from "../services/AuthNanoService.js";
 import { UI_THEME } from "../style/tailwindClasses.js";
 import { buttonHTML } from "./button.js";
