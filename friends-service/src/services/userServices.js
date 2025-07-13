@@ -1,5 +1,7 @@
-import { USERS_SERVICE_URL } from "../config/config.js";
+import { USERS_SERVICE_HOST, USERS_SERVICE_PORT } from "../config/config.js";
 import { handleServiceError } from "./errors/serviceErrorHandler.js";
+
+const USERS_SERVICE_URL = `http://${USERS_SERVICE_HOST}:${USERS_SERVICE_PORT}`;
 
 export async function userExists(userId) {
   try {
