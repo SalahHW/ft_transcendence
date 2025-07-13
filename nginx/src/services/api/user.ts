@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/26 20:41:03 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 19:04:06 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/13 19:27:42 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -135,6 +135,50 @@ export default class UsersApi {
     else
       throw new Error(
         `failed to get user:\n${JSON.stringify(responseData, null, 2)}`
+      );
+  }
+
+  /**
+   * Updates a user's username by ID
+   * @param id - The ID of the user to update
+   * @param username - The new username
+   * @returns A promise that resolves to the updated user
+   */
+  async updateUsernameById(id: number, username: string): Promise<User> {
+    const response = await fetch(`${this._usersBaseUrl}/${id}/username`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username }),
+    });
+    const responseData = await response.json();
+    if (response.status === 200) return responseData;
+    else
+      throw new Error(
+        `failed to update username:\n${JSON.stringify(responseData, null, 2)}`
+      );
+  }
+
+  /**
+   * Updates a user's email by ID
+   * @param id - The ID of the user to update
+   * @param email - The new email
+   * @returns A promise that resolves to the updated user
+   */
+  async updateEmailById(id: number, email: string): Promise<User> {
+    const response = await fetch(`${this._usersBaseUrl}/${id}/email`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }),
+    });
+    const responseData = await response.json();
+    if (response.status === 200) return responseData;
+    else
+      throw new Error(
+        `failed to update email:\n${JSON.stringify(responseData, null, 2)}`
       );
   }
 
