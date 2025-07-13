@@ -195,33 +195,33 @@ export default async function userRoutes(fastify) {
   //   handler: userControllers.updateUser,
   // });
 
-  fastify.route({
-    method: "DELETE",
-    url: "/users/:id",
-    schema: {
-      summary: "Delete a user",
-      description: "Deletes a user by their unique ID.",
-      params: {
-        type: "object",
-        properties: {
-          id: { type: "number", description: "User's unique ID." },
-        },
-        required: ["id"],
-      },
-      response: {
-        204: {
-          description: "User deleted successfully. No content returned.",
-          type: "null",
-        },
-        404: {
-          description: "User not found.",
-          type: "object",
-          properties: {
-            error: { type: "string" },
-          },
-        },
-      },
-    },
-    handler: userControllers.deleteUser,
-  });
+  // fastify.route({
+  //   method: "DELETE",
+  //   url: "/users/:id",
+  //   schema: {
+  //     summary: "Delete a user",
+  //     description: "Deletes a user by their unique ID.",
+  //     params: {
+  //       type: "object",
+  //       properties: {
+  //         id: { type: "number", description: "User's unique ID." },
+  //       },
+  //       required: ["id"],
+  //     },
+  //     response: {
+  //       204: {
+  //         description: "User deleted successfully. No content returned.",
+  //         type: "null",
+  //       },
+  //       404: {
+  //         description: "User not found.",
+  //         type: "object",
+  //         properties: {
+  //           error: { type: "string" },
+  //         },
+  //       },
+  //     },
+  //   },
+  //   handler: userControllers.deleteUser,
+  // });
 }
