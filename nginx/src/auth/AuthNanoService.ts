@@ -208,7 +208,7 @@ export default class AuthNanoService {
 
     this._refreshIntervalId = setInterval(() => {
       this._refreshAccessToken();
-    }, 0.15 * 60 * 1000);
+    }, 4 * 60 * 1000);
   }
 
   private _stopRefreshLoop(): void {
