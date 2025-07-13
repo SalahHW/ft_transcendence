@@ -1,12 +1,17 @@
 import { database } from "./database.js";
+import { translateSqliteError } from "./errors/translateSqliteError.js";
 
 export const readUsername = async (id) => {
   const query = `
   SELECT username 
   FROM users 
   WHERE id = ?`;
-  const result = await database.get(query, [id]);
-  return result ? result.username : null;
+  try {
+    const result = await database.get(query, [id]);
+    return result ? result.username : null;
+  } catch (err) {
+    throw translateSqliteError(err);
+  }
 };
 
 export const updateUsername = async (id, newUsername) => {
@@ -14,6 +19,27 @@ export const updateUsername = async (id, newUsername) => {
   UPDATE users
   SET username = ?
   WHERE id = ?`;
-  const result = await database.run(query, [newUsername, id]);
-  return result.changes;
+  try {
+    const result = await database.run(query, [newUsername.toLowerCase(), id]);
+    if (result.changes === 0) {
+      return null;
+    }
+    return { username: newUsername.toLowerCase() };
+  } catch (err) {
+    throw translateSqliteError(err);
+  }
+};
+
+export const usernameExists = async (username) => {
+  const query = `
+    SELECT 1 FROM users
+    WHERE username = ?
+    LIMIT 1
+  `;
+  try {
+    const result = await database.get(query, [username.toLowerCase()]);
+    return !!result;
+  } catch (error) {
+    throw translateSqliteError(error);
+  }
 };
