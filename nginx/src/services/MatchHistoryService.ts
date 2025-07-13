@@ -19,10 +19,6 @@ export interface EnrichedMatchHistory {
 	currentUserAvatarUrl: string;
 }
 
-
-/**
- * Service to manage user match and tournament history, including caching.
- */
 export default class MatchHistoryService implements CacheableService {
     private static _instance: MatchHistoryService;
     private _userProfileService = UserProfileService.getInstance();
@@ -35,12 +31,11 @@ export default class MatchHistoryService implements CacheableService {
     public readonly serviceName = 'MatchHistoryService';
 
     private constructor() {
-        // Register with CacheManager
         const cacheManager = CacheManager.getInstance();
         cacheManager.registerService(this, [
             'USER_LOGIN',
             'USER_LOGOUT',
-            'MATCH_REPORTED',
+            'MATCH_ADDED',
             'AVATAR_UPDATED'
         ]);
     }
@@ -179,7 +174,7 @@ export default class MatchHistoryService implements CacheableService {
         // Trigger cache invalidation event
         const cacheManager = CacheManager.getInstance();
         cacheManager.triggerEvent({
-            type: 'MATCH_REPORTED',
+            type: 'MATCH_ADDED',
             data: { matchId: match.matchId, winner: match.winner }
         });
 

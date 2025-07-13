@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/13 16:50:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 17:19:14 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/13 18:05:19 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,7 @@ export interface CacheableService {
 }
 
 export interface CacheEvent {
-    type: 'USER_LOGIN' | 'USER_LOGOUT' | 'MATCH_REPORTED' | 'FRIEND_ADDED' | 'FRIEND_REMOVED' | 'AVATAR_UPDATED' | 'PROFILE_UPDATED';
+    type: 'USER_LOGIN' | 'USER_LOGOUT' | 'MATCH_REPORTED' | 'MATCH_ADDED' | 'FRIEND_ADDED' | 'FRIEND_REMOVED' | 'AVATAR_UPDATED' | 'PROFILE_UPDATED';
     data?: any;
 }
 
@@ -68,8 +68,7 @@ export default class CacheManager {
     public unregisterService(serviceName: string): void {
         this._services.delete(serviceName);
 
-        // Remove from all event handlers
-        this._eventHandlers.forEach((services, event) => {
+        this._eventHandlers.forEach((services) => {
             const index = services.indexOf(serviceName);
             if (index > -1) {
                 services.splice(index, 1);
@@ -97,7 +96,7 @@ export default class CacheManager {
      * Clear cache for all registered services
      */
     public clearAllCaches(): void {
-        this._services.forEach((service, serviceName) => {
+        this._services.forEach((service) => {
             service.clearCache();
         });
         this._cache.clear();

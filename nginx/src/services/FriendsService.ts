@@ -1,6 +1,6 @@
-import AuthNanoService from '../auth/AuthNanoService.js';
+import AuthNanoService from './AuthNanoService.js';
 import FriendsServiceAPI from './api/friends.js';
-import UsersApi, { User } from './api/user.js';
+import UsersApi from './api/user.js';
 import AvatarServiceAPI from './api/avatar.js';
 import MatchServiceAPI from './api/match.js';
 import CacheManager, { CacheableService } from './CacheManager.js';
@@ -35,7 +35,8 @@ export default class FriendsService implements CacheableService {
             'USER_LOGIN',
             'USER_LOGOUT',
             'FRIEND_ADDED',
-            'FRIEND_REMOVED'
+            'FRIEND_REMOVED',
+            'MATCH_ADDED'
         ]);
     }
 
