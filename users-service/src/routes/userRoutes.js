@@ -152,6 +152,43 @@ export default async function userRoutes(fastify) {
     handler: userControllers.readUserByUsername,
   });
 
+  fastify.route({
+    method: "GET",
+    url: "/users/wallet/:wallet",
+    schema: {
+      summary: "Get user by wallet",
+      description: "Returns a user by their wallet address.",
+      params: {
+        type: "object",
+        properties: {
+          wallet: { type: "string", description: "User's wallet address." },
+        },
+        required: ["wallet"],
+      },
+      response: {
+        200: {
+          description: "User found.",
+          type: "object",
+          properties: {
+            id: { type: "number" },
+            username: { type: "string" },
+            email: { type: "string" },
+            wallet: { type: "string" },
+            authenticationMethod: { type: "string" },
+          },
+        },
+        404: {
+          description: "User not found.",
+          type: "object",
+          properties: {
+            error: { type: "string" },
+          },
+        },
+      },
+    },
+    handler: userControllers.readUserByWallet,
+  });
+
   // fastify.route({
   //   method: "PUT",
   //   url: "/users/:id",
