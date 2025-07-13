@@ -76,6 +76,20 @@ export const readUserByUsername = async (username) => {
   }
 };
 
+export const readUserByWallet = async (wallet) => {
+  const query = `
+    SELECT u.id, u.username, u.wallet, u.authenticationMethod, c.email, c.password
+    FROM users u
+    LEFT JOIN credentials_auth c ON u.id = c.id
+    WHERE LOWER(u.wallet) = ?
+  `;
+  try {
+    return await database.get(query, [wallet.toLowerCase()]);
+  } catch (error) {
+    throw translateSqliteError(error);
+  }
+};
+
 export const readAllUsers = async () => {
   const query = `
     SELECT u.id, u.username, u.wallet, u.authenticationMethod, c.email

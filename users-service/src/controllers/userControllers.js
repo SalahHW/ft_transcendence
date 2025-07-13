@@ -101,6 +101,21 @@ export async function readUserByUsername(request, reply) {
   }
 }
 
+export async function readUserByWallet(request, reply) {
+  const wallet = request.params.wallet;
+  if (!wallet) return reply.code(400).send({ error: "Wallet is required" });
+
+  try {
+    const result = await userModels.readUserByWallet(wallet);
+    if (!result) return reply.code(404).send({ error: "User not found" });
+    return reply.code(200).send(result);
+  } catch (error) {
+    return reply
+      .code(500)
+      .send({ error: "Failed to read user", cause: error.message });
+  }
+}
+
 export async function readAllUsers(_request, reply) {
   try {
     const result = await userModels.readAllUsers();

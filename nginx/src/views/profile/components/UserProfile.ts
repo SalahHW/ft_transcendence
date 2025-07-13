@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/27 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 00:22:52 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/13 14:43:33 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -197,22 +197,32 @@ export class UserProfile {
                     const usernameInput = usernameWrapper.querySelector('input[name="username"]') as HTMLInputElement;
                     const emailInput = emailWrapper?.querySelector('input[name="email"]') as HTMLInputElement;
 
-                    const currentUsername = usernameInput?.value?.trim() || originalUsername;
-                    const currentEmail = emailInput?.value?.trim() || originalEmail;
+                    const newUsername = usernameInput?.value?.trim();
+                    const newEmail = emailInput?.value?.trim();
 
                     if (save) {
-                        const dataChanged = currentUsername !== originalUsername || currentEmail !== originalEmail;
                         const avatarChanged = newAvatarFile !== null;
 
-                        if (dataChanged) {
+                        // Handle username update
+                        if (newUsername && newUsername !== originalUsername) {
                             try {
-                                await this._userProfileService.updateUserProfile({
-                                    username: currentUsername,
-                                    email: currentEmail
-                                });
+                                await this._userProfileService.updateUsername(newUsername);
+                                this._showNotification("Nom d'utilisateur mis à jour avec succès!", "success");
                             } catch (error) {
-                                console.error("Error updating profile:", error);
-                                this._showNotification("Erreur lors de la mise à jour du profil", "error");
+                                console.error("Error updating username:", error);
+                                this._showNotification("Erreur lors de la mise à jour du nom d'utilisateur", "error");
+                                save = false; // Revert on error
+                            }
+                        }
+
+                        // Handle email update
+                        if (emailInput && newEmail && newEmail !== originalEmail) {
+                            try {
+                                await this._userProfileService.updateEmail(newEmail);
+                                this._showNotification("Email mis à jour avec succès!", "success");
+                            } catch (error) {
+                                console.error("Error updating email:", error);
+                                this._showNotification("Erreur lors de la mise à jour de l'email", "error");
                                 save = false; // Revert on error
                             }
                         }
@@ -220,26 +230,22 @@ export class UserProfile {
                         if (avatarChanged && newAvatarFile) {
                             try {
                                 await this._avatarService.uploadOrUpdateCurrentUserAvatar(newAvatarFile);
+                                this._showNotification("Avatar mis à jour avec succès!", "success");
                             } catch (error) {
                                 console.error("Error updating avatar:", error);
                                 this._showNotification("Erreur lors de la mise à jour de l'avatar", "error");
                                 save = false; // Revert on error
                             }
                         }
-
-                        if ((dataChanged || avatarChanged) && save) {
-                            this._showNotification("Profil mis à jour avec succès!", "success");
-                        }
                     }
 
-                    // Restore UI
-                    const finalUsername = save ? currentUsername : originalUsername;
-                    const finalEmail = save ? currentEmail : originalEmail;
+                    // Restore UI - re-fetch from cache to ensure consistency
+                    const updatedUser = await this._userProfileService.getUserProfile();
 
-                    usernameWrapper.innerHTML = `<h2 class="text-4xl font-bold text-white">${finalUsername}</h2>`;
+                    usernameWrapper.innerHTML = `<h2 class="text-4xl font-bold text-white">${updatedUser.username}</h2>`;
 
-                    if (emailWrapper) {
-                        emailWrapper.innerHTML = `<p class="text-gray-500">${finalEmail}</p>`;
+                    if (emailWrapper && updatedUser.email) {
+                        emailWrapper.innerHTML = `<p class="text-gray-500">${updatedUser.email}</p>`;
                     }
 
                     // Reset avatar state
@@ -249,36 +255,25 @@ export class UserProfile {
                     avatarOverlay.removeEventListener('click', handleAvatarClick);
                     avatarUploadInput.removeEventListener('change', handleFileSelect);
 
-                    if (!save) {
-                        avatarImg.src = originalAvatarSrc;
-                    } else if (newAvatarFile) {
-						const newAvatarUrl = await this._avatarService.getCurrentUserAvatarUrl();
-						avatarImg.src = `${newAvatarUrl}?t=${new Date().getTime()}`;
-						isDefaultAvatar = newAvatarUrl.includes('defaultAvatar.jpg');
-						updateAvatarOverlay();
-					}
+                    if (objectUrlToRevoke) URL.revokeObjectURL(objectUrlToRevoke);
 
-					if (objectUrlToRevoke) {
-						URL.revokeObjectURL(objectUrlToRevoke);
-						objectUrlToRevoke = null;
-					}
-					newAvatarFile = null;
+                    if (!save) {
+                        avatarImg.src = originalAvatarSrc; // Revert to original if cancelled
+                    } else {
+                        // Refresh avatar from server on successful save
+                        const newAvatarUrl = await this._avatarService.getCurrentUserAvatarUrl();
+                        avatarImg.src = `${newAvatarUrl}?t=${new Date().getTime()}`;
+                    }
 
                     editButton.innerHTML = '✏️';
                     editButton.removeEventListener('click', saveHandler);
-                    document.removeEventListener('keydown', keydownHandler);
                     editButton.addEventListener('click', editHandler);
                 };
 
                 const saveHandler = () => finishEditing(true);
                 const keydownHandler = (e: KeyboardEvent) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        finishEditing(true);
-                    }
-                    if (e.key === 'Escape') {
-                        finishEditing(false);
-                    }
+                    if (e.key === 'Enter') finishEditing(true);
+                    if (e.key === 'Escape') finishEditing(false);
                 };
 
                 editButton.removeEventListener('click', editHandler);

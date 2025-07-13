@@ -41,22 +41,42 @@ export default class UserProfileService {
     }
 
     /**
-     * Updates the user profile on the server and in the local cache.
-     * @param updatedData - An object with the user data to update.
+     * Updates the user's username on the server and in the local cache.
+     * @param username - The new username
      * @returns A promise that resolves to the updated user profile.
      */
-    public async updateUserProfile(updatedData: Partial<User>): Promise<User> {
+    public async updateUsername(username: string): Promise<User> {
+        const jwtPayload = await this._authService.getJwtPayload();
+        if (!jwtPayload?.sub) {
+            throw new Error("User not authenticated or user ID is missing.");
+        }
+        try {
+            const updatedUser = await this._usersApi.updateUsername(username);
+            this._userProfileCache = updatedUser;
+            return updatedUser;
+        } catch (error) {
+            throw new Error(`Failed to update username: ${error}`);
+        }
+    }
+
+    /**
+     * Updates the user's email on the server and in the local cache.
+     * @param email - The new email
+     * @returns A promise that resolves to the updated user profile.
+     */
+    public async updateEmail(email: string): Promise<User> {
         const jwtPayload = await this._authService.getJwtPayload();
         if (!jwtPayload?.sub) {
             throw new Error("User not authenticated or user ID is missing.");
         }
 
-        const updatedUser = await this._usersApi.updateUser(jwtPayload.sub, updatedData);
-
-        // Update the cache with the new, complete data from the server response
-        this._userProfileCache = updatedUser;
-
-        return updatedUser;
+        try {
+            const updatedUser = await this._usersApi.updateEmail(email);
+            this._userProfileCache = updatedUser;
+            return updatedUser;
+        } catch (error) {
+            throw new Error(`Failed to update email: ${error}`);
+        }
     }
 
     /**
