@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   LoginPopup.ts                                      :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/06/16 18:20:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 14:45:50 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 import AuthNanoService from "../services/AuthNanoService.js";
 import { UI_THEME } from "../style/tailwindClasses.js";
 import { buttonHTML } from "./button.js";
@@ -36,10 +24,8 @@ export default class LoginPopup extends ModalView {
 
   public render(): void {
     this._contentContainer.innerHTML = /* HTML */ `
-      <!-- Titre -->
       <h2 class="${UI_THEME.components.title} mb-6">Sign In</h2>
 
-      <!-- Formulaire -->
       <form id="popup-container-form-login" class="${UI_THEME.components.form}">
         <div>
           <input
@@ -61,7 +47,6 @@ export default class LoginPopup extends ModalView {
           />
         </div>
 
-        <!-- Zone de message fixe pour éviter le resize -->
         <div id="popup-container-message-container-login" class="h-6 mt-4">
           <div
             id="popup-container-message-login"
@@ -146,16 +131,13 @@ export default class LoginPopup extends ModalView {
     );
     if (!messageElement) return;
 
-    // Réinitialiser les classes et afficher le message
     messageElement.className = `${UI_THEME.components.message} ${colorClass} opacity-100 visible transition-all duration-200`;
     messageElement.textContent = message;
 
-    // Masquer automatiquement après 3 secondes
     setTimeout(() => {
       messageElement.classList.remove("opacity-100", "visible");
       messageElement.classList.add("opacity-0", "invisible");
 
-      // Nettoyer le contenu après l'animation
       setTimeout(() => {
         messageElement.textContent = "";
       }, 200);

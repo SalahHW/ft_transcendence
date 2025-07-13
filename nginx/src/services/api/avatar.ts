@@ -35,7 +35,6 @@ export default class AvatarServiceAPI {
 				throw new Error(`Failed to retrieve avatar: ${response.status} ${response.statusText}. Response: ${responseText}`);
 			}
 		}
-		// The avatar is served as a file, so return the URL
 		return `${this._avatarsBaseUrl}/id/${userId}`;
 	}
 

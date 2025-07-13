@@ -1,10 +1,11 @@
-import UsersApi, { JwtUserPayload } from "./api/user.js";
+import UsersApi, { JwtUserPayload } from "../services/api/user.js";
+import CacheManager from './CacheManager.js';
 
 export default class AuthNanoService {
 	private static _instance: AuthNanoService;
 	private _usersApi: UsersApi = new UsersApi();
 	private _user: JwtUserPayload | null = null;
-	private _isLoggedIn: boolean | null = null; // null means we haven't checked yet
+	private _isLoggedIn: boolean | null = null;
 	private _refreshInterval: ReturnType<typeof setInterval> | null = null;
 	private _host: string = `${window.location.protocol}//${window.location.host}`;
 
@@ -48,6 +49,13 @@ export default class AuthNanoService {
 		this._user = await this._usersApi.getCurrentUser();
 		this._isLoggedIn = true;
 		this._startRefreshLoop();
+
+		const cacheManager = CacheManager.getInstance();
+		cacheManager.triggerEvent({
+			type: 'USER_LOGIN',
+			data: { userId: this._user?.sub, username: this._user?.username }
+		});
+
 		return this._user!;
 	}
 
@@ -58,18 +66,11 @@ export default class AuthNanoService {
 			this._isLoggedIn = false;
 			this._stopRefreshLoop();
 
-			// Clear all service caches on logout using dynamic imports to avoid circular dependencies.
-			const AvatarService = (await import('./AvatarService.js')).default;
-			const FriendsService = (await import('./FriendsService.js')).default;
-			const UserProfileService = (await import('./UserProfileService.js')).default;
-			const MatchHistoryService = (await import('./MatchHistoryService.js')).default;
-			const Router = (await import('../router/Router.js')).default;
-
-			AvatarService.getInstance().clearCache();
-			FriendsService.getInstance().clearCache();
-			UserProfileService.getInstance().clearCache();
-			MatchHistoryService.getInstance().clearCache();
-			Router.getInstance().clearAllRouteCaches();
+			const cacheManager = CacheManager.getInstance();
+			cacheManager.triggerEvent({
+				type: 'USER_LOGOUT',
+				data: { timestamp: Date.now() }
+			});
 		} catch (error) {
 			console.error('Logout API call failed:', error);
 			throw new Error('Logout failed. Please try again.');
@@ -103,6 +104,12 @@ export default class AuthNanoService {
 			this._user = await this._usersApi.getCurrentUser();
 			this._isLoggedIn = true;
 			this._startRefreshLoop();
+
+			const cacheManager = CacheManager.getInstance();
+			cacheManager.triggerEvent({
+				type: 'USER_LOGIN',
+				data: { userId: this._user?.sub, username: this._user?.username }
+			});
 		} catch (error) {
 			console.error("registerWithWallet() error:", error);
 			throw error;
@@ -149,6 +156,12 @@ export default class AuthNanoService {
 			this._user = await this._usersApi.getCurrentUser();
 			this._isLoggedIn = true;
 			this._startRefreshLoop();
+
+			const cacheManager = CacheManager.getInstance();
+			cacheManager.triggerEvent({
+				type: 'USER_LOGIN',
+				data: { userId: this._user?.sub, username: this._user?.username }
+			});
 		} catch (error) {
 			console.error("loginWithWallet() error:", error);
 			throw error;

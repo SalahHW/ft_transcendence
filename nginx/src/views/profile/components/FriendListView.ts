@@ -1,49 +1,22 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   FriendList.ts                                      :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/05/26 21:09:59 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 14:45:50 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-import FriendsService from "../../../services/FriendsService.js";
-import UsersApi, { User } from "../../../services/api/user.js";
-import AvatarServiceAPI from "../../../services/api/avatar.js";
-import { Friendship } from "../../../services/api/friends.js";
+import FriendsService, { EnrichedFriend } from "../../../services/FriendsService.js";
+import UsersApi from "../../../services/api/user.js";
 import AuthNanoService from "../../../services/AuthNanoService.js";
+import CacheManager from "../../../services/CacheManager.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 import { createWinRateDonutChart } from "./WinRateDonutChart.js";
 
-// Interface pour un ami enrichi avec les informations utilisateur
-interface EnrichedFriend {
-    id: number;
-    username: string;
-    avatarUrl: string;
-    status: 'online' | 'offline';
-    wins: number;
-    losses: number;
-    authenticationMethod?: string;
-    email?: string;
-    wallet?: string;
-    created_at: string;
-}
-
-export class FriendList {
+export class FriendListView {
     private static isAddFriendExpanded: boolean = false;
     private static friends: EnrichedFriend[] = [];
     private static friendsService = FriendsService.getInstance();
     private static usersService = new UsersApi();
-    private static avatarServiceApi = new AvatarServiceAPI();
-    private static isLoading: boolean = false;
+    private static isLoading: boolean = true;
     private static authNanoService = AuthNanoService.getInstance();
+    private static cacheManager = CacheManager.getInstance();
 
     public static async render(): Promise<string> {
         try {
-            if (this.friends.length === 0 && !this.isLoading) {
+            if (this.friends.length === 0) {
                 await this.loadFriends();
             }
 
@@ -62,6 +35,7 @@ export class FriendList {
             `;
         } catch (error) {
             console.error('[FriendList] Error in render():', error);
+			this.isLoading = false;
             return this.renderErrorState();
         }
     }
@@ -70,7 +44,7 @@ export class FriendList {
         return /* HTML */`
             <div class="flex flex-col gap-2 h-full">
                 <div class="overflow-auto flex-[1] flex items-center justify-center">
-                    <div class="text-gray-400">Chargement des amis...</div>
+                    <div class="text-gray-400">Loading friends...</div>
                 </div>
                 ${this.createAddFriendSection()}
             </div>
@@ -80,7 +54,7 @@ export class FriendList {
     private static renderEmptyState(): string {
         return /* HTML */`
             <div class="flex items-center justify-center h-full text-gray-400">
-                <p>Aucun ami pour le moment</p>
+                <p>No friends yet</p>
             </div>
         `;
     }
@@ -89,7 +63,7 @@ export class FriendList {
         return /* HTML */`
             <div class="flex flex-col gap-2 h-full">
                 <div class="overflow-auto flex-[1] flex items-center justify-center">
-                    <div class="text-red-400">Erreur lors du chargement des amis</div>
+                    <div class="text-red-400">Error loading friends</div>
                 </div>
                 ${this.createAddFriendSection()}
             </div>
@@ -97,53 +71,16 @@ export class FriendList {
     }
 
     private static async loadFriends(): Promise<void> {
+		this.isLoading = true;
         try {
-            this.isLoading = true;
-            const friendships = await this.friendsService.getFriends();
-            this.friends = await Promise.all(
-                friendships.map(async (friendship: Friendship) => {
-                    try {
-                        const [user, avatarUrl] = await Promise.all([
-                            this.usersService.getUserById(friendship.friend_id),
-                            this.avatarServiceApi.getUserAvatarUrl(friendship.friend_id)
-                                .catch(() => '/assets/defaultAvatar.jpg')
-                        ]);
-                        return this.enrichFriend(friendship, user, avatarUrl);
-                    }
-                    catch (error) {
-                        console.error(`Erreur lors de la récupération de l'utilisateur ${friendship.friend_id}:`, error);
-                        return {
-                            id: friendship.friend_id,
-                            username: `User ${friendship.friend_id}`,
-                            avatarUrl: '/assets/defaultAvatar.jpg',
-                            status: 'offline' as const,
-                            wins: 0,
-                            losses: 0,
-                            created_at: friendship.created_at
-                        };
-                    }
-                })
-            );
+            this.friends = await this.friendsService.getEnrichedFriends();
         } catch (error) {
-            console.error('Erreur lors du chargement des amis:', error);
+            console.error('Error loading friends:', error);
             this.friends = [];
+			throw error;
         } finally {
             this.isLoading = false;
         }
-    }
-
-    private static enrichFriend(friendship: Friendship, user: User, avatarUrl: string): EnrichedFriend {
-        return {
-            id: friendship.friend_id,
-            username: user.username || `User ${friendship.friend_id}`,
-            avatarUrl: avatarUrl,
-            status: 'offline', // Tous les amis sont offline comme demandé
-            wins: 0, // TODO: intégrer les stats de match une fois le service connecté
-            losses: 0, // TODO: intégrer les stats de match une fois le service connecté
-            authenticationMethod: user.email ? 'credentials' : 'wallet',
-            email: user.email || undefined,
-            created_at: friendship.created_at
-        };
     }
 
     private static createFriendListItem(friend: EnrichedFriend): string {
@@ -171,7 +108,7 @@ export class FriendList {
                     <input
                         id="friend-username-input"
                         type="text"
-                        placeholder="Nom d'utilisateur..."
+                        placeholder="Username..."
                         class="${UI_THEME.components.friendList.addFriendInput}"
                     >
                     <button id="add-friend-btn" class="${UI_THEME.components.friendList.addFriendButton}">
@@ -204,13 +141,11 @@ export class FriendList {
 
         if (!addFriendBtn) return;
 
-        // Supprimer les anciens event listeners
         addFriendBtn.replaceWith(addFriendBtn.cloneNode(true));
         const newAddFriendBtn = document.getElementById('add-friend-btn');
         if (!newAddFriendBtn) return;
 
         if (this.isAddFriendExpanded) {
-            // Mode étendu : le bouton confirme l'ajout ou l'input envoie le formulaire
             newAddFriendBtn.addEventListener('click', () => this.handleAddFriend());
 
             if (friendUsernameInput) {
@@ -229,7 +164,6 @@ export class FriendList {
                 });
             }
         } else {
-            // Mode réduit : le bouton ouvre le champ d'input
             newAddFriendBtn.addEventListener('click', () => this.toggleAddFriendMode());
         }
     }
@@ -254,8 +188,8 @@ export class FriendList {
             const currentUserId = jwtPayload?.sub;
 
             if (!currentUserId) {
-                console.error('Utilisateur non connecté');
-                alert('Vous devez être connecté pour ajouter un ami');
+                console.error('User not logged in');
+                alert('You must be logged in to add a friend');
                 return;
             }
 
@@ -263,26 +197,25 @@ export class FriendList {
             try {
                 targetUser = await this.usersService.getUserByUsername(username);
             } catch (error) {
-                console.error('Erreur lors de la recherche de l\'utilisateur:', error);
-                alert(`Utilisateur "${username}" introuvable`);
+                console.error('Error searching for user:', error);
+                alert(`User "${username}" not found`);
                 return;
             }
 
             if (!targetUser || !targetUser.id) {
-                console.error('Utilisateur invalide ou ID manquant');
-                alert('Utilisateur invalide ou incomplet');
+                console.error('Invalid user or missing ID');
+                alert('Invalid or incomplete user');
                 return;
             }
 
             if (targetUser.id === currentUserId) {
-                alert('Vous ne pouvez pas vous ajouter comme ami');
+                alert("You can't add yourself as a friend");
                 return;
             }
 
-            // Vérifier si l'amitié existe déjà
             const isAlreadyFriend = this.friends.some(friend => friend.id === targetUser.id);
             if (isAlreadyFriend) {
-                alert(`${username} est déjà dans votre liste d'amis`);
+                alert(`${username} is already in your friends list`);
                 return;
             }
 
@@ -290,24 +223,25 @@ export class FriendList {
 
             await this.loadFriends();
 
-            // Reset du formulaire
             friendUsernameInput.value = '';
             this.toggleAddFriendMode();
 
             const container = document.querySelector('.flex.flex-col.gap-2.h-full');
             if (container) {
+                this.isLoading = true;
+                this.friends = [];
                 container.innerHTML = await this.render();
                 this.addEventListeners();
             }
 
         }
         catch (error) {
-            console.error('Erreur lors de l\'ajout de l\'ami:', error);
+            console.error('Error adding friend:', error);
             if (error instanceof Error) {
-                alert(`Erreur: ${error.message}`);
+                alert(`Error: ${error.message}`);
             }
             else {
-                alert('Erreur lors de l\'ajout de l\'ami');
+                alert('Error adding friend');
             }
         }
     }
@@ -328,5 +262,20 @@ export class FriendList {
 
     public static async refreshFriends(): Promise<void> {
         await this.loadFriends();
+        const container = document.querySelector('.flex.flex-col.gap-2.h-full');
+        if (container) {
+            container.innerHTML = await this.render();
+            this.addEventListeners();
+        }
+    }
+
+    public static forceRefreshAllCaches(): void {
+        this.cacheManager.clearAllCaches();
+        console.log('[FriendList] All caches cleared manually');
+    }
+
+    public static getCacheStats(): void {
+        const stats = this.cacheManager.getStats();
+        console.log('[FriendList] Cache stats:', stats);
     }
 }

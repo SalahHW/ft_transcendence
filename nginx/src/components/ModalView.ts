@@ -34,7 +34,6 @@ export default class ModalView {
         this._element.innerHTML = /* HTML */`
 			<div class="modal-content-container bg-[#313131]/90 backdrop-blur-xl rounded-2xl shadow-2xl border-2 border-[#5A5A5A] ${contentClasses}"
                  style="width: ${width}; height: ${height}; max-width: ${maxWidth};">
-				<!-- Content will be injected here by child classes -->
 			</div>
 		`;
     }
@@ -42,7 +41,6 @@ export default class ModalView {
     private _setupEventListeners(): void {
 		document.addEventListener("keydown", (event: KeyboardEvent) => {
 			if (event.key === "Escape" && this._isVisible) {
-				// Ne pas fermer la modal si l'utilisateur est dans un champ input
 				const activeElement = document.activeElement as HTMLElement;
 				const isInInputField = activeElement && (
 					activeElement.tagName === 'INPUT' ||

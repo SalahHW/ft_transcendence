@@ -1,43 +1,31 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   APITestPage.ts                                     :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/27 19:14:29 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/12 22:09:05 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 import ModalView from "../../components/ModalView.js";
 import Tabs from "./components/tabs.js";
-// ADDED MISSING IMPORTS
+
 import Router from "../../router/Router.js";
 import { buttonHTML } from "../../components/button.js";
 
-// User forms
+
 import GetUserForm from "./userForms/GetUserForm.js";
 import CreateUserForm from "./userForms/CreateUserForm.js";
 import UpdateUserForm from "./userForms/UpdateUserForm.js";
 import DeleteUserForm from "./userForms/DeleteUserForm.js";
 
-// Match forms
+
 import GetMatchForm from "./matchForms/GetMatchForm.js";
 import CreateMatchForm from "./matchForms/CreateMatchForm.js";
 
-// Current user forms
+
 import GetCurrentUserForm from "./currentUserForms/GetCurrentUserForm.js";
 import LoginLogoutUserForm from "./currentUserForms/LoginLogoutUserForm.js";
 import RegisterUserForm from "./currentUserForms/RegisterUserForm.js";
 
-// Avatar forms
+
 import GetAvatarForm from "./avatarForms/GetAvatarForm.js";
 import CreateAvatarForm from "./avatarForms/CreateAvatarForm.js";
 import UpdateAvatarForm from "./avatarForms/UpdateAvatarForm.js";
 import DeleteAvatarForm from "./avatarForms/DeleteAvatarForm.js";
 
-// Friends forms
+
 import CreateFriendshipForm from "./friendsForms/CreateFriendshipForm.js";
 import GetFriendshipsForm from "./friendsForms/GetFriendshipsForm.js";
 import DeleteFriendshipForm from "./friendsForms/DeleteFriendshipForm.js";
@@ -64,7 +52,6 @@ export default class APITestPage extends ModalView {
 			<div class="w-full h-full flex flex-col">
 				<h1 class="text-3xl font-bold mb-4 text-center text-gradient bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent drop-shadow">API Test Page</h1>
 				<div class="flex flex-col md:flex-row gap-6 flex-1 min-h-0">
-					<!-- First card -->
 					<div class="flex-1 bg-black/20 backdrop-blur-xl rounded-2xl shadow-2xl border-2 border-[#5A5A5A] p-6 min-h-0 flex flex-col overflow-hidden">
 						<div class="w-full h-full flex flex-col">
 							<div class="flex-grow min-h-0">
@@ -72,7 +59,6 @@ export default class APITestPage extends ModalView {
 							</div>
 						</div>
 					</div>
-					<!-- Second card -->
 					<div class="flex-1 bg-black/20 backdrop-blur-xl rounded-2xl shadow-2xl border-2 border-[#5A5A5A] p-6 min-h-0 flex flex-col overflow-hidden">
 						<div class="w-full h-full flex flex-col">
 							<div class="flex-grow min-h-0">
@@ -323,9 +309,9 @@ export default class APITestPage extends ModalView {
 	}
 
 	protected _onHide(): void {
-		// Clean up the terminal when the modal is hidden
+
 		if (this._terminalInstance) {
-			// Import and call the static cleanup method
+
 			import('./components/customTerminal.js').then((module) => {
 				module.default.restoreConsoleLog();
 			});

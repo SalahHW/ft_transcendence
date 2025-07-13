@@ -70,9 +70,15 @@ export default class UpdateUserForm {
 			}
 
 			try {
-				const response = await this._userService.updateUser(userId, updateData);
+				if (updateData.username) {
+					const response = await this._userService.updateUsernameById(userId, updateData.username);
+					console.log(`Username updated:\n${JSON.stringify(response, null, 2)}`);
+				}
+				if (updateData.email) {
+					const response = await this._userService.updateEmailById(userId, updateData.email);
+					console.log(`Email updated:\n${JSON.stringify(response, null, 2)}`);
+				}
 				form.reset();
-				console.log(`User updated:\n${JSON.stringify(response, null, 2)}`);
 			}
 			catch (error) {
 				if (error instanceof Error)

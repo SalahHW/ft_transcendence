@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   tabs.ts                                            :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/26 20:42:26 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/05/26 20:42:29 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 
 export default class Tabs {
@@ -65,11 +53,9 @@ export default class Tabs {
 	private _createBaseStructure(): void {
 		this._container.innerHTML = /* HTML */ `
 			<div class="${UI_THEME.components.tabs.container}">
-				<!-- Container for tabs -->
 				<div class="${UI_THEME.components.tabs.tabsContainer}">
 					<div id="tab-headers" class="flex"></div>
 				</div>
-				<!-- Content container - visually integrated with the active tab -->
 				<div id="tab-contents" class="${UI_THEME.components.tabs.contentContainer}" style="margin-top: -1px;"></div>
 			</div>
 		`;

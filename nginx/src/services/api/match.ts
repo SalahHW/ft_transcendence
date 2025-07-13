@@ -1,14 +1,16 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   match.ts                                           :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/26 20:41:07 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 01:00:53 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
+const mapMatchArrayToMatchObject = (match: any[]): Match => {
+	if (!match || !Array.isArray(match)) {
+		return match as Match;
+	}
+	return {
+		player1: match[0],
+		player2: match[1],
+		winner: match[2],
+		player1Score: parseInt(match[3], 10),
+		player2Score: parseInt(match[4], 10),
+		matchId: parseInt(match[5], 10),
+	};
+};
 
 /**
  * Match object.
@@ -47,7 +49,7 @@ export interface Tournament {
  * Toutes les méthodes correspondent aux routes exposées par le backend Fastify du blockchain-service.
  */
 export default class MatchServiceAPI {
-	private _baseUrl: string = `${window.location.protocol}//${window.location.host}`; // Port du blockchain-service
+	private _baseUrl: string = `${window.location.protocol}//${window.location.host}`;
 
 	/**
 	 * Get all matches played by a player (by address)
@@ -61,14 +63,14 @@ export default class MatchServiceAPI {
 			});
 			const data = await response.json();
 			if (response.status === 200 && data.success)
-				return data.matches;
+				return data.matches.map(mapMatchArrayToMatchObject);
 			else
 				throw new Error(`Failed to fetch matches by player:\n${JSON.stringify(data, null, 2)}`);
 		} catch (error) {
 			if (error instanceof Error && error.message.includes("Player not found.")) {
-				return []; // Return empty array if player not found
+				return [];
 			}
-			throw error; // Re-throw other errors
+			throw error;
 		}
 	}
 
@@ -83,7 +85,7 @@ export default class MatchServiceAPI {
 		});
 		const data = await response.json();
 		if (response.status === 200 && data.success)
-			return data.matches;
+			return data.matches.map(mapMatchArrayToMatchObject);
 		else
 			throw new Error(`Failed to fetch matches by winner:\n${JSON.stringify(data, null, 2)}`);
 	}
@@ -99,7 +101,7 @@ export default class MatchServiceAPI {
 		});
 		const data = await response.json();
 		if (response.status === 200 && data.success)
-			return data.match;
+			return mapMatchArrayToMatchObject(data.match);
 		else
 			throw new Error(`Failed to fetch match by id:\n${JSON.stringify(data, null, 2)}`);
 	}
@@ -142,7 +144,7 @@ export default class MatchServiceAPI {
 	async reportTournament(tournament: {
 		endTimestamp: number;
 		matchIds: number[];
-		winner: string; // address
+		winner: string;
 		tournamentTokenIds: number[];
 	}): Promise<string> {
 		const response = await fetch(`${this._baseUrl}/report-tournament`, {
