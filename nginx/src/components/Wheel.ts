@@ -38,7 +38,28 @@ export default class Wheel {
       onClick: () => {
         this._router.navigate("/profile");
       },
-      condition: () => !this._userIsLoggedIn,
+      condition: () => this._userIsLoggedIn,
+    },
+    {
+      label: "Play",
+      icon: "🎮",
+      condition: () => this._userIsLoggedIn,
+      subMenu: [
+        {
+          label: "1v1",
+          icon: "⚔️",
+          onClick: () => {
+            this._router.navigate("/1v1");
+          },
+        },
+        {
+          label: "Tournament",
+          icon: "🏆",
+          onClick: () => {
+            this._router.navigate("/tournament");
+          },
+        },
+      ],
     },
     {
       label: "Login",
