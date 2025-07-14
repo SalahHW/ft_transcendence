@@ -30,6 +30,18 @@ export interface Match {
 	winner?: string;
 }
 
+const mapTournamentArrayToTournamentObject = (tournament: any[]): Tournament => {
+    if (!tournament || !Array.isArray(tournament)) {
+        return tournament as Tournament;
+    }
+    return {
+        endTimestamp: parseInt(tournament[0], 10),
+        matchIds: tournament[1].map((id: string) => parseInt(id, 10)),
+        tournamentId: parseInt(tournament[2], 10),
+        winner: tournament[3],
+    };
+};
+
 /**
  * Tournament object.
  * @property `tournamentId` - The tournament's ID
@@ -66,6 +78,30 @@ export default class MatchServiceAPI {
 				return data.matches.map(mapMatchArrayToMatchObject);
 			else
 				throw new Error(`Failed to fetch matches by player:\n${JSON.stringify(data, null, 2)}`);
+		} catch (error) {
+			if (error instanceof Error && error.message.includes("Player not found.")) {
+				return [];
+			}
+			throw error;
+		}
+	}
+
+	/**
+	 * Get all tournaments a player participated in.
+	 * @param address - The player's address
+	 * @returns A promise that resolves to an array of tournaments
+	 */
+	 // ! Not implemented in the blockchain-service
+	async getTournamentsByPlayer(address: string): Promise<Tournament[]> {
+		try {
+			const response = await fetch(`${this._baseUrl}/tournament/player/${address}`, {
+				method: "GET"
+			});
+			const data = await response.json();
+			if (response.status === 200 && data.success)
+				return data.tournaments.map(mapTournamentArrayToTournamentObject);
+			else
+				throw new Error(`Failed to fetch tournaments by player:\n${JSON.stringify(data, null, 2)}`);
 		} catch (error) {
 			if (error instanceof Error && error.message.includes("Player not found.")) {
 				return [];
@@ -188,7 +224,7 @@ export default class MatchServiceAPI {
 		});
 		const data = await response.json();
 		if (response.status === 200 && data.success)
-			return data.tournaments;
+			return data.tournaments.map(mapTournamentArrayToTournamentObject);
 		else
 			throw new Error(`Failed to fetch tournaments by winner:\n${JSON.stringify(data, null, 2)}`);
 	}

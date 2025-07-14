@@ -38,7 +38,7 @@ export default class Wheel {
       onClick: () => {
         this._router.navigate("/profile");
       },
-      condition: () => this._userIsLoggedIn,
+      condition: () => !this._userIsLoggedIn,
     },
     {
       label: "Login",

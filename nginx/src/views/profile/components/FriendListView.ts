@@ -67,7 +67,7 @@ export class FriendListView {
         return /* HTML */`
             <div class="flex flex-col gap-2 h-full">
                 <div class="overflow-auto flex-[1] flex items-center justify-center">
-                    <div class="text-red-400">Error loading friends</div>
+                    <div class="text-red-500">Error loading friends</div>
                 </div>
                 ${this.createAddFriendSection()}
             </div>
