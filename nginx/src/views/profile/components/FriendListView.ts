@@ -4,7 +4,7 @@ import AuthService from "../../../services/AuthNanoService.js";
 import CacheManager from "../../../services/CacheManager.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 import { createWinRateDonutChart } from "./WinRateDonutChart.js";
-import PresenceService, { PresenceCallback } from "../../../services/webSocket/presence.js";
+import PresenceService, { PresenceCallback } from "../../../services/webSocket/PresenceService.js";
 
 
 export class FriendListView {
