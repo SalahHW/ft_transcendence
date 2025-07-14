@@ -1,4 +1,4 @@
-export const signToken = async (request, reply) => {
+export const signRefreshToken = async (request, reply) => {
   const { sub, username, aud } = request.body;
 
   if (!sub || !username || !aud)
@@ -10,16 +10,16 @@ export const signToken = async (request, reply) => {
   const payload = {
     sub,
     username,
-    role: "user",
+    role: "refreshToken",
     aud,
     iss: "jwt-service",
   };
 
   try {
-    const token = await reply.jwtSign(payload, { expiresIn: "5m" });
+    const token = await reply.jwtSign(payload, { expiresIn: "7d" });
     return reply.code(200).send({ token });
   } catch (error) {
-    console.error(error);
+    console.error("Refresh token generation failed:", error.message);
     return reply.code(500).send({
       error: "Failed to generate token",
       cause: error.message,
