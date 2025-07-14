@@ -1,0 +1,14 @@
+{
+  "name": "id-service",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "NODE_ENV=development node src/app.js"
+  },
+  "dependencies": {
+    "fastify": "^5.3.3",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
+  }
+} 
