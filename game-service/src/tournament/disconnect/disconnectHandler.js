@@ -614,11 +614,13 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       matchDuration: TimeUtils.calculateMatchDuration(matchStartTime, matchEndTime),
       winner: {
         id: winner.id,
+        userId: winner.userId, // Include real user ID for blockchain operations
         username: winner.username || 'Anonymous',
         score: finalWinnerScore
       },
       loser: {
         id: loser.id,
+        userId: loser.userId, // Include real user ID for blockchain operations
         username: loser.username || 'Anonymous',
         score: finalLoserScore
       },
@@ -677,11 +679,13 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       matchDuration: TimeUtils.calculateMatchDuration(matchStartTime, matchEndTime),
       winner: {
         id: waitingLoser.id,
+        userId: waitingLoser.userId, // Include real user ID for blockchain operations
         username: waitingLoser.username || 'Anonymous',
         score: 1 // 3rd place gets 1 point instead of 0
       },
       loser: {
         id: waitingLoser.id,
+        userId: waitingLoser.userId, // Include real user ID for blockchain operations
         username: waitingLoser.username || 'Anonymous',
         score: 1 // 3rd place gets 1 point instead of 0
       },

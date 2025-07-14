@@ -70,7 +70,7 @@ export async function registerApiRoutes(fastify) {
       console.log('API request: POST /api/players');
       const { username, userId } = request.body || {};
       
-      const player = playerManager.registerPlayerWithUsername(username);
+      const player = playerManager.registerPlayerWithUsername(username, userId);
       
       // Fetch and cache wallet address if userId is provided
       if (userId) {
@@ -106,7 +106,7 @@ export async function registerApiRoutes(fastify) {
       console.log(`🏆 Player ${username} clicked the tournament button!`);
       
       // Register player first
-      const player = playerManager.registerPlayerWithUsername(username);
+      const player = playerManager.registerPlayerWithUsername(username, userId);
       
       // Fetch and cache wallet address if userId is provided
       if (userId) {

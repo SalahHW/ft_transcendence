@@ -11,6 +11,7 @@ export class Player {
     this.id = id;
     this.ws = ws;
     this.username = options.username || null;
+    this.userId = options.userId || null; // Real user ID for external services
     
     // Game state
     this.positionZ = 0;

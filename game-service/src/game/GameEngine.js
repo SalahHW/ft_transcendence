@@ -401,11 +401,13 @@ export class GameEngine {
       finalMatchType: null,
       winner: {
         id: winner.id,
+        userId: winner.userId, // Include real user ID for blockchain operations
         username: winner.username || 'Anonymous',
         score: winnerScore
       },
       loser: {
         id: loser.id,
+        userId: loser.userId, // Include real user ID for blockchain operations
         username: loser.username || 'Anonymous',
         score: loserScore
       },

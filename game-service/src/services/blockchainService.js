@@ -15,11 +15,22 @@ export class BlockchainService {
   }
 
   /**
-   * Get user wallet address by user ID
-   * @param {string} userId - The user ID
+   * Get user wallet address by user ID or player object
+   * @param {string|Object} userIdOrPlayer - The user ID or player object
    * @returns {Promise<string|null>} - The wallet address or null if not found
    */
-  async getUserWallet(userId) {
+  async getUserWallet(userIdOrPlayer) {
+    // Handle userId (string or number) and player object
+    let userId;
+    if (typeof userIdOrPlayer === 'string' || typeof userIdOrPlayer === 'number') {
+      userId = userIdOrPlayer;
+    } else if (userIdOrPlayer && userIdOrPlayer.userId) {
+      userId = userIdOrPlayer.userId;
+    } else {
+      console.warn(`⚠️ Invalid userIdOrPlayer parameter:`, userIdOrPlayer);
+      return null;
+    }
+
     // Check cache first
     if (this.userWalletCache.has(userId)) {
       return this.userWalletCache.get(userId);
@@ -125,20 +136,88 @@ export class BlockchainService {
   }
 
   /**
+   * Check if a player is registered in the blockchain contract
+   * @param {string} walletAddress - The player's wallet address
+   * @returns {Promise<boolean>} - Whether the player is registered
+   */
+  async isPlayerRegistered(walletAddress) {
+    try {
+      const response = await axios.get(`${BLOCKCHAIN_SERVICE_URL}/player/${walletAddress}`, {
+        timeout: 5000
+      });
+      return response.status === 200 && response.data && response.data.success;
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        return false; // Player not found
+      }
+      console.warn(`⚠️ Error checking if player ${walletAddress} is registered:`, error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Register a player in the blockchain contract (only if not already registered)
+   * @param {string} walletAddress - The player's wallet address
+   * @param {string} playerName - The player's name
+   * @returns {Promise<boolean>} - Success status
+   */
+  async registerPlayerIfNeeded(walletAddress, playerName) {
+    try {
+      // First check if player is already registered
+      const isRegistered = await this.isPlayerRegistered(walletAddress);
+      
+      if (isRegistered) {
+        console.log(`ℹ️ Player ${playerName} (${walletAddress}) already registered in blockchain contract`);
+        return true;
+      }
+
+      // Player not registered, so register them
+      console.log(`🔗 Registering player ${playerName} (${walletAddress}) in blockchain contract`);
+      
+      const response = await axios.post(`${BLOCKCHAIN_SERVICE_URL}/add-player`, {
+        name: playerName,
+        address: walletAddress
+      }, {
+        timeout: 10000
+      });
+
+      if (response.status === 200 && response.data && response.data.success) {
+        console.log(`✅ Player ${playerName} registered successfully. Tx hash: ${response.data.transactionHash}`);
+        return true;
+      } else {
+        console.error(`❌ Failed to register player ${playerName}:`, response.data);
+        return false;
+      }
+    } catch (error) {
+      console.error(`❌ Failed to register player ${playerName}:`, error.message);
+      return false;
+    }
+  }
+
+  /**
    * Report match result to blockchain
    * @param {Object} matchData - Match data with player IDs and scores
    * @returns {Promise<string>} - Transaction hash
    */
   async reportMatch(matchData) {
     try {
-      // Get wallet addresses for both players
+      // Get wallet addresses for both players using real user IDs
       const [player1Wallet, player2Wallet] = await Promise.all([
-        this.getUserWallet(matchData.winner.id),
-        this.getUserWallet(matchData.loser.id)
+        this.getUserWallet(matchData.winner.userId || matchData.winner.id),
+        this.getUserWallet(matchData.loser.userId || matchData.loser.id)
       ]);
 
       if (!player1Wallet || !player2Wallet) {
         throw new Error('Could not retrieve wallet addresses for players');
+      }
+
+      // Validate wallet address format (Ethereum address format)
+      const walletRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!walletRegex.test(player1Wallet)) {
+        throw new Error(`Invalid wallet address format for player1: ${player1Wallet}`);
+      }
+      if (!walletRegex.test(player2Wallet)) {
+        throw new Error(`Invalid wallet address format for player2: ${player2Wallet}`);
       }
 
       // Use the match ID from the match data (already generated)
@@ -148,7 +227,24 @@ export class BlockchainService {
 
       // Determine winner wallet (winner is the one with higher score)
       const winnerWallet = matchData.winner.score > matchData.loser.score ? player1Wallet : player2Wallet;
-      const loserWallet = matchData.winner.score > matchData.loser.score ? player2Wallet : player1Wallet;
+      // const loserWallet = matchData.winner.score > matchData.loser.score ? player2Wallet : player1Wallet;
+
+      // Register players if needed (only if not already registered)
+      const player1Name = matchData.winner.username || `Player_${matchData.winner.userId || matchData.winner.id}`;
+      const player2Name = matchData.loser.username || `Player_${matchData.loser.userId || matchData.loser.id}`;
+
+      const [player1Registered, player2Registered] = await Promise.all([
+        this.registerPlayerIfNeeded(player1Wallet, player1Name),
+        this.registerPlayerIfNeeded(player2Wallet, player2Name)
+      ]);
+
+      if (!player1Registered) {
+        throw new Error(`Failed to register player1 ${player1Name} in blockchain contract`);
+      }
+
+      if (!player2Registered) {
+        throw new Error(`Failed to register player2 ${player2Name} in blockchain contract`);
+      }
 
       // Prepare blockchain data
       const blockchainData = {
@@ -157,10 +253,12 @@ export class BlockchainService {
         matchId: matchData.matchId,
         player1Score: matchData.winner.score,
         player2Score: matchData.loser.score,
-        winner: winnerWallet
+        winner: winnerWallet,
+        endTimestamp: Math.floor(Date.now() / 1000) // Current timestamp in seconds
       };
 
       console.log(`🔗 Reporting match to blockchain:`, blockchainData);
+      console.log(`🔗 Wallet addresses - Player1: ${player1Wallet}, Player2: ${player2Wallet}, Winner: ${winnerWallet}`);
 
       const response = await axios.post(`${BLOCKCHAIN_SERVICE_URL}/report-match`, blockchainData, {
         timeout: 10000
@@ -170,7 +268,8 @@ export class BlockchainService {
         console.log(`✅ Match reported to blockchain successfully. Tx hash: ${response.data.transactionHash}`);
         return response.data.transactionHash;
       } else {
-        throw new Error('Blockchain service returned unsuccessful response');
+        console.error(`❌ Blockchain service returned status ${response.status}:`, response.data);
+        throw new Error(`Blockchain service returned status ${response.status}: ${JSON.stringify(response.data)}`);
       }
     } catch (error) {
       console.error('❌ Failed to report match to blockchain:', error.message);
@@ -185,11 +284,25 @@ export class BlockchainService {
    */
   async reportTournament(tournamentData) {
     try {
-      // Get wallet address for tournament winner (1st place)
-      const winnerWallet = await this.getUserWallet(tournamentData.winner.id);
+      // Get wallet address for tournament winner (1st place) using real user ID
+      const winnerWallet = await this.getUserWallet(tournamentData.winner.userId || tournamentData.winner.id);
 
       if (!winnerWallet) {
         throw new Error('Could not retrieve wallet address for tournament winner');
+      }
+
+      // Validate wallet address format (Ethereum address format)
+      const walletRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!walletRegex.test(winnerWallet)) {
+        throw new Error(`Invalid wallet address format for tournament winner: ${winnerWallet}`);
+      }
+
+      // Register winner if needed (only if not already registered)
+      const winnerName = tournamentData.winner.username || `Player_${tournamentData.winner.userId || tournamentData.winner.id}`;
+      const winnerRegistered = await this.registerPlayerIfNeeded(winnerWallet, winnerName);
+
+      if (!winnerRegistered) {
+        throw new Error(`Failed to register tournament winner ${winnerName} in blockchain contract`);
       }
 
       // Generate tournament ID
@@ -213,7 +326,8 @@ export class BlockchainService {
         console.log(`✅ Tournament reported to blockchain successfully. Tx hash: ${response.data.transactionHash}`);
         return response.data.transactionHash;
       } else {
-        throw new Error('Blockchain service returned unsuccessful response');
+        console.error(`❌ Blockchain service returned status ${response.status}:`, response.data);
+        throw new Error(`Blockchain service returned status ${response.status}: ${JSON.stringify(response.data)}`);
       }
     } catch (error) {
       console.error('❌ Failed to report tournament to blockchain:', error.message);

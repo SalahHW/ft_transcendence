@@ -67,6 +67,7 @@ export async function getUserResponseData(key: string): Promise<any> {
 
 export async function registerCurrentUserForGame(): Promise<{ id: string; username: string }> {
 	const username = await getUserResponseData('username');
+	const userId = await getUserResponseData('sub');
 	// FIXED: Use current domain instead of localhost for game service API
 	// Game service is proxied through nginx, so use same domain as frontend
 	
@@ -75,7 +76,7 @@ export async function registerCurrentUserForGame(): Promise<{ id: string; userna
 		headers: {
 			'Content-Type': 'application/json',
 		},
-		body: JSON.stringify({ username }),
+		body: JSON.stringify({ username, userId }),
 	});
 	
 	if (!response.ok) {
@@ -93,6 +94,7 @@ export async function registerCurrentUserForGame(): Promise<{ id: string; userna
 
 export async function registerCurrentUserForTournament(): Promise<{ id: string; username: string; websocketUrl?: string; waitingRoomId?: string; playerCount?: number; maxPlayers?: number }> {
 	const username = await getUserResponseData('username');
+	const userId = await getUserResponseData('sub');
 	// FIXED: Use current domain instead of localhost for game service API
 	// Game service is proxied through nginx, so use same domain as frontend
 	
@@ -101,7 +103,7 @@ export async function registerCurrentUserForTournament(): Promise<{ id: string; 
 		headers: {
 			'Content-Type': 'application/json',
 		},
-		body: JSON.stringify({ username }),
+		body: JSON.stringify({ username, userId }),
 	});
 	
 	if (!response.ok) {
