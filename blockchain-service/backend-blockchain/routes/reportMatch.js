@@ -16,6 +16,7 @@ module.exports = async (fastify, opts) => {
             "player1Score",
             "player2Score",
             "winner",
+            "endTimestamp",
           ],
           properties: {
             player1: { type: "string", pattern: "^0x[a-fA-F0-9]{40}$" },
@@ -24,6 +25,7 @@ module.exports = async (fastify, opts) => {
             player1Score: { type: "integer", minimum: 0, maximum: 255 },
             player2Score: { type: "integer", minimum: 0, maximum: 255 },
             winner: { type: "string", pattern: "^0x[a-fA-F0-9]{40}$" },
+            endTimestamp: { type: "integer", minimum: 0 },
           },
         },
       },
@@ -32,8 +34,15 @@ module.exports = async (fastify, opts) => {
       if (!contract)
         return reply.status(503).send({ error: "Contract not initialized" });
 
-      const { player1, player2, matchId, player1Score, player2Score, winner } =
-        request.body;
+      const {
+        player1,
+        player2,
+        matchId,
+        player1Score,
+        player2Score,
+        winner,
+        endTimestamp,
+      } = request.body;
 
       try {
         const tx = await contract.reportMatch(
@@ -42,20 +51,19 @@ module.exports = async (fastify, opts) => {
           matchId,
           player1Score,
           player2Score,
-          winner
+          winner,
+          endTimestamp
         );
         await tx.wait();
         reply.send({ success: true, transactionHash: tx.hash });
       } catch (error) {
         request.log.error(error);
         const { code, error: message, details } = parseContractError(error);
-        reply
-          .status(code)
-          .send({
-            success: false,
-            error: message,
-            ...(details && { details }),
-          });
+        reply.status(code).send({
+          success: false,
+          error: message,
+          ...(details && { details }),
+        });
       }
     }
   );
