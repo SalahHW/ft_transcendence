@@ -78,9 +78,7 @@ export default class UsersApi {
   async createUser(user: User): Promise<User> {
     const response = await fetch(`${this._usersBaseUrl}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(user),
     });
     const responseData = await response.json();
@@ -99,6 +97,7 @@ export default class UsersApi {
   async getCurrentUser(): Promise<JwtUserPayload | null> {
     const response = await fetch(`${this._host}${this._mePath}`, {
       method: "GET",
+      credentials: "include",
     });
     if (response.status === 404 || response.status === 401) return null;
     const responseData: JwtResponse = await response.json();
@@ -135,9 +134,7 @@ export default class UsersApi {
   async updateUsernameById(id: number, username: string): Promise<User> {
     const response = await fetch(`${this._usersBaseUrl}/${id}/username`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username }),
     });
     const responseData = await response.json();
@@ -157,9 +154,7 @@ export default class UsersApi {
   async updateEmailById(id: number, email: string): Promise<User> {
     const response = await fetch(`${this._usersBaseUrl}/${id}/email`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
     });
     const responseData = await response.json();
@@ -178,9 +173,7 @@ export default class UsersApi {
   async updateUsername(username: string): Promise<User> {
     const response = await fetch(`${this._usersBaseUrl}/username`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username }),
     });
     const responseData = await response.json();
@@ -199,9 +192,7 @@ export default class UsersApi {
   async updateEmail(email: string): Promise<User> {
     const response = await fetch(`${this._usersBaseUrl}/email`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
     });
     const responseData = await response.json();
@@ -280,14 +271,12 @@ export default class UsersApi {
   async login(username: string, password: string): Promise<void> {
     const response = await fetch(`${this._host}${this._loginPath}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ username, password }),
     });
     const responseData = await response.json();
-    if (response.status === 200)
-      return;
+    if (response.status === 200) return;
     else
       throw new Error(
         `failed to login:\n${JSON.stringify(responseData, null, 2)}`
@@ -301,14 +290,14 @@ export default class UsersApi {
   async logout(): Promise<void> {
     const response = await fetch(`${this._host}${this._logoutPath}`, {
       method: "POST",
+      credentials: "include",
     });
     const responseData = await response.json();
     if (response.status === 200) return;
-    else {
+    else
       throw new Error(
         `failed to logout:\n${JSON.stringify(responseData, null, 2)}`
       );
-    }
   }
 
   /**
@@ -327,9 +316,8 @@ export default class UsersApi {
   ): Promise<User> {
     const response = await fetch(`${this._host}${this._registerPath}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({
         username,
         email,
@@ -362,21 +350,19 @@ export default class UsersApi {
   ): Promise<User> {
     const response = await fetch(`${this._host}/register/wallet`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        username,
-        wallet,
-        signature,
-        timestamp,
-      }),
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ username, wallet, signature, timestamp }),
     });
     const responseData = await response.json();
     if (response.status === 201) return responseData;
     else
       throw new Error(
-        `failed to register with wallet:\n${JSON.stringify(responseData, null, 2)}`
+        `failed to register with wallet:\n${JSON.stringify(
+          responseData,
+          null,
+          2
+        )}`
       );
   }
 
@@ -394,14 +380,9 @@ export default class UsersApi {
   ): Promise<void> {
     const response = await fetch(`${this._host}/login/wallet`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        wallet,
-        signature,
-        timestamp,
-      }),
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ wallet, signature, timestamp }),
     });
     const responseData = await response.json();
     if (response.status === 200) return;
@@ -416,15 +397,25 @@ export default class UsersApi {
    * @param wallet - The wallet address
    * @returns A promise that resolves to the challenge data
    */
-  async getWalletChallenge(wallet: string): Promise<{ challenge: string; timestamp: string }> {
-    const response = await fetch(`${this._host}/wallet/challenge?wallet=${wallet}`, {
-      method: "GET",
-    });
+  async getWalletChallenge(
+    wallet: string
+  ): Promise<{ challenge: string; timestamp: string }> {
+    const response = await fetch(
+      `${this._host}/wallet/challenge?wallet=${wallet}`,
+      {
+        method: "GET",
+        credentials: "include",
+      }
+    );
     const responseData = await response.json();
     if (response.status === 200) return responseData;
     else
       throw new Error(
-        `failed to get wallet challenge:\n${JSON.stringify(responseData, null, 2)}`
+        `failed to get wallet challenge:\n${JSON.stringify(
+          responseData,
+          null,
+          2
+        )}`
       );
   }
 }
