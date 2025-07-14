@@ -10,7 +10,7 @@ export const signAccessToken = async (request, reply) => {
   const payload = {
     sub,
     username,
-    role: "access_token",
+    role: "accessToken",
     aud,
     iss: "jwt-service",
   };

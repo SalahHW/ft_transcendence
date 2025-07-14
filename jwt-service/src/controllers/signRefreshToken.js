@@ -10,7 +10,7 @@ export const signRefreshToken = async (request, reply) => {
   const payload = {
     sub,
     username,
-    role: "refresh_token",
+    role: "refreshToken",
     aud,
     iss: "jwt-service",
   };

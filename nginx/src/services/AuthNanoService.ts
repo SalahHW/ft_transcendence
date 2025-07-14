@@ -51,7 +51,8 @@ export default class AuthService {
     this._isLoggedIn = true;
     this._startRefreshLoop();
 
-    CacheManager.getInstance().triggerEvent({
+    const cacheManager = CacheManager.getInstance();
+    cacheManager.triggerEvent({
       type: "USER_LOGIN",
       data: { userId: this._user?.sub, username: this._user?.username },
     });
@@ -66,7 +67,8 @@ export default class AuthService {
       this._isLoggedIn = false;
       this._stopRefreshLoop();
 
-      CacheManager.getInstance().triggerEvent({
+      const cacheManager = CacheManager.getInstance();
+      cacheManager.triggerEvent({
         type: "USER_LOGOUT",
         data: { timestamp: Date.now() },
       });
@@ -104,6 +106,7 @@ export default class AuthService {
         throw new Error("Invalid challenge response");
 
       const signature = await this._signMessage(challenge, wallet);
+
       await this._usersApi.registerWithWallet(
         username,
         wallet,
@@ -115,82 +118,14 @@ export default class AuthService {
       this._isLoggedIn = true;
       this._startRefreshLoop();
 
-      CacheManager.getInstance().triggerEvent({
+      const cacheManager = CacheManager.getInstance();
+      cacheManager.triggerEvent({
         type: "USER_LOGIN",
         data: { userId: this._user?.sub, username: this._user?.username },
       });
     } catch (error) {
       console.error("registerWithWallet() error:", error);
       throw error;
-    }
-  }
-
-  public async loginWithWallet(): Promise<void> {
-    try {
-      const wallet = await this._getWalletAddress();
-      if (!wallet) throw new Error("No wallet detected");
-
-      const { challenge, timestamp } = await this._usersApi.getWalletChallenge(
-        wallet
-      );
-      if (!challenge || !timestamp)
-        throw new Error("Invalid challenge response");
-
-      const signature = await this._signMessage(challenge, wallet);
-      await this._usersApi.loginWithWallet(wallet, signature, timestamp);
-
-      this._user = await this._usersApi.getCurrentUser();
-      this._isLoggedIn = true;
-      this._startRefreshLoop();
-
-      CacheManager.getInstance().triggerEvent({
-        type: "USER_LOGIN",
-        data: { userId: this._user?.sub, username: this._user?.username },
-      });
-    } catch (error) {
-      console.error("loginWithWallet() error:", error);
-      throw error;
-    }
-  }
-
-  private _startRefreshLoop() {
-    if (this._refreshInterval) return;
-
-    this._refreshInterval = setInterval(async () => {
-      try {
-        const res = await fetch(`${this._host}/refreshAccessToken`, {
-          method: "POST",
-          credentials: "include",
-        });
-
-        if (res.status === 401) {
-          console.warn(
-            "[REFRESH] Refresh token invalid or expired. Logging out..."
-          );
-          await this.logout();
-          return;
-        }
-
-        if (!res.ok) {
-          const body = await res.text().catch(() => "");
-          console.warn(`[REFRESH] Failed with status ${res.status}: ${body}`);
-          return;
-        }
-
-        console.info("[REFRESH] Access token refreshed successfully");
-      } catch (err) {
-        console.error(
-          "[REFRESH] Network/server error during token refresh:",
-          err
-        );
-      }
-    }, 10_000); // 4 minutes
-  }
-
-  private _stopRefreshLoop() {
-    if (this._refreshInterval) {
-      clearInterval(this._refreshInterval);
-      this._refreshInterval = null;
     }
   }
 
@@ -216,5 +151,74 @@ export default class AuthService {
       params: [message, address],
     });
     return signature;
+  }
+
+  public async loginWithWallet(): Promise<void> {
+    try {
+      const wallet = await this._getWalletAddress();
+      if (!wallet) throw new Error("No wallet detected");
+
+      const { challenge, timestamp } = await this._usersApi.getWalletChallenge(
+        wallet
+      );
+      if (!challenge || !timestamp)
+        throw new Error("Invalid challenge response");
+
+      const signature = await this._signMessage(challenge, wallet);
+
+      await this._usersApi.loginWithWallet(wallet, signature, timestamp);
+
+      this._user = await this._usersApi.getCurrentUser();
+      this._isLoggedIn = true;
+      this._startRefreshLoop();
+
+      const cacheManager = CacheManager.getInstance();
+      cacheManager.triggerEvent({
+        type: "USER_LOGIN",
+        data: { userId: this._user?.sub, username: this._user?.username },
+      });
+    } catch (error) {
+      console.error("loginWithWallet() error:", error);
+      throw error;
+    }
+  }
+
+  private _startRefreshLoop() {
+    if (this._refreshInterval) return;
+
+    this._refreshInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`${this._host}/refreshAccessToken`, {
+          method: "POST",
+          credentials: "include",
+        });
+
+        if (res.status === 401) {
+          console.warn("Token expired. Logging out...");
+          await this.logout();
+          return;
+        }
+
+        if (!res.ok) {
+          const body = await res.text().catch(() => "");
+          console.warn(`[REFRESH] Failed with status ${res.status}: ${body}`);
+          return;
+        }
+
+        console.info("[REFRESH] Access token refreshed successfully");
+      } catch (err) {
+        console.error(
+          "[REFRESH] Network or server error during token refresh:",
+          err
+        );
+      }
+    }, 10_000); // 4 minutes
+  }
+
+  private _stopRefreshLoop() {
+    if (this._refreshInterval) {
+      clearInterval(this._refreshInterval);
+      this._refreshInterval = null;
+    }
   }
 }

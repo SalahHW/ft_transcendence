@@ -1,5 +1,5 @@
 export async function getMe(request, reply) {
-  const token = request.cookies?.token;
+  const token = request.cookies?.accessToken;
   if (!token) {
     return reply.code(401).send({ error: "Authentication token is missing" });
   }
@@ -13,7 +13,7 @@ export async function getMe(request, reply) {
 }
 
 export async function verifyAuthentication(request, reply) {
-  const token = request.cookies?.token;
+  const token = request.cookies?.accessToken;
 
   if (!token) {
     return reply.code(401).send({ error: "Authentication token is missing" });
@@ -43,11 +43,9 @@ export async function verifyIdentity(request, reply) {
 
     const authenticatedUserId = request.user.id;
     if (authenticatedUserId !== requestedUserId) {
-      return reply
-        .code(403)
-        .send({
-          error: "Access denied: You can only access your own resources",
-        });
+      return reply.code(403).send({
+        error: "Access denied: You can only access your own resources",
+      });
     }
   } catch (error) {
     return reply.code(500).send({ error: "Internal server error" });

@@ -35,7 +35,7 @@ export const loginUser = async (request, reply) => {
       username: user.username,
       aud: "users-service",
       exp: "5m",
-      type: "access_token",
+      type: "accessToken",
     });
 
     const refreshToken = await signRefreshToken({
@@ -43,7 +43,7 @@ export const loginUser = async (request, reply) => {
       username: user.username,
       aud: "users-service",
       exp: "7d",
-      type: "refresh_token",
+      type: "refreshToken",
     });
 
     setAuthCookies(reply, accessToken, refreshToken);
@@ -58,13 +58,13 @@ export const loginUser = async (request, reply) => {
 
 export const logoutUser = async (request, reply) => {
   reply
-    .clearCookie("access_token", {
+    .clearCookie("accessToken", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "None",
       path: "/",
     })
-    .clearCookie("refresh_token", {
+    .clearCookie("refreshToken", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "None",

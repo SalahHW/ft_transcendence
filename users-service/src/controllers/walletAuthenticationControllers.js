@@ -69,7 +69,7 @@ export async function registerWithWallet(request, reply) {
       username: user.username,
       aud: "users-service",
       exp: "5m",
-      type: "access_token",
+      type: "accessToken",
     });
 
     const refreshToken = await signRefreshToken({
@@ -77,7 +77,7 @@ export async function registerWithWallet(request, reply) {
       username: user.username,
       aud: "users-service",
       exp: "7d",
-      type: "refresh_token",
+      type: "refreshToken",
     });
 
     setAuthCookies(reply, accessToken, refreshToken);
@@ -136,7 +136,7 @@ export async function loginWithWallet(request, reply) {
       username: user.username,
       aud: "users-service",
       exp: "5m",
-      type: "access_token",
+      type: "accessToken",
     });
 
     const refreshToken = await signRefreshToken({
@@ -144,7 +144,7 @@ export async function loginWithWallet(request, reply) {
       username: user.username,
       aud: "users-service",
       exp: "7d",
-      type: "refresh_token",
+      type: "refreshToken",
     });
 
     setAuthCookies(reply, accessToken, refreshToken);

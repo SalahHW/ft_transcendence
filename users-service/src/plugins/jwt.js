@@ -45,7 +45,7 @@ export async function signRefreshToken(payload) {
         status: response.status,
         body: data,
       });
-      throw new Error(data?.error || "Failed to sign refresh_token");
+      throw new Error(data?.error || "Failed to sign refreshToken");
     }
 
     return data.token;
@@ -80,14 +80,14 @@ export async function verifyToken(token) {
 
 export function setAuthCookies(reply, accessToken, refreshToken) {
   reply
-    .setCookie("access_token", accessToken, {
+    .setCookie("accessToken", accessToken, {
       path: "/",
       httpOnly: true,
       sameSite: "None",
       secure: true,
       maxAge: 300,
     })
-    .setCookie("refresh_token", refreshToken, {
+    .setCookie("refreshToken", refreshToken, {
       path: "/",
       httpOnly: true,
       sameSite: "None",

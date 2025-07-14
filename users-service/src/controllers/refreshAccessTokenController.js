@@ -1,7 +1,7 @@
 import { verifyToken, signAccessToken } from "../plugins/jwt.js";
 
 export const refreshAccessToken = async (request, reply) => {
-  const refreshToken = request.cookies.refresh_token;
+  const refreshToken = request.cookies.refreshToken;
 
   if (!refreshToken) {
     return reply.code(401).send({ error: "Missing refresh token" });
@@ -17,7 +17,7 @@ export const refreshAccessToken = async (request, reply) => {
 
   const { valid, decoded, error } = verificationResult;
 
-  if (!valid || decoded?.role !== "refresh_token") {
+  if (!valid || decoded?.role !== "refreshToken") {
     console.warn("Refresh token invalid:", error || decoded);
     return reply.code(401).send({ error: "Invalid or expired refresh token" });
   }
@@ -29,7 +29,7 @@ export const refreshAccessToken = async (request, reply) => {
       aud: "users-service",
     });
 
-    reply.setCookie("access_token", accessToken, {
+    reply.setCookie("accessToken", accessToken, {
       path: "/",
       httpOnly: true,
       sameSite: "None",
