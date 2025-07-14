@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "fastify": "^5.3.3",
+    "@fastify/cookie": "^11.0.2",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7"
   }
