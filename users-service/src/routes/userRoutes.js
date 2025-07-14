@@ -1,14 +1,15 @@
 import * as userControllers from "../controllers/userControllers.js";
 import * as userSchemas from "../schemas/userSchemas.js";
+import * as meControllers from "../controllers/meControllers.js";
 import { refreshAccessToken } from "../controllers/refreshAccessTokenController.js";
 
 export default async function userRoutes(fastify) {
-  fastify.route({
-    method: "POST",
-    url: "/users",
-    schema: userSchemas.createUser,
-    handler: userControllers.createUser,
-  });
+  // fastify.route({
+  //   method: "POST",
+  //   url: "/users",
+  //   schema: userSchemas.createUser,
+  //   handler: userControllers.createUser,
+  // });
 
   fastify.route({
     method: "GET",
