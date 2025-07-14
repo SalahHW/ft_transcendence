@@ -18,6 +18,7 @@ export default class CacheManager {
     private _services: Map<string, CacheableService> = new Map();
     private _eventHandlers: Map<string, string[]> = new Map();
     private _cache: Map<string, { data: any; timestamp: number; ttl: number }> = new Map();
+    private _subscribers: Map<string, Function[]> = new Map();
 
     private constructor() {
         this._setupEventHandlers();
@@ -109,6 +110,15 @@ export default class CacheManager {
     public triggerEvent(event: CacheEvent): void {
         console.log(`[CacheManager] Triggering event: ${event.type}`, event.data);
         this.clearCachesForEvent(event.type);
+
+        const eventSubscribers = this._subscribers.get(event.type) || [];
+        eventSubscribers.forEach(callback => {
+            try {
+                callback(event.data);
+            } catch (error) {
+                console.error(`[CacheManager] Error in event subscriber for ${event.type}:`, error);
+            }
+        });
     }
 
     /**
@@ -132,6 +142,24 @@ export default class CacheManager {
         }
 
         return item.data;
+    }
+
+    public on(eventName: string, callback: Function): void {
+        if (!this._subscribers.has(eventName)) {
+            this._subscribers.set(eventName, []);
+        }
+        this._subscribers.get(eventName)!.push(callback);
+        console.log(`[CacheManager] Registered subscriber for event: ${eventName}`);
+    }
+
+    public off(eventName: string, callback: Function): void {
+        const subscribers = this._subscribers.get(eventName);
+        if (subscribers) {
+            const index = subscribers.indexOf(callback);
+            if (index > -1) {
+                subscribers.splice(index, 1);
+            }
+        }
     }
 
     public delete(key: string): void {
