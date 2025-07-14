@@ -10,14 +10,16 @@ export default async function friendshipRoutes(fastify) {
     schema: friendshipSchemas.createFriendship,
     preHandler: [
       jwtControllers.verifyAuthentication,
-      userControllers.verifyTargetUserExists
+      userControllers.verifyTargetUserExists,
     ],
     handler: friendshipControllers.createFriendship,
   });
 
   fastify.route({
     method: "GET",
-    url: "/friends/:userId",
+    url: "/friends",
+    schema: friendshipSchemas.readFriendship,
+    preHandler: jwtControllers.verifyAuthentication,
     handler: friendshipControllers.readFriendship,
   });
 
