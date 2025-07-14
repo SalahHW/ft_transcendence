@@ -3,7 +3,6 @@ import { createWriteStream } from "fs";
 import fs from "fs/promises";
 import { fileTypeFromFile } from "file-type";
 import path from "path";
-import { httpError } from "../errors/httpErrors.js";
 import { deleteFile } from "../utils/fileUtils.js";
 import { AVATARS_PATH, ALLOWED_MIME_TYPES } from "../config/config.js";
 
@@ -15,17 +14,22 @@ async function saveStream(fileStream, tempPath) {
   try {
     await pipeline(fileStream, createWriteStream(tempPath));
   } catch (err) {
-    throw httpError(`Failed to save stream to disk: ${err.message}`, 500);
+    throw new Error(`Failed to save stream to disk: ${err.message}`);
   }
 }
 
 async function validateMimeType(filePath) {
-  const type = await fileTypeFromFile(filePath);
-  if (!type || !ALLOWED_MIME_TYPES.includes(type.mime)) {
-    await deleteFile(filePath);
-    throw httpError(`Invalid file type: ${type?.mime ?? "unknown"}`, 415);
+  try {
+    const type = await fileTypeFromFile(filePath);
+    if (!type || !ALLOWED_MIME_TYPES.includes(type.mime)) {
+      await deleteFile(filePath);
+      throw new Error(`Invalid file type: ${type?.mime ?? "unknown"}`);
+    }
+    return type;
+  } catch (err) {
+    await deleteFile(filePath).catch(() => {});
+    throw err;
   }
-  return type;
 }
 
 async function finalizeUpload(tempPath, type) {
@@ -37,17 +41,42 @@ async function finalizeUpload(tempPath, type) {
     return { fileName: finalName, filePath: finalPath };
   } catch (err) {
     await deleteFile(tempPath);
-    throw httpError(`Failed to finalize uploaded file: ${err.message}`, 500);
+    throw new Error(`Failed to finalize uploaded file: ${err.message}`);
   }
 }
 
-export async function handleFileUpload(fileData) {
+export async function handleFileUpload(request, reply) {
+  const fileData = request.file;
   const tempName = generateTempFilename();
   const tempPath = path.join(AVATARS_PATH, tempName);
 
-  await saveStream(fileData.file, tempPath);
-  const type = await validateMimeType(tempPath);
-  const { fileName, filePath } = await finalizeUpload(tempPath, type);
+  try {
+    await saveStream(fileData.file, tempPath);
+  } catch (error) {
+    return reply
+      .code(500)
+      .send({ error: "Failed to save uploaded file to disk" });
+  }
 
-  return { fileName, filePath, mime: type.mime };
+  let type;
+  try {
+    type = await validateMimeType(tempPath);
+  } catch (error) {
+    return reply
+      .code(400)
+      .send({ error: "Invalid file type. Only images are allowed" });
+  }
+
+  let uploadResult;
+  try {
+    uploadResult = await finalizeUpload(tempPath, type);
+  } catch (error) {
+    return reply.code(500).send({ error: "Failed to finalize file upload" });
+  }
+
+  request.uploadedFile = {
+    fileName: uploadResult.fileName,
+    filePath: uploadResult.filePath,
+    mime: type.mime,
+  };
 }
