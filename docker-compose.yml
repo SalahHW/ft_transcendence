@@ -1,3 +1,4 @@
+# TODO: create a shared image used by all containers
 services:
   nginx:
     container_name: nginx
@@ -6,7 +7,6 @@ services:
       - "16443:443"
     networks:
       - transcendence
-    restart: on-failure
 
   redis:
     container_name: redis
@@ -16,8 +16,7 @@ services:
     networks:
       - transcendence
     volumes:
-      - redis-data:/data
-    restart: on-failure
+      - ./redis-data:/data
 
   users:
     container_name: users
@@ -28,8 +27,7 @@ services:
     networks:
       - transcendence
     volumes:
-      - users-db:/app/database
-    restart: on-failure
+      - ./users-service/database:/app/database
 
   jwt:
     container_name: jwt
@@ -39,7 +37,6 @@ services:
       - ./jwt-service/.env
     networks:
       - transcendence
-    restart: on-failure
 
   blockchain:
     container_name: blockchain
@@ -49,7 +46,6 @@ services:
       - ./blockchain-service/.env
     networks:
       - transcendence
-    restart: on-failure
 
   game:
     container_name: game
@@ -59,7 +55,6 @@ services:
       - ./game-service/.env
     networks:
       - transcendence
-    restart: on-failure
 
   avatars:
     container_name: avatars
@@ -70,9 +65,8 @@ services:
     networks:
       - transcendence
     volumes:
-      - avatars-db:/app/database
-      - avatars-store:/app/avatars
-    restart: on-failure
+      - ./avatars-service/database:/app/database
+      - ./avatars-service/avatars:/app/avatars
 
   friends:
     container_name: friends
@@ -82,8 +76,7 @@ services:
     networks:
       - transcendence
     volumes:
-      - friends-db:/app/database
-    restart: on-failure
+      - ./friends-service/database:/app/database
 
   presences:
     container_name: presences
@@ -92,14 +85,6 @@ services:
       - ./.env
     networks:
       - transcendence
-    restart: on-failure
 
 networks:
   transcendence:
-
-volumes:
-  redis-data:
-  users-db:
-  avatars-db:
-  avatars-store:
-  friends-db:
