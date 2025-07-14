@@ -23,9 +23,9 @@ export async function createFriendship(request, reply) {
 }
 
 export async function readFriendship(request, reply) {
-  try {
-    const userId = request.params.userId;
+  const userId = request.user.sub;
 
+  try {
     const friendships = await friendshipModels.readFriendship(userId);
 
     if (friendships.length === 0) {
