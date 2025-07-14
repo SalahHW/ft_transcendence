@@ -1,14 +1,14 @@
-import AuthNanoService from "../../../services/AuthNanoService.js";
+import AuthService from "../../../services/AuthNanoService.js";
 import { buttonHTML } from "../../../components/button.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 
 export default class RegisterUserForm {
 	private _container: HTMLElement;
-	private _authService: AuthNanoService;
+	private _authService: AuthService;
 
 	constructor(containerId: string) {
 		this._container = document.getElementById(containerId) as HTMLElement;
-		this._authService = AuthNanoService.getInstance();
+		this._authService = AuthService.getInstance();
 	}
 
 	async render(): Promise<void> {

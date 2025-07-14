@@ -1,9 +1,11 @@
 import FriendsService, { EnrichedFriend } from "../../../services/FriendsService.js";
 import UsersApi from "../../../services/api/user.js";
-import AuthNanoService from "../../../services/AuthNanoService.js";
+import AuthService from "../../../services/AuthNanoService.js";
 import CacheManager from "../../../services/CacheManager.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 import { createWinRateDonutChart } from "./WinRateDonutChart.js";
+import PresenceService, { PresenceCallback } from "../../../services/webSocket/PresenceService.js";
+
 
 export class FriendListView {
     private static isAddFriendExpanded: boolean = false;
@@ -11,8 +13,10 @@ export class FriendListView {
     private static friendsService = FriendsService.getInstance();
     private static usersService = new UsersApi();
     private static isLoading: boolean = true;
-    private static authNanoService = AuthNanoService.getInstance();
+    private static authNanoService = AuthService.getInstance();
     private static cacheManager = CacheManager.getInstance();
+    private static presenceService = PresenceService.getInstance();
+    private static presenceCallback: PresenceCallback | null = null;
 
     public static async render(): Promise<string> {
         try {
@@ -84,13 +88,15 @@ export class FriendListView {
     }
 
     private static createFriendListItem(friend: EnrichedFriend): string {
-        const statusColor = friend.status === 'online' ? UI_THEME.colors.green.light : UI_THEME.colors.red.light;
+        const isOnline = this.presenceService.isUserOnline(friend.id);
+        const statusColor = isOnline ? UI_THEME.colors.green.light : UI_THEME.colors.red.light;
+
         return /* HTML */`
-            <div class="flex items-center justify-between p-2 rounded-lg mb-2 bg-black/20 overflow-hidden">
+            <div data-friend-id="${friend.id}" class="flex items-center justify-between p-2 rounded-lg mb-2 bg-black/20 overflow-hidden">
                 <div class="flex items-center gap-3 min-w-0">
                     <div class="relative flex-shrink-0">
                         <img src="${friend.avatarUrl}" alt="${friend.username} avatar" class="text-white w-12 h-12 rounded-lg object-cover">
-                        <span class="absolute bottom-0 right-0 block h-3 w-3 rounded-full border-2 border-gray-800" style="background-color: ${statusColor}"></span>
+                        <span class="status-indicator absolute bottom-0 right-0 block h-3 w-3 rounded-full border-2 border-gray-800" style="background-color: ${statusColor}"></span>
                     </div>
                     <span class="text-white font-medium truncate">${friend.username}</span>
                 </div>
@@ -133,6 +139,32 @@ export class FriendListView {
 
     public static addEventListeners(): void {
         this.updateAddFriendEventListeners();
+        this.setupPresenceListener();
+    }
+
+    private static setupPresenceListener(): void {
+        if (this.presenceCallback) {
+            this.presenceService.offPresenceChange(this.presenceCallback);
+        }
+
+        this.presenceCallback = (userId, status) => {
+            this.updateFriendStatus(userId, status);
+        };
+
+        this.presenceService.onPresenceChange(this.presenceCallback);
+    }
+
+    private static updateFriendStatus(userId: number, status: 'online' | 'offline'): void {
+        const friendElement = document.querySelector(`[data-friend-id="${userId}"]`);
+        if (!friendElement) return;
+
+        const statusIndicator = friendElement.querySelector('.status-indicator');
+        if (statusIndicator) {
+            const statusColor = status === 'online'
+                ? UI_THEME.colors.green.light
+                : UI_THEME.colors.red.light;
+            (statusIndicator as HTMLElement).style.backgroundColor = statusColor;
+        }
     }
 
     private static updateAddFriendEventListeners(): void {
@@ -266,6 +298,13 @@ export class FriendListView {
         if (container) {
             container.innerHTML = await this.render();
             this.addEventListeners();
+        }
+    }
+
+    public static cleanup(): void {
+        if (this.presenceCallback) {
+            this.presenceService.offPresenceChange(this.presenceCallback);
+            this.presenceCallback = null;
         }
     }
 

@@ -1,8 +1,8 @@
 import UsersApi, { JwtUserPayload } from "../services/api/user.js";
 import CacheManager from './CacheManager.js';
 
-export default class AuthNanoService {
-	private static _instance: AuthNanoService;
+export default class AuthService {
+	private static _instance: AuthService;
 	private _usersApi: UsersApi = new UsersApi();
 	private _user: JwtUserPayload | null = null;
 	private _isLoggedIn: boolean | null = null;
@@ -11,14 +11,14 @@ export default class AuthNanoService {
 
 	private constructor() {}
 
-	public static getInstance(): AuthNanoService {
-		if (!AuthNanoService._instance) {
-			AuthNanoService._instance = new AuthNanoService();
+	public static getInstance(): AuthService {
+		if (!AuthService._instance) {
+			AuthService._instance = new AuthService();
 		}
-		return AuthNanoService._instance;
+		return AuthService._instance;
 	}
 
-	private async _ensureAuthStatusChecked(): Promise<void> {
+	public async _ensureAuthStatusChecked(): Promise<void> {
 		if (this._isLoggedIn === null) {
 			try {
 				this._user = await this._usersApi.getCurrentUser();
