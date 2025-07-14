@@ -171,7 +171,6 @@ export function updatePowerUpStatus(isFPSMode: boolean, powerUpState?: {
     const powerUpElement = document.querySelector('.text-xl.font-medium.text-gray-300') as HTMLElement;
     
     if (!powerUpElement) {
-        console.warn('PowerUp status element not found');
         return;
     }
     

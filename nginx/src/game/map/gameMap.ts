@@ -15,6 +15,7 @@ class gameMap {
     public shadowGenerator: BABYLON.ShadowGenerator | undefined;
     public skyBox: BABYLON.Mesh | undefined;
     public pipeline: BABYLON.DefaultRenderingPipeline | undefined;
+    public starMeshes: BABYLON.Mesh[] = [];
 
     constructor() {
         this.engine = undefined;
@@ -27,6 +28,7 @@ class gameMap {
         this.shadowGenerator = undefined;
         this.skyBox = undefined;
         this.pipeline = undefined;
+        this.starMeshes = [];
     }
 
     createMap(): void {
@@ -40,7 +42,86 @@ class gameMap {
         this.setUpPov();
         this.setUpDof();
         this.setUpLight();
-        this.createBlackBackground();
+        this.createStarField();
+    }
+
+    createStarField(): void {
+        if (!this.scene) return;
+        
+        // Ensure the scene has a proper black background
+        this.scene.clearColor = new BABYLON.Color4(0, 0, 0, 1);
+        
+        // Create star material
+        const starMaterial = new BABYLON.StandardMaterial("starMaterial", this.scene);
+        starMaterial.emissiveColor = new BABYLON.Color3(1, 1, 1);
+        starMaterial.disableLighting = true;
+
+        // Create individual star meshes for better visibility
+        for (let i = 0; i < 1000; i++) {
+            const star = BABYLON.MeshBuilder.CreateSphere(`star_${i}`, {
+                diameter: 2 + Math.random() * 3, // Random size between 2-5
+                segments: 8
+            }, this.scene);
+            
+            // Position stars in a large sphere around the game area
+            const radius = 400 + Math.random() * 1600; // Distance from center: 400-2000
+            const theta = Math.random() * Math.PI * 2; // Random angle around Y axis
+            const phi = Math.acos(2 * Math.random() - 1); // Random angle from Y axis
+            
+            star.position = new BABYLON.Vector3(
+                radius * Math.sin(phi) * Math.cos(theta),
+                radius * Math.cos(phi),
+                radius * Math.sin(phi) * Math.sin(theta)
+            );
+            
+            // Apply material
+            star.material = starMaterial;
+            
+            // Store reference for cleanup
+            this.starMeshes.push(star);
+        }
+        
+        // Create rotating star field animation
+        this.createStarFieldRotation();
+        
+        console.log('⭐ Star field created successfully with 1000 rotating stars');
+    }
+
+    createStarFieldRotation(): void {
+        if (!this.scene) return;
+        
+        // Create a parent mesh to rotate all stars together
+        const starFieldParent = BABYLON.MeshBuilder.CreateBox("starFieldParent", { size: 0.1 }, this.scene);
+        starFieldParent.isVisible = false; // Make parent invisible
+        
+        // Parent all stars to the rotating parent
+        this.starMeshes.forEach(star => {
+            star.setParent(starFieldParent);
+        });
+        
+        // Create rotation animation
+        const rotationAnimation = new BABYLON.Animation(
+            "starFieldRotation",
+            "rotation.y",
+            30, // 30 FPS
+            BABYLON.Animation.ANIMATIONTYPE_FLOAT,
+            BABYLON.Animation.ANIMATIONLOOPMODE_CYCLE
+        );
+        
+        // Define keyframes for smooth rotation - much slower
+        const keyFrames = [
+            { frame: 0, value: 0 },
+            { frame: 4200, value: Math.PI * 2 } // Full 360-degree rotation over 60 seconds
+        ];
+        rotationAnimation.setKeys(keyFrames);
+        
+        // Apply animation to parent mesh
+        starFieldParent.animations = [rotationAnimation];
+        
+        // Start the animation
+        this.scene.beginAnimation(starFieldParent, 0, 4200, true);
+        
+        console.log('🔄 Star field rotation animation started');
     }
 
     setUpLight(): void {
@@ -313,6 +394,31 @@ class gameMap {
             this.engine.stopRenderLoop();
         }
 
+        // Dispose star field
+        if (this.starMeshes.length > 0) {
+            // Find and dispose of the parent mesh first
+            const starFieldParent = this.scene?.getMeshByName("starFieldParent");
+            if (starFieldParent) {
+                try {
+                    starFieldParent.dispose();
+                    console.log('🔄 Star field parent disposed');
+                } catch (e) {
+                    console.warn('Warning during star field parent disposal:', e);
+                }
+            }
+            
+            // Dispose individual star meshes
+            this.starMeshes.forEach(star => {
+                try {
+                    star.dispose();
+                } catch (e) {
+                    console.warn(`Warning during star mesh disposal: ${star.name}`, e);
+                }
+            });
+            this.starMeshes = [];
+            console.log('⭐ All star meshes disposed');
+        }
+
         // Dispose scene and all its resources
         if (this.scene) {
             try {
@@ -344,6 +450,7 @@ class gameMap {
         this.shadowGenerator = undefined;
         this.skyBox = undefined;
         this.pipeline = undefined;
+        this.starMeshes = [];
         
         console.log('🗑️ GameMap disposal completed');
     }
