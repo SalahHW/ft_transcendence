@@ -2,7 +2,7 @@ import Wheel from "./components/Wheel.js";
 import Router from "./router/Router.js";
 import AuthService from "./services/AuthNanoService.js";
 import { initializeServices } from "./services/serviceInitializer.js";
-import Presence from "./services/webSocket/presence.js";
+import Presence from "./services/webSocket/PresenceService.js";
 
 /**
  * Main application class.

@@ -24,7 +24,7 @@ export default class PresenceService {
   private _reconnectAttempts = 0;
   private readonly _maxReconnectAttempts = 5;
   private readonly _reconnectDelay = 1000;
-  private _url = `${window.location.protocol}//${window.location.host}/presences'`;
+  private _url = `${window.location.protocol}//${window.location.host}/presences`;
 
   private _connectedUsers = new Set<number>();
   private _callbacks: PresenceCallback[] = [];
@@ -54,6 +54,7 @@ export default class PresenceService {
         return;
       }
 
+      console.log(`[PresenceService] Attempting to connect to ${this._url} for user ${jwtPayload.sub}`);
       this._webSocket = new WebSocket(this._url);
       this._setupWebSocketHandlers(jwtPayload.sub);
 
@@ -72,6 +73,7 @@ export default class PresenceService {
     };
 
     this._webSocket.onmessage = (event) => {
+      console.log('[PresenceService] Received data from server:', event.data);
       try {
         const data: Payload = JSON.parse(event.data);
         this._handlePresenceEvent(data);
@@ -95,16 +97,19 @@ export default class PresenceService {
   }
 
   private _handlePresenceEvent(event: Payload): void {
+    console.log(`[PresenceService] Handling event of type "${event.type}"`, event);
     switch (event.type) {
       case 'connection_success':
         this._connectedUsers = new Set(event.connectedUsers);
         this._connectedUsers.forEach(id => this._notifyCallbacks(id, 'online'));
         break;
       case 'user_connected':
+        console.log(`[PresenceService] User ${event.userId} has come online.`);
         this._connectedUsers.add(event.userId);
         this._notifyCallbacks(event.userId, 'online');
         break;
       case 'user_disconnected':
+        console.log(`[PresenceService] User ${event.userId} has gone offline.`);
         this._connectedUsers.delete(event.userId);
         this._notifyCallbacks(event.userId, 'offline');
         break;

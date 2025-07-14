@@ -20,9 +20,8 @@ export function initializeServices(): void {
         const authService = AuthService.getInstance();
 
         authService.isLoggedIn().then(loggedIn => {
-            if (loggedIn) {
+            if (loggedIn)
                 presenceService.connect();
-            }
         });
 
         console.log("Services initialized and registered with CacheManager.");
