@@ -16,7 +16,7 @@ services:
     networks:
       - transcendence
     volumes:
-      - ./redis-data:/data
+      - ./redis-service/data:/data
 
   users:
     container_name: users
