@@ -1,13 +1,20 @@
 import * as avatarSchemas from "../schemas/avatarSchemas.js";
 import * as avatarControllers from "../controllers/avatarControllers.js";
 import * as jwtControllers from "../controllers/jwtControllers.js";
+import * as multipartControllers from "../controllers/multipartControllers.js";
+import * as uploadControllers from "../controllers/uploadControllers.js";
 
 export default async function avatarRoutes(fastify) {
   fastify.route({
     method: "POST",
     url: "/avatars",
     schema: avatarSchemas.uploadAvatar,
-    preHandler: [jwtControllers.verifyAuthentication],
+    preHandler: [
+      jwtControllers.verifyAuthentication,
+      avatarControllers.avatarNotExists,
+      multipartControllers.extractFile,
+      uploadControllers.handleFileUpload,
+    ],
     handler: avatarControllers.createAvatar,
   });
 
@@ -22,7 +29,11 @@ export default async function avatarRoutes(fastify) {
     method: "PUT",
     url: "/avatars",
     schema: avatarSchemas.updateAvatar,
-    preHandler: [jwtControllers.verifyAuthentication],
+    preHandler: [
+      jwtControllers.verifyAuthentication,
+      multipartControllers.extractFile,
+      uploadControllers.handleFileUpload,
+    ],
     handler: avatarControllers.updateAvatar,
   });
 
