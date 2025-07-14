@@ -26,6 +26,7 @@ export default class PresenceService {
   private readonly _maxReconnectAttempts = 5;
   private readonly _reconnectDelay = 1000;
   private _url = `${window.location.protocol}//${window.location.host}/presences`;
+  private _intentionalDisconnect = false;
 
   private _connectedUsers = new Set<number>();
   private _callbacks: PresenceCallback[] = [];
@@ -60,6 +61,7 @@ export default class PresenceService {
         return;
     }
 
+    this._intentionalDisconnect = false;
     try {
       const jwtPayload = await this._authService.getJwtPayload();
       if (!jwtPayload?.sub) {
@@ -100,7 +102,9 @@ export default class PresenceService {
       this._webSocket = null;
       this._connectedUsers.forEach(id => this._notifyCallbacks(id, 'offline'));
       this._connectedUsers.clear();
-      this._scheduleReconnect();
+      if (!this._intentionalDisconnect) {
+        this._scheduleReconnect();
+      }
     };
 
     this._webSocket.onerror = (error) => {
@@ -154,6 +158,7 @@ export default class PresenceService {
 
   public disconnect(): void {
     if (this._webSocket) {
+      this._intentionalDisconnect = true;
       this._reconnectAttempts = this._maxReconnectAttempts;
       this._webSocket.close();
     }
@@ -165,6 +170,13 @@ export default class PresenceService {
 
   public onPresenceChange(callback: PresenceCallback): void {
     this._callbacks.push(callback);
+    this._connectedUsers.forEach(userId => {
+      try {
+        callback(userId, 'online');
+      } catch (error) {
+        console.error('[PresenceService] Error in initial presence notification for new callback:', error);
+      }
+    });
   }
 
   public offPresenceChange(callback: PresenceCallback): void {
