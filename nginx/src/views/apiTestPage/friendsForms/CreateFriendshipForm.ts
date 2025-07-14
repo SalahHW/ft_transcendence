@@ -40,13 +40,12 @@ export default class CreateFriendshipForm {
 				return;
 			}
 
-			const userId = parseInt(userIdInput.value);
 			const friendId = parseInt(friendIdInput.value);
 
 			try {
-				await this._friendsService.createFriendship(userId, friendId);
+				await this._friendsService.createFriendship(friendId);
 				form.reset();
-				console.log(`Friendship created between user ${userId} and user ${friendId}`);
+				console.log(`Friendship created between user ${userIdInput.value} and user ${friendIdInput.value}`);
 			} catch (error) {
 				if (error instanceof Error)
 					console.error(error.message);

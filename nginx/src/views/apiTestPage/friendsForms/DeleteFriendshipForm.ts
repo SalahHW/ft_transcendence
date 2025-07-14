@@ -40,13 +40,12 @@ export default class DeleteFriendshipForm {
 				return;
 			}
 
-			const userId = parseInt(userIdInput.value);
 			const friendId = parseInt(friendIdInput.value);
 
 			try {
-				await this._friendsService.deleteFriendship(userId, friendId);
+				await this._friendsService.deleteFriendship(friendId);
 				form.reset();
-				console.log(`Friendship deleted between user ${userId} and user ${friendId}`);
+				console.log(`Friendship deleted between user ${userIdInput.value} and user ${friendIdInput.value}`);
 			} catch (error) {
 				if (error instanceof Error)
 					console.error(error.message);
