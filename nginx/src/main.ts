@@ -20,12 +20,13 @@ class App {
       initializeServices();
       const router = Router.getInstance();
       router.init();
-    }
-    catch (error) {
+    } catch (error) {
       console.log(error);
     }
 
     new Wheel("wheel-container");
+    const auth = AuthService.getInstance();
+    await auth.isLoggedIn();
 
     console.log("Application initialized successfully.");
   }
