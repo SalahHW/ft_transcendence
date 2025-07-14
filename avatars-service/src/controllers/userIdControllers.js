@@ -1,18 +1,21 @@
-import { httpError } from "../errors/httpErrors.js";
 import * as userServices from "../services/userServices.js";
 
-export async function validateUserId(request) {
-  const { id } = request.params;
+export async function verifyUserExists(request, reply) {
+  const userId = request.user.sub;
 
-  const userId = parseInt(id, 10);
-  if (isNaN(userId) || userId <= 0) {
-    throw new Error("Invalid user ID");
-  }
-
+  let response;
   try {
-    await userServices.userExists(userId);
+    response = await userServices.userExists(userId);
   } catch (err) {
-    throw httpError(err.message, 503);
+    if (err.status === 404) {
+      return reply.code(404).send({ error: "User not found" });
+    }
+    return reply.code(503).send({
+      error: "Users service temporarily unavailable",
+    });
   }
-  return userId;
+
+  if (!response.ok) {
+    return reply.code(404).send({ error: "User not found" });
+  }
 }
