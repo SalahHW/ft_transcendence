@@ -24,8 +24,6 @@ class App {
     }
 
     new Wheel("wheel-container");
-    const auth = AuthService.getInstance();
-    await auth.isLoggedIn();
 
     console.log("Application initialized successfully.");
   }
