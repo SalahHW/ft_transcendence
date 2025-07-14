@@ -181,11 +181,23 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
 
     console.log(`🏆 Tournament match pre-game forfeit: ${remainingPlayer.username} wins, ${disconnectedPlayer.username} disconnected`);
 
+    // ⭐ FIX: Capture scores before disposing ball
+    let winnerScore = null;
+    let loserScore = null;
+    
+    if (room.ball) {
+      const isRemainingPlayer1 = remainingPlayer.id === room.players[0].id;
+      const isDisconnectedPlayer1 = disconnectedPlayer.id === room.players[0].id;
+      
+      winnerScore = GAME_CONFIG.WINNING_SCORE; // Winner always gets full score
+      loserScore = isDisconnectedPlayer1 ? room.ball.player1.playerScore : room.ball.player2.playerScore;
+    }
+
     // ⭐ CRITICAL FIX: Immediately dispose ball to prevent it from moving during finals
     await this.immediatelyDisposeBall(room, roomId);
 
-    // Award forfeit win and handle tournament advancement
-    await this.awardTournamentForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'pre_game');
+    // Award forfeit win and handle tournament advancement with captured scores
+    await this.awardTournamentForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'pre_game', winnerScore, loserScore);
   }
 
   /**
@@ -203,11 +215,24 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       return;
     }
     console.log(`🔴 Tournament match in-game forfeit: ${remainingPlayer.username} wins, ${disconnectedPlayer.username} disconnected`);
+    
+    // ⭐ FIX: Capture scores before disposing ball
+    let winnerScore = null;
+    let loserScore = null;
+    
+    if (room.ball) {
+      const isRemainingPlayer1 = remainingPlayer.id === room.players[0].id;
+      const isDisconnectedPlayer1 = disconnectedPlayer.id === room.players[0].id;
+      
+      winnerScore = GAME_CONFIG.WINNING_SCORE; // Winner always gets full score
+      loserScore = isDisconnectedPlayer1 ? room.ball.player1.playerScore : room.ball.player2.playerScore;
+    }
+    
     // ⭐ CRITICAL FIX: Immediately dispose ball to prevent it from moving during finals
     await this.immediatelyDisposeBall(room, roomId);
 
-    // Award forfeit win and handle tournament advancement
-    await this.awardTournamentForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'in_game');
+    // Award forfeit win and handle tournament advancement with captured scores
+    await this.awardTournamentForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'in_game', winnerScore, loserScore);
   }
 
   /**
@@ -235,7 +260,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   /**
    * Award forfeit win to remaining player in tournament matches
    */
-  async awardTournamentForfeitWin(room, roomId, winner, loser, reason, context) {
+  async awardTournamentForfeitWin(room, roomId, winner, loser, reason, context, winnerScore = null, loserScore = null) {
     console.log(`🏆 Awarding tournament forfeit win: ${winner.username} defeats ${loser.username} in ${room.metadata?.roomType}`);
     
     // Update disconnection tracking in waiting room data
@@ -257,7 +282,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     room.isGameOver = true;
     
     // Create tournament match data
-    const matchData = await this.createTournamentForfeitMatchData(room, roomId, winner, loser, reason, context);
+    const matchData = await this.createTournamentForfeitMatchData(room, roomId, winner, loser, reason, context, winnerScore, loserScore);
     
     // Log the tournament forfeit
     LogUtils.logMatchCompletion(matchData);
@@ -340,7 +365,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       console.log(`🏆 Found waiting loser: ${waitingLoser.username} (${waitingLoser.id})`);
       
       // Create match data for forfeit winner (1st place)
-      const winnerMatchData = await this.createTournamentForfeitMatchData(room, roomId, forfeitWinner, forfeitLoser, reason, context);
+      const winnerMatchData = await this.createTournamentForfeitMatchData(room, roomId, forfeitWinner, forfeitLoser, reason, context, null, null);
       
       // Create match data for waiting loser (3rd place)
       const thirdPlaceMatchData = await this.createTournamentThirdPlaceMatchData(room, roomId, waitingLoser, reason, context);
@@ -481,7 +506,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   /**
    * Create match data for tournament forfeit scenarios
    */
-  async createTournamentForfeitMatchData(room, roomId, winner, loser, reason, context) {
+  async createTournamentForfeitMatchData(room, roomId, winner, loser, reason, context, winnerScore = null, loserScore = null) {
     // Get tournament waiting room data for accurate player counts
     const waitingRoomId = room.metadata?.waitingRoomId;
     let numberOfDisconnectedPlayers = 0;
@@ -535,6 +560,24 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     }
     const matchStartTime = room.startTime || matchEndTime;
     
+    // ⭐ FIX: Use provided scores or calculate correct scores based on player positions
+    let finalWinnerScore = winnerScore;
+    let finalLoserScore = loserScore;
+    
+    if (finalWinnerScore === null || finalLoserScore === null) {
+      // Calculate scores based on which player is which
+      if (room.ball) {
+        const isWinnerPlayer1 = winner.id === room.players[0].id;
+        const isLoserPlayer1 = loser.id === room.players[0].id;
+        
+        finalWinnerScore = finalWinnerScore ?? GAME_CONFIG.WINNING_SCORE; // Winner always gets full score
+        finalLoserScore = finalLoserScore ?? ((isLoserPlayer1 ? room.ball.player1.playerScore : room.ball.player2.playerScore) || 0);
+      } else {
+        finalWinnerScore = finalWinnerScore ?? GAME_CONFIG.WINNING_SCORE;
+        finalLoserScore = finalLoserScore ?? 0;
+      }
+    }
+    
     return {
       roomId,
       matchType: this.matchType,
@@ -547,16 +590,16 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       winner: {
         id: winner.id,
         username: winner.username || 'Anonymous',
-        score: GAME_CONFIG.WINNING_SCORE // Award full score for forfeit win
+        score: finalWinnerScore
       },
       loser: {
         id: loser.id,
         username: loser.username || 'Anonymous',
-        score: room.ball?.player2?.playerScore || 0
+        score: finalLoserScore
       },
       gameStats: {
         totalRebounds: room.ball?.rebounds || 0,
-        finalScore: `${GAME_CONFIG.WINNING_SCORE}-${room.ball?.player2?.playerScore || 0}`,
+        finalScore: `${finalWinnerScore}-${finalLoserScore}`,
         ballSpeed: room.ball?.speed || 0,
         lastHitBy: room.ball?.wasHitByPlayer || null,
         forfeitReason: this.getTournamentForfeitReasonText(reason, context, room.metadata?.roomType),
@@ -589,16 +632,16 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       winner: {
         id: waitingLoser.id,
         username: waitingLoser.username || 'Anonymous',
-        score: 0 // 3rd place gets 0 score
+        score: 1 // 3rd place gets 1 point instead of 0
       },
       loser: {
         id: waitingLoser.id,
         username: waitingLoser.username || 'Anonymous',
-        score: 0 // 3rd place gets 0 score
+        score: 1 // 3rd place gets 1 point instead of 0
       },
       gameStats: {
         totalRebounds: 0,
-        finalScore: '0-0',
+        finalScore: '1-1',
         ballSpeed: 0,
         lastHitBy: null,
         forfeitReason: this.getTournamentForfeitReasonText(reason, context, 'loser_final'),
