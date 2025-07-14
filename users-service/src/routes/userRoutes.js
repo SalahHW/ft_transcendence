@@ -1,4 +1,5 @@
 import * as userControllers from "../controllers/userControllers.js";
+import { refreshAccessToken } from "../controllers/refreshAccessTokenController.js";
 
 export default async function userRoutes(fastify) {
   fastify.route({
@@ -261,4 +262,10 @@ export default async function userRoutes(fastify) {
   //   },
   //   handler: userControllers.deleteUser,
   // });
+
+  fastify.route({
+    method: "POST",
+    url: "/refreshAccessToken",
+    handler: refreshAccessToken,
+  });
 }
