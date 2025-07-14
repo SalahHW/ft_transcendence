@@ -6,6 +6,7 @@ import { gameStateManager } from '../game/GameStateManager.js';
 import { gameEngine } from '../game/GameEngine.js';
 import { roomManager } from '../room/RoomManager.js';
 import { tournamentManager } from '../tournament/TournamentManager.js';
+import { blockchainService } from '../services/blockchainService.js';
 
 // Constants for paddle movement
 const PADDLE_PULSE_DISTANCE = 1.0;
@@ -67,9 +68,19 @@ export async function registerApiRoutes(fastify) {
   fastify.post('/api/players', async (request, reply) => {
     try {
       console.log('API request: POST /api/players');
-      const { username } = request.body || {};
+      const { username, userId } = request.body || {};
       
       const player = playerManager.registerPlayerWithUsername(username);
+      
+      // Fetch and cache wallet address if userId is provided
+      if (userId) {
+        try {
+          await blockchainService.getUserWallet(userId);
+          console.log(`📱 Fetched wallet for user ${userId} during 1v1 registration`);
+        } catch (error) {
+          console.warn(`⚠️ Failed to fetch wallet for user ${userId}:`, error.message);
+        }
+      }
       
       console.log(`Created player ${player.id} with username ${username}`);
       return reply.code(201).send({
@@ -90,12 +101,22 @@ export async function registerApiRoutes(fastify) {
   fastify.post('/api/tournaments', async (request, reply) => {
     try {
       console.log('🎯 TOURNAMENT BUTTON CLICKED: API request: POST /api/tournaments');
-      const { username } = request.body || {};
+      const { username, userId } = request.body || {};
       
       console.log(`🏆 Player ${username} clicked the tournament button!`);
       
       // Register player first
       const player = playerManager.registerPlayerWithUsername(username);
+      
+      // Fetch and cache wallet address if userId is provided
+      if (userId) {
+        try {
+          await blockchainService.getUserWallet(userId);
+          console.log(`📱 Fetched wallet for user ${userId} during tournament registration`);
+        } catch (error) {
+          console.warn(`⚠️ Failed to fetch wallet for user ${userId}:`, error.message);
+        }
+      }
       
       // Add player to tournament waiting room
       let tournamentData;
@@ -584,7 +605,15 @@ async function notifyService(serviceName, url, matchData) {
 // Export function to call external services from gameState
 export async function reportMatchResultsToAPI(matchData) {
   try {
-    // Forward match data to external services only
+    // Report to blockchain service
+    try {
+      await blockchainService.reportMatch(matchData);
+      console.log(`✅ Match reported to blockchain successfully`);
+    } catch (blockchainError) {
+      console.error('❌ Failed to report match to blockchain:', blockchainError.message);
+    }
+    
+    // Forward match data to other external services
     const results = await notifyOtherServices(matchData);
     
     // Check if any notifications succeeded
@@ -596,5 +625,20 @@ export async function reportMatchResultsToAPI(matchData) {
     }
   } catch (error) {
     console.error('❌ Failed to process match results:', error.message);
+  }
+}
+
+// Export function to report tournament completion to blockchain
+export async function reportTournamentResultsToAPI(tournamentData) {
+  try {
+    // Report to blockchain service
+    try {
+      await blockchainService.reportTournament(tournamentData);
+      console.log(`✅ Tournament reported to blockchain successfully`);
+    } catch (blockchainError) {
+      console.error('❌ Failed to report tournament to blockchain:', blockchainError.message);
+    }
+  } catch (error) {
+    console.error('❌ Failed to process tournament results:', error.message);
   }
 }

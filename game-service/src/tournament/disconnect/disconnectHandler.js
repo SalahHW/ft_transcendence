@@ -13,6 +13,7 @@ import { reportMatchResultsToAPI } from '../../server/api.js';
 import { GAME_CONFIG } from '../../core/constants.js';
 import { TournamentRoomTypes, TournamentPhases } from '../constants.js';
 import { tournamentManager } from '../TournamentManager.js';
+import { blockchainService } from '../../services/blockchainService.js';
 
 /**
  * Tournament Match Disconnect Handler
@@ -114,6 +115,9 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     
     const room = gameStateManager.getRoom(roomId);
     if (!room) return;
+
+    // Clear wallet cache for disconnected player
+    blockchainService.clearUserWalletCache(playerId);
 
     // DEBUG: Log room state to understand what's happening
     console.log(`🏆 DEBUG: Room ${roomId} state - gameStarted: ${room.gameStarted}, ready: ${room.ready}, players: ${room.players.length}`);
@@ -578,8 +582,29 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       }
     }
     
+    // Generate match ID for blockchain reporting
+    let matchId = null;
+    try {
+      const { blockchainService } = await import('../../services/blockchainService.js');
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Match ID generation timeout')), 3000)
+      );
+      matchId = await Promise.race([
+        blockchainService.generateMatchId(),
+        timeoutPromise
+      ]);
+      console.log(`🎯 Generated match ID ${matchId} for tournament forfeit in room ${roomId}`);
+    } catch (error) {
+      console.error('❌ Failed to generate match ID for tournament forfeit:', error.message);
+      // Use timestamp as fallback ID
+      matchId = Math.floor(Date.now() / 1000) % 1000000;
+      console.log(`🎯 Using fallback match ID ${matchId} for tournament forfeit in room ${roomId}`);
+    }
+    
     return {
       roomId,
+      matchId, // Add the generated match ID
       matchType: this.matchType,
       tournamentPhase: (isSinglePlayerForfeitSemi  ? 'winner_final' : room.metadata?.tournamentPhase),
       tournamentRoomType: (isSinglePlayerForfeitSemi ? 'winner_final' : room.metadata?.tournamentPhase),
@@ -620,8 +645,29 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     const matchEndTime = TimeUtils.getCurrentTimestamp();
     const matchStartTime = room.startTime || matchEndTime;
     
+    // Generate match ID for blockchain reporting
+    let matchId = null;
+    try {
+      const { blockchainService } = await import('../../services/blockchainService.js');
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Match ID generation timeout')), 3000)
+      );
+      matchId = await Promise.race([
+        blockchainService.generateMatchId(),
+        timeoutPromise
+      ]);
+      console.log(`🎯 Generated match ID ${matchId} for tournament third place in room ${roomId}`);
+    } catch (error) {
+      console.error('❌ Failed to generate match ID for tournament third place:', error.message);
+      // Use timestamp as fallback ID
+      matchId = Math.floor(Date.now() / 1000) % 1000000;
+      console.log(`🎯 Using fallback match ID ${matchId} for tournament third place in room ${roomId}`);
+    }
+    
     return {
       roomId,
+      matchId, // Add the generated match ID
       matchType: this.matchType,
       tournamentPhase: 'loser_final',
       tournamentRoomType: 'loser_final',

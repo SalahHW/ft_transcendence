@@ -137,7 +137,7 @@ export class GameEngine {
     if (room.ball.player1.playerScore >= GAME_CONFIG.WINNING_SCORE || room.ball.player2.playerScore >= GAME_CONFIG.WINNING_SCORE) {
       room.isGameOver = true;
       
-      const matchData = this._createMatchData(room, roomId);
+      const matchData = await this._createMatchData(room, roomId);
       
       // ⭐ CRITICAL FIX: Handle case where match data creation fails
       if (!matchData) {
@@ -350,7 +350,7 @@ export class GameEngine {
     }
   }
 
-  _createMatchData(room, roomId) {
+  async _createMatchData(room, roomId) {
     const player1 = room.players[0];
     const player2 = room.players[1];
     
@@ -371,8 +371,29 @@ export class GameEngine {
     const matchEndTime = new Date().toISOString();
     const matchStartTime = room.startTime || new Date().toISOString();
     
+    // Generate match ID for blockchain reporting
+    let matchId = null;
+    try {
+      const { blockchainService } = await import('../services/blockchainService.js');
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Match ID generation timeout')), 3000)
+      );
+      matchId = await Promise.race([
+        blockchainService.generateMatchId(),
+        timeoutPromise
+      ]);
+      console.log(`🎯 Generated match ID ${matchId} for room ${roomId}`);
+    } catch (error) {
+      console.error('❌ Failed to generate match ID:', error.message);
+      // Use timestamp as fallback ID
+      matchId = Math.floor(Date.now() / 1000) % 1000000;
+      console.log(`🎯 Using fallback match ID ${matchId} for room ${roomId}`);
+    }
+    
     return {
       roomId,
+      matchId, // Add the generated match ID
       matchStartTime,
       matchEndTime,
       matchDuration: new Date() - new Date(matchStartTime),

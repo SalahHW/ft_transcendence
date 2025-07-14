@@ -4,6 +4,7 @@
  */
 
 import { gameStateManager } from '../../game/GameStateManager.js';
+import { reportTournamentResultsToAPI } from '../../server/api.js';
 
 /**
  * Tournament Match Manager
@@ -163,7 +164,7 @@ export class TournamentMatchManager {
     if (!waitingRoomData.semiFinalResults) {
       waitingRoomData.semiFinalResults = {};
     }
-    waitingRoomData.semiFinalResults[roomId] = { winner, loser };
+    waitingRoomData.semiFinalResults[roomId] = { winner, loser, matchData };
 
     // Create final results to complete the tournament
     if (!waitingRoomData.finalResults) {
@@ -174,6 +175,7 @@ export class TournamentMatchManager {
     waitingRoomData.finalResults['winner_final'] = { 
       winner: winner, 
       loser: loser,
+      matchData: matchData, // Store the match data with match ID
       isSingleSemiFinal: true,
       isForfeitWinner: isForfeitWinner
     };
@@ -182,6 +184,7 @@ export class TournamentMatchManager {
     waitingRoomData.finalResults['loser_final'] = { 
       winner: loser, 
       loser: loser, // Same player since no actual loser final
+      matchData: matchData, // Store the match data with match ID
       isSingleSemiFinal: true,
       isForfeitWinner: isForfeitWinner
     };
@@ -278,11 +281,11 @@ export class TournamentMatchManager {
     const winner = matchData.winner;
     const loser = matchData.loser;
     
-    // Store the match result
+    // Store the match result with match data
     if (!waitingRoomData.semiFinalResults) {
       waitingRoomData.semiFinalResults = {};
     }
-    waitingRoomData.semiFinalResults[roomId] = { winner, loser };
+    waitingRoomData.semiFinalResults[roomId] = { winner, loser, matchData };
     
      // Handle single semi-final edge case
     const singleSemiFinalHandled = await this.handleSingleSemiFinal(waitingRoomId, roomId, winner, loser, matchData);
@@ -314,11 +317,11 @@ export class TournamentMatchManager {
     const loser = matchData.loser;
     const roomType = gameStateManager.getRoom(roomId)?.metadata?.roomType;
     
-    // Store the final result
+    // Store the final result with match data
     if (!waitingRoomData.finalResults) {
       waitingRoomData.finalResults = {};
     }
-    waitingRoomData.finalResults[roomType] = { winner, loser };
+    waitingRoomData.finalResults[roomType] = { winner, loser, matchData };
     
     // Send individual final match completion message to players in this room
     this.tournamentManager.communicationManager._sendIndividualFinalMatchCompletion(waitingRoomId, roomId, roomType, winner, loser);
@@ -329,6 +332,13 @@ export class TournamentMatchManager {
     
     if (winnerFinalResult && loserFinalResult) {
       console.log(`🏆 Both finals complete, ending tournament`);
+      
+      // Report tournament to blockchain
+      try {
+        await this._reportTournamentToBlockchain(waitingRoomId, winnerFinalResult.winner);
+      } catch (error) {
+        console.error('🏆 Failed to report tournament to blockchain:', error.message);
+      }
       
       // Send tournament completion message to all players
       this.tournamentManager.communicationManager._sendTournamentCompletionMessage(waitingRoomId, matchData);
@@ -373,6 +383,13 @@ export class TournamentMatchManager {
             };
             
             console.log(`🏆 Tournament completed with forfeit: ${thirdPlace.username} gets 3rd place, ${fourthPlace.username} gets 4th place`);
+            
+            // Report tournament to blockchain
+            try {
+              await this._reportTournamentToBlockchain(waitingRoomId, winnerFinalResult.winner);
+            } catch (error) {
+              console.error('🏆 Failed to report tournament to blockchain:', error.message);
+            }
             
             // Send tournament completion message to all players
             this.tournamentManager.communicationManager._sendTournamentCompletionMessage(waitingRoomId, matchData);
@@ -536,5 +553,55 @@ export class TournamentMatchManager {
         }
       }
     });
+  }
+
+  /**
+   * Report tournament completion to blockchain
+   * @param {string} waitingRoomId - The tournament waiting room ID
+   * @param {Object} winner - The tournament winner (1st place)
+   */
+  async _reportTournamentToBlockchain(waitingRoomId, winner) {
+    const waitingRoomData = this.tournamentManager.waitingRooms.get(waitingRoomId);
+    if (!waitingRoomData) {
+      console.error('🏆 No waiting room data found for tournament reporting');
+      return;
+    }
+
+    // Collect all match IDs from the tournament
+    const matchIds = [];
+    
+    // Add semi-final match IDs from stored match data
+    if (waitingRoomData.semiFinalResults) {
+      Object.values(waitingRoomData.semiFinalResults).forEach(matchResult => {
+        if (matchResult.matchData && matchResult.matchData.matchId !== undefined && matchResult.matchData.matchId !== null) {
+          matchIds.push(matchResult.matchData.matchId);
+        }
+      });
+    }
+
+    // Add final match IDs from stored match data
+    if (waitingRoomData.finalResults) {
+      Object.values(waitingRoomData.finalResults).forEach(matchResult => {
+        if (matchResult.matchData && matchResult.matchData.matchId !== undefined && matchResult.matchData.matchId !== null) {
+          matchIds.push(matchResult.matchData.matchId);
+        }
+      });
+    }
+
+    // Ensure we have exactly 4 match IDs (tournament requirement)
+    while (matchIds.length < 4) {
+      matchIds.push(0); // Add placeholder IDs if needed
+    }
+
+    // Take only the first 4 match IDs
+    const finalMatchIds = matchIds.slice(0, 4);
+
+    const tournamentData = {
+      winner: winner,
+      matchIds: finalMatchIds
+    };
+
+    console.log(`🏆 Reporting tournament to blockchain with ${finalMatchIds.length} match IDs:`, finalMatchIds);
+    await reportTournamentResultsToAPI(tournamentData);
   }
 } 

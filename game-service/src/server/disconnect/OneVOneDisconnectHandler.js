@@ -10,6 +10,7 @@ import { LogUtils, TimeUtils } from '../../utils/helpers.js';
 import { playerManager } from '../../player/PlayerManager.js';
 import { reportMatchResultsToAPI } from '../api.js';
 import { GAME_CONFIG } from '../../core/constants.js';
+import { blockchainService } from '../../services/blockchainService.js';
 
 /**
  * 1v1 specific disconnect handler
@@ -76,6 +77,9 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
     const room = gameStateManager.getRoom(roomId);
     if (!room) return;
 
+    // Clear wallet cache for disconnected player
+    blockchainService.clearUserWalletCache(playerId);
+
     // Check if game has started but is in animation phase
     if (room.gameStarted && room.ready) {
       this.handlePreGameDisconnect(playerId, roomId, reason);
@@ -123,7 +127,7 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
     await this.disposeBallAssets(room, roomId);
 
     // Award forfeit win with captured scores
-    this.awardForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'pre_game', winnerScore, loserScore);
+    await this.awardForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'pre_game', winnerScore, loserScore);
   }
 
   /**
@@ -155,7 +159,7 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
     await this.disposeBallAssets(room, roomId);
 
     // Award forfeit win with captured scores
-    this.awardForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'in_game', winnerScore, loserScore);
+    await this.awardForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'in_game', winnerScore, loserScore);
   }
 
   /**
@@ -174,12 +178,12 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
   /**
    * Award forfeit win to remaining player
    */
-  awardForfeitWin(room, roomId, winner, loser, reason, context, winnerScore = null, loserScore = null) {
+  async awardForfeitWin(room, roomId, winner, loser, reason, context, winnerScore = null, loserScore = null) {
     // Mark game as over immediately
     room.isGameOver = true;
     
     // Create match data
-    const matchData = this.createForfeitMatchData(room, roomId, winner, loser, reason, context, winnerScore, loserScore);
+    const matchData = await this.createForfeitMatchData(room, roomId, winner, loser, reason, context, winnerScore, loserScore);
     
     // Log the forfeit
     LogUtils.logMatchCompletion(matchData);
@@ -197,7 +201,7 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
   /**
    * Create match data for forfeit scenarios
    */
-  createForfeitMatchData(room, roomId, winner, loser, reason, context, winnerScore = null, loserScore = null) {
+  async createForfeitMatchData(room, roomId, winner, loser, reason, context, winnerScore = null, loserScore = null) {
     const matchEndTime = TimeUtils.getCurrentTimestamp();
     const matchStartTime = room.startTime || matchEndTime;
     
@@ -219,8 +223,29 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
       }
     }
     
+    // Generate match ID for blockchain reporting
+    let matchId = null;
+    try {
+      const { blockchainService } = await import('../../services/blockchainService.js');
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Match ID generation timeout')), 3000)
+      );
+      matchId = await Promise.race([
+        blockchainService.generateMatchId(),
+        timeoutPromise
+      ]);
+      console.log(`🎯 Generated match ID ${matchId} for 1v1 forfeit in room ${roomId}`);
+    } catch (error) {
+      console.error('❌ Failed to generate match ID for 1v1 forfeit:', error.message);
+      // Use timestamp as fallback ID
+      matchId = Math.floor(Date.now() / 1000) % 1000000;
+      console.log(`🎯 Using fallback match ID ${matchId} for 1v1 forfeit in room ${roomId}`);
+    }
+    
     return {
       roomId,
+      matchId, // Add the generated match ID
       matchType: this.matchType,
       matchStartTime,
       matchEndTime,
