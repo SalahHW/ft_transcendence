@@ -1,9 +1,8 @@
 import { PORT } from "./config/config.js";
 import Fastify from "fastify";
+import fastifyCookie from "@fastify/cookie";
 import { initializeDatabase } from "./models/database.js";
 import registerRoutes from "./routes/index.js";
-
-const fastify = Fastify();
 
 async function main() {
   try {
@@ -13,6 +12,9 @@ async function main() {
     process.exit(1);
   }
 
+  const fastify = Fastify();
+
+  await fastify.register(fastifyCookie);
   await fastify.register(registerRoutes);
 
   try {
