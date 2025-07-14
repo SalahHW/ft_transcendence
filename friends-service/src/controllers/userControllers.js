@@ -1,7 +1,7 @@
 import * as userServices from "../services/userServices.js";
 
-export async function verifyUserExists(request, reply) {
-  const userId = request.user.sub;
+export async function verifyTargetUserExists(request, reply) {
+  const userId = request.params.friendId;
 
   let response;
   try {
