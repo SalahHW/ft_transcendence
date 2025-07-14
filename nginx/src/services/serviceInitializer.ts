@@ -3,7 +3,7 @@ import AvatarService from './AvatarService.js';
 import FriendsService from './FriendsService.js';
 import MatchHistoryService from './MatchHistoryService.js';
 import UserProfileService from './UserProfileService.js';
-import PresenceService from './webSocket/presence.js';
+import PresenceService from './webSocket/PresenceService.js';
 import AuthService from './AuthNanoService.js';
 
 export function initializeServices(): void {
