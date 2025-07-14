@@ -39,18 +39,18 @@ class Client {
   }
 }
 
-let server;
+const server = http.createServer();
 
-if (isDev) {
-  server = http.createServer();
-  if (isDev || logs) console.log(`Development mode: using HTTP server`);
-} else {
-  const serverOptions = {
-    key: fs.readFileSync("./ssl/privkey.pem"),
-    cert: fs.readFileSync("./ssl/fullchain.pem"),
-  };
-  server = https.createServer(serverOptions);
-}
+// if (isDev) {
+//   server = http.createServer();
+//   if (isDev || logs) console.log(`Development mode: using HTTP server`);
+// } else {
+//   const serverOptions = {
+//     key: fs.readFileSync("./ssl/privkey.pem"),
+//     cert: fs.readFileSync("./ssl/fullchain.pem"),
+//   };
+//   server = https.createServer(serverOptions);
+// }
 
 const wss = new WebSocketServer({ server });
 
@@ -162,7 +162,6 @@ function broadcastConnection(newClient) {
 }
 
 server.listen(PORT, () => {
-  const protocol = isDev ? "ws" : "wss";
   if (isDev || logs)
-    console.log(`WebSocket server running on ${protocol}://localhost:${PORT}`);
+    console.log(`WebSocket server running on localhost:${PORT}`);
 });
