@@ -1,4 +1,5 @@
 export const uploadAvatar = {
+  consumes: ["multipart/form-data"],
   params: {
     type: "object",
     properties: {},
@@ -20,6 +21,7 @@ export const getAvatar = {
 };
 
 export const updateAvatar = {
+  consumes: ["multipart/form-data"],
   params: {
     type: "object",
     properties: {},

@@ -1,10 +1,6 @@
 import { httpError } from "../errors/httpErrors.js";
 
 export async function extractFile(request) {
-  if (!request.isMultipart()) {
-    throw httpError("Request is not multipart/form-data", 406);
-  }
-
   const parts = request.parts();
   let file = null;
 
