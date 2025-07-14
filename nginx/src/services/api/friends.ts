@@ -21,8 +21,8 @@ export default class FriendsServiceAPI {
 	 * @param friendId - The ID of the user to befriend
 	 * @returns A promise that resolves when the friendship is created
 	 */
-	async createFriendship(userId: number, friendId: number): Promise<void> {
-		const response = await fetch(`${this._friendsBaseUrl}/${userId}/${friendId}`, {
+	async createFriendship(friendId: number): Promise<void> {
+		const response = await fetch(`${this._friendsBaseUrl}/id/${friendId}`, {
 			method: "POST"
 		});
 		if (response.status !== 201) {
@@ -36,8 +36,8 @@ export default class FriendsServiceAPI {
 	 * @param userId - The ID of the user
 	 * @returns A promise that resolves to an array of friendships
 	 */
-	async getUserFriendships(userId: number): Promise<Friendship[]> {
-		const response = await fetch(`${this._friendsBaseUrl}/${userId}`, {
+	async getUserFriendships(): Promise<Friendship[]> {
+		const response = await fetch(`${this._friendsBaseUrl}`, {
 			method: "GET"
 		});
 		if (response.status === 404) {
@@ -55,8 +55,8 @@ export default class FriendsServiceAPI {
 	 * @param friendId - The ID of the friend to remove
 	 * @returns A promise that resolves when the friendship is deleted
 	 */
-	async deleteFriendship(userId: number, friendId: number): Promise<void> {
-		const response = await fetch(`${this._friendsBaseUrl}/${userId}/${friendId}`, {
+	async deleteFriendship(friendId: number): Promise<void> {
+		const response = await fetch(`${this._friendsBaseUrl}/${friendId}`, {
 			method: "DELETE"
 		});
 		if (response.status !== 204) {

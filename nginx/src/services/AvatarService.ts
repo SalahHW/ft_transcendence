@@ -67,13 +67,11 @@ export default class AvatarService implements CacheableService {
      * @returns A promise that resolves when the upload is successful.
      */
     public async uploadCurrentUserAvatar(file: File | Blob): Promise<void> {
-        const userId = await this._getUserId();
-        await this._avatarApi.uploadUserAvatar(userId, file);
+        await this._avatarApi.uploadUserAvatar(file);
 
         const cacheManager = CacheManager.getInstance();
         cacheManager.triggerEvent({
             type: 'AVATAR_UPDATED',
-            data: { userId }
         });
     }
 
@@ -85,7 +83,7 @@ export default class AvatarService implements CacheableService {
      */
     public async updateCurrentUserAvatar(file: File | Blob): Promise<void> {
         const userId = await this._getUserId();
-        await this._avatarApi.updateUserAvatar(userId, file);
+        await this._avatarApi.updateUserAvatar(file);
 
         const cacheManager = CacheManager.getInstance();
         cacheManager.triggerEvent({
@@ -103,15 +101,14 @@ export default class AvatarService implements CacheableService {
         const userId = await this._getUserId();
         try {
             await this._avatarApi.getUserAvatarUrl(userId);
-            await this._avatarApi.updateUserAvatar(userId, file);
+            await this._avatarApi.updateUserAvatar(file);
         } catch (error) {
-            await this._avatarApi.uploadUserAvatar(userId, file);
+            await this._avatarApi.uploadUserAvatar(file);
         }
 
         const cacheManager = CacheManager.getInstance();
         cacheManager.triggerEvent({
             type: 'AVATAR_UPDATED',
-            data: { userId }
         });
     }
 
@@ -121,13 +118,11 @@ export default class AvatarService implements CacheableService {
      * @returns A promise that resolves when the avatar is deleted.
      */
     public async deleteCurrentUserAvatar(): Promise<void> {
-        const userId = await this._getUserId();
-        await this._avatarApi.deleteUserAvatar(userId);
+        await this._avatarApi.deleteUserAvatar();
 
         const cacheManager = CacheManager.getInstance();
         cacheManager.triggerEvent({
             type: 'AVATAR_UPDATED',
-            data: { userId }
         });
     }
 
