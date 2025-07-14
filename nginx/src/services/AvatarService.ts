@@ -1,17 +1,26 @@
-import AuthNanoService from './AuthNanoService.js';
+import AuthService from './AuthNanoService.js';
 import AvatarServiceAPI from './api/avatar.js';
+import CacheManager, { CacheableService } from './CacheManager.js';
 
 /**
  * Service to manage the current user's avatar, including caching.
  */
-export default class AvatarService {
+export default class AvatarService implements CacheableService {
     private static _instance: AvatarService;
-    private _authService = AuthNanoService.getInstance();
+    private _authService = AuthService.getInstance();
     private _avatarApi = new AvatarServiceAPI();
     private _avatarUrlCache: string | null = null;
     private _defaultAvatarUrl: string = '/assets/defaultAvatar.jpg';
+    public readonly serviceName = 'AvatarService';
 
-    private constructor() {}
+    private constructor() {
+        const cacheManager = CacheManager.getInstance();
+        cacheManager.registerService(this, [
+            'USER_LOGIN',
+            'USER_LOGOUT',
+            'AVATAR_UPDATED'
+        ]);
+    }
 
     public static getInstance(): AvatarService {
         if (!AvatarService._instance) {
@@ -60,7 +69,12 @@ export default class AvatarService {
     public async uploadCurrentUserAvatar(file: File | Blob): Promise<void> {
         const userId = await this._getUserId();
         await this._avatarApi.uploadUserAvatar(userId, file);
-        this.clearCache();
+
+        const cacheManager = CacheManager.getInstance();
+        cacheManager.triggerEvent({
+            type: 'AVATAR_UPDATED',
+            data: { userId }
+        });
     }
 
     /**
@@ -72,7 +86,12 @@ export default class AvatarService {
     public async updateCurrentUserAvatar(file: File | Blob): Promise<void> {
         const userId = await this._getUserId();
         await this._avatarApi.updateUserAvatar(userId, file);
-        this.clearCache();
+
+        const cacheManager = CacheManager.getInstance();
+        cacheManager.triggerEvent({
+            type: 'AVATAR_UPDATED',
+            data: { userId }
+        });
     }
 
     /**
@@ -83,17 +102,17 @@ export default class AvatarService {
     public async uploadOrUpdateCurrentUserAvatar(file: File | Blob): Promise<void> {
         const userId = await this._getUserId();
         try {
-            // Try to get the avatar URL to see if it exists.
             await this._avatarApi.getUserAvatarUrl(userId);
-            // If it exists, update it.
             await this._avatarApi.updateUserAvatar(userId, file);
         } catch (error) {
-            // If it fails with a "not found" style error, it means we need to create one.
-            // A more robust solution might check the error status code (e.g., 404).
             await this._avatarApi.uploadUserAvatar(userId, file);
-        } finally {
-            this.clearCache();
         }
+
+        const cacheManager = CacheManager.getInstance();
+        cacheManager.triggerEvent({
+            type: 'AVATAR_UPDATED',
+            data: { userId }
+        });
     }
 
     /**
@@ -104,7 +123,12 @@ export default class AvatarService {
     public async deleteCurrentUserAvatar(): Promise<void> {
         const userId = await this._getUserId();
         await this._avatarApi.deleteUserAvatar(userId);
-        this.clearCache();
+
+        const cacheManager = CacheManager.getInstance();
+        cacheManager.triggerEvent({
+            type: 'AVATAR_UPDATED',
+            data: { userId }
+        });
     }
 
     /**

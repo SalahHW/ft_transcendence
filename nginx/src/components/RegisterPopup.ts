@@ -1,23 +1,11 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   RegisterPopup.ts                                   :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/06/16 16:30:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 14:45:50 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-import AuthNanoService from "../services/AuthNanoService.js";
+import AuthService from "../services/AuthNanoService.js";
 import { UI_THEME } from "../style/tailwindClasses.js";
 import { buttonHTML } from "./button.js";
 import { loadingSpinnerHTML } from "./loadingSpinner";
 import ModalView from "./ModalView.js";
 
 export default class RegisterPopup extends ModalView {
-  private _authService: AuthNanoService;
+  private _authService: AuthService;
 
   constructor() {
     super({
@@ -25,7 +13,7 @@ export default class RegisterPopup extends ModalView {
       maxWidth: "36rem",
       contentContainerClasses: "p-8 mx-4",
     });
-    this._authService = AuthNanoService.getInstance();
+    this._authService = AuthService.getInstance();
   }
 
   public show(): void {

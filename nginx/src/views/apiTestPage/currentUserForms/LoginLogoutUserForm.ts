@@ -1,26 +1,14 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   LoginLogoutUserForm.ts                             :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/26 20:42:34 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 14:45:50 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-import AuthNanoService from "../../../services/AuthNanoService.js";
+import AuthService from "../../../services/AuthNanoService.js";
 import { buttonHTML } from "../../../components/button.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 
 export default class LoginLogoutUserForm {
 	private _container: HTMLElement;
-	private _authService: AuthNanoService;
+	private _authService: AuthService;
 
 	constructor(containerId: string) {
 		this._container = document.getElementById(containerId) as HTMLElement;
-		this._authService = AuthNanoService.getInstance();
+		this._authService = AuthService.getInstance();
 	}
 
 	async render(): Promise<void> {

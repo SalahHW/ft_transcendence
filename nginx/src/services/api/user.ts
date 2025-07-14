@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   user.ts                                            :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/26 20:41:03 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 14:32:04 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 /**
  * Authentication method for user
  */
@@ -22,13 +10,13 @@ export enum AuthenticationMethod {
  * JWT User payload - the user data inside the JWT token
  */
 export interface JwtUserPayload {
-  sub: number;           // Subject (user ID)
+  sub: number;
   username: string;
   role: string;
-  aud: string;           // Audience
-  iss: string;           // Issuer
-  iat: number;           // Issued at
-  exp: number;           // Expiration time
+  aud: string;
+  iss: string;
+  iat: number;
+  exp: number;
 }
 
 /**
@@ -139,6 +127,50 @@ export default class UsersApi {
   }
 
   /**
+   * Updates a user's username by ID
+   * @param id - The ID of the user to update
+   * @param username - The new username
+   * @returns A promise that resolves to the updated user
+   */
+  async updateUsernameById(id: number, username: string): Promise<User> {
+    const response = await fetch(`${this._usersBaseUrl}/${id}/username`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username }),
+    });
+    const responseData = await response.json();
+    if (response.status === 200) return responseData;
+    else
+      throw new Error(
+        `failed to update username:\n${JSON.stringify(responseData, null, 2)}`
+      );
+  }
+
+  /**
+   * Updates a user's email by ID
+   * @param id - The ID of the user to update
+   * @param email - The new email
+   * @returns A promise that resolves to the updated user
+   */
+  async updateEmailById(id: number, email: string): Promise<User> {
+    const response = await fetch(`${this._usersBaseUrl}/${id}/email`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }),
+    });
+    const responseData = await response.json();
+    if (response.status === 200) return responseData;
+    else
+      throw new Error(
+        `failed to update email:\n${JSON.stringify(responseData, null, 2)}`
+      );
+  }
+
+  /**
    * Updates a user's username
    * @param username - The new username
    * @returns A promise that resolves to the updated user
@@ -211,6 +243,27 @@ export default class UsersApi {
     else
       throw new Error(
         `failed to get users by username:\n${JSON.stringify(
+          responseData,
+          null,
+          2
+        )}`
+      );
+  }
+
+  /**
+   * Gets a user by wallet address
+   * @param wallet - The wallet address of the user to get
+   * @returns A promise that resolves to the user
+   */
+  async getUserByWallet(wallet: string): Promise<User> {
+    const response = await fetch(`${this._usersBaseUrl}/wallet/${wallet}`, {
+      method: "GET",
+    });
+    const responseData = await response.json();
+    if (response.status === 200) return responseData;
+    else
+      throw new Error(
+        `failed to get user by wallet:\n${JSON.stringify(
           responseData,
           null,
           2

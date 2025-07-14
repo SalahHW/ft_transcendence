@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   CreateMatchForm.ts                                 :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/26 20:42:42 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/12 21:29:28 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 import MatchServiceAPI from "../../../services/api/match.js";
 import { buttonHTML } from "../../../components/button.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";

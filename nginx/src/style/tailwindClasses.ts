@@ -1,18 +1,5 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   tailwindClasses.ts                                 :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/26 20:41:14 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/10 12:15:56 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-// Styles communs pour la Wheel et les Popups
 export const UI_THEME = {
-	// Couleurs et apparences de base
+
 	colors: {
 		background: {
 			primary: 'rgba(31, 41, 55, 0.85)', // bg-gray-800/85
@@ -41,7 +28,6 @@ export const UI_THEME = {
 		}
 	},
 
-	// Animations et transitions
 	animations: {
 		entrance: 'opacity-0 scale-95 transition-all duration-150 ease-out',
 		visible: 'opacity-100 scale-100',
@@ -49,7 +35,6 @@ export const UI_THEME = {
 		hover: 'transition-all duration-200',
 	},
 
-	// Composants réutilisables
 	components: {
 		overlay: `fixed inset-0 z-50 hidden items-center justify-center bg-black/30 backdrop-blur-md select-none opacity-0 scale-95 transition-all duration-150 ease-out`,
 
@@ -94,7 +79,6 @@ export const UI_THEME = {
 		}
 	},
 
-	// Styles spécifiques à la Wheel
 	wheel: {
 		svg: {
 			fill: {
@@ -116,7 +100,6 @@ export const UI_THEME = {
 	}
 };
 
-// Classes CSS existantes pour compatibilité
 export const COMMON_CLASSES = {
 	primaryButton: /* CSS */ `px-6 py-3 bg-white/10 hover:bg-white/20 text-gray-100 font-semibold rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/30 shadow-lg`,
 	secondaryButton:	/* CSS */ `px-4 py-2 bg-transparent hover:bg-white/10 border border-white/20 text-gray-300 font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/30`,
