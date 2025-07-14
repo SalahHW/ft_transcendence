@@ -19,13 +19,14 @@ export default async function friendshipRoutes(fastify) {
     method: "GET",
     url: "/friends",
     schema: friendshipSchemas.readFriendship,
-    preHandler: jwtControllers.verifyAuthentication,
+    preHandler: [jwtControllers.verifyAuthentication],
     handler: friendshipControllers.readFriendship,
   });
 
   fastify.route({
     method: "DELETE",
-    url: "/friends/:userId/:friendId",
+    url: "/friends/id/:friendId",
+    preHandler: [jwtControllers.verifyAuthentication],
     handler: friendshipControllers.deleteFriendship,
   });
 }
