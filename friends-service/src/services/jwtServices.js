@@ -11,11 +11,8 @@ export async function verifyToken(token) {
         Authorization: `Bearer ${token}`,
       },
     });
-
-    console.log(response);
     return response;
   } catch (err) {
-    console.log(err);
     throw err;
   }
 }
