@@ -46,5 +46,3 @@ if (!USERS_SERVICE_HOST) {
   console.error("Unable to load users service host from environment variables");
   process.exit(1);
 }
-
-export const USERS_SERVICE_TIMEOUT = 2000;
