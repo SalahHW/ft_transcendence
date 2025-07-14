@@ -1,4 +1,5 @@
 import AuthService from '../AuthNanoService.js';
+import CacheManager from '../CacheManager.js';
 
 /**
  * Type pour les événements de présence reçus du serveur WebSocket.
@@ -29,7 +30,19 @@ export default class PresenceService {
   private _connectedUsers = new Set<number>();
   private _callbacks: PresenceCallback[] = [];
 
-  private constructor() {}
+  private constructor() {
+    const cacheManager = CacheManager.getInstance();
+
+    cacheManager.on('USER_LOGIN', () => {
+        console.log('[PresenceService] Login event detected, connecting...');
+        this.connect();
+    });
+
+    cacheManager.on('USER_LOGOUT', () => {
+        console.log('[PresenceService] Logout event detected, disconnecting...');
+        this.disconnect();
+    });
+  }
 
   public static getInstance(): PresenceService {
     if (!PresenceService._instance) {
