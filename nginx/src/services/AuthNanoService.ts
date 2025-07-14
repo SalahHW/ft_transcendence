@@ -212,7 +212,7 @@ export default class AuthService {
           err
         );
       }
-    }, 10_000); // 4 minutes
+    }, 240_000); // 4 minutes
   }
 
   private _stopRefreshLoop() {
