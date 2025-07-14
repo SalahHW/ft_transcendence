@@ -176,7 +176,8 @@ contract MasterContract is Ownable {
             winner,
             player1Score,
             player2Score,
-            matchId
+            matchId,
+            endTimestamp
         );
     }
 
