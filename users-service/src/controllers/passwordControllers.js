@@ -6,7 +6,7 @@ export async function createPassword(password) {
   const regexPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+=\[{\]};:<>|./?,-]).{8,64}$/;
   if (!password || !regexPattern.test(password)) {
     throw new Error(
-      "Invalid password format. It must be 6 to 20 characters long and contain only letters, numbers, or special characters"
+      "Invalid password format. It must be 8 to 64 characters long and contain only letters, numbers, or special characters"
     );
   }
   return await encryptPassword(password);
