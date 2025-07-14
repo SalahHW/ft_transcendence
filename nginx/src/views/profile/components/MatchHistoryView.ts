@@ -1,4 +1,4 @@
-import MatchHistoryService, { EnrichedMatch, EnrichedMatchHistory } from "../../../services/MatchHistoryService.js";
+import MatchHistoryService, { EnrichedMatch, EnrichedTournament, PlayerInfo } from "../../../services/MatchHistoryService.js";
 import UserProfileService from "../../../services/UserProfileService.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 
@@ -15,23 +15,19 @@ export class MatchHistoryView {
 				return this.renderErrorState();
 			}
 
-            const enrichedHistory: EnrichedMatchHistory = await this._matchHistoryService.getEnrichedMatchHistory(user.wallet);
+            const [enrichedHistory, enrichedTournamentHistory] = await Promise.all([
+				this._matchHistoryService.getEnrichedMatchHistory(user.wallet),
+				this._matchHistoryService.getEnrichedTournamentHistory(user.wallet)
+			]);
+
 			const { enrichedMatches, currentUserAvatarUrl } = enrichedHistory;
 
-			const hardcodedTournament = {
-                players: [
-                    { username: 'Joueur 1', avatarUrl: '/assets/devuser.png' },
-                    { username: user.username!, avatarUrl: currentUserAvatarUrl },
-                    { username: 'Joueur 3', avatarUrl: '/assets/defaultAvatar.jpg' },
-                    { username: 'Joueur 4', avatarUrl: '/assets/defaultAvatar.jpg' },
-                ],
-                userPlacement: 1,
-                currentUser: { username: user.username!, avatarUrl: currentUserAvatarUrl }
-            };
-            const tournamentItemHtml = await MatchHistoryView.createTournamentHistoryItem(hardcodedTournament);
+            const tournamentItemsHtml = (await Promise.all(enrichedTournamentHistory.map(tournament => {
+                const currentUserInfo = tournament.players.find(p => p.walletAddress === user.wallet);
+                return MatchHistoryView.createTournamentHistoryItem(tournament, currentUserInfo!);
+            }))).join('');
 
-
-            if (enrichedMatches.length === 0)
+            if (enrichedMatches.length === 0 && enrichedTournamentHistory.length === 0)
 				return this.renderEmptyState();
 
             const matchesHtmlPromises = enrichedMatches.map((enrichedMatch: EnrichedMatch) => this.createMatchHistoryItem(enrichedMatch, user, currentUserAvatarUrl));
@@ -40,7 +36,7 @@ export class MatchHistoryView {
                 <div class="flex flex-col h-full">
                     <div class="overflow-auto flex-[1] [mask-image:linear-gradient(to_bottom,transparent,black_2%,black_98%,transparent)] pt-2 overflow-x-auto">
                         <div class="min-w-[600px]">
-                            ${tournamentItemHtml}
+                            ${tournamentItemsHtml}
                             ${matchesHtml}
                         </div>
                     </div>
@@ -52,24 +48,7 @@ export class MatchHistoryView {
 			if (error instanceof Error && error.message.includes('No matches found for this player.')) {
 				return this.renderEmptyState();
 			} else {
-				const hardcodedTournament = {
-                    players: [
-                        { username: 'Joueur 2', avatarUrl: '/assets/defaultAvatar.jpg' },
-                        { username: 'User', avatarUrl: '/assets/devuser.png' },
-                        { username: 'Joueur 3', avatarUrl: '/assets/defaultAvatar.jpg' },
-                        { username: 'Joueur 4', avatarUrl: '/assets/defaultAvatar.jpg' },
-                    ],
-                    userPlacement: 1,
-                    currentUser: { username: 'User', avatarUrl: '/assets/devuser.png' }
-                };
-                const tournamentItemHtml = await MatchHistoryView.createTournamentHistoryItem(hardcodedTournament);
-                return /* HTML */`
-                    <div class="flex flex-col h-full">
-                        <div class="overflow-auto flex-[1] [mask-image:linear-gradient(to_bottom,transparent,black_2%,black_98%,transparent)] pt-2">
-                            ${tournamentItemHtml}
-                        </div>
-                    </div>
-                `;
+				return this.renderErrorState();
 			}
         }
     }
@@ -90,19 +69,11 @@ export class MatchHistoryView {
 		`;
 	}
 
-    private static async createTournamentHistoryItem(enrichedTournament: {
-        players: {
-            username: string;
-            avatarUrl: string;
-        }[];
-        userPlacement: number;
-        currentUser: {
-            username: string;
-            avatarUrl: string;
-        };
-    }): Promise<string> {
-        const { players, userPlacement, currentUser } = enrichedTournament;
-        const isWin = userPlacement === 1;
+    private static async createTournamentHistoryItem(
+        enrichedTournament: EnrichedTournament,
+        currentUser: PlayerInfo
+    ): Promise<string> {
+        const { players, userPlacement, isWin } = enrichedTournament;
         const resultText = isWin ? 'VICTORY' : 'DEFEAT';
         const resultColor = isWin ? UI_THEME.colors.green.light : UI_THEME.colors.red.light;
         const bgColor = isWin ? UI_THEME.colors.green.dark : UI_THEME.colors.red.dark;
