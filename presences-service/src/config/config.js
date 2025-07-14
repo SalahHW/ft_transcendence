@@ -1,5 +1,7 @@
 export const isDev = process.env.NODE_ENV === "development";
 
+export const logs = true;
+
 export const PORT = process.env.PRESENCES_SERVICE_PORT;
 
 if (!PORT) {

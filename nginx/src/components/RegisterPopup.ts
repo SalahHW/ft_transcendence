@@ -1,23 +1,11 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   RegisterPopup.ts                                   :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/06/16 16:30:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/09 20:57:29 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-import AuthNanoService from "../auth/AuthNanoService.js";
+import AuthService from "../services/AuthNanoService.js";
 import { UI_THEME } from "../style/tailwindClasses.js";
 import { buttonHTML } from "./button.js";
 import { loadingSpinnerHTML } from "./loadingSpinner";
 import ModalView from "./ModalView.js";
 
 export default class RegisterPopup extends ModalView {
-  private _authService: AuthNanoService;
+  private _authService: AuthService;
 
   constructor() {
     super({
@@ -25,7 +13,7 @@ export default class RegisterPopup extends ModalView {
       maxWidth: "36rem",
       contentContainerClasses: "p-8 mx-4",
     });
-    this._authService = AuthNanoService.getInstance();
+    this._authService = AuthService.getInstance();
   }
 
   public show(): void {
@@ -68,13 +56,6 @@ export default class RegisterPopup extends ModalView {
             class="${UI_THEME.components.input}"
           />
         </div>
-
-        <input
-          type="hidden"
-          id="popup-container-authentication-method-register"
-          value="credentials"
-          name="authenticationMethod"
-        />
 
         <div>
           <input
@@ -128,9 +109,6 @@ export default class RegisterPopup extends ModalView {
     const passwordInput = document.getElementById(
       "popup-container-password-register"
     ) as HTMLInputElement;
-    const authenticationMethodInput = document.getElementById(
-      "popup-container-authentication-method-register"
-    ) as HTMLInputElement;
     const walletInput = document.getElementById(
       "popup-container-wallet-register"
     ) as HTMLInputElement;
@@ -138,10 +116,9 @@ export default class RegisterPopup extends ModalView {
     const username = usernameInput.value.trim();
     const email = emailInput.value.trim();
     const password = passwordInput.value;
-    const authenticationMethod = authenticationMethodInput.value;
     const wallet = walletInput.value.trim();
 
-    if (!username || !email || !password || !authenticationMethod || !wallet) {
+    if (!username || !email || !password || !wallet) {
       this._showError("Please fill in all fields.");
       return;
     }
@@ -153,7 +130,6 @@ export default class RegisterPopup extends ModalView {
         username,
         email,
         password,
-        authenticationMethod,
         wallet,
       });
 

@@ -1,26 +1,14 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   RegisterUserForm.ts                                :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/26 20:42:38 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/05 14:55:23 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-import AuthNanoService from "../../../auth/AuthNanoService.js";
+import AuthService from "../../../services/AuthNanoService.js";
 import { buttonHTML } from "../../../components/button.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 
 export default class RegisterUserForm {
 	private _container: HTMLElement;
-	private _authService: AuthNanoService;
+	private _authService: AuthService;
 
 	constructor(containerId: string) {
 		this._container = document.getElementById(containerId) as HTMLElement;
-		this._authService = AuthNanoService.getInstance();
+		this._authService = AuthService.getInstance();
 	}
 
 	async render(): Promise<void> {
@@ -32,6 +20,10 @@ export default class RegisterUserForm {
 
 				<div>
 					<input type="email" id="register-user-form-email" placeholder="Email (required)" class="${UI_THEME.components.input}">
+				</div>
+
+				<div>
+					<input type="text" id="register-user-form-wallet" placeholder="Wallet (required)" class="${UI_THEME.components.input}">
 				</div>
 
 				<div>
@@ -58,9 +50,10 @@ export default class RegisterUserForm {
 			const usernameInput = document.getElementById("register-user-form-username") as HTMLInputElement;
 			const passwordInput = document.getElementById("register-user-form-password") as HTMLInputElement;
 			const emailInput = document.getElementById("register-user-form-email") as HTMLInputElement;
+			const walletInput = document.getElementById("register-user-form-wallet") as HTMLInputElement;
 
-			if (!usernameInput.value || !passwordInput.value || !emailInput.value) {
-				console.warn("Please provide username, email and password");
+			if (!usernameInput.value || !passwordInput.value || !emailInput.value || !walletInput.value) {
+				console.warn("Please provide username, email, password and wallet");
 				return;
 			}
 
@@ -69,8 +62,7 @@ export default class RegisterUserForm {
 					username: usernameInput.value,
 					password: passwordInput.value,
 					email: emailInput.value,
-					authenticationMethod: "local",
-					wallet: ""
+					wallet: walletInput.value
 				});
 				console.log(response);
 			}

@@ -6,14 +6,14 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/22 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/10 12:17:05 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/13 22:00:41 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 import ModalView from "../../components/ModalView.js";
-import { UserProfile } from "./components/UserProfile.js";
-import { MatchHistory } from "./components/MatchHistory.js";
-import { FriendList } from "./components/FriendList.js";
+import { UserProfileView } from "./components/UserProfileView.js";
+import { MatchHistoryView } from "./components/MatchHistoryView.js";
+import { FriendListView } from "./components/FriendListView.js";
 
 export default class ProfileView extends ModalView {
 
@@ -23,10 +23,15 @@ export default class ProfileView extends ModalView {
 			height: '70vh'
 		});
 
-		this.render();
+		// Initialize asynchronously after construction
+		this.init();
 	}
 
-	public render(): void {
+	private async init(): Promise<void> {
+		await this.render();
+	}
+
+	public async render(): Promise<void> {
 		this._contentContainer.innerHTML = /* HTML */`
 			<div class="flex h-full w-full overflow-auto min-h-0">
 				<div class="relative flex flex-[4] flex-col gap-2 p-2 after:absolute after:right-0 after:top-[5%] after:h-[90%] after:w-px after:bg-white/20">
@@ -38,41 +43,57 @@ export default class ProfileView extends ModalView {
 				</div>
 			</div>
 		`;
-		this.updateProfile();
+		await this.updateProfile();
 		this.updateMatchHistory();
-		this.updateFriendList();
+		await this.updateFriendList();
 	}
 
-	public updateProfile(): void {
-		console.log('Updating profile...');
+	public async updateProfile(): Promise<void> {
 		const profileContainer = this._contentContainer.querySelector('#profile');
 		if (!profileContainer) {
 			console.error('Profile container not found');
 			return;
 		}
 
-		profileContainer.innerHTML = UserProfile.render();
-		UserProfile.addEventListeners();
+		try {
+			// Afficher un loader pendant le chargement
+			profileContainer.innerHTML = /* HTML */`
+				<div class="flex items-center justify-center h-full">
+					<div class="text-white">Chargement du profil...</div>
+				</div>
+			`;
+
+			// Charger et afficher le profil
+			profileContainer.innerHTML = await UserProfileView.render();
+			await UserProfileView.addEventListeners();
+		} catch (error) {
+			console.error('Error updating profile:', error);
+			profileContainer.innerHTML = /* HTML */`
+				<div class="flex items-center justify-center h-full">
+					<div class="text-red-500">Erreur lors du chargement du profil</div>
+				</div>
+			`;
+		}
 	}
 
-	public updateMatchHistory(): void {
+	public async updateMatchHistory(): Promise<void> {
 		const matchHistoryContainer = this._contentContainer.querySelector('#match-history');
 		if (!matchHistoryContainer) {
 			console.error('Match history container not found');
 			return;
 		}
 
-		matchHistoryContainer.innerHTML = MatchHistory.render();
+		matchHistoryContainer.innerHTML = await MatchHistoryView.render();
 	}
 
-	public updateFriendList(): void {
+	public async updateFriendList(): Promise<void> {
 		const friendListContainer = this._contentContainer.querySelector('#friends');
 		if (!friendListContainer) {
 			console.error('Friend list container not found');
 			return;
 		}
 
-		friendListContainer.innerHTML = FriendList.render();
-		FriendList.addEventListeners();
+		friendListContainer.innerHTML = await FriendListView.render();
+		FriendListView.addEventListeners();
 	}
 }

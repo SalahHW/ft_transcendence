@@ -76,6 +76,20 @@ export const readUserByUsername = async (username) => {
   }
 };
 
+export const readUserByWallet = async (wallet) => {
+  const query = `
+    SELECT u.id, u.username, u.wallet, u.authenticationMethod, c.email, c.password
+    FROM users u
+    LEFT JOIN credentials_auth c ON u.id = c.id
+    WHERE LOWER(u.wallet) = ?
+  `;
+  try {
+    return await database.get(query, [wallet.toLowerCase()]);
+  } catch (error) {
+    throw translateSqliteError(error);
+  }
+};
+
 export const readAllUsers = async () => {
   const query = `
     SELECT u.id, u.username, u.wallet, u.authenticationMethod, c.email
@@ -127,20 +141,6 @@ export const userExists = async (username) => {
   try {
     const user = await database.get(query, [username.toLowerCase()]);
     return !!user;
-  } catch (error) {
-    throw translateSqliteError(error);
-  }
-};
-
-export const emailExists = async (email) => {
-  const query = `
-    SELECT 1 FROM credentials_auth
-    WHERE email = ?
-    LIMIT 1
-  `;
-  try {
-    const result = await database.get(query, [email.toLowerCase()]);
-    return !!result;
   } catch (error) {
     throw translateSqliteError(error);
   }

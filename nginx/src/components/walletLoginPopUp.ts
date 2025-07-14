@@ -1,11 +1,11 @@
 import ModalView from "./ModalView.js";
-import AuthNanoService from "../auth/AuthNanoService.js";
+import AuthService from "../services/AuthNanoService.js";
 import { UI_THEME } from "../style/tailwindClasses.js";
 import { buttonHTML } from "./button.js";
 import { loadingSpinnerHTML } from "./loadingSpinner";
 
 export default class WalletLoginPopup extends ModalView {
-  private _authService: AuthNanoService;
+  private _authService: AuthService;
 
   constructor() {
     super({
@@ -13,7 +13,7 @@ export default class WalletLoginPopup extends ModalView {
       maxWidth: "28rem",
       contentContainerClasses: "p-6 mx-4",
     });
-    this._authService = AuthNanoService.getInstance();
+    this._authService = AuthService.getInstance();
   }
 
   public show(): void {

@@ -1,20 +1,5 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Router.ts                                          :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: Invalid Date        by              +#+  #+#    #+#             */
-/*   Updated: 2025/07/09 20:59:47 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-
-// TODO: Mettre cette classe ça au propre
-// TODO: (opt) Mettre des views pour les differents forms de APITestPage
-
-// All imports are now dynamic below, remove static imports
+// TODO: Clean up this class
+// TODO: (opt) Add views for different forms in APITestPage
 
 interface Route {
   path: string;
@@ -117,9 +102,25 @@ export default class Router {
     return Router._instance;
   }
 
+  public clearAllRouteCaches(): void {
+    this._routes.forEach((route) => {
+      if (route.cache) {
+        if (typeof route.cache.cleanup === 'function') {
+          try {
+            route.cache.cleanup();
+          } catch (error) {
+            console.error(
+              `Error during ${route.path} route cleanup on logout:`,
+              error,
+            );
+          }
+        }
+        route.cache = undefined;
+      }
+    });
+  }
+
   private _executeHandler(path: string) {
-    // **CRITICAL FIX**: Clean up ANY route when navigating away
-    // Don't clean up during popstate events (back navigation) as cleanup should already be done
     const currentPath = this.getCurrentPath();
     const isLeavingRoute = path !== currentPath;
     const isPopstateNavigation = (window as any).popstateInProgress;
@@ -140,10 +141,8 @@ export default class Router {
   private _cleanupCurrentRoute(): void {
     const currentPath = this.getCurrentPath();
     if (!(window as any).routeCleanupInProgress) {
-      // Set flag to prevent double cleanup
       (window as any).routeCleanupInProgress = true;
 
-      // **CRITICAL**: Clean up current route's cached component if it has cleanup method
       const currentRoute = this._routes.find(
         (route) => route.path === currentPath
       );
@@ -155,9 +154,7 @@ export default class Router {
         }
       }
 
-      // **CRITICAL**: Special cleanup for game routes
       if (currentPath === "/1v1" || currentPath === "/tournament") {
-        // Call cleanup if available globally
         if ((window as any).leaveGame) {
           try {
             (window as any).leaveGame();
@@ -173,7 +170,6 @@ export default class Router {
         }
       }
 
-      // Clear the cleanup flag after a short delay
       setTimeout(() => {
         (window as any).routeCleanupInProgress = false;
       }, 100);
@@ -185,7 +181,6 @@ export default class Router {
   }
 
   private _redirectToHome(): void {
-    // **CRITICAL FIX**: Prevent recursive calls by checking if we're already redirecting
     if ((window as any).redirectingToHome) {
       return;
     }
@@ -197,7 +192,6 @@ export default class Router {
       this._executeHandler("/");
     } catch (error) {
       console.error("Error redirecting to home:", error);
-      // Force navigation on error
       window.location.pathname = "/";
     } finally {
       setTimeout(() => {
@@ -207,7 +201,6 @@ export default class Router {
   }
 
   public navigate(path: string, replaceState: boolean = false): boolean {
-    // **CRITICAL FIX**: Prevent recursive navigation
     if ((window as any).navigationInProgress) {
       return false;
     }
@@ -241,7 +234,6 @@ export default class Router {
   }
 
   private _handlePopState = (): void => {
-    // **CRITICAL FIX**: Prevent recursive popstate handling
     if ((window as any).popstateInProgress) {
       return;
     }
@@ -253,18 +245,14 @@ export default class Router {
 
       if (!this._executeHandler(path)) {
         if (path !== "/") {
-          // **CRITICAL**: Use replaceState without calling _executeHandler to prevent recursion
           window.history.replaceState({ path: "/" }, "", "/");
-          // Force a page reload instead of recursive navigation
           window.location.pathname = "/";
         }
       }
     } catch (error) {
       console.error("Error in popstate handler:", error);
-      // Force navigation to home on error
       window.location.pathname = "/";
     } finally {
-      // Clear the flag after a short delay
       setTimeout(() => {
         (window as any).popstateInProgress = false;
       }, 100);

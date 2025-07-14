@@ -1,4 +1,5 @@
 import * as userControllers from "../controllers/userControllers.js";
+import { refreshAccessToken } from "../controllers/refreshAccessTokenController.js";
 
 export default async function userRoutes(fastify) {
   fastify.route({
@@ -99,6 +100,8 @@ export default async function userRoutes(fastify) {
             id: { type: "number" },
             username: { type: "string" },
             email: { type: "string" },
+            wallet: { type: "string" },
+            authenticationMethod: { type: "string" },
           },
         },
         404: {
@@ -134,6 +137,8 @@ export default async function userRoutes(fastify) {
             id: { type: "number" },
             username: { type: "string" },
             email: { type: "string" },
+            wallet: { type: "string" },
+            authenticationMethod: { type: "string" },
           },
         },
         404: {
@@ -149,34 +154,28 @@ export default async function userRoutes(fastify) {
   });
 
   fastify.route({
-    method: "PUT",
-    url: "/users/:id",
+    method: "GET",
+    url: "/users/wallet/:wallet",
     schema: {
-      summary: "Update a user",
-      description: "Updates a user's information by their unique ID.",
+      summary: "Get user by wallet",
+      description: "Returns a user by their wallet address.",
       params: {
         type: "object",
         properties: {
-          id: { type: "number", description: "User's unique ID." },
+          wallet: { type: "string", description: "User's wallet address." },
         },
-        required: ["id"],
-      },
-      body: {
-        type: "object",
-        properties: {
-          username: { type: "string" },
-          password: { type: "string" },
-          email: { type: "string", format: "email" },
-        },
+        required: ["wallet"],
       },
       response: {
         200: {
-          description: "User updated successfully.",
+          description: "User found.",
           type: "object",
           properties: {
             id: { type: "number" },
             username: { type: "string" },
             email: { type: "string" },
+            wallet: { type: "string" },
+            authenticationMethod: { type: "string" },
           },
         },
         404: {
@@ -188,36 +187,85 @@ export default async function userRoutes(fastify) {
         },
       },
     },
-    handler: userControllers.updateUser,
+    handler: userControllers.readUserByWallet,
   });
 
+  // fastify.route({
+  //   method: "PUT",
+  //   url: "/users/:id",
+  //   schema: {
+  //     summary: "Update a user",
+  //     description: "Updates a user's information by their unique ID.",
+  //     params: {
+  //       type: "object",
+  //       properties: {
+  //         id: { type: "number", description: "User's unique ID." },
+  //       },
+  //       required: ["id"],
+  //     },
+  //     body: {
+  //       type: "object",
+  //       properties: {
+  //         username: { type: "string" },
+  //         password: { type: "string" },
+  //         email: { type: "string", format: "email" },
+  //       },
+  //     },
+  //     response: {
+  //       200: {
+  //         description: "User updated successfully.",
+  //         type: "object",
+  //         properties: {
+  //           id: { type: "number" },
+  //           username: { type: "string" },
+  //           email: { type: "string" },
+  //         },
+  //       },
+  //       404: {
+  //         description: "User not found.",
+  //         type: "object",
+  //         properties: {
+  //           error: { type: "string" },
+  //         },
+  //       },
+  //     },
+  //   },
+  //   handler: userControllers.updateUser,
+  // });
+
+  // fastify.route({
+  //   method: "DELETE",
+  //   url: "/users/:id",
+  //   schema: {
+  //     summary: "Delete a user",
+  //     description: "Deletes a user by their unique ID.",
+  //     params: {
+  //       type: "object",
+  //       properties: {
+  //         id: { type: "number", description: "User's unique ID." },
+  //       },
+  //       required: ["id"],
+  //     },
+  //     response: {
+  //       204: {
+  //         description: "User deleted successfully. No content returned.",
+  //         type: "null",
+  //       },
+  //       404: {
+  //         description: "User not found.",
+  //         type: "object",
+  //         properties: {
+  //           error: { type: "string" },
+  //         },
+  //       },
+  //     },
+  //   },
+  //   handler: userControllers.deleteUser,
+  // });
+
   fastify.route({
-    method: "DELETE",
-    url: "/users/:id",
-    schema: {
-      summary: "Delete a user",
-      description: "Deletes a user by their unique ID.",
-      params: {
-        type: "object",
-        properties: {
-          id: { type: "number", description: "User's unique ID." },
-        },
-        required: ["id"],
-      },
-      response: {
-        204: {
-          description: "User deleted successfully. No content returned.",
-          type: "null",
-        },
-        404: {
-          description: "User not found.",
-          type: "object",
-          properties: {
-            error: { type: "string" },
-          },
-        },
-      },
-    },
-    handler: userControllers.deleteUser,
+    method: "POST",
+    url: "/refreshAccessToken",
+    handler: refreshAccessToken,
   });
 }

@@ -4,7 +4,7 @@ services:
     container_name: nginx
     build: ./nginx/
     ports:
-      - "8443:443"
+      - "16443:443"
     networks:
       - transcendence
 

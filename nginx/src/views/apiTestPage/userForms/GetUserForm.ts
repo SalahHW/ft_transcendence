@@ -1,16 +1,4 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   GetUserForm.ts                                     :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/26 21:08:25 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/09 20:59:22 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-import UsersApi from "../../../api/user.js";
+import UsersApi from "../../../services/api/user.js";
 import { buttonHTML } from "../../../components/button.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 
@@ -69,7 +57,7 @@ export default class GetUserForm {
 					console.log(`User found by id:\n${JSON.stringify(response, null, 2)}`);
 				}
 				else if (nameInput.value) {
-					const response = await this._userService.getUsersByUsername(nameInput.value);
+					const response = await this._userService.getUserByUsername(nameInput.value);
 					form.reset();
 					console.log(`User found by name:\n${JSON.stringify(response, null, 2)}`);
 				}

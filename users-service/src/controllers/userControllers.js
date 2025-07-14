@@ -1,4 +1,5 @@
 import * as userModels from "../models/userModels.js";
+import * as emailModels from "../models/emailModels.js";
 import { createEmail } from "./emailControllers.js";
 import { createPassword } from "./passwordControllers.js";
 import axios from "axios";
@@ -21,7 +22,7 @@ export async function createUser(request, reply) {
       return reply.code(409).send({ error: "Username already exists" });
 
     if (authenticationMethod === "credentials") {
-      const emailTaken = await userModels.emailExists(email);
+      const emailTaken = await emailModels.emailExists(email);
       if (emailTaken)
         return reply.code(409).send({ error: "Email already exists" });
     }
@@ -91,6 +92,21 @@ export async function readUserByUsername(request, reply) {
 
   try {
     const result = await userModels.readUserByUsername(username);
+    if (!result) return reply.code(404).send({ error: "User not found" });
+    return reply.code(200).send(result);
+  } catch (error) {
+    return reply
+      .code(500)
+      .send({ error: "Failed to read user", cause: error.message });
+  }
+}
+
+export async function readUserByWallet(request, reply) {
+  const wallet = request.params.wallet;
+  if (!wallet) return reply.code(400).send({ error: "Wallet is required" });
+
+  try {
+    const result = await userModels.readUserByWallet(wallet);
     if (!result) return reply.code(404).send({ error: "User not found" });
     return reply.code(200).send(result);
   } catch (error) {

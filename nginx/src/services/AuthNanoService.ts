@@ -1,22 +1,24 @@
-import UsersApi, { User } from "../api/user.js";
+import UsersApi, { JwtUserPayload } from "../services/api/user.js";
+import CacheManager from "./CacheManager.js";
 
-export default class AuthNanoService {
-  private static _instance: AuthNanoService;
+export default class AuthService {
+  private static _instance: AuthService;
   private _usersApi: UsersApi = new UsersApi();
-  private _user: User | null = null;
-  private _isLoggedIn: boolean | null = null; // null means we haven't checked yet
+  private _user: JwtUserPayload | null = null;
+  private _isLoggedIn: boolean | null = null;
   private _refreshInterval: ReturnType<typeof setInterval> | null = null;
+  private _host: string = `${window.location.protocol}//${window.location.host}`;
 
   private constructor() {}
 
-  public static getInstance(): AuthNanoService {
-    if (!AuthNanoService._instance) {
-      AuthNanoService._instance = new AuthNanoService();
+  public static getInstance(): AuthService {
+    if (!AuthService._instance) {
+      AuthService._instance = new AuthService();
     }
-    return AuthNanoService._instance;
+    return AuthService._instance;
   }
 
-  private async _ensureAuthStatusChecked(): Promise<void> {
+  public async _ensureAuthStatusChecked(): Promise<void> {
     if (this._isLoggedIn === null) {
       try {
         this._user = await this._usersApi.getCurrentUser();
@@ -35,17 +37,27 @@ export default class AuthNanoService {
     return this._isLoggedIn!;
   }
 
-  public async getUser(): Promise<User | null> {
+  public async getJwtPayload(): Promise<JwtUserPayload | null> {
     await this._ensureAuthStatusChecked();
     return this._user;
   }
 
-  public async login(username: string, password: string): Promise<User> {
-    const user = await this._usersApi.login(username, password);
-    this._user = user;
+  public async login(
+    username: string,
+    password: string
+  ): Promise<JwtUserPayload> {
+    await this._usersApi.login(username, password);
+    this._user = await this._usersApi.getCurrentUser();
     this._isLoggedIn = true;
     this._startRefreshLoop();
-    return user;
+
+    const cacheManager = CacheManager.getInstance();
+    cacheManager.triggerEvent({
+      type: "USER_LOGIN",
+      data: { userId: this._user?.sub, username: this._user?.username },
+    });
+
+    return this._user!;
   }
 
   public async logout(): Promise<void> {
@@ -54,6 +66,12 @@ export default class AuthNanoService {
       this._user = null;
       this._isLoggedIn = false;
       this._stopRefreshLoop();
+
+      const cacheManager = CacheManager.getInstance();
+      cacheManager.triggerEvent({
+        type: "USER_LOGOUT",
+        data: { timestamp: Date.now() },
+      });
     } catch (error) {
       console.error("Logout API call failed:", error);
       throw new Error("Logout failed. Please try again.");
@@ -64,25 +82,16 @@ export default class AuthNanoService {
     username: string;
     password: string;
     email: string;
-    authenticationMethod: string;
     wallet: string;
-  }): Promise<User> {
-    const response = await fetch("https://elsalmatjori.com:16443/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({}));
-      const errorMessage =
-        errorBody?.error || `Failed to register: ${response.statusText}`;
-      const error: any = new Error(errorMessage);
-      error.response = response;
-      throw error;
-    }
-
-    return this.login(data.username, data.password);
+  }): Promise<JwtUserPayload> {
+    await this._usersApi.register(
+      data.username,
+      data.email,
+      data.password,
+      data.wallet
+    );
+    await this.login(data.username, data.password);
+    return this._user!;
   }
 
   public async registerWithWallet(username: string): Promise<void> {
@@ -90,42 +99,30 @@ export default class AuthNanoService {
       const wallet = await this._getWalletAddress();
       if (!wallet) throw new Error("No wallet detected");
 
-      const challengeRes = await fetch(
-        `https://elsalmatjori.com:16443/wallet/challenge?wallet=${wallet}`
+      const { challenge, timestamp } = await this._usersApi.getWalletChallenge(
+        wallet
       );
-      if (!challengeRes.ok) {
-        const errorText = await challengeRes.text();
-        throw new Error(`Failed to get challenge: ${errorText}`);
-      }
-
-      const { challenge, timestamp } = await challengeRes.json();
       if (!challenge || !timestamp)
         throw new Error("Invalid challenge response");
 
       const signature = await this._signMessage(challenge, wallet);
 
-      const registerRes = await fetch(
-        "https://elsalmatjori.com:16443/register/wallet",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            wallet,
-            username,
-            signature,
-            timestamp,
-          }),
-        }
+      await this._usersApi.registerWithWallet(
+        username,
+        wallet,
+        signature,
+        timestamp
       );
-
-      if (!registerRes.ok) {
-        const errorText = await registerRes.text();
-        throw new Error(`Wallet registration failed: ${errorText}`);
-      }
 
       this._user = await this._usersApi.getCurrentUser();
       this._isLoggedIn = true;
       this._startRefreshLoop();
+
+      const cacheManager = CacheManager.getInstance();
+      cacheManager.triggerEvent({
+        type: "USER_LOGIN",
+        data: { userId: this._user?.sub, username: this._user?.username },
+      });
     } catch (error) {
       console.error("registerWithWallet() error:", error);
       throw error;
@@ -161,41 +158,25 @@ export default class AuthNanoService {
       const wallet = await this._getWalletAddress();
       if (!wallet) throw new Error("No wallet detected");
 
-      const challengeRes = await fetch(
-        `https://elsalmatjori.com:16443/wallet/challenge?wallet=${wallet}`
+      const { challenge, timestamp } = await this._usersApi.getWalletChallenge(
+        wallet
       );
-      if (!challengeRes.ok) {
-        const errorText = await challengeRes.text();
-        throw new Error(`Failed to get challenge: ${errorText}`);
-      }
-
-      const { challenge, timestamp } = await challengeRes.json();
       if (!challenge || !timestamp)
         throw new Error("Invalid challenge response");
 
       const signature = await this._signMessage(challenge, wallet);
 
-      const loginRes = await fetch(
-        "https://elsalmatjori.com:16443/login/wallet",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            wallet,
-            signature,
-            timestamp,
-          }),
-        }
-      );
-
-      if (!loginRes.ok) {
-        const errorText = await loginRes.text();
-        throw new Error(`Wallet login failed: ${errorText}`);
-      }
+      await this._usersApi.loginWithWallet(wallet, signature, timestamp);
 
       this._user = await this._usersApi.getCurrentUser();
       this._isLoggedIn = true;
       this._startRefreshLoop();
+
+      const cacheManager = CacheManager.getInstance();
+      cacheManager.triggerEvent({
+        type: "USER_LOGIN",
+        data: { userId: this._user?.sub, username: this._user?.username },
+      });
     } catch (error) {
       console.error("loginWithWallet() error:", error);
       throw error;
@@ -207,7 +188,7 @@ export default class AuthNanoService {
 
     this._refreshInterval = setInterval(async () => {
       try {
-        const res = await fetch("https://elsalmatjori.com:16443/refresh", {
+        const res = await fetch(`${this._host}/refreshAccessToken`, {
           method: "POST",
           credentials: "include",
         });
@@ -219,18 +200,19 @@ export default class AuthNanoService {
         }
 
         if (!res.ok) {
-          console.warn(`[REFRESH] Failed with status ${res.status}`);
+          const body = await res.text().catch(() => "");
+          console.warn(`[REFRESH] Failed with status ${res.status}: ${body}`);
           return;
         }
 
-        console.info("[REFRESH] Token refreshed successfully");
+        console.info("[REFRESH] Access token refreshed successfully");
       } catch (err) {
         console.error(
           "[REFRESH] Network or server error during token refresh:",
           err
         );
       }
-    }, 240_000);
+    }, 240_000); // 4 minutes
   }
 
   private _stopRefreshLoop() {

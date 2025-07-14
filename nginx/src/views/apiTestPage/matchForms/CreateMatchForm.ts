@@ -1,16 +1,4 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   CreateMatchForm.ts                                 :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/26 20:42:42 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/03 13:16:22 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-import MatchServiceAPI from "../../../api/match.js";
+import MatchServiceAPI from "../../../services/api/match.js";
 import { buttonHTML } from "../../../components/button.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 
@@ -29,10 +17,10 @@ export default class CreateMatchForm {
 		this._container.innerHTML = /* HTML */ `
 			<form id="create-match-form" class="${UI_THEME.components.form}">
 				<div>
-					<input type="text" id="createform-player1" placeholder="Player 1 name" class="${UI_THEME.components.input}">
+					<input type="text" id="createform-player1" placeholder="Player 1 address (0x...)" class="${UI_THEME.components.input}">
 				</div>
 				<div>
-					<input type="text" id="createform-player2" placeholder="Player 2 name" class="${UI_THEME.components.input}">
+					<input type="text" id="createform-player2" placeholder="Player 2 address (0x...)" class="${UI_THEME.components.input}">
 				</div>
 				<div>
 					<input type="number" id="createform-match-id" placeholder="Match ID" class="${UI_THEME.components.input}">

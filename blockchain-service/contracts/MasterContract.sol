@@ -38,6 +38,7 @@ contract MasterContract is Ownable {
         uint8 player1Score;
         uint8 player2Score;
         uint16 matchId;
+        uint32 endTimestamp;
     }
 
     /**
@@ -70,7 +71,8 @@ contract MasterContract is Ownable {
         address indexed winner,
         uint8 player1Score,
         uint8 player2Score,
-        uint16 matchId
+        uint16 matchId,
+        uint32 endTimestamp
     );
 
     event TournamentReported(
@@ -130,7 +132,8 @@ contract MasterContract is Ownable {
         uint16 matchId,
         uint8 player1Score,
         uint8 player2Score,
-        address winner
+        address winner,
+        uint32 endTimestamp
     ) public onlyOwner {
         require(players[player1].exists, "Player1 not registered");
         require(players[player2].exists, "Player2 not registered");
@@ -161,7 +164,8 @@ contract MasterContract is Ownable {
             winner: winner,
             player1Score: player1Score,
             player2Score: player2Score,
-            matchId: matchId
+            matchId: matchId,
+            endTimestamp: endTimestamp
         });
 
         globalMatchesArray.push(tempMatch);
