@@ -44,22 +44,18 @@ export async function readFriendship(request, reply) {
 }
 
 export async function deleteFriendship(request, reply) {
+  const friendId = request.params.friendId;
+  const userId = request.user.sub;
+
+  let result;
   try {
-    const userId = request.params.userId;
-    const friendId = request.params.friendId;
-
-    if (userId === friendId) {
-      return reply
-        .code(400)
-        .send({ error: "User cannot add themselves as a friend" });
-    }
-
-    await friendshipModels.deleteFriendship(userId, friendId);
-    reply.code(204).send();
+    result = await friendshipModels.deleteFriendship(userId, friendId);
   } catch (err) {
     return reply.code(500).send({
       error: "Failed to delete friendships",
       cause: err.message,
     });
   }
+  if (!result) reply.code(404).send({ error: "Friendship not found" });
+  reply.code(204).send();
 }
