@@ -17,7 +17,6 @@ export default async function authenticationRoutes(fastify) {
   fastify.route({
     method: "POST",
     url: "/logout",
-    preHandler: meControllers.verifyAuthentication,
     handler: authenticationControllers.logoutUser,
   });
 
