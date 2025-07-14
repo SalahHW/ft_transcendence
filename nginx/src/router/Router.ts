@@ -64,6 +64,7 @@ export default class Router {
           this.cache = new module.default();
         }
         this.cache.show();
+        this.cache.render();
       },
     },
     {
