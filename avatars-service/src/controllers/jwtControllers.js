@@ -1,7 +1,7 @@
 import * as jwtServices from "../services/jwtServices.js";
 
 export async function verifyAuthentication(request, reply) {
-  const token = request.cookies?.token;
+  const token = request.cookies?.accessToken;
 
   if (!token) {
     return reply.code(401).send({ error: "Authentication token is missing" });
