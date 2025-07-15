@@ -18,8 +18,9 @@ import { getUserResponseData, registerCurrentUserForGame } from "../utils/fetch.
  * @param cache - The route cache object to store the GamePage instance
  */
 export async function handleSimpleMatch(cache: any): Promise<void> {
+	let playerData = null;
 	try {
-		const playerData = await registerCurrentUserForGame();
+		playerData = await registerCurrentUserForGame();
 		
 		if (!cache.cache) {
 			cache.cache = new GamePage("app-container");
@@ -33,7 +34,9 @@ export async function handleSimpleMatch(cache: any): Promise<void> {
 		if (gameClientModule.setupJoinGameButton) {
 			gameClientModule.setupJoinGameButton('1v1');
 		}
-		await gameClientModule.initializeGame(playerData.id, '1v1');
+		if (playerData) {
+			await gameClientModule.initializeGame(playerData.id, '1v1');
+		}
 		
 	} catch (error) {
 		console.error("Error registering user for game:", error);
