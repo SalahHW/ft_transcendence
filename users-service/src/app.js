@@ -3,6 +3,7 @@ import Fastify from "fastify";
 import plugins from "./plugins/index.js";
 import fastifyCookie from "@fastify/cookie";
 import { initializeDatabase } from "./models/database.js";
+import { initializeRedis } from "./models/redis.js";
 import registerRoutes from "./routes/index.js";
 
 const fastify = Fastify();
@@ -14,6 +15,8 @@ try {
   console.error("Failed to initialize the database: ", error.message);
   process.exit(1);
 }
+
+await initializeRedis(fastify);
 
 // Register Swagger in dev environment
 if (isDev) {
