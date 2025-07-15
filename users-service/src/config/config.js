@@ -36,6 +36,7 @@ export const REDIS_SERVICE_HOST = isDev
   ? "localhost"
   : process.env.REDIS_SERVICE_HOST;
 export const REDIS_SERVICE_PORT = process.env.REDIS_SERVICE_PORT;
+export const REDIS_SERVICE_PASSWORD = process.env.REDIS_SERVICE_PASSWORD;
 
 if (!REDIS_SERVICE_HOST) {
   console.error("Unable to load redis service host from environment variables");
@@ -45,4 +46,10 @@ if (!REDIS_SERVICE_HOST) {
 if (!REDIS_SERVICE_PORT) {
   console.error("Unable to load redis service port from environment variables");
   process.exit(1);
+}
+
+if (!REDIS_SERVICE_PASSWORD) {
+  console.error(
+    "Unable to load redis service password from environment variables"
+  );
 }
