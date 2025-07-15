@@ -9,6 +9,7 @@ export default class ModalView {
     protected _element: HTMLElement;
     protected _contentContainer: HTMLElement;
     public _isVisible: boolean = false;
+    private static _instances: Set<ModalView> = new Set();
 
     constructor(options?: ModalViewOptions) {
         const container = document.createElement('div');
@@ -18,6 +19,7 @@ export default class ModalView {
         this._renderBase(options);
         this._contentContainer = this._element.querySelector('.modal-content-container') as HTMLElement;
         this._setupEventListeners();
+        ModalView._instances.add(this);
     }
 
     private _renderBase(options?: ModalViewOptions): void {
@@ -87,4 +89,15 @@ export default class ModalView {
 			this._element.classList.remove("flex");
 		}, 150);
 	}
+
+    public destroy(): void {
+        this._element.remove();
+        ModalView._instances.delete(this);
+    }
+
+    public static hideAll(): void {
+        for (const instance of this._instances) {
+            instance.hide();
+        }
+    }
 }
