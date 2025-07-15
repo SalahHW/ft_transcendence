@@ -170,15 +170,14 @@ export class BlockchainService {
         throw new Error(`Invalid wallet address format for player2: ${player2Wallet}`);
       }
 
-      // Determine winner wallet (winner is the one with higher score)
-      const winnerWallet = matchData.winner.score > matchData.loser.score ? player1Wallet : player2Wallet;
+      // Register both players (required for blockchain contract)
+      const player1Name = matchData.winner.username || `Player_${matchData.winner.userId || matchData.winner.id}`;
+      const player2Name = matchData.loser.username || `Player_${matchData.loser.userId || matchData.loser.id}`;
+      const player1Registered = await this.registerPlayerIfNeeded(player1Wallet, player1Name);
+      const player2Registered = await this.registerPlayerIfNeeded(player2Wallet, player2Name);
 
-      // Register winner if needed (only winner needs to be registered for reporting)
-      const winnerName = matchData.winner.username || `Player_${matchData.winner.userId || matchData.winner.id}`;
-      const winnerRegistered = await this.registerPlayerIfNeeded(winnerWallet, winnerName);
-
-      if (!winnerRegistered) {
-        throw new Error(`Failed to register winner ${winnerName} in blockchain contract`);
+      if (!player1Registered || !player2Registered) {
+        throw new Error(`Failed to register both players in blockchain contract`);
       }
 
       // Determine endTimestamp based on match type
@@ -202,14 +201,14 @@ export class BlockchainService {
       const blockchainData = {
         player1: player1Wallet,
         player2: player2Wallet,
-        winner: winnerWallet,
+        winner: player1Wallet, // Winner is the one with higher score
         player1Score: matchData.winner.score.toString(),
         player2Score: matchData.loser.score.toString(),
         endTimestamp: endTimestamp.toString()
       };
 
       console.log(`🔗 Reporting ${isMatch1v1 ? '1v1' : 'tournament'} match to blockchain (WINNER ONLY):`, blockchainData);
-      console.log(`🔗 Winner wallet: ${winnerWallet}, EndTimestamp: ${endTimestamp}`);
+      console.log(`🔗 Winner wallet: ${player1Wallet}, EndTimestamp: ${endTimestamp}`);
 
       const response = await axios.post(`${BLOCKCHAIN_SERVICE_URL}/report-match`, blockchainData, {
         timeout: 10000

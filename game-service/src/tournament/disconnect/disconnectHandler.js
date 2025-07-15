@@ -60,6 +60,14 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
         console.error(`🏆 Error checking player disconnection status:`, error);
       }
     }
+
+    // ⭐ NEW: Check if this is a legitimate tournament closure
+    if (this._isLegitimateTournamentClosure(reason)) {
+      console.log(`🏆 Legitimate tournament closure detected for player ${playerId}, skipping forfeit handling`);
+      this.removePlayerFromGame(playerId);
+      return;
+    }
+
     //TODO: CHECK 3 DISCONNECTED PLAYERS AND 1 CONNECTED PLAYER
     // Clean up player connection first
     this.cleanupPlayerConnection(playerId);
@@ -563,7 +571,22 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       }
     }
     const matchStartTime = room.startTime || matchEndTime;
-    const endTimestamp = Math.floor(Date.now() / 1000); // Actual end time as integer for blockchain
+    
+    // ⭐ FIX: Use tournament start timestamp for tournament matches instead of real end time
+    let endTimestamp;
+    if (waitingRoomId) {
+      try {
+        const { blockchainService } = await import('../../services/blockchainService.js');
+        const tournamentStartTime = blockchainService.getTournamentStartTime(waitingRoomId);
+        endTimestamp = tournamentStartTime || Math.floor(Date.now() / 1000);
+        console.log(`🏆 Using tournament start timestamp ${endTimestamp} for forfeit match in room ${roomId}`);
+      } catch (error) {
+        console.error(`🏆 Error getting tournament start time, using current time:`, error);
+        endTimestamp = Math.floor(Date.now() / 1000);
+      }
+    } else {
+      endTimestamp = Math.floor(Date.now() / 1000);
+    }
     
     // ⭐ FIX: Use provided scores or calculate correct scores based on player positions
     let finalWinnerScore = winnerScore;
@@ -632,7 +655,22 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   async createTournamentThirdPlaceMatchData(room, roomId, waitingLoser, reason, context) {
     const matchEndTime = TimeUtils.getCurrentTimestamp();
     const matchStartTime = room.startTime || matchEndTime;
-    const endTimestamp = Math.floor(Date.now() / 1000); // Actual end time as integer for blockchain
+    // ⭐ FIX: Use tournament start timestamp for tournament matches instead of real end time
+    let endTimestamp;
+    const waitingRoomId = room.metadata?.waitingRoomId;
+    if (waitingRoomId) {
+      try {
+        const { blockchainService } = await import('../../services/blockchainService.js');
+        const tournamentStartTime = blockchainService.getTournamentStartTime(waitingRoomId);
+        endTimestamp = tournamentStartTime || Math.floor(Date.now() / 1000);
+        console.log(`🏆 Using tournament start timestamp ${endTimestamp} for third place match in room ${roomId}`);
+      } catch (error) {
+        console.error(`🏆 Error getting tournament start time, using current time:`, error);
+        endTimestamp = Math.floor(Date.now() / 1000);
+      }
+    } else {
+      endTimestamp = Math.floor(Date.now() / 1000);
+    }
     
     // Generate simple match ID for internal tracking
     const matchId = Math.floor(Date.now() / 1000) % 1000000;
@@ -721,7 +759,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   }
 
   /**
-   * Handle tournament advancement for forfeit scenarios
+   * Handle tournament advancement after forfeit
    */
   async handleTournamentAdvancement(room, roomId, matchData) {
     const waitingRoomId = room.metadata?.waitingRoomId;
@@ -733,15 +771,16 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     console.log(`🏆 Handling tournament advancement for room ${roomId} in tournament ${waitingRoomId}`);
 
     try {
-      // ⭐ FIX: Don't call tournament match manager methods here to prevent duplicate reporting
-      // The tournament match manager already handles match reporting when matches end normally
-      // This method is only for forfeit scenarios, not for triggering match reporting
+      // Import tournament manager dynamically to avoid circular dependencies
+      const { tournamentManager } = await import('../TournamentManager.js');
       
       const roomType = room.metadata?.roomType;
       if (roomType === TournamentRoomTypes.SEMI_FINAL_A || roomType === TournamentRoomTypes.SEMI_FINAL_B) {
-        console.log(`🏆 Semi-final forfeit detected, advancement handled by tournament manager`);
+        console.log(`🏆 Semi-final forfeit detected, advancing winner to finals`);
+        await tournamentManager.handleSemiFinalMatchEnd(waitingRoomId, roomId, matchData);
       } else if (roomType === TournamentRoomTypes.WINNER_FINAL || roomType === TournamentRoomTypes.LOSER_FINAL) {
-        console.log(`🏆 Final forfeit detected, completion handled by tournament manager`);
+        console.log(`🏆 Final forfeit detected, completing tournament`);
+        await tournamentManager.handleFinalMatchEnd(waitingRoomId, roomId, matchData);
       } else {
         console.error(`🏆 Unknown tournament room type for advancement: ${roomType}`);
       }
@@ -815,14 +854,22 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   }
 
   /**
-   * Report forfeit results to external APIs
+   * Report tournament forfeit results to external APIs
    */
   async reportTournamentForfeitResults(matchData) {
     try {
       console.log(`🏆 Reporting tournament forfeit results for room ${matchData.roomId}`);
-      // ⭐ FIX: Don't report match data here to prevent duplicates
-      // The tournament match manager already handles match reporting
-      // This method is only for forfeit scenarios, not normal match endings
+      // Report to external services - Tournament match
+      const tournamentId = matchData.waitingRoomId;
+      
+      // ⭐ FIX: Use safe reporting to prevent duplicates
+      const { tournamentManager } = await import('../TournamentManager.js');
+      if (tournamentManager.matchManager && tournamentManager.matchManager._safeReportMatch) {
+        await tournamentManager.matchManager._safeReportMatch(matchData, false, tournamentId);
+      } else {
+        // Fallback to direct reporting if safe method not available
+        await reportMatchResultsToAPI(matchData, false, tournamentId);
+      }
     } catch (error) {
       console.error('🏆 Failed to report tournament forfeit results:', error);
     }
@@ -1047,6 +1094,38 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     }
     
     console.log(`🏆 Immediate ball disposal completed for room ${roomId}`);
+  }
+
+  /**
+   * ⭐ NEW: Check if disconnection reason indicates legitimate tournament closure
+   */
+  _isLegitimateTournamentClosure(reason) {
+    // Check for legitimate tournament closure reasons
+    const legitimateReasons = [
+      'Tournament completed',
+      'Tournament completed - 1st place',
+      'Tournament completed - 2nd place', 
+      'Tournament completed - 3rd place',
+      'Tournament completed - 4th place',
+      'Tournament placement determined',
+      'Tournament placement determined - 1st place',
+      'Tournament placement determined - 2nd place',
+      'Tournament placement determined - 3rd place',
+      'Tournament placement determined - 4th place',
+      'Tournament cleanup'
+    ];
+    
+    // Check if the reason indicates legitimate tournament completion
+    if (reason && legitimateReasons.some(legitReason => reason.includes(legitReason))) {
+      return true;
+    }
+    
+    // Also check for tournament-related reasons
+    if (reason && reason.toLowerCase().includes('tournament')) {
+      return true;
+    }
+    
+    return false;
   }
 }
 

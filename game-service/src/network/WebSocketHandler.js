@@ -95,6 +95,12 @@ export class WebSocketHandler {
       const currentRoomId = ws.roomId || roomId;
       console.log(`🔌 WebSocket closed for player ${playerId} in room ${currentRoomId}: code=${code}, reason=${reason}`);
       
+      // ⭐ FIX: Check if this is a legitimate tournament closure before treating as disconnect
+      if (this._isLegitimateTournamentClosure(code, reason)) {
+        console.log(`🏆 Legitimate tournament closure detected for player ${playerId}, skipping disconnect handling`);
+        return;
+      }
+      
       // Get the disconnect reason from close code
       const disconnectReason = this._getDisconnectionReasonFromCloseCode(code);
       
@@ -243,6 +249,38 @@ export class WebSocketHandler {
       clearInterval(this.heartbeatIntervals.get(playerId));
       this.heartbeatIntervals.delete(playerId);
     }
+  }
+
+  /**
+   * ⭐ NEW: Check if WebSocket closure is a legitimate tournament completion
+   */
+  _isLegitimateTournamentClosure(code, reason) {
+    // Check for legitimate tournament closure reasons
+    const legitimateReasons = [
+      'Tournament completed',
+      'Tournament completed - 1st place',
+      'Tournament completed - 2nd place', 
+      'Tournament completed - 3rd place',
+      'Tournament completed - 4th place',
+      'Tournament placement determined',
+      'Tournament placement determined - 1st place',
+      'Tournament placement determined - 2nd place',
+      'Tournament placement determined - 3rd place',
+      'Tournament placement determined - 4th place',
+      'Tournament cleanup'
+    ];
+    
+    // Check if the close reason indicates legitimate tournament completion
+    if (reason && legitimateReasons.some(legitReason => reason.includes(legitReason))) {
+      return true;
+    }
+    
+    // Also check for normal closure code with tournament-related reasons
+    if (code === 1000 && reason && reason.toLowerCase().includes('tournament')) {
+      return true;
+    }
+    
+    return false;
   }
 }
 
