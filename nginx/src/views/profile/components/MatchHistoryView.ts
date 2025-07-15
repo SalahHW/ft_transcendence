@@ -73,7 +73,7 @@ export class MatchHistoryView {
         enrichedTournament: EnrichedTournament,
         currentUser: PlayerInfo
     ): Promise<string> {
-        const { players, userPlacement, isWin } = enrichedTournament;
+        const { players, userPlacement, isWin, endTimestamp } = enrichedTournament;
         const resultText = isWin ? 'VICTORY' : 'DEFEAT';
         const resultColor = isWin ? UI_THEME.colors.green.light : UI_THEME.colors.red.light;
         const bgColor = isWin ? UI_THEME.colors.green.dark : UI_THEME.colors.red.dark;
@@ -90,6 +90,13 @@ export class MatchHistoryView {
             }
             return "th";
         };
+
+        const date = new Date(endTimestamp * 1000);
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = date.toLocaleString('en-GB', { month: 'short' });
+        const year = date.getFullYear().toString().slice(-2);
+        const formattedDate = `${day} ${month} ${year}`;
+
         const otherPlayers = players.filter((p) => p.username !== currentUser.username);
         const otherPlayersHtml = otherPlayers.map((player) => /* HTML */ `
             <div class="flex flex-col items-center ml-6">
@@ -119,6 +126,9 @@ export class MatchHistoryView {
                         ${otherPlayersHtml}
                     </div>
                 </div>
+                <div class="flex items-center justify-center w-6" style="background-color: ${bgColor};">
+                    <span class="text-white font-semibold text-xs opacity-80" style="writing-mode: vertical-rl; text-orientation: mixed;">${formattedDate}</span>
+                </div>
             </div>
         `;
     }
@@ -134,6 +144,12 @@ export class MatchHistoryView {
         const resultColor = isWin ? UI_THEME.colors.green.light : UI_THEME.colors.red.light;
 
         const bgColor = isWin ? UI_THEME.colors.green.dark : UI_THEME.colors.red.dark;
+
+        const date = new Date(match.endTimestamp! * 1000);
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = date.toLocaleString('en-US', { month: 'short' });
+        const year = date.getFullYear().toString().slice(-2);
+        const formattedDate = `${day} ${month} ${year}`;
 
         return /* HTML */`
             <div class="flex items-stretch justify-between rounded-lg mb-2 overflow-hidden" style="background-color: ${bgColor}95;">
@@ -162,6 +178,9 @@ export class MatchHistoryView {
                             <img src="${opponentAvatar}" alt="${opponentUsername} avatar" class=" text-white w-10 h-10 rounded-lg object-cover">
                         </div>
                     </div>
+                </div>
+                <div class="flex items-center justify-center w-6" style="background-color: ${bgColor};">
+                    <span class="text-white font-semibold text-xs opacity-80" style="writing-mode: vertical-rl; text-orientation: mixed;">${formattedDate}</span>
                 </div>
             </div>
         `;
