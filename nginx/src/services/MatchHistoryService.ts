@@ -28,7 +28,7 @@ export interface PlayerInfo {
 
 export interface EnrichedTournament {
     id: number;
-    // timestamp: number; // TODO: Need to determine how to get this
+    endTimestamp: number;
     players: PlayerInfo[];
     userPlacement: number;
 	isWin: boolean;
@@ -114,6 +114,7 @@ export default class MatchHistoryService implements CacheableService {
 
 				return {
 					id: tournament.tournamentId!,
+					endTimestamp: tournament.endTimestamp!,
 					players,
 					userPlacement,
 					isWin

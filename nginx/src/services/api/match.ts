@@ -9,6 +9,7 @@ const mapMatchArrayToMatchObject = (match: any[]): Match => {
 		player1Score: parseInt(match[3], 10),
 		player2Score: parseInt(match[4], 10),
 		matchId: parseInt(match[5], 10),
+		endTimestamp: parseInt(match[6], 10),
 	};
 };
 
@@ -28,6 +29,7 @@ export interface Match {
 	player1Score?: number;
 	player2Score?: number;
 	winner?: string;
+	endTimestamp?: number;
 }
 
 const mapTournamentArrayToTournamentObject = (tournament: any[]): Tournament => {
