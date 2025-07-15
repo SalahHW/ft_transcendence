@@ -7,6 +7,15 @@ services:
       - "16443:443"
     networks:
       - transcendence
+    depends_on:
+      - users
+      - jwt
+      - blockchain
+      - game
+      - avatars
+      - friends
+      - presences
+    restart: unless-stopped
 
   redis:
     container_name: redis
