@@ -394,4 +394,46 @@ contract MasterContract is Ownable {
             }
         }
     }
+
+    /**
+     * @dev Function to get tournaments by player address
+     * @param player: player address
+     */
+
+    function getTournamentsByPlayer(
+        address player
+    ) public view returns (Tournament[] memory) {
+        require(players[player].exists, "Player does not exist");
+
+        uint256 size = 0;
+
+        for (uint i = 0; i < globalTournamentsArray.length; i++) {
+            uint16[] memory matchIds = globalTournamentsArray[i].matchIds;
+            for (uint j = 0; j < matchIds.length; j++) {
+                Match memory m = getMatchesByMatchId(matchIds[j]);
+                if (m.player1 == player || m.player2 == player) {
+                    size++;
+                    break;
+                }
+            }
+        }
+
+        if (size == 0) revert("No tournaments found for the player");
+
+        Tournament[] memory result = new Tournament[](size);
+        uint256 index = 0;
+
+        for (uint i = 0; i < globalTournamentsArray.length; i++) {
+            uint16[] memory matchIds = globalTournamentsArray[i].matchIds;
+            for (uint j = 0; j < matchIds.length; j++) {
+                Match memory m = getMatchesByMatchId(matchIds[j]);
+                if (m.player1 == player || m.player2 == player) {
+                    result[index++] = globalTournamentsArray[i];
+                    break;
+                }
+            }
+        }
+
+        return result;
+    }
 }
