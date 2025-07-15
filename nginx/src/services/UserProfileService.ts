@@ -56,6 +56,9 @@ export default class UserProfileService implements CacheableService {
         }
 
         const baseUser = await this._usersApi.getUserById(jwtPayload.sub);
+        if (!baseUser) {
+            throw new Error(`User with id ${jwtPayload.sub} not found`);
+        }
 
         const [avatarUrl, matches] = await Promise.all([
             this._avatarService.getCurrentUserAvatarUrl(),

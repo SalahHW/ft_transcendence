@@ -1,6 +1,7 @@
 import Router from "../router/Router.js";
 import { UI_THEME } from "../style/tailwindClasses.js";
 import AuthService from "../services/AuthNanoService.js";
+import ModalView from "./ModalView.js";
 
 interface Option {
   label: string;
@@ -165,6 +166,10 @@ export default class Wheel {
     });
   }
 
+  private _closeAllModals(): void {
+    ModalView.hideAll();
+  }
+
   private async _selectOption(): Promise<void> {
     const selectedOption = this._wheelOptions[this._selectedIndex];
     if (!selectedOption) return;
@@ -175,6 +180,7 @@ export default class Wheel {
       this._selectedIndex = 0;
       this._renderWheel();
     } else if (selectedOption.onClick) {
+      this._closeAllModals();
       await selectedOption.onClick();
       this.hideWheel();
     }
@@ -200,7 +206,7 @@ export default class Wheel {
     }
 
     try {
-      this._userIsLoggedIn = await this._authService.isLoggedIn();
+      this._userIsLoggedIn = await this._authService.isLoggedIn(true);
 
       this._isVisible = true;
       this._selectedIndex = 0;

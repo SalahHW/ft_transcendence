@@ -18,27 +18,32 @@ export default class AuthService {
     return AuthService._instance;
   }
 
-  public async _ensureAuthStatusChecked(): Promise<void> {
-    if (this._isLoggedIn === null) {
+  public async _ensureAuthStatusChecked(forceRefresh: boolean = false): Promise<void> {
+    if (this._isLoggedIn === null || forceRefresh) {
       try {
         this._user = await this._usersApi.getCurrentUser();
         this._isLoggedIn = !!this._user;
-        if (this._isLoggedIn) this._startRefreshLoop();
+        if (this._isLoggedIn) {
+          this._startRefreshLoop();
+        } else {
+          this._stopRefreshLoop();
+        }
       } catch (error) {
         console.error("Failed to check auth status", error);
         this._user = null;
         this._isLoggedIn = false;
+        this._stopRefreshLoop();
       }
     }
   }
 
-  public async isLoggedIn(): Promise<boolean> {
-    await this._ensureAuthStatusChecked();
+  public async isLoggedIn(forceRefresh: boolean = false): Promise<boolean> {
+    await this._ensureAuthStatusChecked(forceRefresh);
     return this._isLoggedIn!;
   }
 
-  public async getJwtPayload(): Promise<JwtUserPayload | null> {
-    await this._ensureAuthStatusChecked();
+  public async getJwtPayload(forceRefresh: boolean = false): Promise<JwtUserPayload | null> {
+    await this._ensureAuthStatusChecked(forceRefresh);
     return this._user;
   }
 
