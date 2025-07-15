@@ -39,16 +39,15 @@ export default class UpdateAvatarForm {
 				console.warn("Please provide a user ID and upload an image file");
 				return;
 			}
-			const userId = parseInt(idInput.value);
 			const file = fileInput.files[0];
 			try {
-				await this._avatarService.updateUserAvatar(userId, file);
+				await this._avatarService.updateUserAvatar(file);
 				form.reset();
-				console.log(`Avatar updated for user ID: ${userId}`);
+				console.log(`Avatar updated for user ID: ${idInput.value}`);
 				const terminal = CustomTerminal["_instance"];
 				if (terminal && typeof terminal.logImage === "function") {
-					const url = await this._avatarService.getUserAvatarUrl(userId);
-					terminal.logImage(url, "Avatar image");
+					const url = await this._avatarService.getUserAvatarUrl(parseInt(idInput.value));
+					terminal.logImage(url, `Avatar image for user ID: ${idInput.value}`);
 				}
 			} catch (error) {
 				if (error instanceof Error)

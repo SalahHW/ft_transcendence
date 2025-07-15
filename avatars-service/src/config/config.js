@@ -9,16 +9,6 @@ export const AVATARS_PATH = isDev
   : process.env.AVATARS_PATH;
 export const ALLOWED_MIME_TYPES = process.env.ALLOWED_MIME_TYPES;
 
-// Users service
-export const USERS_SERVICE_HOST = isDev
-  ? "localhost"
-  : process.env.USERS_SERVICE_HOST;
-export const USERS_SERVICE_PORT = process.env.USERS_SERVICE_PORT;
-export const USERS_SERVICE_URL = `http://${USERS_SERVICE_HOST}:${USERS_SERVICE_PORT}`;
-export const USERS_SERVICE_TIMEOUT = process.env.USERS_SERVICE_TIMEOUT;
-
-//! Variable formats are not validated
-
 if (!PORT) {
   console.error("Unable to load port from environment variables");
   process.exit(1);
@@ -39,6 +29,12 @@ if (!ALLOWED_MIME_TYPES) {
   process.exit(1);
 }
 
+// Users service
+export const USERS_SERVICE_HOST = isDev
+  ? "localhost"
+  : process.env.USERS_SERVICE_HOST;
+export const USERS_SERVICE_PORT = process.env.USERS_SERVICE_PORT;
+
 if (!USERS_SERVICE_HOST) {
   console.error("Unable to load users service host from environment variables");
   process.exit(1);
@@ -49,14 +45,22 @@ if (!USERS_SERVICE_PORT) {
   process.exit(1);
 }
 
-if (!USERS_SERVICE_URL) {
-  console.error("Unable to load users service url from environment variable");
+export const USERS_SERVICE_URL = `http://${USERS_SERVICE_HOST}:${USERS_SERVICE_PORT}`;
+
+// JWT Service
+export const JWT_SERVICE_PORT = process.env.JWT_SERVICE_PORT;
+export const JWT_SERVICE_HOST = isDev
+  ? "localhost"
+  : process.env.JWT_SERVICE_HOST;
+
+if (!JWT_SERVICE_HOST) {
+  console.error("Unable to load jwt service host from environment variables");
   process.exit(1);
 }
 
-if (!USERS_SERVICE_TIMEOUT) {
-  console.error(
-    "Unable to load users service timeout from environment variable"
-  );
+if (!JWT_SERVICE_PORT) {
+  console.error("Unable to load jwt service port from environment variables");
   process.exit(1);
 }
+
+export const JWT_SERVICE_URL = `http://${JWT_SERVICE_HOST}:${JWT_SERVICE_PORT}`;

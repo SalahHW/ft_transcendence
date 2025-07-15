@@ -85,6 +85,7 @@ try {
   fastify.register(require("./routes/getGoatOwner"));
   fastify.register(require("./routes/getTournamentNftOwner"));
   fastify.register(require("./routes/removePlayer"));
+  fastify.register(require("./routes/getTournamentsByPlayer"));
 
   // Health check route
   fastify.get("/status", async () => {

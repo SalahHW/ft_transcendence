@@ -6,7 +6,7 @@
 /*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/22 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/13 22:00:41 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/14 13:07:12 by edelarbr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,13 +22,6 @@ export default class ProfileView extends ModalView {
 			width: '70vw',
 			height: '70vh'
 		});
-
-		// Initialize asynchronously after construction
-		this.init();
-	}
-
-	private async init(): Promise<void> {
-		await this.render();
 	}
 
 	public async render(): Promise<void> {
@@ -44,7 +37,7 @@ export default class ProfileView extends ModalView {
 			</div>
 		`;
 		await this.updateProfile();
-		this.updateMatchHistory();
+		await this.updateMatchHistory();
 		await this.updateFriendList();
 	}
 
@@ -56,14 +49,12 @@ export default class ProfileView extends ModalView {
 		}
 
 		try {
-			// Afficher un loader pendant le chargement
 			profileContainer.innerHTML = /* HTML */`
 				<div class="flex items-center justify-center h-full">
 					<div class="text-white">Chargement du profil...</div>
 				</div>
 			`;
 
-			// Charger et afficher le profil
 			profileContainer.innerHTML = await UserProfileView.render();
 			await UserProfileView.addEventListeners();
 		} catch (error) {

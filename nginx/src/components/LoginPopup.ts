@@ -5,7 +5,7 @@ import ModalView from "./ModalView.js";
 import { setButtonLoading } from "./PopUpUtils";
 
 export default class LoginPopup extends ModalView {
-  private _authService: AuthService;
+  private _authService = AuthService.getInstance();
 
   constructor() {
     super({
@@ -13,7 +13,6 @@ export default class LoginPopup extends ModalView {
       maxWidth: "36rem",
       contentContainerClasses: "p-8 mx-4",
     });
-    this._authService = AuthService.getInstance();
   }
 
   public show(): void {

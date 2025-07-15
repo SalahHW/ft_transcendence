@@ -60,13 +60,13 @@ export const logoutUser = async (request, reply) => {
   reply
     .clearCookie("accessToken", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: "true",
       sameSite: "None",
       path: "/",
     })
     .clearCookie("refreshToken", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: "true",
       sameSite: "None",
       path: "/",
     })

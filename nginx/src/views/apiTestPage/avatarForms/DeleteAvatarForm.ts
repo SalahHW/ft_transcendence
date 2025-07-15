@@ -34,11 +34,10 @@ export default class DeleteAvatarForm {
 				console.warn("Please provide a user ID");
 				return;
 			}
-			const userId = parseInt(idInput.value);
 			try {
-				await this._avatarService.deleteUserAvatar(userId);
+				await this._avatarService.deleteUserAvatar();
 				form.reset();
-				console.log(`Avatar deleted for user ID: ${userId}`);
+				console.log(`Avatar deleted for user ID: ${idInput.value}`);
 			} catch (error) {
 				if (error instanceof Error)
 					console.error(error.message);

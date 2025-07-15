@@ -4,10 +4,11 @@
   "type": "module",
   "scripts": {
     "start": "node src/app.js",
-    "dev": "NODE_ENV=development node src/app.js"
+    "dev": "NODE_ENV=development node --env-file=../.env --env-file=./.env src/app.js"
   },
   "dependencies": {
     "fastify": "^5.3.3",
+    "@fastify/cookie": "^11.0.2",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7"
   }

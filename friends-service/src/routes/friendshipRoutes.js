@@ -1,21 +1,32 @@
+import * as friendshipSchemas from "../schemas/friendshipSchemas.js";
 import * as friendshipControllers from "../controllers/friendshipControllers.js";
+import * as jwtControllers from "../controllers/jwtControllers.js";
+import * as userControllers from "../controllers/userControllers.js";
 
 export default async function friendshipRoutes(fastify) {
   fastify.route({
     method: "POST",
-    url: "/friends/:userId/:friendId",
+    url: "/friends/id/:friendId",
+    schema: friendshipSchemas.createFriendship,
+    preHandler: [
+      jwtControllers.verifyAuthentication,
+      userControllers.verifyTargetUserExists,
+    ],
     handler: friendshipControllers.createFriendship,
   });
 
   fastify.route({
     method: "GET",
-    url: "/friends/:userId",
+    url: "/friends",
+    schema: friendshipSchemas.readFriendship,
+    preHandler: [jwtControllers.verifyAuthentication],
     handler: friendshipControllers.readFriendship,
   });
 
   fastify.route({
     method: "DELETE",
-    url: "/friends/:userId/:friendId",
+    url: "/friends/id/:friendId",
+    preHandler: [jwtControllers.verifyAuthentication],
     handler: friendshipControllers.deleteFriendship,
   });
 }

@@ -7,6 +7,15 @@ services:
       - "16443:443"
     networks:
       - transcendence
+    depends_on:
+      - users
+      - jwt
+      - blockchain
+      - game
+      - avatars
+      - friends
+      - presences
+    restart: unless-stopped
 
   redis:
     container_name: redis
@@ -17,6 +26,7 @@ services:
       - transcendence
     volumes:
       - ./redis-data:/data
+    restart: unless-stopped
 
   users:
     container_name: users
@@ -28,6 +38,7 @@ services:
       - transcendence
     volumes:
       - ./users-service/database:/app/database
+    restart: unless-stopped
 
   jwt:
     container_name: jwt
@@ -37,6 +48,7 @@ services:
       - ./jwt-service/.env
     networks:
       - transcendence
+    restart: unless-stopped
 
   blockchain:
     container_name: blockchain
@@ -46,6 +58,7 @@ services:
       - ./blockchain-service/.env
     networks:
       - transcendence
+    restart: unless-stopped
 
   game:
     container_name: game
@@ -55,6 +68,7 @@ services:
       - ./game-service/.env
     networks:
       - transcendence
+    restart: unless-stopped
 
   avatars:
     container_name: avatars
@@ -67,6 +81,7 @@ services:
     volumes:
       - ./avatars-service/database:/app/database
       - ./avatars-service/avatars:/app/avatars
+    restart: unless-stopped
 
   friends:
     container_name: friends
@@ -77,6 +92,7 @@ services:
       - transcendence
     volumes:
       - ./friends-service/database:/app/database
+    restart: unless-stopped
 
   presences:
     container_name: presences
@@ -85,6 +101,7 @@ services:
       - ./.env
     networks:
       - transcendence
+    restart: unless-stopped
 
 networks:
   transcendence:

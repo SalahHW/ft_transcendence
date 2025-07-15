@@ -1,5 +1,6 @@
 import { PORT, isDev, AVATARS_PATH } from "./config/config.js";
 import Fastify from "fastify";
+import fastifyCookie from "@fastify/cookie";
 import Multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import { initializeDatabase } from "./models/database.js";
@@ -7,12 +8,13 @@ import { initializeFileStorage } from "./init/fileStorage.js";
 import registerRoutes from "./routes/index.js";
 import path from "path";
 
-const fastify = Fastify();
-
 async function main() {
   await initializeDatabase();
   await initializeFileStorage();
 
+  const fastify = Fastify();
+
+  await fastify.register(fastifyCookie);
   await fastify.register(Multipart, {
     limits: {
       fieldNameSize: 100, // Max field name size in bytes

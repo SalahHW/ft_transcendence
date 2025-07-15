@@ -27,6 +27,21 @@ export const readAvatar = async (userId) => {
   }
 };
 
+export const avatarExists = async (userId) => {
+  const query = `
+  SELECT 1
+  FROM avatars
+  WHERE user_id = ?
+  ;`;
+
+  try {
+    const result = await database.get(query, [userId]);
+    return !!result;
+  } catch (err) {
+    throw translateSqliteError(err);
+  }
+};
+
 export const updateAvatar = async (userId, newFileName) => {
   const query = `
   UPDATE avatars

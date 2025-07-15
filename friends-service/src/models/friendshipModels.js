@@ -33,7 +33,8 @@ export async function deleteFriendship(userId, friendId) {
     WHERE user_id = ? AND friend_id = ?`;
 
   try {
-    await database.run(query, [userId, friendId]);
+    const result = await database.run(query, [userId, friendId]);
+    return result.changes > 0;
   } catch (err) {
     throw translateSqliteError(err);
   }
