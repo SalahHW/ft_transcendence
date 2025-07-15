@@ -12,7 +12,6 @@ module.exports = async (fastify, opts) => {
           required: [
             "player1",
             "player2",
-            "matchId",
             "player1Score",
             "player2Score",
             "winner",
@@ -21,7 +20,6 @@ module.exports = async (fastify, opts) => {
           properties: {
             player1: { type: "string", pattern: "^0x[a-fA-F0-9]{40}$" },
             player2: { type: "string", pattern: "^0x[a-fA-F0-9]{40}$" },
-            matchId: { type: "integer", minimum: 0 },
             player1Score: { type: "integer", minimum: 0, maximum: 255 },
             player2Score: { type: "integer", minimum: 0, maximum: 255 },
             winner: { type: "string", pattern: "^0x[a-fA-F0-9]{40}$" },
@@ -37,7 +35,6 @@ module.exports = async (fastify, opts) => {
       const {
         player1,
         player2,
-        matchId,
         player1Score,
         player2Score,
         winner,
@@ -48,7 +45,6 @@ module.exports = async (fastify, opts) => {
         const tx = await contract.reportMatch(
           player1,
           player2,
-          matchId,
           player1Score,
           player2Score,
           winner,
