@@ -41,6 +41,7 @@ export default class FriendsServiceAPI {
 			method: "GET"
 		});
 		if (response.status === 404) {
+			return [];
 		}
 		if (response.status !== 200) {
 			const responseData = await response.json();

@@ -113,10 +113,13 @@ export default class UsersApi {
    * @param id - The ID of the user to get
    * @returns A promise that resolves to the user
    */
-  async getUserById(id: number): Promise<User> {
+  async getUserById(id: number): Promise<User | null> {
     const response = await fetch(`${this._usersBaseUrl}/id/${id}`, {
       method: "GET",
     });
+    if (response.status === 404) {
+      return null;
+    }
     const responseData = await response.json();
     if (response.status === 200) return responseData;
     else
