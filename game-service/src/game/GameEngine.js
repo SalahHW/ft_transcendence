@@ -370,6 +370,7 @@ export class GameEngine {
     
     const matchEndTime = new Date().toISOString();
     const matchStartTime = room.startTime || new Date().toISOString();
+    const endTimestamp = Math.floor(Date.now() / 1000); // Actual end time as integer for blockchain
     
     // Generate simple match ID for internal tracking
     const matchId = Math.floor(Date.now() / 1000) % 1000000;
@@ -380,6 +381,7 @@ export class GameEngine {
       matchId, // Add the generated match ID
       matchStartTime,
       matchEndTime,
+      endTimestamp, // Add actual end timestamp as integer for blockchain
       matchDuration: new Date() - new Date(matchStartTime),
       matchType: 'regular',
       finalMatchType: null,

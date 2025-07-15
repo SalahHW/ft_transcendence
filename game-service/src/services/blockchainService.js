@@ -181,14 +181,11 @@ export class BlockchainService {
         throw new Error(`Failed to register winner ${winnerName} in blockchain contract`);
       }
 
-      // Generate simple ID for the match
-      const matchId = this.generateSimpleId();
-
       // Determine endTimestamp based on match type
       let endTimestamp;
       if (isMatch1v1) {
-        // For 1v1 matches: use actual end time
-        endTimestamp = Math.floor(Date.now() / 1000);
+        // For 1v1 matches: use actual end time from match data
+        endTimestamp = matchData.endTimestamp || Math.floor(Date.now() / 1000);
       } else {
         // For tournament matches: use tournament's start timestamp
         if (!tournamentId) {
@@ -201,14 +198,14 @@ export class BlockchainService {
         endTimestamp = tournamentStartTime;
       }
 
-      // Prepare blockchain data (WINNER ONLY)
+      // Prepare blockchain data (WINNER ONLY) - only send data for the winner
       const blockchainData = {
         player1: player1Wallet,
         player2: player2Wallet,
         winner: winnerWallet,
-        player1Score: matchData.winner.score,
-        player2Score: matchData.loser.score,
-        endTimestamp: endTimestamp
+        player1Score: matchData.winner.score.toString(),
+        player2Score: matchData.loser.score.toString(),
+        endTimestamp: endTimestamp.toString()
       };
 
       console.log(`🔗 Reporting ${isMatch1v1 ? '1v1' : 'tournament'} match to blockchain (WINNER ONLY):`, blockchainData);
@@ -268,7 +265,7 @@ export class BlockchainService {
 
       // Prepare simplified blockchain data (SIMPLIFIED: only endTimestamp and winner)
       const blockchainData = {
-        endTimestamp: tournamentStartTime, // Use tournament's start timestamp
+        endTimestamp: tournamentStartTime, // Use tournament's start timestamp as integer
         winner: winnerWallet
       };
 

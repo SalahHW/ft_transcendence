@@ -4,7 +4,7 @@
  */
 
 import { gameStateManager } from '../../game/GameStateManager.js';
-import { reportTournamentResultsToAPI } from '../../server/api.js';
+import { reportTournamentResultsToAPI, reportMatchResultsToAPI } from '../../server/api.js';
 
 /**
  * Tournament Match Manager
@@ -241,6 +241,14 @@ export class TournamentMatchManager {
     // Mark tournament as finished
     waitingRoomData.phase = 'FINISHED';
 
+    // Report single semi-final match to blockchain (winner only)
+    try {
+      await reportMatchResultsToAPI(matchData, false, waitingRoomId);
+      console.log(`✅ Tournament single semi-final match reported to blockchain successfully (winner only)`);
+    } catch (error) {
+      console.error('❌ Failed to report tournament single semi-final match to blockchain:', error.message);
+    }
+
     // Send tournament completion message to all players
     this.tournamentManager.communicationManager._sendTournamentCompletionMessage(waitingRoomId, { winner, loser });
 
@@ -287,6 +295,14 @@ export class TournamentMatchManager {
     }
     waitingRoomData.semiFinalResults[roomId] = { winner, loser, matchData };
     
+    // Report individual tournament match to blockchain (winner only)
+    try {
+      await reportMatchResultsToAPI(matchData, false, waitingRoomId);
+      console.log(`✅ Tournament semi-final match reported to blockchain successfully (winner only)`);
+    } catch (error) {
+      console.error('❌ Failed to report tournament semi-final match to blockchain:', error.message);
+    }
+    
      // Handle single semi-final edge case
     const singleSemiFinalHandled = await this.handleSingleSemiFinal(waitingRoomId, roomId, winner, loser, matchData);
     // If single semi-final was handled, don't proceed with normal transfer
@@ -322,6 +338,14 @@ export class TournamentMatchManager {
       waitingRoomData.finalResults = {};
     }
     waitingRoomData.finalResults[roomType] = { winner, loser, matchData };
+    
+    // Report individual tournament final match to blockchain (winner only)
+    try {
+      await reportMatchResultsToAPI(matchData, false, waitingRoomId);
+      console.log(`✅ Tournament final match reported to blockchain successfully (winner only)`);
+    } catch (error) {
+      console.error('❌ Failed to report tournament final match to blockchain:', error.message);
+    }
     
     // Send individual final match completion message to players in this room
     this.tournamentManager.communicationManager._sendIndividualFinalMatchCompletion(waitingRoomId, roomId, roomType, winner, loser);

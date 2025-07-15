@@ -563,6 +563,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       }
     }
     const matchStartTime = room.startTime || matchEndTime;
+    const endTimestamp = Math.floor(Date.now() / 1000); // Actual end time as integer for blockchain
     
     // ⭐ FIX: Use provided scores or calculate correct scores based on player positions
     let finalWinnerScore = winnerScore;
@@ -595,6 +596,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       waitingRoomId: room.metadata?.waitingRoomId,
       matchStartTime,
       matchEndTime,
+      endTimestamp, // Add actual end timestamp as integer for blockchain
       matchDuration: TimeUtils.calculateMatchDuration(matchStartTime, matchEndTime),
       winner: {
         id: winner.id,
@@ -630,6 +632,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   async createTournamentThirdPlaceMatchData(room, roomId, waitingLoser, reason, context) {
     const matchEndTime = TimeUtils.getCurrentTimestamp();
     const matchStartTime = room.startTime || matchEndTime;
+    const endTimestamp = Math.floor(Date.now() / 1000); // Actual end time as integer for blockchain
     
     // Generate simple match ID for internal tracking
     const matchId = Math.floor(Date.now() / 1000) % 1000000;
@@ -644,6 +647,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       waitingRoomId: room.metadata?.waitingRoomId,
       matchStartTime,
       matchEndTime,
+      endTimestamp, // Add actual end timestamp as integer for blockchain
       matchDuration: TimeUtils.calculateMatchDuration(matchStartTime, matchEndTime),
       winner: {
         id: waitingLoser.id,

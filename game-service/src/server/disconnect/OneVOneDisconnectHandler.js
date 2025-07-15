@@ -204,6 +204,7 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
   async createForfeitMatchData(room, roomId, winner, loser, reason, context, winnerScore = null, loserScore = null) {
     const matchEndTime = TimeUtils.getCurrentTimestamp();
     const matchStartTime = room.startTime || matchEndTime;
+    const endTimestamp = Math.floor(Date.now() / 1000); // Actual end time as integer for blockchain
     
     // ⭐ FIX: Use provided scores or calculate correct scores based on player positions
     let finalWinnerScore = winnerScore;
@@ -233,6 +234,7 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
       matchType: this.matchType,
       matchStartTime,
       matchEndTime,
+      endTimestamp, // Add actual end timestamp as integer for blockchain
       matchDuration: TimeUtils.calculateMatchDuration(matchStartTime, matchEndTime),
       winner: {
         id: winner.id,
