@@ -42,7 +42,6 @@ export default [
     ]
   },
   // Game client bundle (separate for optimization)
-  /*
   {
     input: 'src/game/index.ts',
     output: {
@@ -98,5 +97,4 @@ export default [
       })
     ]
   }
-  */
 ];
