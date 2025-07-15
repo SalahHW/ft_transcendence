@@ -519,12 +519,12 @@ export async function registerApiRoutes(fastify) {
 }
 
 // Export function to call external services from gameState
-export async function reportMatchResultsToAPI(matchData) {
+export async function reportMatchResultsToAPI(matchData, isMatch1v1 = true, tournamentId = null) {
   try {
-    // Report to blockchain service
+    // Report to blockchain service (winner only)
     try {
-      await blockchainService.reportMatch(matchData);
-      console.log(`✅ Match reported to blockchain successfully`);
+      await blockchainService.reportMatch(matchData, { isMatch1v1, tournamentId });
+      console.log(`✅ ${isMatch1v1 ? '1v1' : 'Tournament'} match reported to blockchain successfully (winner only)`);
     } catch (blockchainError) {
       console.error('❌ Failed to report match to blockchain:', blockchainError.message);
     }
@@ -534,12 +534,12 @@ export async function reportMatchResultsToAPI(matchData) {
 }
 
 // Export function to report tournament completion to blockchain
-export async function reportTournamentResultsToAPI(tournamentData) {
+export async function reportTournamentResultsToAPI(tournamentData, tournamentId) {
   try {
-    // Report to blockchain service
+    // Report to blockchain service (simplified)
     try {
-      await blockchainService.reportTournament(tournamentData);
-      console.log(`✅ Tournament reported to blockchain successfully`);
+      await blockchainService.reportTournament(tournamentData, tournamentId);
+      console.log(`✅ Tournament reported to blockchain successfully (simplified)`);
     } catch (blockchainError) {
       console.error('❌ Failed to report tournament to blockchain:', blockchainError.message);
     }

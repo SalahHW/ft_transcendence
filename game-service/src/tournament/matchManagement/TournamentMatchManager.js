@@ -556,7 +556,7 @@ export class TournamentMatchManager {
   }
 
   /**
-   * Report tournament completion to blockchain
+   * Report tournament completion to blockchain (simplified)
    * @param {string} waitingRoomId - The tournament waiting room ID
    * @param {Object} winner - The tournament winner (1st place)
    */
@@ -567,41 +567,11 @@ export class TournamentMatchManager {
       return;
     }
 
-    // Collect all match IDs from the tournament
-    const matchIds = [];
-    
-    // Add semi-final match IDs from stored match data
-    if (waitingRoomData.semiFinalResults) {
-      Object.values(waitingRoomData.semiFinalResults).forEach(matchResult => {
-        if (matchResult.matchData && matchResult.matchData.matchId !== undefined && matchResult.matchData.matchId !== null) {
-          matchIds.push(matchResult.matchData.matchId);
-        }
-      });
-    }
-
-    // Add final match IDs from stored match data
-    if (waitingRoomData.finalResults) {
-      Object.values(waitingRoomData.finalResults).forEach(matchResult => {
-        if (matchResult.matchData && matchResult.matchData.matchId !== undefined && matchResult.matchData.matchId !== null) {
-          matchIds.push(matchResult.matchData.matchId);
-        }
-      });
-    }
-
-    // Ensure we have exactly 4 match IDs (tournament requirement)
-    while (matchIds.length < 4) {
-      matchIds.push(0); // Add placeholder IDs if needed
-    }
-
-    // Take only the first 4 match IDs
-    const finalMatchIds = matchIds.slice(0, 4);
-
     const tournamentData = {
-      winner: winner,
-      matchIds: finalMatchIds
+      winner: winner
     };
 
-    console.log(`🏆 Reporting tournament to blockchain with ${finalMatchIds.length} match IDs:`, finalMatchIds);
-    await reportTournamentResultsToAPI(tournamentData);
+    console.log(`🏆 Reporting tournament to blockchain (simplified):`, tournamentData);
+    await reportTournamentResultsToAPI(tournamentData, waitingRoomId);
   }
 } 

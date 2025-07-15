@@ -86,16 +86,5 @@ services:
     networks:
       - transcendence
 
-  id:
-    container_name: id
-    build: ./id-service
-    env_file:
-      - ./.env
-      - ./id-service/.env
-    networks:
-      - transcendence
-    volumes:
-      - ./id-service/database:/app/database
-
 networks:
   transcendence:

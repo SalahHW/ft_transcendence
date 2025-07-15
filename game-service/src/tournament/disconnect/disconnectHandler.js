@@ -582,25 +582,9 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       }
     }
     
-    // Generate match ID for blockchain reporting
-    let matchId = null;
-    try {
-      const { blockchainService } = await import('../../services/blockchainService.js');
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Match ID generation timeout')), 3000)
-      );
-      matchId = await Promise.race([
-        blockchainService.generateMatchId(),
-        timeoutPromise
-      ]);
-      console.log(`🎯 Generated match ID ${matchId} for tournament forfeit in room ${roomId}`);
-    } catch (error) {
-      console.error('❌ Failed to generate match ID for tournament forfeit:', error.message);
-      // Use timestamp as fallback ID
-      matchId = Math.floor(Date.now() / 1000) % 1000000;
-      console.log(`🎯 Using fallback match ID ${matchId} for tournament forfeit in room ${roomId}`);
-    }
+    // Generate simple match ID for internal tracking
+    const matchId = Math.floor(Date.now() / 1000) % 1000000;
+    console.log(`🎯 Generated simple match ID ${matchId} for tournament forfeit in room ${roomId}`);
     
     return {
       roomId,
@@ -647,25 +631,9 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     const matchEndTime = TimeUtils.getCurrentTimestamp();
     const matchStartTime = room.startTime || matchEndTime;
     
-    // Generate match ID for blockchain reporting
-    let matchId = null;
-    try {
-      const { blockchainService } = await import('../../services/blockchainService.js');
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Match ID generation timeout')), 3000)
-      );
-      matchId = await Promise.race([
-        blockchainService.generateMatchId(),
-        timeoutPromise
-      ]);
-      console.log(`🎯 Generated match ID ${matchId} for tournament third place in room ${roomId}`);
-    } catch (error) {
-      console.error('❌ Failed to generate match ID for tournament third place:', error.message);
-      // Use timestamp as fallback ID
-      matchId = Math.floor(Date.now() / 1000) % 1000000;
-      console.log(`🎯 Using fallback match ID ${matchId} for tournament third place in room ${roomId}`);
-    }
+    // Generate simple match ID for internal tracking
+    const matchId = Math.floor(Date.now() / 1000) % 1000000;
+    console.log(`🎯 Generated simple match ID ${matchId} for tournament third place in room ${roomId}`);
     
     return {
       roomId,
@@ -849,7 +817,9 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   async reportTournamentForfeitResults(matchData) {
     try {
       console.log(`🏆 Reporting tournament forfeit results for room ${matchData.roomId}`);
-      await reportMatchResultsToAPI(matchData);
+      // Report to external services - Tournament match
+    const tournamentId = matchData.waitingRoomId;
+    await reportMatchResultsToAPI(matchData, false, tournamentId);
     } catch (error) {
       console.error('🏆 Failed to report tournament forfeit results:', error);
     }

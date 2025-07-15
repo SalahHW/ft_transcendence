@@ -223,25 +223,9 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
       }
     }
     
-    // Generate match ID for blockchain reporting
-    let matchId = null;
-    try {
-      const { blockchainService } = await import('../../services/blockchainService.js');
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Match ID generation timeout')), 3000)
-      );
-      matchId = await Promise.race([
-        blockchainService.generateMatchId(),
-        timeoutPromise
-      ]);
-      console.log(`🎯 Generated match ID ${matchId} for 1v1 forfeit in room ${roomId}`);
-    } catch (error) {
-      console.error('❌ Failed to generate match ID for 1v1 forfeit:', error.message);
-      // Use timestamp as fallback ID
-      matchId = Math.floor(Date.now() / 1000) % 1000000;
-      console.log(`🎯 Using fallback match ID ${matchId} for 1v1 forfeit in room ${roomId}`);
-    }
+    // Generate simple match ID for internal tracking
+    const matchId = Math.floor(Date.now() / 1000) % 1000000;
+    console.log(`🎯 Generated simple match ID ${matchId} for 1v1 forfeit in room ${roomId}`);
     
     return {
       roomId,
@@ -319,7 +303,8 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
    */
   async reportForfeitResults(matchData) {
     try {
-      await reportMatchResultsToAPI(matchData);
+      // Report to external services - 1v1 match
+    await reportMatchResultsToAPI(matchData, true, null);
     } catch (error) {
       console.error('❌ Failed to report forfeit results:', error);
     }

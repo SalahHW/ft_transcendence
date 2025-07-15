@@ -154,8 +154,8 @@ export class GameEngine {
         // ⭐ FIX: Dispose ball assets for 1v1 games to prevent memory leaks
         await this._disposeBallAssets(room, roomId);
         
-        // Report to external services (async, don't wait for completion)
-        reportMatchResultsToAPI(matchData).catch(err => {
+        // Report to external services (async, don't wait for completion) - 1v1 match
+        reportMatchResultsToAPI(matchData, true, null).catch(err => {
           console.error('Failed to report match results to external services:', err.message);
         });
         
@@ -371,25 +371,9 @@ export class GameEngine {
     const matchEndTime = new Date().toISOString();
     const matchStartTime = room.startTime || new Date().toISOString();
     
-    // Generate match ID for blockchain reporting
-    let matchId = null;
-    try {
-      const { blockchainService } = await import('../services/blockchainService.js');
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Match ID generation timeout')), 3000)
-      );
-      matchId = await Promise.race([
-        blockchainService.generateMatchId(),
-        timeoutPromise
-      ]);
-      console.log(`🎯 Generated match ID ${matchId} for room ${roomId}`);
-    } catch (error) {
-      console.error('❌ Failed to generate match ID:', error.message);
-      // Use timestamp as fallback ID
-      matchId = Math.floor(Date.now() / 1000) % 1000000;
-      console.log(`🎯 Using fallback match ID ${matchId} for room ${roomId}`);
-    }
+    // Generate simple match ID for internal tracking
+    const matchId = Math.floor(Date.now() / 1000) % 1000000;
+    console.log(`🎯 Generated simple match ID ${matchId} for room ${roomId}`);
     
     return {
       roomId,

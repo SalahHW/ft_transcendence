@@ -73,6 +73,11 @@ export class TournamentManager {
       console.error(`Waiting room data not found for ${waitingRoomId}`);
       return;
     }
+
+    // Store tournament start time for blockchain reporting
+    const { blockchainService } = await import('../services/blockchainService.js');
+    const tournamentStartTime = Math.floor(Date.now() / 1000);
+    blockchainService.storeTournamentStartTime(waitingRoomId, tournamentStartTime);
     
     const waitingRoom = gameStateManager.getRoom(waitingRoomId);
     if (!waitingRoom || waitingRoom.players.length !== TournamentConfig.MAX_PLAYERS_PER_WAITING_ROOM) {
