@@ -59,6 +59,9 @@ export default class FriendsService implements CacheableService {
             friendships.map(async (friendship) => {
                 try {
                     const friendUser = await this._usersApi.getUserById(friendship.friend_id);
+					if (!friendUser) {
+						throw new Error(`User with id ${friendship.friend_id} not found`);
+					}
                     const avatarUrl = await this._avatarApi.getUserAvatarUrl(friendUser.id!)
                         .catch(() => '/assets/defaultAvatar.jpg');
 

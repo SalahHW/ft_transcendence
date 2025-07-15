@@ -69,21 +69,23 @@ export default class MatchServiceAPI {
 	 * @returns A promise that resolves to an array of matches
 	 */
 	async getMatchesByPlayer(address: string): Promise<Match[]> {
-		try {
-			const response = await fetch(`${this._baseUrl}/match/player/${address}`, {
-				method: "GET"
-			});
-			const data = await response.json();
-			if (response.status === 200 && data.success)
-				return data.matches.map(mapMatchArrayToMatchObject);
-			else
-				throw new Error(`Failed to fetch matches by player:\n${JSON.stringify(data, null, 2)}`);
-		} catch (error) {
-			if (error instanceof Error && error.message.includes("Player not found.")) {
-				return [];
-			}
-			throw error;
+		const response = await fetch(`${this._baseUrl}/match/player/${address}`, {
+			method: "GET"
+		});
+		if (response.status === 404) {
+			return [];
 		}
+		if (!response.headers.get('content-type')?.includes('application/json')) {
+			return [];
+		}
+		const data = await response.json();
+		if (response.ok && data.success) {
+			return data.matches.map(mapMatchArrayToMatchObject);
+		}
+		if (response.ok && !data.success) {
+			return [];
+		}
+		throw new Error(`Failed to fetch matches by player:\n${JSON.stringify(data, null, 2)}`);
 	}
 
 	/**
@@ -93,21 +95,23 @@ export default class MatchServiceAPI {
 	 */
 	 // ! Not implemented in the blockchain-service
 	async getTournamentsByPlayer(address: string): Promise<Tournament[]> {
-		try {
-			const response = await fetch(`${this._baseUrl}/tournament/player/${address}`, {
-				method: "GET"
-			});
-			const data = await response.json();
-			if (response.status === 200 && data.success)
-				return data.tournaments.map(mapTournamentArrayToTournamentObject);
-			else
-				throw new Error(`Failed to fetch tournaments by player:\n${JSON.stringify(data, null, 2)}`);
-		} catch (error) {
-			if (error instanceof Error && error.message.includes("Player not found.")) {
-				return [];
-			}
-			throw error;
+		const response = await fetch(`${this._baseUrl}/tournament/player/${address}`, {
+			method: "GET"
+		});
+		if (response.status === 404) {
+			return [];
 		}
+		if (!response.headers.get('content-type')?.includes('application/json')) {
+			return [];
+		}
+		const data = await response.json();
+		if (response.ok && data.success) {
+			return data.tournaments.map(mapTournamentArrayToTournamentObject);
+		}
+		if (response.ok && !data.success) {
+			return [];
+		}
+		throw new Error(`Failed to fetch tournaments by player:\n${JSON.stringify(data, null, 2)}`);
 	}
 
 	/**
@@ -119,11 +123,20 @@ export default class MatchServiceAPI {
 		const response = await fetch(`${this._baseUrl}/match/winner/${address}`, {
 			method: "GET"
 		});
+		if (response.status === 404) {
+			return [];
+		}
+		if (!response.headers.get('content-type')?.includes('application/json')) {
+			return [];
+		}
 		const data = await response.json();
-		if (response.status === 200 && data.success)
+		if (response.ok && data.success) {
 			return data.matches.map(mapMatchArrayToMatchObject);
-		else
-			throw new Error(`Failed to fetch matches by winner:\n${JSON.stringify(data, null, 2)}`);
+		}
+		if (response.ok && !data.success) {
+			return [];
+		}
+		throw new Error(`Failed to fetch matches by winner:\n${JSON.stringify(data, null, 2)}`);
 	}
 
 	/**
@@ -222,11 +235,20 @@ export default class MatchServiceAPI {
 		const response = await fetch(`${this._baseUrl}/tournament/winner/${address}`, {
 			method: "GET"
 		});
+		if (response.status === 404) {
+			return [];
+		}
+		if (!response.headers.get('content-type')?.includes('application/json')) {
+			return [];
+		}
 		const data = await response.json();
-		if (response.status === 200 && data.success)
+		if (response.ok && data.success) {
 			return data.tournaments.map(mapTournamentArrayToTournamentObject);
-		else
-			throw new Error(`Failed to fetch tournaments by winner:\n${JSON.stringify(data, null, 2)}`);
+		}
+		if (response.ok && !data.success) {
+			return [];
+		}
+		throw new Error(`Failed to fetch tournaments by winner:\n${JSON.stringify(data, null, 2)}`);
 	}
 
 	/**
