@@ -516,90 +516,6 @@ export async function registerApiRoutes(fastify) {
       });
     }
   });
-
-  // POST /api/matches/results: Report match completion to other services
-  fastify.post('/api/matches/results', async (request, reply) => {
-    try {
-      console.log('API request: POST /api/matches/results');
-      const matchData = request.body;
-      
-      // Validate required match data
-      const requiredFields = ['roomId', 'matchEndTime', 'winner', 'loser', 'gameStats'];
-      const missingFields = requiredFields.filter(field => !matchData[field]);
-      
-      if (missingFields.length > 0) {
-        return reply.code(400).send({
-          status: 'error',
-          message: `Missing required fields: ${missingFields.join(', ')}`,
-        });
-      }
-
-      // Forward match data to other services
-      await notifyOtherServices(matchData);
-      
-      return reply.code(200).send({
-        status: 'success',
-        message: 'Match results reported successfully',
-        data: { matchId: matchData.roomId }
-      });
-    } catch (error) {
-      console.error('Error in POST /api/matches/results:', error);
-      return reply.code(500).send({
-        status: 'error',
-        message: 'Failed to report match results',
-      });
-    }
-  });
-}
-
-// Service-to-service notification functions
-async function notifyOtherServices(matchData) {
-  const services = [
-    {
-      name: 'users-service',
-      url: process.env.USERS_SERVICE_URL || 'http://users:3000',
-      endpoints: ['/api/matches/completed']
-    }
-  ];
-
-  const notifications = services.flatMap(service => 
-    service.endpoints.map(endpoint => 
-      notifyService(service.name, `${service.url}${endpoint}`, matchData)
-    )
-  );
-
-  await Promise.allSettled(notifications);
-}
-
-async function notifyService(serviceName, url, matchData) {
-  try {
-    console.log(`📡 Notifying ${serviceName} at ${url}...`);
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Source-Service': 'game-service',
-        'X-Match-Id': matchData.roomId
-      },
-      body: JSON.stringify(matchData),
-      signal: AbortSignal.timeout(5000) // 5 second timeout
-    });
-
-    if (!response.ok) {
-      throw new Error(`${serviceName} responded with ${response.status}`);
-    }
-
-    const responseData = await response.json();
-    console.log(`✅ Successfully notified ${serviceName}`);
-    
-    return responseData;
-  } catch (error) {
-    // ⭐ FIX: Make API communication failures less noisy
-    console.warn(`⚠️ Failed to notify ${serviceName}: ${error.message}`);
-    // Don't throw error to prevent match processing from failing
-    return null;
-  }
 }
 
 // Export function to call external services from gameState
@@ -611,17 +527,6 @@ export async function reportMatchResultsToAPI(matchData) {
       console.log(`✅ Match reported to blockchain successfully`);
     } catch (blockchainError) {
       console.error('❌ Failed to report match to blockchain:', blockchainError.message);
-    }
-    
-    // Forward match data to other external services
-    const results = await notifyOtherServices(matchData);
-    
-    // Check if any notifications succeeded
-    const successfulNotifications = results.filter(result => result !== null);
-    if (successfulNotifications.length > 0) {
-      console.log(`✅ Match results processing completed (${successfulNotifications.length} services notified)`);
-    } else {
-      console.warn('⚠️ Match results processing completed but no external services were notified');
     }
   } catch (error) {
     console.error('❌ Failed to process match results:', error.message);
