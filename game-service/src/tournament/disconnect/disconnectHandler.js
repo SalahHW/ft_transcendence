@@ -721,7 +721,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   }
 
   /**
-   * Handle tournament advancement after forfeit
+   * Handle tournament advancement for forfeit scenarios
    */
   async handleTournamentAdvancement(room, roomId, matchData) {
     const waitingRoomId = room.metadata?.waitingRoomId;
@@ -733,16 +733,15 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     console.log(`🏆 Handling tournament advancement for room ${roomId} in tournament ${waitingRoomId}`);
 
     try {
-      // Import tournament manager dynamically to avoid circular dependencies
-      const { tournamentManager } = await import('../TournamentManager.js');
+      // ⭐ FIX: Don't call tournament match manager methods here to prevent duplicate reporting
+      // The tournament match manager already handles match reporting when matches end normally
+      // This method is only for forfeit scenarios, not for triggering match reporting
       
       const roomType = room.metadata?.roomType;
       if (roomType === TournamentRoomTypes.SEMI_FINAL_A || roomType === TournamentRoomTypes.SEMI_FINAL_B) {
-        console.log(`🏆 Semi-final forfeit detected, advancing winner to finals`);
-        await tournamentManager.handleSemiFinalMatchEnd(waitingRoomId, roomId, matchData);
+        console.log(`🏆 Semi-final forfeit detected, advancement handled by tournament manager`);
       } else if (roomType === TournamentRoomTypes.WINNER_FINAL || roomType === TournamentRoomTypes.LOSER_FINAL) {
-        console.log(`🏆 Final forfeit detected, completing tournament`);
-        await tournamentManager.handleFinalMatchEnd(waitingRoomId, roomId, matchData);
+        console.log(`🏆 Final forfeit detected, completion handled by tournament manager`);
       } else {
         console.error(`🏆 Unknown tournament room type for advancement: ${roomType}`);
       }
@@ -816,14 +815,14 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   }
 
   /**
-   * Report tournament forfeit results to external APIs
+   * Report forfeit results to external APIs
    */
   async reportTournamentForfeitResults(matchData) {
     try {
       console.log(`🏆 Reporting tournament forfeit results for room ${matchData.roomId}`);
-      // Report to external services - Tournament match
-    const tournamentId = matchData.waitingRoomId;
-    await reportMatchResultsToAPI(matchData, false, tournamentId);
+      // ⭐ FIX: Don't report match data here to prevent duplicates
+      // The tournament match manager already handles match reporting
+      // This method is only for forfeit scenarios, not normal match endings
     } catch (error) {
       console.error('🏆 Failed to report tournament forfeit results:', error);
     }

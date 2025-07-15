@@ -164,6 +164,13 @@ export class TournamentMatchManager {
     if (!waitingRoomData.semiFinalResults) {
       waitingRoomData.semiFinalResults = {};
     }
+    
+    // ⭐ FIX: Check if tournament is already finished to prevent duplicate reporting
+    if (waitingRoomData.phase === 'FINISHED') {
+      console.log(`🏆 Tournament already finished, skipping duplicate single semi-final reporting`);
+      return true;
+    }
+    
     waitingRoomData.semiFinalResults[roomId] = { winner, loser, matchData };
 
     // Create final results to complete the tournament
@@ -293,6 +300,13 @@ export class TournamentMatchManager {
     if (!waitingRoomData.semiFinalResults) {
       waitingRoomData.semiFinalResults = {};
     }
+    
+    // ⭐ FIX: Check if match has already been reported to prevent duplicates
+    if (waitingRoomData.semiFinalResults[roomId]) {
+      console.log(`🏆 Semi-final match ${roomId} already reported, skipping duplicate reporting`);
+      return;
+    }
+    
     waitingRoomData.semiFinalResults[roomId] = { winner, loser, matchData };
     
     // Report individual tournament match to blockchain (winner only)
@@ -337,6 +351,13 @@ export class TournamentMatchManager {
     if (!waitingRoomData.finalResults) {
       waitingRoomData.finalResults = {};
     }
+    
+    // ⭐ FIX: Check if match has already been reported to prevent duplicates
+    if (waitingRoomData.finalResults[roomType]) {
+      console.log(`🏆 Final match ${roomType} already reported, skipping duplicate reporting`);
+      return;
+    }
+    
     waitingRoomData.finalResults[roomType] = { winner, loser, matchData };
     
     // Report individual tournament final match to blockchain (winner only)
@@ -356,6 +377,12 @@ export class TournamentMatchManager {
     
     if (winnerFinalResult && loserFinalResult) {
       console.log(`🏆 Both finals complete, ending tournament`);
+      
+      // ⭐ FIX: Check if tournament is already finished to prevent duplicate reporting
+      if (waitingRoomData.phase === 'FINISHED') {
+        console.log(`🏆 Tournament already finished, skipping duplicate completion reporting`);
+        return;
+      }
       
       // Report tournament to blockchain
       try {
@@ -407,6 +434,12 @@ export class TournamentMatchManager {
             };
             
             console.log(`🏆 Tournament completed with forfeit: ${thirdPlace.username} gets 3rd place, ${fourthPlace.username} gets 4th place`);
+            
+            // ⭐ FIX: Check if tournament is already finished to prevent duplicate reporting
+            if (waitingRoomData.phase === 'FINISHED') {
+              console.log(`🏆 Tournament already finished, skipping duplicate completion reporting`);
+              return;
+            }
             
             // Report tournament to blockchain
             try {
@@ -598,4 +631,4 @@ export class TournamentMatchManager {
     console.log(`🏆 Reporting tournament to blockchain (simplified):`, tournamentData);
     await reportTournamentResultsToAPI(tournamentData, waitingRoomId);
   }
-} 
+}
