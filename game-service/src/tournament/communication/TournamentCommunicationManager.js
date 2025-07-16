@@ -65,6 +65,7 @@ export class TournamentCommunicationManager {
                 winner: matchData.winner,
                 playerPlacement: playerPlacement,
                 finalStandings: finalStandings,
+                isDisrupted: waitingRoomData.hasDisconnections, // ⭐ NEW: Indicate if tournament was disrupted
                 message: `🏆 Tournament complete! You finished ${this._getPlacementText(playerPlacement)}!`
               }));
               

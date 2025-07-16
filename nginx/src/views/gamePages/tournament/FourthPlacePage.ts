@@ -3,44 +3,66 @@ import Router from "../../../router/Router.js";
 export default class FourthPlacePage {
     private container: HTMLElement;
     private countdownTimer: number | null = null;
+    private isDisrupted: boolean;
 
-    constructor(containerId: string) {
+    constructor(containerId: string, isDisrupted: boolean = false) {
         this.container = document.getElementById(containerId) as HTMLElement;
         if (!this.container) {
             throw new Error(`Container ${containerId} not found`);
         }
+        this.isDisrupted = isDisrupted;
     }
 
     render(): void {
+        const backgroundClass = this.isDisrupted 
+            ? 'bg-gradient-to-br from-gray-600 via-gray-700 to-gray-800' 
+            : 'bg-gradient-to-br from-gray-800 via-gray-700 to-gray-600';
+            
+        const message = this.isDisrupted
+            ? '🏆 Tournament completed (some players disconnected)'
+            : '🏆 Tournament complete! You finished 4th place!';
+            
+        const subtitle = this.isDisrupted
+            ? 'You finished 4th place'
+            : 'Thanks for participating!';
+        
         this.container.innerHTML = /* HTML */ `
-            <div class="fixed inset-0 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 flex items-center justify-center z-50">
+            <div class="fixed inset-0 ${backgroundClass} flex items-center justify-center z-50">
                 <div class="text-center text-white animate-pulse">
                     <!-- Fourth Place Icon -->
                     <div class="mb-8">
                         <div class="text-8xl mb-4">🏅</div>
-                        <div class="text-6xl font-bold text-blue-300 mb-2">FOURTH PLACE!</div>
-                        <div class="text-3xl text-blue-200 mb-4">🏆 TOURNAMENT PARTICIPANT 🏆</div>
-                        <div class="text-2xl text-blue-100">Well played! You finished 4th!</div>
-                        <div class="text-lg text-blue-200 mt-4">Keep practicing and come back stronger!</div>
+                        <div class="text-6xl font-bold text-gray-300 mb-2">FOURTH PLACE!</div>
+                        <div class="text-3xl text-gray-200 mb-4">🏆 TOURNAMENT PARTICIPANT 🏆</div>
+                        <div class="text-2xl text-gray-100">${subtitle}</div>
                     </div>
+                    
+                    <!-- Disruption Notice -->
+                    ${this.isDisrupted ? `
+                    <div class="mt-4 mb-6">
+                        <div class="text-lg text-gray-300 bg-gray-800 bg-opacity-50 px-4 py-2 rounded-lg">
+                            ⚠️ Some players disconnected during the tournament
+                        </div>
+                    </div>
+                    ` : ''}
                     
                     <!-- Countdown -->
                     <div class="mt-8">
-                        <div class="text-lg text-blue-200">
+                        <div class="text-lg text-gray-200">
                             Returning to main menu in <span id="countdown" class="text-white font-bold">5</span> seconds...
                         </div>
                     </div>
                     
-                    <!-- Encouraging Animation -->
+                    <!-- Celebration Animation -->
                     <div class="absolute inset-0 pointer-events-none">
-                        <div class="confetti">🏅</div>
-                        <div class="confetti" style="animation-delay: 0.5s;">🏆</div>
+                        <div class="confetti">🏆</div>
+                        <div class="confetti" style="animation-delay: 0.5s;">🏅</div>
                         <div class="confetti" style="animation-delay: 1s;">✨</div>
-                        <div class="confetti" style="animation-delay: 1.5s;">💪</div>
+                        <div class="confetti" style="animation-delay: 1.5s;">🎊</div>
                         <div class="confetti" style="animation-delay: 2s;">⭐</div>
-                        <div class="confetti" style="animation-delay: 0.3s;">💫</div>
-                        <div class="confetti" style="animation-delay: 0.8s;">🌟</div>
-                        <div class="confetti" style="animation-delay: 1.3s;">🎯</div>
+                        <div class="confetti" style="animation-delay: 0.3s;">👑</div>
+                        <div class="confetti" style="animation-delay: 0.8s;">💎</div>
+                        <div class="confetti" style="animation-delay: 1.3s;">🔥</div>
                     </div>
                 </div>
             </div>

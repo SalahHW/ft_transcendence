@@ -585,6 +585,12 @@ export class TournamentMatchManager {
       return;
     }
 
+    // ⭐ NEW: Skip blockchain reporting if tournament has disconnections
+    if (waitingRoomData.hasDisconnections) {
+      console.log(`🏆 Skipping blockchain reporting for tournament ${waitingRoomId} due to disconnections`);
+      return;
+    }
+
     // Get all tournament matches
     const matches = this.tournamentManager.getTournamentMatches(waitingRoomId);
     

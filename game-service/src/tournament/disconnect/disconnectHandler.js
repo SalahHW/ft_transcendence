@@ -842,6 +842,9 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       // Update disconnected players array
       if (disconnected && !waitingRoomData.disconnectedPlayers.includes(playerId)) {
         waitingRoomData.disconnectedPlayers.push(playerId);
+        // ⭐ NEW: Set tournament-wide disconnection flag
+        waitingRoomData.hasDisconnections = true;
+        console.log(`🏆 Tournament ${waitingRoomId} marked as disrupted due to player ${playerId} disconnection`);
       } else if (!disconnected) {
         waitingRoomData.disconnectedPlayers = waitingRoomData.disconnectedPlayers.filter(id => id !== playerId);
       }

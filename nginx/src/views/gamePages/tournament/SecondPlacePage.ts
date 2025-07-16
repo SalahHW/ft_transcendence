@@ -3,25 +3,48 @@ import Router from "../../../router/Router.js";
 export default class SecondPlacePage {
     private container: HTMLElement;
     private countdownTimer: number | null = null;
+    private isDisrupted: boolean;
 
-    constructor(containerId: string) {
+    constructor(containerId: string, isDisrupted: boolean = false) {
         this.container = document.getElementById(containerId) as HTMLElement;
         if (!this.container) {
             throw new Error(`Container ${containerId} not found`);
         }
+        this.isDisrupted = isDisrupted;
     }
 
     render(): void {
+        const backgroundClass = this.isDisrupted 
+            ? 'bg-gradient-to-br from-gray-600 via-gray-700 to-gray-800' 
+            : 'bg-gradient-to-br from-gray-400 via-gray-500 to-gray-600';
+            
+        const message = this.isDisrupted
+            ? '🏆 Tournament completed (some players disconnected)'
+            : '🏆 Tournament complete! You finished 2nd place! 🥈';
+            
+        const subtitle = this.isDisrupted
+            ? 'You finished 2nd place'
+            : 'Great performance!';
+        
         this.container.innerHTML = /* HTML */ `
-            <div class="fixed inset-0 bg-gradient-to-br from-gray-700 via-gray-600 to-gray-500 flex items-center justify-center z-50">
+            <div class="fixed inset-0 ${backgroundClass} flex items-center justify-center z-50">
                 <div class="text-center text-white animate-pulse">
                     <!-- Second Place Icon -->
                     <div class="mb-8">
                         <div class="text-8xl mb-4">🥈</div>
-                        <div class="text-6xl font-bold text-gray-300 mb-2">RUNNER-UP!</div>
-                        <div class="text-3xl text-gray-200 mb-4">🏆 TOURNAMENT FINALIST 🏆</div>
-                        <div class="text-2xl text-gray-100">Excellent performance! You finished 2nd!</div>
+                        <div class="text-6xl font-bold text-gray-300 mb-2">SECOND PLACE!</div>
+                        <div class="text-3xl text-gray-200 mb-4">🏆 TOURNAMENT RUNNER-UP 🏆</div>
+                        <div class="text-2xl text-gray-100">${subtitle}</div>
                     </div>
+                    
+                    <!-- Disruption Notice -->
+                    ${this.isDisrupted ? `
+                    <div class="mt-4 mb-6">
+                        <div class="text-lg text-gray-300 bg-gray-800 bg-opacity-50 px-4 py-2 rounded-lg">
+                            ⚠️ Some players disconnected during the tournament
+                        </div>
+                    </div>
+                    ` : ''}
                     
                     <!-- Countdown -->
                     <div class="mt-8">
@@ -32,14 +55,14 @@ export default class SecondPlacePage {
                     
                     <!-- Celebration Animation -->
                     <div class="absolute inset-0 pointer-events-none">
-                        <div class="confetti">🥈</div>
-                        <div class="confetti" style="animation-delay: 0.5s;">🏆</div>
+                        <div class="confetti">🏆</div>
+                        <div class="confetti" style="animation-delay: 0.5s;">🥈</div>
                         <div class="confetti" style="animation-delay: 1s;">✨</div>
                         <div class="confetti" style="animation-delay: 1.5s;">🎊</div>
                         <div class="confetti" style="animation-delay: 2s;">⭐</div>
-                        <div class="confetti" style="animation-delay: 0.3s;">💫</div>
-                        <div class="confetti" style="animation-delay: 0.8s;">🌟</div>
-                        <div class="confetti" style="animation-delay: 1.3s;">🎉</div>
+                        <div class="confetti" style="animation-delay: 0.3s;">👑</div>
+                        <div class="confetti" style="animation-delay: 0.8s;">💎</div>
+                        <div class="confetti" style="animation-delay: 1.3s;">🔥</div>
                     </div>
                 </div>
             </div>

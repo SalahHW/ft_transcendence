@@ -3,25 +3,48 @@ import Router from "../../../router/Router.js";
 export default class ThirdPlacePage {
     private container: HTMLElement;
     private countdownTimer: number | null = null;
+    private isDisrupted: boolean;
 
-    constructor(containerId: string) {
+    constructor(containerId: string, isDisrupted: boolean = false) {
         this.container = document.getElementById(containerId) as HTMLElement;
         if (!this.container) {
             throw new Error(`Container ${containerId} not found`);
         }
+        this.isDisrupted = isDisrupted;
     }
 
     render(): void {
+        const backgroundClass = this.isDisrupted 
+            ? 'bg-gradient-to-br from-gray-600 via-gray-700 to-gray-800' 
+            : 'bg-gradient-to-br from-amber-700 via-amber-600 to-amber-500';
+            
+        const message = this.isDisrupted
+            ? '🏆 Tournament completed (some players disconnected)'
+            : '🏆 Tournament complete! You finished 3rd place! 🥉';
+            
+        const subtitle = this.isDisrupted
+            ? 'You finished 3rd place'
+            : 'Well done!';
+        
         this.container.innerHTML = /* HTML */ `
-            <div class="fixed inset-0 bg-gradient-to-br from-amber-800 via-amber-700 to-amber-600 flex items-center justify-center z-50">
+            <div class="fixed inset-0 ${backgroundClass} flex items-center justify-center z-50">
                 <div class="text-center text-white animate-pulse">
                     <!-- Third Place Icon -->
                     <div class="mb-8">
                         <div class="text-8xl mb-4">🥉</div>
                         <div class="text-6xl font-bold text-amber-300 mb-2">THIRD PLACE!</div>
-                        <div class="text-3xl text-amber-200 mb-4">🏆 TOURNAMENT SEMI-FINALIST 🏆</div>
-                        <div class="text-2xl text-amber-100">Great job! You finished 3rd!</div>
+                        <div class="text-3xl text-amber-200 mb-4">🏆 TOURNAMENT BRONZE 🏆</div>
+                        <div class="text-2xl text-amber-100">${subtitle}</div>
                     </div>
+                    
+                    <!-- Disruption Notice -->
+                    ${this.isDisrupted ? `
+                    <div class="mt-4 mb-6">
+                        <div class="text-lg text-gray-300 bg-gray-800 bg-opacity-50 px-4 py-2 rounded-lg">
+                            ⚠️ Some players disconnected during the tournament
+                        </div>
+                    </div>
+                    ` : ''}
                     
                     <!-- Countdown -->
                     <div class="mt-8">
@@ -32,14 +55,14 @@ export default class ThirdPlacePage {
                     
                     <!-- Celebration Animation -->
                     <div class="absolute inset-0 pointer-events-none">
-                        <div class="confetti">🥉</div>
-                        <div class="confetti" style="animation-delay: 0.5s;">🏆</div>
+                        <div class="confetti">🏆</div>
+                        <div class="confetti" style="animation-delay: 0.5s;">🥉</div>
                         <div class="confetti" style="animation-delay: 1s;">✨</div>
                         <div class="confetti" style="animation-delay: 1.5s;">🎊</div>
                         <div class="confetti" style="animation-delay: 2s;">⭐</div>
-                        <div class="confetti" style="animation-delay: 0.3s;">💫</div>
-                        <div class="confetti" style="animation-delay: 0.8s;">🌟</div>
-                        <div class="confetti" style="animation-delay: 1.3s;">🎉</div>
+                        <div class="confetti" style="animation-delay: 0.3s;">👑</div>
+                        <div class="confetti" style="animation-delay: 0.8s;">💎</div>
+                        <div class="confetti" style="animation-delay: 1.3s;">🔥</div>
                     </div>
                 </div>
             </div>
