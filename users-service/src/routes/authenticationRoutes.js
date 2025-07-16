@@ -18,8 +18,8 @@ export default async function authenticationRoutes(fastify) {
   fastify.route({
     method: "POST",
     url: "/logout",
+    preHandler: redisControllers.invalidateToken,
     handler: authenticationControllers.logoutUser,
-    onSend: redisControllers.invalidateToken,
   });
 
   fastify.route({
