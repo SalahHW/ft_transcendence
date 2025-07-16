@@ -4,11 +4,12 @@
   "type": "module",
   "scripts": {
     "start": "node src/app.js",
-    "dev": "NODE_ENV=development node --env-file=../.env --env-file=./.env src/app.js"
+    "dev": "NODE_ENV=development nodemon --env-file=../.env --env-file=./.env src/app.js"
   },
   "dependencies": {
+    "fastify": "^5.0.0",
     "@fastify/cookie": "^11.0.2",
     "@fastify/jwt": "9.1.0",
-    "fastify": "5.0.0"
+    "@fastify/redis": "^7.0.2"
   }
 }
