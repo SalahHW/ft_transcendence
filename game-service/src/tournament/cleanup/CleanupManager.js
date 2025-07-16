@@ -117,6 +117,17 @@ export class TournamentCleanupManager {
       await assetDisposalManager.disposeAtTournamentEnd(waitingRoomId);
     }
     
+    // ⭐ NEW: Clean up reported matches for this tournament
+    // Note: No longer needed since we collect all matches and report them together
+    // try {
+    //   const { tournamentManager } = await import('../TournamentManager.js');
+    //   if (tournamentManager.matchManager) {
+    //     tournamentManager.matchManager.cleanupReportedMatches(waitingRoomId);
+    //   }
+    // } catch (error) {
+    //   console.error(`🏆 Error cleaning up reported matches for tournament ${waitingRoomId}:`, error);
+    // }
+    
     // Clean up tournament rooms
     const disconnectHandler = await this.getDisconnectHandler();
     disconnectHandler.cleanupTournamentRooms(waitingRoomId);
@@ -176,6 +187,17 @@ export class TournamentCleanupManager {
     // Clean up stale waiting room data
     for (const waitingRoomId of staleWaitingRooms) {
       console.log(`🏆 Removing stale waiting room data for ${waitingRoomId}`);
+      
+      // ⭐ NEW: Clean up reported matches for this tournament
+      // try {
+      //   const { tournamentManager } = await import('../TournamentManager.js');
+      //   if (tournamentManager.matchManager) {
+      //     tournamentManager.matchManager.cleanupReportedMatches(waitingRoomId);
+      //   }
+      // } catch (error) {
+      //   console.error(`🏆 Error cleaning up reported matches for stale tournament ${waitingRoomId}:`, error);
+      // }
+      
       this.waitingRooms.delete(waitingRoomId);
     }
     

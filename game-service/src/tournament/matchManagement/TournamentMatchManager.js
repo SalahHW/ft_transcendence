@@ -4,6 +4,7 @@
  */
 
 import { gameStateManager } from '../../game/GameStateManager.js';
+import { reportTournamentResultsToAPI, reportMatchResultsToAPI } from '../../server/api.js';
 
 /**
  * Tournament Match Manager
@@ -163,7 +164,7 @@ export class TournamentMatchManager {
     if (!waitingRoomData.semiFinalResults) {
       waitingRoomData.semiFinalResults = {};
     }
-    waitingRoomData.semiFinalResults[roomId] = { winner, loser };
+    waitingRoomData.semiFinalResults[roomId] = { winner, loser, matchData };
 
     // Create final results to complete the tournament
     if (!waitingRoomData.finalResults) {
@@ -174,6 +175,7 @@ export class TournamentMatchManager {
     waitingRoomData.finalResults['winner_final'] = { 
       winner: winner, 
       loser: loser,
+      matchData: matchData, // Store the match data with match ID
       isSingleSemiFinal: true,
       isForfeitWinner: isForfeitWinner
     };
@@ -182,6 +184,7 @@ export class TournamentMatchManager {
     waitingRoomData.finalResults['loser_final'] = { 
       winner: loser, 
       loser: loser, // Same player since no actual loser final
+      matchData: matchData, // Store the match data with match ID
       isSingleSemiFinal: true,
       isForfeitWinner: isForfeitWinner
     };
@@ -241,6 +244,18 @@ export class TournamentMatchManager {
     // Send tournament completion message to all players
     this.tournamentManager.communicationManager._sendTournamentCompletionMessage(waitingRoomId, { winner, loser });
 
+    // Add match to tournament collection (NEW: collect instead of report individually)
+    if (matchData) {
+      await this.tournamentManager.addTournamentMatch(waitingRoomId, matchData);
+    }
+
+    // Report tournament to blockchain (NEW: with all matches)
+    try {
+      await this._reportTournamentToBlockchain(waitingRoomId, winner);
+    } catch (error) {
+      console.error('🏆 Failed to report tournament to blockchain:', error.message);
+    }
+
     // Schedule cleanup
     setTimeout(() => {
       this.tournamentManager.cleanupManager.cleanupWaitingRoom(waitingRoomId);
@@ -278,11 +293,14 @@ export class TournamentMatchManager {
     const winner = matchData.winner;
     const loser = matchData.loser;
     
-    // Store the match result
+    // Store the match result with match data
     if (!waitingRoomData.semiFinalResults) {
       waitingRoomData.semiFinalResults = {};
     }
-    waitingRoomData.semiFinalResults[roomId] = { winner, loser };
+    waitingRoomData.semiFinalResults[roomId] = { winner, loser, matchData };
+    
+    // Add match to tournament collection (NEW: collect instead of report individually)
+    await this.tournamentManager.addTournamentMatch(waitingRoomId, matchData);
     
      // Handle single semi-final edge case
     const singleSemiFinalHandled = await this.handleSingleSemiFinal(waitingRoomId, roomId, winner, loser, matchData);
@@ -314,11 +332,14 @@ export class TournamentMatchManager {
     const loser = matchData.loser;
     const roomType = gameStateManager.getRoom(roomId)?.metadata?.roomType;
     
-    // Store the final result
+    // Store the final result with match data
     if (!waitingRoomData.finalResults) {
       waitingRoomData.finalResults = {};
     }
-    waitingRoomData.finalResults[roomType] = { winner, loser };
+    waitingRoomData.finalResults[roomType] = { winner, loser, matchData };
+    
+    // Add match to tournament collection (NEW: collect instead of report individually)
+    await this.tournamentManager.addTournamentMatch(waitingRoomId, matchData);
     
     // Send individual final match completion message to players in this room
     this.tournamentManager.communicationManager._sendIndividualFinalMatchCompletion(waitingRoomId, roomId, roomType, winner, loser);
@@ -329,6 +350,13 @@ export class TournamentMatchManager {
     
     if (winnerFinalResult && loserFinalResult) {
       console.log(`🏆 Both finals complete, ending tournament`);
+      
+      // Report tournament to blockchain (NEW: with all matches)
+      try {
+        await this._reportTournamentToBlockchain(waitingRoomId, winnerFinalResult.winner);
+      } catch (error) {
+        console.error('🏆 Failed to report tournament to blockchain:', error.message);
+      }
       
       // Send tournament completion message to all players
       this.tournamentManager.communicationManager._sendTournamentCompletionMessage(waitingRoomId, matchData);
@@ -373,6 +401,13 @@ export class TournamentMatchManager {
             };
             
             console.log(`🏆 Tournament completed with forfeit: ${thirdPlace.username} gets 3rd place, ${fourthPlace.username} gets 4th place`);
+            
+            // Report tournament to blockchain (NEW: with all matches)
+            try {
+              await this._reportTournamentToBlockchain(waitingRoomId, winnerFinalResult.winner);
+            } catch (error) {
+              console.error('🏆 Failed to report tournament to blockchain:', error.message);
+            }
             
             // Send tournament completion message to all players
             this.tournamentManager.communicationManager._sendTournamentCompletionMessage(waitingRoomId, matchData);
@@ -537,4 +572,53 @@ export class TournamentMatchManager {
       }
     });
   }
-} 
+
+  /**
+   * Report tournament completion to blockchain (NEW FORMAT: with all matches)
+   * @param {string} waitingRoomId - The tournament waiting room ID
+   * @param {Object} winner - The tournament winner (1st place)
+   */
+  async _reportTournamentToBlockchain(waitingRoomId, winner) {
+    const waitingRoomData = this.tournamentManager.waitingRooms.get(waitingRoomId);
+    if (!waitingRoomData) {
+      console.error('🏆 No waiting room data found for tournament reporting');
+      return;
+    }
+
+    // Get all tournament matches
+    const matches = this.tournamentManager.getTournamentMatches(waitingRoomId);
+    
+    // Get tournament start timestamp for endTimestamp
+    const endTimestamp = Math.floor(Date.now() / 1000);
+    
+    // Get winner wallet address
+    const { blockchainService } = await import('../../services/blockchainService.js');
+    const winnerWallet = await blockchainService.getUserWallet(winner.userId || winner.id);
+    if (!winnerWallet) {
+      console.error('🏆 Could not retrieve wallet address for tournament winner');
+      return;
+    }
+    
+    const tournamentData = {
+      endTimestamp: endTimestamp,
+      winner: winnerWallet,
+      matches: matches
+    };
+
+    console.log(`🏆 Reporting tournament to blockchain (NEW FORMAT):`, tournamentData);
+    console.log(`🏆 Tournament has ${matches.length} matches`);
+    
+    // Set timeout to 25 seconds for blockchain calls
+    try {
+      await Promise.race([
+        reportTournamentResultsToAPI(tournamentData, waitingRoomId),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Tournament reporting timeout after 45 seconds')), 45000)
+        )
+      ]);
+    } catch (error) {
+      console.error('🏆 Failed to report tournament to blockchain:', error.message);
+      throw error;
+    }
+  }
+}

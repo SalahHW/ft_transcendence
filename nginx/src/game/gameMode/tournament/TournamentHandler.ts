@@ -23,8 +23,9 @@ export class TournamentHandler {
    * Handle the logic for starting a tournament
    */
   async handleTournament(): Promise<void> {
+    let playerData = null;
     try {
-      const playerData = await registerCurrentUserForTournament();
+      playerData = await registerCurrentUserForTournament();
       
       if (!this.cache.cache) {
         this.cache.cache = new GamePage("app-container");
@@ -39,7 +40,9 @@ export class TournamentHandler {
       }
       
       // Initialize the game client for tournament mode
-      await this.gameClient.initializeGame(playerData.id, true); // true = tournament mode
+      if (playerData) {
+        await this.gameClient.initializeGame(playerData.id, true); // true = tournament mode
+      }
       
     } catch (error) {
       console.error("Error registering user for tournament:", error);

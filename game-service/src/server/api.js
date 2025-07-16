@@ -6,6 +6,7 @@ import { gameStateManager } from '../game/GameStateManager.js';
 import { gameEngine } from '../game/GameEngine.js';
 import { roomManager } from '../room/RoomManager.js';
 import { tournamentManager } from '../tournament/TournamentManager.js';
+import { blockchainService } from '../services/blockchainService.js';
 
 // Constants for paddle movement
 const PADDLE_PULSE_DISTANCE = 1.0;
@@ -67,9 +68,19 @@ export async function registerApiRoutes(fastify) {
   fastify.post('/api/players', async (request, reply) => {
     try {
       console.log('API request: POST /api/players');
-      const { username } = request.body || {};
+      const { username, userId } = request.body || {};
       
-      const player = playerManager.registerPlayerWithUsername(username);
+      const player = playerManager.registerPlayerWithUsername(username, userId);
+      
+      // Fetch and cache wallet address if userId is provided
+      if (userId) {
+        try {
+          await blockchainService.getUserWallet(userId);
+          console.log(`📱 Fetched wallet for user ${userId} during 1v1 registration`);
+        } catch (error) {
+          console.warn(`⚠️ Failed to fetch wallet for user ${userId}:`, error.message);
+        }
+      }
       
       console.log(`Created player ${player.id} with username ${username}`);
       return reply.code(201).send({
@@ -90,12 +101,22 @@ export async function registerApiRoutes(fastify) {
   fastify.post('/api/tournaments', async (request, reply) => {
     try {
       console.log('🎯 TOURNAMENT BUTTON CLICKED: API request: POST /api/tournaments');
-      const { username } = request.body || {};
+      const { username, userId } = request.body || {};
       
       console.log(`🏆 Player ${username} clicked the tournament button!`);
       
       // Register player first
-      const player = playerManager.registerPlayerWithUsername(username);
+      const player = playerManager.registerPlayerWithUsername(username, userId);
+      
+      // Fetch and cache wallet address if userId is provided
+      if (userId) {
+        try {
+          await blockchainService.getUserWallet(userId);
+          console.log(`📱 Fetched wallet for user ${userId} during tournament registration`);
+        } catch (error) {
+          console.warn(`⚠️ Failed to fetch wallet for user ${userId}:`, error.message);
+        }
+      }
       
       // Add player to tournament waiting room
       let tournamentData;
@@ -495,112 +516,34 @@ export async function registerApiRoutes(fastify) {
       });
     }
   });
-
-  // POST /api/matches/results: Report match completion to other services
-  fastify.post('/api/matches/results', async (request, reply) => {
-    try {
-      console.log('API request: POST /api/matches/results');
-      const matchData = request.body;
-      
-      // Validate required match data
-      const requiredFields = ['roomId', 'matchEndTime', 'winner', 'loser', 'gameStats'];
-      const missingFields = requiredFields.filter(field => !matchData[field]);
-      
-      if (missingFields.length > 0) {
-        return reply.code(400).send({
-          status: 'error',
-          message: `Missing required fields: ${missingFields.join(', ')}`,
-        });
-      }
-
-      // Forward match data to other services
-      await notifyOtherServices(matchData);
-      
-      return reply.code(200).send({
-        status: 'success',
-        message: 'Match results reported successfully',
-        data: { matchId: matchData.roomId }
-      });
-    } catch (error) {
-      console.error('Error in POST /api/matches/results:', error);
-      return reply.code(500).send({
-        status: 'error',
-        message: 'Failed to report match results',
-      });
-    }
-  });
-}
-
-// Service-to-service notification functions
-async function notifyOtherServices(matchData) {
-  const services = [
-    {
-      name: 'users-service',
-      url: process.env.USERS_SERVICE_URL || 'http://users:3000',
-      endpoints: ['/api/matches/completed']
-    }
-    // ⭐ FIX: Removed stats-service as it's not defined in docker-compose
-    // {
-    //   name: 'stats-service', 
-    //   url: process.env.STATS_SERVICE_URL || 'http://localhost:3002',
-    //   endpoints: ['/api/player-stats', '/api/match-history']
-    // }
-  ];
-
-  const notifications = services.flatMap(service => 
-    service.endpoints.map(endpoint => 
-      notifyService(service.name, `${service.url}${endpoint}`, matchData)
-    )
-  );
-
-  await Promise.allSettled(notifications);
-}
-
-async function notifyService(serviceName, url, matchData) {
-  try {
-    console.log(`📡 Notifying ${serviceName} at ${url}...`);
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Source-Service': 'game-service',
-        'X-Match-Id': matchData.roomId
-      },
-      body: JSON.stringify(matchData),
-      signal: AbortSignal.timeout(5000) // 5 second timeout
-    });
-
-    if (!response.ok) {
-      throw new Error(`${serviceName} responded with ${response.status}`);
-    }
-
-    const responseData = await response.json();
-    console.log(`✅ Successfully notified ${serviceName}`);
-    
-    return responseData;
-  } catch (error) {
-    // ⭐ FIX: Make API communication failures less noisy
-    console.warn(`⚠️ Failed to notify ${serviceName}: ${error.message}`);
-    // Don't throw error to prevent match processing from failing
-    return null;
-  }
 }
 
 // Export function to call external services from gameState
-export async function reportMatchResultsToAPI(matchData) {
+export async function reportMatchResultsToAPI(matchData, isMatch1v1 = true, tournamentId = null) {
   try {
-    // Forward match data to external services only
-    const results = await notifyOtherServices(matchData);
-    
-    // Check if any notifications succeeded
-    const successfulNotifications = results.filter(result => result !== null);
-    if (successfulNotifications.length > 0) {
-      console.log(`✅ Match results processing completed (${successfulNotifications.length} services notified)`);
-    } else {
-      console.warn('⚠️ Match results processing completed but no external services were notified');
+    // Report to blockchain service (winner only)
+    try {
+      await blockchainService.reportMatch(matchData, { isMatch1v1, tournamentId });
+      console.log(`✅ ${isMatch1v1 ? '1v1' : 'Tournament'} match reported to blockchain successfully (winner only)`);
+    } catch (blockchainError) {
+      console.error('❌ Failed to report match to blockchain:', blockchainError.message);
     }
   } catch (error) {
     console.error('❌ Failed to process match results:', error.message);
+  }
+}
+
+// Export function to report tournament completion to blockchain
+export async function reportTournamentResultsToAPI(tournamentData, tournamentId) {
+  try {
+    // Report to blockchain service (simplified)
+    try {
+      await blockchainService.reportTournament(tournamentData, tournamentId);
+      console.log(`✅ Tournament reported to blockchain successfully (simplified)`);
+    } catch (blockchainError) {
+      console.error('❌ Failed to report tournament to blockchain:', blockchainError.message);
+    }
+  } catch (error) {
+    console.error('❌ Failed to process tournament results:', error.message);
   }
 }

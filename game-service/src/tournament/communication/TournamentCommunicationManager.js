@@ -58,9 +58,7 @@ export class TournamentCommunicationManager {
         room.players.forEach(player => {
           if (player.ws && player.ws.readyState === 1) {
             try {
-              // Find player's placement
               const playerPlacement = finalStandings.find(p => p.id === player.id)?.placement || 4;
-              
               player.ws.send(JSON.stringify({
                 type: 'tournamentAdvancement',
                 status: 'tournament_complete',
@@ -81,8 +79,6 @@ export class TournamentCommunicationManager {
       }
     });
     
-    // ⭐ CRITICAL FIX: Clean up stale waiting room data immediately after tournament completion
-    // This prevents issues where players can't join new tournaments due to stale data
     setTimeout(async () => {
       try {
         await this.tournamentManager.cleanupManager.cleanupStaleWaitingRoomData();

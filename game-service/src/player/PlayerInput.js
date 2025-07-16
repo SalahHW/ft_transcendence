@@ -37,12 +37,6 @@ export class PlayerInput {
     const roomId = player.roomId;
     if (roomId) {
       const animationStatus = this.playerManager.stateManager.getAnimationStatusForRoom(roomId);
-      const isInAnimationPhase = animationStatus.length < 2;
-      
-      if (isInAnimationPhase) {
-        console.log(`🎬 Blocking input for player ${playerId}: still in animation phase`);
-        return false;
-      }
     }
 
     const success = this.playerManager.handlePlayerKeyPress(playerId, direction);

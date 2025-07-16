@@ -137,7 +137,7 @@ export class GameEngine {
     if (room.ball.player1.playerScore >= GAME_CONFIG.WINNING_SCORE || room.ball.player2.playerScore >= GAME_CONFIG.WINNING_SCORE) {
       room.isGameOver = true;
       
-      const matchData = this._createMatchData(room, roomId);
+      const matchData = await this._createMatchData(room, roomId);
       
       // ⭐ CRITICAL FIX: Handle case where match data creation fails
       if (!matchData) {
@@ -154,8 +154,8 @@ export class GameEngine {
         // ⭐ FIX: Dispose ball assets for 1v1 games to prevent memory leaks
         await this._disposeBallAssets(room, roomId);
         
-        // Report to external services (async, don't wait for completion)
-        reportMatchResultsToAPI(matchData).catch(err => {
+        // Report to external services (async, don't wait for completion) - 1v1 match
+        reportMatchResultsToAPI(matchData, true, null).catch(err => {
           console.error('Failed to report match results to external services:', err.message);
         });
         
@@ -350,7 +350,7 @@ export class GameEngine {
     }
   }
 
-  _createMatchData(room, roomId) {
+  async _createMatchData(room, roomId) {
     const player1 = room.players[0];
     const player2 = room.players[1];
     
@@ -370,21 +370,30 @@ export class GameEngine {
     
     const matchEndTime = new Date().toISOString();
     const matchStartTime = room.startTime || new Date().toISOString();
+    const endTimestamp = Math.floor(Date.now() / 1000); // Actual end time as integer for blockchain
+    
+    // Generate simple match ID for internal tracking
+    const matchId = Math.floor(Date.now() / 1000) % 1000000;
+    console.log(`🎯 Generated simple match ID ${matchId} for room ${roomId}`);
     
     return {
       roomId,
+      matchId, // Add the generated match ID
       matchStartTime,
       matchEndTime,
+      endTimestamp, // Add actual end timestamp as integer for blockchain
       matchDuration: new Date() - new Date(matchStartTime),
       matchType: 'regular',
       finalMatchType: null,
       winner: {
         id: winner.id,
+        userId: winner.userId, // Include real user ID for blockchain operations
         username: winner.username || 'Anonymous',
         score: winnerScore
       },
       loser: {
         id: loser.id,
+        userId: loser.userId, // Include real user ID for blockchain operations
         username: loser.username || 'Anonymous',
         score: loserScore
       },

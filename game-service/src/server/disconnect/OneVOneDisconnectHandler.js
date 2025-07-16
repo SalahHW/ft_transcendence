@@ -10,6 +10,7 @@ import { LogUtils, TimeUtils } from '../../utils/helpers.js';
 import { playerManager } from '../../player/PlayerManager.js';
 import { reportMatchResultsToAPI } from '../api.js';
 import { GAME_CONFIG } from '../../core/constants.js';
+import { blockchainService } from '../../services/blockchainService.js';
 
 /**
  * 1v1 specific disconnect handler
@@ -76,6 +77,9 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
     const room = gameStateManager.getRoom(roomId);
     if (!room) return;
 
+    // Clear wallet cache for disconnected player
+    blockchainService.clearUserWalletCache(playerId);
+
     // Check if game has started but is in animation phase
     if (room.gameStarted && room.ready) {
       this.handlePreGameDisconnect(playerId, roomId, reason);
@@ -107,11 +111,23 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
       return;
     }
 
+    // ⭐ FIX: Capture scores before disposing ball assets
+    let winnerScore = null;
+    let loserScore = null;
+    
+    if (room.ball) {
+      const isRemainingPlayer1 = remainingPlayer.id === room.players[0].id;
+      const isDisconnectedPlayer1 = disconnectedPlayer.id === room.players[0].id;
+      
+      winnerScore = GAME_CONFIG.WINNING_SCORE; // Winner always gets full score
+      loserScore = isDisconnectedPlayer1 ? room.ball.player1.playerScore : room.ball.player2.playerScore;
+    }
+
     // ⭐ FIX: Dispose ball assets to prevent memory leaks
     await this.disposeBallAssets(room, roomId);
 
-    // Award forfeit win
-    this.awardForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'pre_game');
+    // Award forfeit win with captured scores
+    await this.awardForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'pre_game', winnerScore, loserScore);
   }
 
   /**
@@ -127,11 +143,23 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
       return;
     }
 
+    // ⭐ FIX: Capture scores before disposing ball assets
+    let winnerScore = null;
+    let loserScore = null;
+    
+    if (room.ball) {
+      const isRemainingPlayer1 = remainingPlayer.id === room.players[0].id;
+      const isDisconnectedPlayer1 = disconnectedPlayer.id === room.players[0].id;
+      
+      winnerScore = GAME_CONFIG.WINNING_SCORE; // Winner always gets full score
+      loserScore = isDisconnectedPlayer1 ? room.ball.player1.playerScore : room.ball.player2.playerScore;
+    }
+
     // ⭐ FIX: Dispose ball assets to prevent memory leaks
     await this.disposeBallAssets(room, roomId);
 
-    // Award forfeit win
-    this.awardForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'in_game');
+    // Award forfeit win with captured scores
+    await this.awardForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'in_game', winnerScore, loserScore);
   }
 
   /**
@@ -150,12 +178,12 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
   /**
    * Award forfeit win to remaining player
    */
-  awardForfeitWin(room, roomId, winner, loser, reason, context) {
+  async awardForfeitWin(room, roomId, winner, loser, reason, context, winnerScore = null, loserScore = null) {
     // Mark game as over immediately
     room.isGameOver = true;
     
     // Create match data
-    const matchData = this.createForfeitMatchData(room, roomId, winner, loser, reason, context);
+    const matchData = await this.createForfeitMatchData(room, roomId, winner, loser, reason, context, winnerScore, loserScore);
     
     // Log the forfeit
     LogUtils.logMatchCompletion(matchData);
@@ -173,29 +201,56 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
   /**
    * Create match data for forfeit scenarios
    */
-  createForfeitMatchData(room, roomId, winner, loser, reason, context) {
+  async createForfeitMatchData(room, roomId, winner, loser, reason, context, winnerScore = null, loserScore = null) {
     const matchEndTime = TimeUtils.getCurrentTimestamp();
     const matchStartTime = room.startTime || matchEndTime;
+    const endTimestamp = Math.floor(Date.now() / 1000); // Actual end time as integer for blockchain
+    
+    // ⭐ FIX: Use provided scores or calculate correct scores based on player positions
+    let finalWinnerScore = winnerScore;
+    let finalLoserScore = loserScore;
+    
+    if (finalWinnerScore === null || finalLoserScore === null) {
+      // Calculate scores based on which player is which
+      if (room.ball) {
+        const isWinnerPlayer1 = winner.id === room.players[0].id;
+        const isLoserPlayer1 = loser.id === room.players[0].id;
+        
+                 finalWinnerScore = finalWinnerScore ?? GAME_CONFIG.WINNING_SCORE; // Winner always gets full score
+         finalLoserScore = finalLoserScore ?? ((isLoserPlayer1 ? room.ball.player1.playerScore : room.ball.player2.playerScore) || 0);
+      } else {
+        finalWinnerScore = finalWinnerScore ?? GAME_CONFIG.WINNING_SCORE;
+        finalLoserScore = finalLoserScore ?? 0;
+      }
+    }
+    
+    // Generate simple match ID for internal tracking
+    const matchId = Math.floor(Date.now() / 1000) % 1000000;
+    console.log(`🎯 Generated simple match ID ${matchId} for 1v1 forfeit in room ${roomId}`);
     
     return {
       roomId,
+      matchId, // Add the generated match ID
       matchType: this.matchType,
       matchStartTime,
       matchEndTime,
+      endTimestamp, // Add actual end timestamp as integer for blockchain
       matchDuration: TimeUtils.calculateMatchDuration(matchStartTime, matchEndTime),
       winner: {
         id: winner.id,
+        userId: winner.userId, // Include real user ID for blockchain operations
         username: winner.username || 'Anonymous',
-        score: GAME_CONFIG.WINNING_SCORE // Award full score for forfeit win
+        score: finalWinnerScore
       },
       loser: {
         id: loser.id,
+        userId: loser.userId, // Include real user ID for blockchain operations
         username: loser.username || 'Anonymous',
-        score: room.ball?.player2?.playerScore || 0
+        score: finalLoserScore
       },
       gameStats: {
         totalRebounds: room.ball?.rebounds || 0,
-        finalScore: `${GAME_CONFIG.WINNING_SCORE}-${room.ball?.player2?.playerScore || 0}`,
+        finalScore: `${finalWinnerScore}-${finalLoserScore}`,
         ballSpeed: room.ball?.speed || 0,
         lastHitBy: room.ball?.wasHitByPlayer || null,
         forfeitReason: this.getForfeitReasonText(reason, context),
@@ -250,7 +305,8 @@ export class OneVOneDisconnectHandler extends BaseDisconnectHandler {
    */
   async reportForfeitResults(matchData) {
     try {
-      await reportMatchResultsToAPI(matchData);
+      // Report to external services - 1v1 match
+    await reportMatchResultsToAPI(matchData, true, null);
     } catch (error) {
       console.error('❌ Failed to report forfeit results:', error);
     }
