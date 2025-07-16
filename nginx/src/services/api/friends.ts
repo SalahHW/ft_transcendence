@@ -25,10 +25,12 @@ export default class FriendsServiceAPI {
 		const response = await fetch(`${this._friendsBaseUrl}/id/${friendId}`, {
 			method: "POST"
 		});
-		if (response.status !== 201) {
-			const responseData = await response.json();
-			throw new Error(`Failed to create friendship:\n${JSON.stringify(responseData, null, 2)}`);
+		if (!response.ok) {
+			const responseText = await response.text();
+			console.error(`Failed to create friendship with user ${friendId}: ${response.status} ${response.statusText}`, responseText);
+			throw new Error("Failed to create friendship. Please try again later.");
 		}
+		console.log(`Friendship with user ${friendId} created successfully.`);
 	}
 
 	/**
@@ -41,13 +43,17 @@ export default class FriendsServiceAPI {
 			method: "GET"
 		});
 		if (response.status === 404) {
+			console.log("No friendships found for the user.");
 			return [];
 		}
-		if (response.status !== 200) {
-			const responseData = await response.json();
-			throw new Error(`Failed to get friendships:\n${JSON.stringify(responseData, null, 2)}`);
+		if (!response.ok) {
+			const responseText = await response.text();
+			console.error(`Failed to get friendships: ${response.status} ${response.statusText}`, responseText);
+			throw new Error("Failed to get friendships. Please try again later.");
 		}
-		return await response.json();
+		const friendships = await response.json();
+		console.log("Successfully retrieved user friendships.");
+		return friendships;
 	}
 
 	/**
@@ -60,9 +66,11 @@ export default class FriendsServiceAPI {
 		const response = await fetch(`${this._friendsBaseUrl}/${friendId}`, {
 			method: "DELETE"
 		});
-		if (response.status !== 204) {
-			const responseData = await response.json();
-			throw new Error(`Failed to delete friendship:\n${JSON.stringify(responseData, null, 2)}`);
+		if (!response.ok) {
+			const responseText = await response.text();
+			console.error(`Failed to delete friendship with user ${friendId}: ${response.status} ${response.statusText}`, responseText);
+			throw new Error("Failed to delete friendship. Please try again later.");
 		}
+		console.log(`Friendship with user ${friendId} deleted successfully.`);
 	}
 }

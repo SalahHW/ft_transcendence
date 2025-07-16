@@ -75,19 +75,24 @@ export default class MatchServiceAPI {
 			method: "GET"
 		});
 		if (response.status === 404) {
+			console.log(`No matches found for player ${address}.`);
 			return [];
 		}
 		if (!response.headers.get('content-type')?.includes('application/json')) {
+			console.log(`No matches found for player ${address}.`);
 			return [];
 		}
 		const data = await response.json();
-		if (response.ok && data.success) {
-			return data.matches.map(mapMatchArrayToMatchObject);
-		}
 		if (response.ok && !data.success) {
+			console.log(`No matches found for player ${address}.`);
 			return [];
 		}
-		throw new Error(`Failed to fetch matches by player:\n${JSON.stringify(data, null, 2)}`);
+		if (response.ok && data.success) {
+			console.log(`Successfully fetched matches for player ${address}.`);
+			return data.matches.map(mapMatchArrayToMatchObject);
+		}
+		console.error(`Failed to fetch matches for player ${address}:`, data);
+		throw new Error(`Failed to fetch matches. Please try again later.`);
 	}
 
 	/**
@@ -101,19 +106,24 @@ export default class MatchServiceAPI {
 			method: "GET"
 		});
 		if (response.status === 404) {
+			console.log(`No tournaments found for player ${address}.`);
 			return [];
 		}
 		if (!response.headers.get('content-type')?.includes('application/json')) {
+			console.log(`No tournaments found for player ${address}.`);
 			return [];
 		}
 		const data = await response.json();
 		if (response.ok && data.success) {
+			console.log(`Successfully fetched tournaments for player ${address}.`);
 			return data.tournaments.map(mapTournamentArrayToTournamentObject);
 		}
 		if (response.ok && !data.success) {
+			console.log(`No tournaments found for player ${address}.`);
 			return [];
 		}
-		throw new Error(`Failed to fetch tournaments by player:\n${JSON.stringify(data, null, 2)}`);
+		console.error(`Failed to fetch tournaments for player ${address}:`, data);
+		throw new Error(`Failed to fetch tournaments. Please try again later.`);
 	}
 
 	/**
@@ -126,19 +136,24 @@ export default class MatchServiceAPI {
 			method: "GET"
 		});
 		if (response.status === 404) {
+			console.log(`No matches found for winner ${address}.`);
 			return [];
 		}
 		if (!response.headers.get('content-type')?.includes('application/json')) {
+			console.log(`No matches found for winner ${address}.`);
 			return [];
 		}
 		const data = await response.json();
 		if (response.ok && data.success) {
+			console.log(`Successfully fetched matches for winner ${address}.`);
 			return data.matches.map(mapMatchArrayToMatchObject);
 		}
 		if (response.ok && !data.success) {
+			console.log(`No matches found for winner ${address}.`);
 			return [];
 		}
-		throw new Error(`Failed to fetch matches by winner:\n${JSON.stringify(data, null, 2)}`);
+		console.error(`Failed to fetch matches for winner ${address}:`, data);
+		throw new Error(`Failed to fetch matches. Please try again later.`);
 	}
 
 	/**
@@ -151,10 +166,14 @@ export default class MatchServiceAPI {
 			method: "GET"
 		});
 		const data = await response.json();
-		if (response.status === 200 && data.success)
+		if (response.ok && data.success) {
+			console.log(`Successfully fetched match with id ${matchId}.`);
 			return mapMatchArrayToMatchObject(data.match);
-		else
-			throw new Error(`Failed to fetch match by id:\n${JSON.stringify(data, null, 2)}`);
+		}
+		else {
+			console.error(`Failed to fetch match with id ${matchId}:`, data);
+			throw new Error(`Failed to fetch match details. Please try again later.`);
+		}
 	}
 
 	/**
@@ -181,10 +200,14 @@ export default class MatchServiceAPI {
 			body: JSON.stringify(match)
 		});
 		const data = await response.json();
-		if (response.status === 200 && data.success)
+		if (response.status === 200 && data.success) {
+			console.log("Match reported successfully.");
 			return data.transactionHash;
-		else
-			throw new Error(`Failed to report match:\n${JSON.stringify(data, null, 2)}`);
+		}
+		else {
+			console.error("Failed to report match:", data);
+			throw new Error(`Failed to report match. Please try again later.`);
+		}
 	}
 
 	/**
@@ -206,10 +229,14 @@ export default class MatchServiceAPI {
 			body: JSON.stringify(tournament)
 		});
 		const data = await response.json();
-		if (response.status === 200 && data.success)
+		if (response.status === 200 && data.success) {
+			console.log("Tournament reported successfully.");
 			return data.transactionHash;
-		else
-			throw new Error(`Failed to report tournament:\n${JSON.stringify(data, null, 2)}`);
+		}
+		else {
+			console.error("Failed to report tournament:", data);
+			throw new Error(`Failed to report tournament. Please try again later.`);
+		}
 	}
 
 	/**
@@ -222,10 +249,14 @@ export default class MatchServiceAPI {
 			method: "GET"
 		});
 		const data = await response.json();
-		if (response.status === 200 && data.success)
+		if (response.status === 200 && data.success) {
+			console.log(`Successfully fetched tournament with id ${tournamentId}.`);
 			return data.tournament;
-		else
-			throw new Error(`Failed to fetch tournament by id:\n${JSON.stringify(data, null, 2)}`);
+		}
+		else {
+			console.error(`Failed to fetch tournament with id ${tournamentId}:`, data);
+			throw new Error(`Failed to fetch tournament details. Please try again later.`);
+		}
 	}
 
 	/**
@@ -238,19 +269,24 @@ export default class MatchServiceAPI {
 			method: "GET"
 		});
 		if (response.status === 404) {
+			console.log(`No tournaments found for winner ${address}.`);
 			return [];
 		}
 		if (!response.headers.get('content-type')?.includes('application/json')) {
+			console.log(`No tournaments found for winner ${address}.`);
 			return [];
 		}
 		const data = await response.json();
 		if (response.ok && data.success) {
+			console.log(`Successfully fetched tournaments for winner ${address}.`);
 			return data.tournaments.map(mapTournamentArrayToTournamentObject);
 		}
 		if (response.ok && !data.success) {
+			console.log(`No tournaments found for winner ${address}.`);
 			return [];
 		}
-		throw new Error(`Failed to fetch tournaments by winner:\n${JSON.stringify(data, null, 2)}`);
+		console.error(`Failed to fetch tournaments for winner ${address}:`, data);
+		throw new Error(`Failed to fetch tournaments. Please try again later.`);
 	}
 
 	/**
@@ -263,9 +299,13 @@ export default class MatchServiceAPI {
 			method: "GET"
 		});
 		const data = await response.json();
-		if (response.status === 200 && data.success)
+		if (response.status === 200 && data.success) {
+			console.log(`Successfully fetched player name for address ${address}.`);
 			return data.name;
-		else
-			throw new Error(`Failed to fetch player name by address:\n${JSON.stringify(data, null, 2)}`);
+		}
+		else {
+			console.error(`Failed to fetch player name for address ${address}:`, data);
+			throw new Error(`Failed to fetch player name. Please try again later.`);
+		}
 	}
 }
