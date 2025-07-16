@@ -3,7 +3,7 @@ import Fastify from "fastify";
 import plugins from "./plugins/index.js";
 import fastifyCookie from "@fastify/cookie";
 import { initializeDatabase } from "./models/database.js";
-import { initializeRedis } from "./models/redis.js";
+import { initializeRedis } from "./redis/redis.js";
 import registerRoutes from "./routes/index.js";
 
 const fastify = Fastify();
