@@ -2,20 +2,20 @@ export const UI_THEME = {
 
 	colors: {
 		background: {
-			primary: 'rgba(31, 41, 55, 0.85)', // bg-gray-800/85
-			primarySelected: 'rgba(55, 65, 81, 0.95)', // bg-gray-700/95
-			secondary: 'rgba(31, 41, 55, 0.9)', // bg-gray-800/90
-			overlay: 'bg-black/30 backdrop-blur-md', // Overlay avec blur
+			primary: '#1F2937D9',
+			primarySelected: '#374151F2',
+			secondary: '#1F2937E6',
+			overlay: 'bg-black/30 backdrop-blur-md',
 			input: 'bg-gray-700/50',
 			inputFocus: 'bg-gray-700/70',
 		},
 		border: {
-			primary: 'rgba(75, 85, 99, 0.3)', // border-gray-600/30
-			primarySelected: 'rgba(156, 163, 175, 0.6)', // border-gray-400/60
+			primary: '#4B55634D',
+			primarySelected: '#9CA3AF99',
 		},
 		text: {
-			primary: 'rgb(243, 244, 246)', // text-gray-100
-			secondary: 'rgb(156, 163, 175)', // text-gray-400
+			primary: '#F3F4F6',
+			secondary: '#9CA3AF',
 			placeholder: 'text-gray-400',
 		},
 		green: {
@@ -36,7 +36,7 @@ export const UI_THEME = {
 	},
 
 	components: {
-		overlay: `fixed inset-0 z-50 hidden items-center justify-center bg-black/30 backdrop-blur-md select-none opacity-0 scale-95 transition-all duration-150 ease-out`,
+		overlay: `fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xl select-none opacity-0 scale-95 transition-all duration-150 ease-out`,
 
 		popupContainer: `relative bg-custom-dark/90 backdrop-blur-xl rounded-2xl shadow-2xl border-2 border-custom-gray select-none`,
 
@@ -82,18 +82,18 @@ export const UI_THEME = {
 	wheel: {
 		svg: {
 			fill: {
-				normal: 'rgba(31, 41, 55, 0.85)',
-				selected: 'rgba(55, 65, 81, 0.95)',
-				hover: 'rgba(75, 85, 99, 0.9)',
-				center: 'rgba(31, 41, 55, 0.9)',
+				normal: '#313131',
+				selected: '#444444',
+				hover: '#444444',
+				center: '#313131',
 			},
 			stroke: {
-				normal: 'rgba(75, 85, 99, 0.3)',
-				selected: 'rgba(156, 163, 175, 0.6)',
+				normal: '#5A5A5A',
+				selected: '#888888',
 			},
 			text: {
-				normal: 'rgb(156, 163, 175)',
-				selected: 'rgb(243, 244, 246)',
+				normal: '#9CA3AF',
+				selected: '#F3F4F6',
 				font: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',
 			}
 		}
