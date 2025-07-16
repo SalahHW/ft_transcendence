@@ -44,11 +44,11 @@ export default class AvatarServiceAPI {
 	 * @param file - The File or Blob to upload
 	 * @returns A promise that resolves when the upload is successful
 	 */
-	async uploadUserAvatar(userId: number, file: File | Blob): Promise<void> {
+	async uploadUserAvatar(file: File | Blob): Promise<void> {
 		const formData = new FormData();
 		formData.append("file", file);
 
-		const response = await fetch(`${this._avatarsBaseUrl}/id/${userId}`, {
+		const response = await fetch(`${this._avatarsBaseUrl}`, {
 			method: "POST",
 			body: formData
 		});
@@ -69,11 +69,11 @@ export default class AvatarServiceAPI {
 	 * @param file - The new File or Blob to upload
 	 * @returns A promise that resolves when the update is successful
 	 */
-	async updateUserAvatar(userId: number, file: File | Blob): Promise<void> {
+	async updateUserAvatar(file: File | Blob): Promise<void> {
 		const formData = new FormData();
 		formData.append("file", file);
 
-		const response = await fetch(`${this._avatarsBaseUrl}/id/${userId}`, {
+		const response = await fetch(`${this._avatarsBaseUrl}`, {
 			method: "PUT",
 			body: formData
 		});
@@ -93,8 +93,8 @@ export default class AvatarServiceAPI {
 	 * @param userId - The ID of the user
 	 * @returns A promise that resolves when the avatar is deleted
 	 */
-	async deleteUserAvatar(userId: number): Promise<void> {
-		const response = await fetch(`${this._avatarsBaseUrl}/id/${userId}`, {
+	async deleteUserAvatar(): Promise<void> {
+		const response = await fetch(`${this._avatarsBaseUrl}`, {
 			method: "DELETE"
 		});
 		if (response.status !== 200) {

@@ -19,6 +19,21 @@ export interface EnrichedMatchHistory {
 	currentUserAvatarUrl: string;
 }
 
+export interface PlayerInfo {
+    id: number;
+    username: string;
+    avatarUrl: string;
+    walletAddress: string;
+}
+
+export interface EnrichedTournament {
+    id: number;
+    endTimestamp: number;
+    players: PlayerInfo[];
+    userPlacement: number;
+	isWin: boolean;
+}
+
 export default class MatchHistoryService implements CacheableService {
     private static _instance: MatchHistoryService;
     private _userProfileService = UserProfileService.getInstance();
@@ -27,6 +42,7 @@ export default class MatchHistoryService implements CacheableService {
 	private _avatarApi = new AvatarServiceAPI();
     private _enrichedMatchHistoryCache: EnrichedMatchHistory | null = null;
     private _tournamentHistoryCache: Tournament[] | null = null;
+	private _enrichedTournamentHistoryCache: EnrichedTournament[] | null = null;
     private _userNameCache: Map<string, string> = new Map();
     public readonly serviceName = 'MatchHistoryService';
 
@@ -47,6 +63,93 @@ export default class MatchHistoryService implements CacheableService {
         }
         return MatchHistoryService._instance;
     }
+
+    /**
+     * Gets the full tournament history for the current user, enriched with opponent data and avatars.
+     * Implements a simple cache-on-read strategy.
+     * @returns A promise that resolves to the user's enriched tournament history.
+     */
+	public async getEnrichedTournamentHistory(walletAddress: string): Promise<EnrichedTournament[]> {
+        if (this._enrichedTournamentHistoryCache) {
+            return this._enrichedTournamentHistoryCache;
+        }
+
+        if (!walletAddress) {
+            throw new Error("Wallet address is missing.");
+        }
+
+        const rawTournaments = await this._matchApi.getTournamentsByPlayer(walletAddress);
+
+        if (rawTournaments.length === 0) {
+            return [];
+        }
+
+		const enrichedTournaments = await Promise.all(
+			rawTournaments.map(async (tournament): Promise<EnrichedTournament> => {
+				const matches = await Promise.all(
+					tournament.matchIds!.map(id => this._matchApi.getMatchById(id))
+				);
+
+				const playerWallets = new Set<string>();
+				matches.forEach(match => {
+					playerWallets.add(match.player1!);
+					playerWallets.add(match.player2!);
+				});
+
+				const players = await Promise.all(
+					Array.from(playerWallets).map(async (wallet): Promise<PlayerInfo> => {
+						const user = await this._usersApi.getUserByWallet(wallet);
+						const avatarUrl = await this._avatarApi.getUserAvatarUrl(user.id!)
+							.catch(() => '/assets/defaultAvatar.jpg');
+						return {
+							id: user.id!,
+							username: user.username!,
+							avatarUrl: avatarUrl,
+							walletAddress: wallet
+						};
+					})
+				);
+
+				const { userPlacement, isWin } = this.calculateUserPlacement(matches, walletAddress);
+
+				return {
+					id: tournament.tournamentId!,
+					endTimestamp: tournament.endTimestamp!,
+					players,
+					userPlacement,
+					isWin
+				};
+			})
+		);
+
+		this._enrichedTournamentHistoryCache = enrichedTournaments;
+		return enrichedTournaments;
+    }
+
+	private calculateUserPlacement(matches: Match[], userWallet: string): { userPlacement: number, isWin: boolean } {
+		const wins = matches.filter(m => m.winner === userWallet).length;
+        // TODO: Need to determine how to get the placement in the tournament when we get the api response format
+		// This is a simplified placement logic.
+		// A real implementation would need to understand the tournament bracket structure (e.g., final, semi-finals).
+		// For now, we'll base it on number of wins.
+		if (wins === 2) return { userPlacement: 1, isWin: true }; // Assuming 2 wins means 1st place in a 4-person tournament
+		if (wins === 1) return { userPlacement: 2, isWin: false }; // Assuming 1 win means 2nd place
+
+		// For 0 wins, we need to differentiate 3rd and 4th.
+		// This requires more detail about the matches, like who they lost to.
+		// For now, let's simplify. We can't distinguish 3rd and 4th with this logic.
+		const losses = matches.filter(m => (m.player1 === userWallet || m.player2 === userWallet) && m.winner !== userWallet);
+		if (losses.length > 0) {
+			const opponentInLoss = losses[0].player1 === userWallet ? losses[0].player2 : losses[0].player1;
+			const opponentWins = matches.filter(m => m.winner === opponentInLoss).length;
+			if (opponentWins > 1) { // Lost to the winner or finalist
+				return { userPlacement: 3, isWin: false };
+			}
+		}
+
+		return { userPlacement: 4, isWin: false };
+	}
+
 
     /**
      * Gets the full match history for the current user, enriched with opponent data and avatars.
@@ -154,6 +257,7 @@ export default class MatchHistoryService implements CacheableService {
     public clearCache(): void {
         this._enrichedMatchHistoryCache = null;
         this._tournamentHistoryCache = null;
+		this._enrichedTournamentHistoryCache = null;
         this._userNameCache.clear();
     }
 

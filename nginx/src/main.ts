@@ -1,7 +1,6 @@
 import Wheel from "./components/Wheel.js";
 import Router from "./router/Router.js";
 import { initializeServices } from "./services/serviceInitializer.js";
-import AuthService from "./services/AuthNanoService.js";
 
 /**
  * Main application class.

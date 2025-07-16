@@ -9,6 +9,7 @@ const mapMatchArrayToMatchObject = (match: any[]): Match => {
 		player1Score: parseInt(match[3], 10),
 		player2Score: parseInt(match[4], 10),
 		matchId: parseInt(match[5], 10),
+		endTimestamp: parseInt(match[6], 10),
 	};
 };
 
@@ -28,7 +29,20 @@ export interface Match {
 	player1Score?: number;
 	player2Score?: number;
 	winner?: string;
+	endTimestamp?: number;
 }
+
+const mapTournamentArrayToTournamentObject = (tournament: any[]): Tournament => {
+    if (!tournament || !Array.isArray(tournament)) {
+        return tournament as Tournament;
+    }
+    return {
+        endTimestamp: parseInt(tournament[0], 10),
+        matchIds: tournament[1].map((id: string) => parseInt(id, 10)),
+        tournamentId: parseInt(tournament[2], 10),
+        winner: tournament[3],
+    };
+};
 
 /**
  * Tournament object.
@@ -57,21 +71,49 @@ export default class MatchServiceAPI {
 	 * @returns A promise that resolves to an array of matches
 	 */
 	async getMatchesByPlayer(address: string): Promise<Match[]> {
-		try {
-			const response = await fetch(`${this._baseUrl}/match/player/${address}`, {
-				method: "GET"
-			});
-			const data = await response.json();
-			if (response.status === 200 && data.success)
-				return data.matches.map(mapMatchArrayToMatchObject);
-			else
-				throw new Error(`Failed to fetch matches by player:\n${JSON.stringify(data, null, 2)}`);
-		} catch (error) {
-			if (error instanceof Error && error.message.includes("Player not found.")) {
-				return [];
-			}
-			throw error;
+		const response = await fetch(`${this._baseUrl}/match/player/${address}`, {
+			method: "GET"
+		});
+		if (response.status === 404) {
+			return [];
 		}
+		if (!response.headers.get('content-type')?.includes('application/json')) {
+			return [];
+		}
+		const data = await response.json();
+		if (response.ok && data.success) {
+			return data.matches.map(mapMatchArrayToMatchObject);
+		}
+		if (response.ok && !data.success) {
+			return [];
+		}
+		throw new Error(`Failed to fetch matches by player:\n${JSON.stringify(data, null, 2)}`);
+	}
+
+	/**
+	 * Get all tournaments a player participated in.
+	 * @param address - The player's address
+	 * @returns A promise that resolves to an array of tournaments
+	 */
+	 // ! Not implemented in the blockchain-service
+	async getTournamentsByPlayer(address: string): Promise<Tournament[]> {
+		const response = await fetch(`${this._baseUrl}/tournament/player/${address}`, {
+			method: "GET"
+		});
+		if (response.status === 404) {
+			return [];
+		}
+		if (!response.headers.get('content-type')?.includes('application/json')) {
+			return [];
+		}
+		const data = await response.json();
+		if (response.ok && data.success) {
+			return data.tournaments.map(mapTournamentArrayToTournamentObject);
+		}
+		if (response.ok && !data.success) {
+			return [];
+		}
+		throw new Error(`Failed to fetch tournaments by player:\n${JSON.stringify(data, null, 2)}`);
 	}
 
 	/**
@@ -83,11 +125,20 @@ export default class MatchServiceAPI {
 		const response = await fetch(`${this._baseUrl}/match/winner/${address}`, {
 			method: "GET"
 		});
+		if (response.status === 404) {
+			return [];
+		}
+		if (!response.headers.get('content-type')?.includes('application/json')) {
+			return [];
+		}
 		const data = await response.json();
-		if (response.status === 200 && data.success)
+		if (response.ok && data.success) {
 			return data.matches.map(mapMatchArrayToMatchObject);
-		else
-			throw new Error(`Failed to fetch matches by winner:\n${JSON.stringify(data, null, 2)}`);
+		}
+		if (response.ok && !data.success) {
+			return [];
+		}
+		throw new Error(`Failed to fetch matches by winner:\n${JSON.stringify(data, null, 2)}`);
 	}
 
 	/**
@@ -186,11 +237,20 @@ export default class MatchServiceAPI {
 		const response = await fetch(`${this._baseUrl}/tournament/winner/${address}`, {
 			method: "GET"
 		});
+		if (response.status === 404) {
+			return [];
+		}
+		if (!response.headers.get('content-type')?.includes('application/json')) {
+			return [];
+		}
 		const data = await response.json();
-		if (response.status === 200 && data.success)
-			return data.tournaments;
-		else
-			throw new Error(`Failed to fetch tournaments by winner:\n${JSON.stringify(data, null, 2)}`);
+		if (response.ok && data.success) {
+			return data.tournaments.map(mapTournamentArrayToTournamentObject);
+		}
+		if (response.ok && !data.success) {
+			return [];
+		}
+		throw new Error(`Failed to fetch tournaments by winner:\n${JSON.stringify(data, null, 2)}`);
 	}
 
 	/**

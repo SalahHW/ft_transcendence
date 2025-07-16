@@ -1,4 +1,3 @@
-import AuthService from './AuthNanoService.js';
 import FriendsServiceAPI from './api/friends.js';
 import UsersApi from './api/user.js';
 import AvatarServiceAPI from './api/avatar.js';
@@ -20,7 +19,6 @@ export interface EnrichedFriend {
  */
 export default class FriendsService implements CacheableService {
     private static _instance: FriendsService;
-    private _authService = AuthService.getInstance();
     private _friendsApi = new FriendsServiceAPI();
     private _usersApi = new UsersApi();
     private _avatarApi = new AvatarServiceAPI();
@@ -46,21 +44,12 @@ export default class FriendsService implements CacheableService {
         return FriendsService._instance;
     }
 
-    private async _getUserId(): Promise<number> {
-        const jwtPayload = await this._authService.getJwtPayload();
-        if (!jwtPayload?.sub) {
-            throw new Error("User not authenticated or user ID is missing.");
-        }
-        return jwtPayload.sub;
-    }
-
     public async getEnrichedFriends(): Promise<EnrichedFriend[]> {
         if (this._enrichedFriendsCache) {
             return this._enrichedFriendsCache;
         }
 
-        const userId = await this._getUserId();
-        const friendships = await this._friendsApi.getUserFriendships(userId);
+        const friendships = await this._friendsApi.getUserFriendships();
 
         if (friendships.length === 0) {
             return [];
@@ -70,6 +59,9 @@ export default class FriendsService implements CacheableService {
             friendships.map(async (friendship) => {
                 try {
                     const friendUser = await this._usersApi.getUserById(friendship.friend_id);
+					if (!friendUser) {
+						throw new Error(`User with id ${friendship.friend_id} not found`);
+					}
                     const avatarUrl = await this._avatarApi.getUserAvatarUrl(friendUser.id!)
                         .catch(() => '/assets/defaultAvatar.jpg');
 
@@ -118,8 +110,7 @@ export default class FriendsService implements CacheableService {
      * @returns A promise that resolves to an array of friend IDs.
      */
     public async getFriends(): Promise<any[]> {
-        const userId = await this._getUserId();
-        return this._friendsApi.getUserFriendships(userId);
+        return this._friendsApi.getUserFriendships();
     }
 
     /**
@@ -134,13 +125,12 @@ export default class FriendsService implements CacheableService {
      * @param friendId - The ID of the user to befriend.
      */
     public async addFriend(friendId: number): Promise<void> {
-        const userId = await this._getUserId();
-        await this._friendsApi.createFriendship(userId, friendId);
+        await this._friendsApi.createFriendship(friendId);
 
         const cacheManager = CacheManager.getInstance();
         cacheManager.triggerEvent({
             type: 'FRIEND_ADDED',
-            data: { friendId, userId }
+            data: { friendId }
         });
     }
 
@@ -149,13 +139,12 @@ export default class FriendsService implements CacheableService {
      * @param friendId - The ID of the friend to remove.
      */
     public async removeFriend(friendId: number): Promise<void> {
-        const userId = await this._getUserId();
-        await this._friendsApi.deleteFriendship(userId, friendId);
+        await this._friendsApi.deleteFriendship(friendId);
 
         const cacheManager = CacheManager.getInstance();
         cacheManager.triggerEvent({
             type: 'FRIEND_REMOVED',
-            data: { friendId, userId }
+            data: { friendId }
         });
     }
 }

@@ -36,11 +36,9 @@ export default class GetFriendshipsForm {
 				return;
 			}
 
-			const userId = parseInt(userIdInput.value);
-
 			try {
-				const friendships = await this._friendsService.getUserFriendships(userId);
-				console.log(`Friendships for user ${userId}:`, friendships);
+				const friendships = await this._friendsService.getUserFriendships();
+				console.log(`Friendships for user ${userIdInput.value}:`, friendships);
 				if (friendships.length === 0) {
 					console.log("No friendships found for this user.");
 				}

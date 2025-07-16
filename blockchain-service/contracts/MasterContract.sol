@@ -47,7 +47,7 @@ contract MasterContract is Ownable {
     struct Tournament {
         uint32 endTimestamp;
         uint16[] matchIds;
-        uint16 tournamentId;
+        uint16 tournamentIds;
         address winner;
     }
 
@@ -76,7 +76,7 @@ contract MasterContract is Ownable {
     );
 
     event TournamentReported(
-        uint16 indexed tournamentId,
+        uint16 indexed tournamentIds,
         uint32 endTimestamp,
         uint16[] matchIds,
         address indexed winner
@@ -85,6 +85,9 @@ contract MasterContract is Ownable {
     event PlayerAdded(string name, address playerAddress);
     event PlayerRemoved(address playerAddress, string name);
     event GoatReassigned(address indexed newGoat);
+
+    uint16 public matchId;
+    uint16 public tournamentIds;
 
     /**
      * @dev Constructor to initialize the contract
@@ -129,7 +132,6 @@ contract MasterContract is Ownable {
     function reportMatch(
         address player1,
         address player2,
-        uint16 matchId,
         uint8 player1Score,
         uint8 player2Score,
         address winner,
@@ -179,6 +181,7 @@ contract MasterContract is Ownable {
             matchId,
             endTimestamp
         );
+        matchId++;
     }
 
     /**
@@ -240,10 +243,10 @@ contract MasterContract is Ownable {
      * @dev Function to get match by match ID
      */
     function getMatchesByMatchId(
-        uint16 matchId
+        uint16 matchToFind
     ) public view returns (Match memory) {
         for (uint i = 0; i < globalMatchesArray.length; i++) {
-            if (globalMatchesArray[i].matchId == matchId) {
+            if (globalMatchesArray[i].matchId == matchToFind) {
                 return globalMatchesArray[i];
             }
         }
@@ -264,16 +267,11 @@ contract MasterContract is Ownable {
     /**
      * @dev Function to report a tournament and mint the tournament NFT
      */
+
     function reportTournament(
         uint32 endTimestamp,
-        uint16[] memory matchIds,
-        address winner,
-        uint16 tournamentId
+        address winner
     ) public onlyOwner {
-        require(
-            matchIds.length == 4,
-            "A tournament must include exactly 4 matches"
-        );
         require(winner != address(0), "Winner address is invalid");
 
         for (uint i = 0; i < globalTournamentsArray.length; i++) {
@@ -282,39 +280,57 @@ contract MasterContract is Ownable {
             }
         }
 
-        for (uint i = 0; i < matchIds.length; i++) {
-            bool matchFound = false;
-            for (uint j = 0; j < globalMatchesArray.length; j++) {
-                if (globalMatchesArray[j].matchId == matchIds[i]) {
-                    matchFound = true;
-                    break;
-                }
-            }
-            require(matchFound, "One or more matchIds do not exist");
-        }
+        uint16[] memory matchIds = getMatchIdsByTimestamp(endTimestamp);
 
-        tournamentNft.mintTnt(winner, tournamentId);
+        tournamentNft.mintTnt(winner, tournamentIds);
 
         Tournament memory t = Tournament({
             endTimestamp: endTimestamp,
             matchIds: matchIds,
-            tournamentId: tournamentId,
+            tournamentIds: tournamentIds,
             winner: winner
         });
 
         globalTournamentsArray.push(t);
 
-        emit TournamentReported(tournamentId, endTimestamp, matchIds, winner);
+        emit TournamentReported(tournamentIds, endTimestamp, matchIds, winner);
+        tournamentIds++;
+    }
+
+    /**
+     * @dev Function to get all matches played at a specific timestamp
+     * @param timestamp: timestamp to filter matches
+     * @return array of match IDs
+     */
+
+    function getMatchIdsByTimestamp(
+        uint32 timestamp
+    ) internal view returns (uint16[] memory) {
+        uint count = 0;
+        uint16[] memory temp = new uint16[](4);
+
+        for (uint i = 0; i < globalMatchesArray.length; i++) {
+            if (globalMatchesArray[i].endTimestamp == timestamp) {
+                if (count >= 4)
+                    revert("More than 4 matches found for this timestamp");
+                temp[count] = globalMatchesArray[i].matchId;
+                count++;
+            }
+        }
+
+        require(count == 4, "Exactly 4 matches must have this timestamp");
+
+        return temp;
     }
 
     /**
      * @dev Function to get tournament by ID
      */
     function getTournamentById(
-        uint16 tournamentId
+        uint16 tournamentToFind
     ) public view returns (Tournament memory) {
         for (uint i = 0; i < globalTournamentsArray.length; i++) {
-            if (globalTournamentsArray[i].tournamentId == tournamentId) {
+            if (globalTournamentsArray[i].tournamentIds == tournamentToFind) {
                 return globalTournamentsArray[i];
             }
         }
@@ -393,5 +409,47 @@ contract MasterContract is Ownable {
                 emit GoatReassigned(address(0));
             }
         }
+    }
+
+    /**
+     * @dev Function to get tournaments by player address
+     * @param player: player address
+     */
+
+    function getTournamentsByPlayer(
+        address player
+    ) public view returns (Tournament[] memory) {
+        require(players[player].exists, "Player does not exist");
+
+        uint256 size = 0;
+
+        for (uint i = 0; i < globalTournamentsArray.length; i++) {
+            uint16[] memory matchIds = globalTournamentsArray[i].matchIds;
+            for (uint j = 0; j < matchIds.length; j++) {
+                Match memory m = getMatchesByMatchId(matchIds[j]);
+                if (m.player1 == player || m.player2 == player) {
+                    size++;
+                    break;
+                }
+            }
+        }
+
+        if (size == 0) revert("No tournaments found for the player");
+
+        Tournament[] memory result = new Tournament[](size);
+        uint256 index = 0;
+
+        for (uint i = 0; i < globalTournamentsArray.length; i++) {
+            uint16[] memory matchIds = globalTournamentsArray[i].matchIds;
+            for (uint j = 0; j < matchIds.length; j++) {
+                Match memory m = getMatchesByMatchId(matchIds[j]);
+                if (m.player1 == player || m.player2 == player) {
+                    result[index++] = globalTournamentsArray[i];
+                    break;
+                }
+            }
+        }
+
+        return result;
     }
 }
