@@ -125,6 +125,7 @@ export default class Wheel {
 
     this._setupKeyboardEvents();
     this._setupMouseEvents();
+    this._setupWindowEvents();
 
     this.render();
   }
@@ -134,7 +135,7 @@ export default class Wheel {
 			if (event.key === 'Shift') {
 				const target = event.target as HTMLElement;
 
-				if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+				if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) || event.ctrlKey || event.metaKey || event.altKey) {
 					return;
 				}
 
@@ -151,6 +152,10 @@ export default class Wheel {
 				event.preventDefault();
 				await this.showWheel();
 			}
+
+			if (event.key === 'Escape' && this._isVisible) {
+				this._goBack();
+			}
 		});
 
 		document.addEventListener("keyup", (event: KeyboardEvent) => {
@@ -163,6 +168,12 @@ export default class Wheel {
   private _setupMouseEvents(): void {
     this._element.addEventListener("click", (event: MouseEvent) => {
       event.stopPropagation();
+    });
+  }
+
+  private _setupWindowEvents(): void {
+    window.addEventListener("blur", () => {
+      this.hideWheel();
     });
   }
 
