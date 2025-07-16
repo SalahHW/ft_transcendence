@@ -228,16 +228,15 @@ export class BlockchainService {
   }
 
   /**
-   * Report tournament result to blockchain (SIMPLIFIED)
-   * @param {Object} tournamentData - Tournament data with winner
+   * Report tournament result to blockchain (NEW FORMAT: with all matches)
+   * @param {Object} tournamentData - Tournament data with winner and matches
    * @param {string} tournamentId - Tournament identifier
    * @returns {Promise<string>} - Transaction hash
    */
   async reportTournament(tournamentData, tournamentId) {
     try {
-      // Get wallet address for tournament winner (1st place) using real user ID
+      // Get wallet address for tournament winner
       const winnerWallet = await this.getUserWallet(tournamentData.winner.userId || tournamentData.winner.id);
-
       if (!winnerWallet) {
         throw new Error('Could not retrieve wallet address for tournament winner');
       }
@@ -251,7 +250,6 @@ export class BlockchainService {
       // Register winner if needed (only if not already registered)
       const winnerName = tournamentData.winner.username || `Player_${tournamentData.winner.userId || tournamentData.winner.id}`;
       const winnerRegistered = await this.registerPlayerIfNeeded(winnerWallet, winnerName);
-
       if (!winnerRegistered) {
         throw new Error(`Failed to register tournament winner ${winnerName} in blockchain contract`);
       }
@@ -262,13 +260,39 @@ export class BlockchainService {
         throw new Error(`Tournament start time not found for tournament ${tournamentId}`);
       }
 
-      // Prepare simplified blockchain data (SIMPLIFIED: only endTimestamp and winner)
+      // Validate and prepare matches (they should already be in wallet format)
+      const validatedMatches = [];
+      if (tournamentData.matches && Array.isArray(tournamentData.matches)) {
+        for (const match of tournamentData.matches) {
+          // Validate that all fields are wallet addresses
+          if (!walletRegex.test(match.player1) || !walletRegex.test(match.player2) || !walletRegex.test(match.winner)) {
+            console.warn(`⚠️ Skipping match due to invalid wallet format: ${match.player1} vs ${match.player2}`);
+            continue;
+          }
+          
+          validatedMatches.push({
+            player1: match.player1,
+            player2: match.player2,
+            winner: match.winner,
+            player1Score: match.player1Score,
+            player2Score: match.player2Score
+          });
+        }
+      }
+
+      // Prepare new blockchain data format with all matches
       const blockchainData = {
-        endTimestamp: tournamentStartTime, // Use tournament's start timestamp as integer
-        winner: winnerWallet
+        tournaments: [
+          {
+            endTimestamp: tournamentStartTime,
+            winner: winnerWallet,
+            matches: validatedMatches
+          }
+        ]
       };
 
-      console.log(`🔗 Reporting tournament to blockchain (SIMPLIFIED):`, blockchainData);
+      console.log(`🔗 Reporting tournament to blockchain (NEW FORMAT):`, blockchainData);
+      console.log(`🔗 Tournament has ${validatedMatches.length} matches`);
 
       const response = await axios.post(`${BLOCKCHAIN_SERVICE_URL}/report-tournament`, blockchainData, {
         timeout: 15000

@@ -858,20 +858,15 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
    */
   async reportTournamentForfeitResults(matchData) {
     try {
-      console.log(`🏆 Reporting tournament forfeit results for room ${matchData.roomId}`);
-      // Report to external services - Tournament match
+      console.log(`🏆 Collecting tournament forfeit match for room ${matchData.roomId}`);
+      // Collect match data for tournament reporting (NEW: collect instead of report individually)
       const tournamentId = matchData.waitingRoomId;
       
-      // ⭐ FIX: Use safe reporting to prevent duplicates
+      // Add match to tournament collection
       const { tournamentManager } = await import('../TournamentManager.js');
-      if (tournamentManager.matchManager && tournamentManager.matchManager._safeReportMatch) {
-        await tournamentManager.matchManager._safeReportMatch(matchData, false, tournamentId);
-      } else {
-        // Fallback to direct reporting if safe method not available
-        await reportMatchResultsToAPI(matchData, false, tournamentId);
-      }
+      await tournamentManager.addTournamentMatch(tournamentId, matchData);
     } catch (error) {
-      console.error('🏆 Failed to report tournament forfeit results:', error);
+      console.error('🏆 Failed to collect tournament forfeit match:', error);
     }
   }
 

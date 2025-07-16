@@ -12,66 +12,6 @@ import { reportTournamentResultsToAPI, reportMatchResultsToAPI } from '../../ser
 export class TournamentMatchManager {
   constructor(tournamentManager) {
     this.tournamentManager = tournamentManager;
-    // ⭐ NEW: Track reported matches to prevent duplicates
-    this.reportedMatches = new Set();
-  }
-
-  /**
-   * ⭐ NEW: Check if match has already been reported
-   */
-  _isMatchReported(matchId, roomId) {
-    const matchKey = `${matchId}_${roomId}`;
-    return this.reportedMatches.has(matchKey);
-  }
-
-  /**
-   * ⭐ NEW: Mark match as reported
-   */
-  _markMatchReported(matchId, roomId) {
-    const matchKey = `${matchId}_${roomId}`;
-    this.reportedMatches.add(matchKey);
-    console.log(`🏆 Marked match ${matchId} in room ${roomId} as reported`);
-  }
-
-  /**
-   * ⭐ NEW: Safe match reporting with duplicate prevention
-   */
-  async _safeReportMatch(matchData, isTournamentMatch = false, waitingRoomId = null) {
-    const matchKey = `${matchData.matchId}_${matchData.roomId}`;
-    
-    if (this._isMatchReported(matchData.matchId, matchData.roomId)) {
-      console.log(`🏆 Match ${matchData.matchId} in room ${matchData.roomId} already reported, skipping`);
-      return;
-    }
-    
-    try {
-      await reportMatchResultsToAPI(matchData, isTournamentMatch, waitingRoomId);
-      this._markMatchReported(matchData.matchId, matchData.roomId);
-      console.log(`✅ Tournament match reported to blockchain successfully (winner only)`);
-    } catch (error) {
-      console.error(`❌ Failed to report match to blockchain:`, error.message);
-    }
-  }
-
-  /**
-   * ⭐ NEW: Clean up reported matches for a specific tournament
-   */
-  cleanupReportedMatches(waitingRoomId) {
-    // Remove all reported matches for this tournament
-    const matchesToRemove = [];
-    for (const matchKey of this.reportedMatches) {
-      if (matchKey.includes(waitingRoomId)) {
-        matchesToRemove.push(matchKey);
-      }
-    }
-    
-    matchesToRemove.forEach(matchKey => {
-      this.reportedMatches.delete(matchKey);
-    });
-    
-    if (matchesToRemove.length > 0) {
-      console.log(`🏆 Cleaned up ${matchesToRemove.length} reported matches for tournament ${waitingRoomId}`);
-    }
   }
 
   /**
@@ -304,10 +244,16 @@ export class TournamentMatchManager {
     // Send tournament completion message to all players
     this.tournamentManager.communicationManager._sendTournamentCompletionMessage(waitingRoomId, { winner, loser });
 
-    // Report individual tournament match to blockchain (winner only, no duplicate)
-    if (matchData && !matchData.matchReported) {
-      await this._safeReportMatch(matchData, false, waitingRoomId);
-      matchData.matchReported = true;
+    // Add match to tournament collection (NEW: collect instead of report individually)
+    if (matchData) {
+      await this.tournamentManager.addTournamentMatch(waitingRoomId, matchData);
+    }
+
+    // Report tournament to blockchain (NEW: with all matches)
+    try {
+      await this._reportTournamentToBlockchain(waitingRoomId, winner);
+    } catch (error) {
+      console.error('🏆 Failed to report tournament to blockchain:', error.message);
     }
 
     // Schedule cleanup
@@ -353,6 +299,9 @@ export class TournamentMatchManager {
     }
     waitingRoomData.semiFinalResults[roomId] = { winner, loser, matchData };
     
+    // Add match to tournament collection (NEW: collect instead of report individually)
+    await this.tournamentManager.addTournamentMatch(waitingRoomId, matchData);
+    
      // Handle single semi-final edge case
     const singleSemiFinalHandled = await this.handleSingleSemiFinal(waitingRoomId, roomId, winner, loser, matchData);
     // If single semi-final was handled, don't proceed with normal transfer
@@ -365,12 +314,6 @@ export class TournamentMatchManager {
     
     // Check if both semi-finals are complete and start finals
     await this._checkFinalsReadiness(waitingRoomId);
-
-    // Report individual tournament match to blockchain (winner only, no duplicate)
-    if (!matchData.matchReported) {
-      await this._safeReportMatch(matchData, false, waitingRoomId);
-      matchData.matchReported = true;
-    }
   }
 
   /**
@@ -395,6 +338,9 @@ export class TournamentMatchManager {
     }
     waitingRoomData.finalResults[roomType] = { winner, loser, matchData };
     
+    // Add match to tournament collection (NEW: collect instead of report individually)
+    await this.tournamentManager.addTournamentMatch(waitingRoomId, matchData);
+    
     // Send individual final match completion message to players in this room
     this.tournamentManager.communicationManager._sendIndividualFinalMatchCompletion(waitingRoomId, roomId, roomType, winner, loser);
     
@@ -405,7 +351,7 @@ export class TournamentMatchManager {
     if (winnerFinalResult && loserFinalResult) {
       console.log(`🏆 Both finals complete, ending tournament`);
       
-      // Report tournament to blockchain
+      // Report tournament to blockchain (NEW: with all matches)
       try {
         await this._reportTournamentToBlockchain(waitingRoomId, winnerFinalResult.winner);
       } catch (error) {
@@ -456,7 +402,7 @@ export class TournamentMatchManager {
             
             console.log(`🏆 Tournament completed with forfeit: ${thirdPlace.username} gets 3rd place, ${fourthPlace.username} gets 4th place`);
             
-            // Report tournament to blockchain
+            // Report tournament to blockchain (NEW: with all matches)
             try {
               await this._reportTournamentToBlockchain(waitingRoomId, winnerFinalResult.winner);
             } catch (error) {
@@ -476,12 +422,6 @@ export class TournamentMatchManager {
           }
         }
       }
-    }
-
-    // Report individual tournament match to blockchain (winner only, no duplicate)
-    if (!matchData.matchReported) {
-      await this._safeReportMatch(matchData, false, waitingRoomId);
-      matchData.matchReported = true;
     }
   }
 
@@ -634,7 +574,7 @@ export class TournamentMatchManager {
   }
 
   /**
-   * Report tournament completion to blockchain (simplified)
+   * Report tournament completion to blockchain (NEW FORMAT: with all matches)
    * @param {string} waitingRoomId - The tournament waiting room ID
    * @param {Object} winner - The tournament winner (1st place)
    */
@@ -645,45 +585,16 @@ export class TournamentMatchManager {
       return;
     }
 
-    // ⭐ FIX: Wait for all individual tournament matches to be processed
-    await this._waitForTournamentMatchesToBeProcessed(waitingRoomId);
-
+    // Get all tournament matches
+    const matches = this.tournamentManager.getTournamentMatches(waitingRoomId);
+    
     const tournamentData = {
-      winner: winner
+      winner: winner,
+      matches: matches
     };
 
-    console.log(`🏆 Reporting tournament to blockchain (SIMPLIFIED):`, tournamentData);
+    console.log(`🏆 Reporting tournament to blockchain (NEW FORMAT):`, tournamentData);
+    console.log(`🏆 Tournament has ${matches.length} matches`);
     await reportTournamentResultsToAPI(tournamentData, waitingRoomId);
   }
-
-  /**
-   * Wait for all individual tournament matches to be processed before reporting tournament completion
-   * @param {string} waitingRoomId - The tournament waiting room ID
-   */
-  async _waitForTournamentMatchesToBeProcessed(waitingRoomId) {
-    console.log(`🏆 Waiting for all individual tournament matches to be processed for tournament ${waitingRoomId}...`);
-    
-    // Wait up to 10 seconds for all matches to be processed
-    const maxWaitTime = 10000; // 10 seconds
-    const checkInterval = 500; // Check every 500ms
-    const maxChecks = maxWaitTime / checkInterval;
-    
-    for (let i = 0; i < maxChecks; i++) {
-      try {
-        // Check if we can find the tournament matches in the blockchain service
-        // This is a simple check - in a production environment, you might want to
-        // implement a more sophisticated verification mechanism
-        await new Promise(resolve => setTimeout(resolve, checkInterval));
-        
-        // Log progress every 2 seconds
-        if (i % 4 === 0) {
-          console.log(`🏆 Still waiting for tournament matches to be processed... (${(i * checkInterval / 1000).toFixed(1)}s)`);
-        }
-      } catch (error) {
-        console.error(`🏆 Error while waiting for tournament matches:`, error);
-      }
-    }
-    
-    console.log(`🏆 Finished waiting for tournament matches to be processed`);
-  }
-} 
+}

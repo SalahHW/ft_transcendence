@@ -118,14 +118,15 @@ export class TournamentCleanupManager {
     }
     
     // ⭐ NEW: Clean up reported matches for this tournament
-    try {
-      const { tournamentManager } = await import('../TournamentManager.js');
-      if (tournamentManager.matchManager) {
-        tournamentManager.matchManager.cleanupReportedMatches(waitingRoomId);
-      }
-    } catch (error) {
-      console.error(`🏆 Error cleaning up reported matches for tournament ${waitingRoomId}:`, error);
-    }
+    // Note: No longer needed since we collect all matches and report them together
+    // try {
+    //   const { tournamentManager } = await import('../TournamentManager.js');
+    //   if (tournamentManager.matchManager) {
+    //     tournamentManager.matchManager.cleanupReportedMatches(waitingRoomId);
+    //   }
+    // } catch (error) {
+    //   console.error(`🏆 Error cleaning up reported matches for tournament ${waitingRoomId}:`, error);
+    // }
     
     // Clean up tournament rooms
     const disconnectHandler = await this.getDisconnectHandler();
@@ -188,14 +189,14 @@ export class TournamentCleanupManager {
       console.log(`🏆 Removing stale waiting room data for ${waitingRoomId}`);
       
       // ⭐ NEW: Clean up reported matches for this tournament
-      try {
-        const { tournamentManager } = await import('../TournamentManager.js');
-        if (tournamentManager.matchManager) {
-          tournamentManager.matchManager.cleanupReportedMatches(waitingRoomId);
-        }
-      } catch (error) {
-        console.error(`🏆 Error cleaning up reported matches for stale tournament ${waitingRoomId}:`, error);
-      }
+      // try {
+      //   const { tournamentManager } = await import('../TournamentManager.js');
+      //   if (tournamentManager.matchManager) {
+      //     tournamentManager.matchManager.cleanupReportedMatches(waitingRoomId);
+      //   }
+      // } catch (error) {
+      //   console.error(`🏆 Error cleaning up reported matches for stale tournament ${waitingRoomId}:`, error);
+      // }
       
       this.waitingRooms.delete(waitingRoomId);
     }
