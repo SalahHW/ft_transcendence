@@ -125,6 +125,7 @@ export default class Wheel {
 
     this._setupKeyboardEvents();
     this._setupMouseEvents();
+    this._setupWindowEvents();
 
     this.render();
   }
@@ -134,7 +135,7 @@ export default class Wheel {
 			if (event.key === 'Shift') {
 				const target = event.target as HTMLElement;
 
-				if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+				if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) || event.ctrlKey || event.metaKey || event.altKey) {
 					return;
 				}
 
@@ -151,6 +152,10 @@ export default class Wheel {
 				event.preventDefault();
 				await this.showWheel();
 			}
+
+			if (event.key === 'Escape' && this._isVisible) {
+				this._goBack();
+			}
 		});
 
 		document.addEventListener("keyup", (event: KeyboardEvent) => {
@@ -163,6 +168,12 @@ export default class Wheel {
   private _setupMouseEvents(): void {
     this._element.addEventListener("click", (event: MouseEvent) => {
       event.stopPropagation();
+    });
+  }
+
+  private _setupWindowEvents(): void {
+    window.addEventListener("blur", () => {
+      this.hideWheel();
     });
   }
 
@@ -248,21 +259,21 @@ export default class Wheel {
     this._element.className = UI_THEME.components.overlay;
 
     this._element.innerHTML = `
-			<div class="wheel-content relative select-none">
-				<svg class="wheel-svg select-none" width="960" height="960" viewBox="0 0 960 960" style="user-select: none; -webkit-user-select: none; -moz-user-select: none;">
-				</svg>
+			<div class="wheel-content-wrapper">
+        <svg class="wheel-svg select-none" width="500" height="500" viewBox="0 0 500 500" style="user-select: none; -webkit-user-select: none; -moz-user-select: none;">
+        </svg>
 			</div>
-		`;
+    `;
   }
 
 	private _renderWheel(): void {
 		const svg = this._element.querySelector(".wheel-svg") as SVGElement;
 		if (!svg) return;
 
-    const centerX = 480;
-    const centerY = 480;
-    const radius = 360;
-    const innerRadius = 90;
+    const centerX = 250;
+    const centerY = 250;
+    const radius = 250;
+    const innerRadius = radius * 0.20;
     const optionCount = this._wheelOptions.length;
 
 		svg.innerHTML = "";
@@ -281,10 +292,10 @@ export default class Wheel {
 		centerCircle.setAttribute("r", innerRadius.toString());
 		centerCircle.setAttribute("fill", UI_THEME.wheel.svg.fill.center);
 		centerCircle.setAttribute("stroke", UI_THEME.wheel.svg.stroke.normal);
-		centerCircle.setAttribute("stroke-width", "1");
+		centerCircle.setAttribute("stroke-width", "2");
 		centerCircle.setAttribute(
 			"class",
-			"cursor-pointer transition-all duration-200 hover:fill-gray-600/90"
+			"cursor-pointer transition-all duration-200"
 		);
 
 		centerCircle.addEventListener("click", () => {
@@ -336,10 +347,10 @@ export default class Wheel {
 					? UI_THEME.wheel.svg.stroke.selected
 					: UI_THEME.wheel.svg.stroke.normal
 			);
-			path.setAttribute("stroke-width", "1");
+			path.setAttribute("stroke-width", "2");
 			path.setAttribute(
 				"class",
-				"cursor-pointer transition-all duration-200 hover:fill-gray-600/90"
+				"cursor-pointer transition-all duration-200"
 			);
 
 			path.addEventListener("click", async () => {
@@ -376,7 +387,7 @@ export default class Wheel {
 					"text"
 				);
 				iconText.setAttribute("x", textX.toString());
-				iconText.setAttribute("y", (textY - 20).toString());
+				iconText.setAttribute("y", (textY - 12).toString());
 				iconText.setAttribute("text-anchor", "middle");
 				iconText.setAttribute("dominant-baseline", "middle");
 				iconText.setAttribute(
@@ -385,7 +396,7 @@ export default class Wheel {
 						? UI_THEME.wheel.svg.text.selected
 						: UI_THEME.wheel.svg.text.normal
 				);
-				iconText.setAttribute("font-size", "32");
+				iconText.setAttribute("font-size", "24");
 				iconText.setAttribute("font-family", UI_THEME.wheel.svg.text.font);
 				iconText.setAttribute("font-weight", "300");
 				iconText.textContent = option.icon;
@@ -397,7 +408,7 @@ export default class Wheel {
 				"text"
 			);
 			label.setAttribute("x", textX.toString());
-			label.setAttribute("y", (textY + 20).toString());
+			label.setAttribute("y", (textY + (option.icon ? 12 : 0)).toString());
 			label.setAttribute("text-anchor", "middle");
 			label.setAttribute("dominant-baseline", "middle");
 			label.setAttribute(
@@ -406,7 +417,7 @@ export default class Wheel {
 					? UI_THEME.wheel.svg.text.selected
 					: UI_THEME.wheel.svg.text.normal
 			);
-			label.setAttribute("font-size", "24");
+			label.setAttribute("font-size", "16");
 			label.setAttribute("font-weight", isSelected ? "500" : "400");
 			label.setAttribute("font-family", UI_THEME.wheel.svg.text.font);
 			label.textContent = option.label;
@@ -424,14 +435,14 @@ export default class Wheel {
 			backIndicator.setAttribute("y", centerY.toString());
 			backIndicator.setAttribute("text-anchor", "middle");
 			backIndicator.setAttribute("dominant-baseline", "middle");
-			backIndicator.setAttribute("fill", "rgb(156, 163, 175)");
-			backIndicator.setAttribute("font-size", "20");
+			backIndicator.setAttribute("fill", UI_THEME.colors.text.secondary);
+			backIndicator.setAttribute("font-size", "16");
 			backIndicator.setAttribute(
 				"font-family",
 				"SF Pro Display, system-ui, -apple-system, sans-serif"
 			);
 			backIndicator.setAttribute("font-weight", "400");
-			backIndicator.textContent = "← ESC";
+			backIndicator.textContent = "←";
 			svg.appendChild(backIndicator);
 		}
 	}
