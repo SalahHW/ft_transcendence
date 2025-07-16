@@ -3,6 +3,7 @@ import UsersApi from "../../../services/api/user.js";
 import AuthService from "../../../services/AuthNanoService.js";
 import CacheManager from "../../../services/CacheManager.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
+import NotificationService from "../../../services/NotificationService.js";
 import { createWinRateDonutChart } from "./WinRateDonutChart.js";
 import PresenceService, { PresenceCallback } from "../../../services/webSocket/PresenceService.js";
 
@@ -220,8 +221,8 @@ export class FriendListView {
             const currentUserId = jwtPayload?.sub;
 
             if (!currentUserId) {
-                console.error('User not logged in');
-                alert('You must be logged in to add a friend');
+                console.error("User not logged in");
+                NotificationService.show("You must be logged in to add a friend", "error");
                 return;
             }
 
@@ -229,52 +230,47 @@ export class FriendListView {
             try {
                 targetUser = await this.usersService.getUserByUsername(username);
             } catch (error) {
-                console.error('Error searching for user:', error);
-                alert(`User "${username}" not found`);
+                console.error("Error searching for user:", error);
+                NotificationService.show(`User "${username}" not found. Please try again later.`, "error");
                 return;
             }
 
             if (!targetUser || !targetUser.id) {
-                console.error('Invalid user or missing ID');
-                alert('Invalid or incomplete user');
+                console.error("Invalid user or missing ID");
+                NotificationService.show("Invalid or incomplete user data. Please try again later.", "error");
                 return;
             }
 
             if (targetUser.id === currentUserId) {
-                alert("You can't add yourself as a friend");
+                NotificationService.show("You can't add yourself as a friend", "error");
                 return;
             }
 
-            const isAlreadyFriend = this.friends.some(friend => friend.id === targetUser.id);
+            const isAlreadyFriend = this.friends.some((friend) => friend.id === targetUser.id);
             if (isAlreadyFriend) {
-                alert(`${username} is already in your friends list`);
+                NotificationService.show(`${username} is already in your friends list`, "error");
                 return;
             }
 
             await this.friendsService.addFriend(targetUser.id);
+            NotificationService.show("Friend added successfully!", "success");
+
 
             await this.loadFriends();
 
-            friendUsernameInput.value = '';
+            friendUsernameInput.value = "";
             this.toggleAddFriendMode();
 
-            const container = document.querySelector('.flex.flex-col.gap-2.h-full');
+            const container = document.querySelector(".flex.flex-col.gap-2.h-full");
             if (container) {
                 this.isLoading = true;
                 this.friends = [];
                 container.innerHTML = await this.render();
                 this.addEventListeners();
             }
-
-        }
-        catch (error) {
-            console.error('Error adding friend:', error);
-            if (error instanceof Error) {
-                alert(`Error: ${error.message}`);
-            }
-            else {
-                alert('Error adding friend');
-            }
+        } catch (error) {
+            console.error("Error adding friend:", error);
+            NotificationService.show("Error adding friend. Please try again later.", "error");
         }
     }
 

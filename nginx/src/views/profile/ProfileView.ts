@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   ProfileView.ts                                     :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/06/22 10:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/07/14 13:07:12 by edelarbr         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 import ModalView from "../../components/ModalView.js";
 import { UserProfileView } from "./components/UserProfileView.js";
 import { MatchHistoryView } from "./components/MatchHistoryView.js";
