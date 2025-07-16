@@ -1,6 +1,6 @@
 import Fastify from "fastify";
 import jwt from "@fastify/jwt";
-import cookies from "@fastify/cookie";
+import fastifyCookie from "@fastify/cookie";
 import { SECRETKEY, PORT } from "./config/config.js";
 import { initializeRedis } from "./redis/redis.js";
 import registerRoutes from "./routes/index.js";
@@ -9,7 +9,7 @@ async function main() {
   const fastify = Fastify();
 
   try {
-    await fastify.register(cookies);
+    await fastify.register(fastifyCookie);
     await fastify.register(jwt, { secret: SECRETKEY });
     await initializeRedis(fastify);
   } catch (err) {
