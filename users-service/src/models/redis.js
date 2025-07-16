@@ -31,7 +31,7 @@ export async function initializeRedis(fastify) {
   });
 
   fastify.redis.on("error", (err) => {
-    console.error("Redis: ", err.message);
+    console.error("Redis:", err.message);
   });
 
   try {
