@@ -588,13 +588,37 @@ export class TournamentMatchManager {
     // Get all tournament matches
     const matches = this.tournamentManager.getTournamentMatches(waitingRoomId);
     
+    // Get tournament start timestamp for endTimestamp
+    const endTimestamp = Math.floor(Date.now() / 1000);
+    
+    // Get winner wallet address
+    const { blockchainService } = await import('../../services/blockchainService.js');
+    const winnerWallet = await blockchainService.getUserWallet(winner.userId || winner.id);
+    if (!winnerWallet) {
+      console.error('🏆 Could not retrieve wallet address for tournament winner');
+      return;
+    }
+    
     const tournamentData = {
-      winner: winner,
+      endTimestamp: endTimestamp,
+      winner: winnerWallet,
       matches: matches
     };
 
     console.log(`🏆 Reporting tournament to blockchain (NEW FORMAT):`, tournamentData);
     console.log(`🏆 Tournament has ${matches.length} matches`);
-    await reportTournamentResultsToAPI(tournamentData, waitingRoomId);
+    
+    // Set timeout to 25 seconds for blockchain calls
+    try {
+      await Promise.race([
+        reportTournamentResultsToAPI(tournamentData, waitingRoomId),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Tournament reporting timeout after 45 seconds')), 45000)
+        )
+      ]);
+    } catch (error) {
+      console.error('🏆 Failed to report tournament to blockchain:', error.message);
+      throw error;
+    }
   }
 }
