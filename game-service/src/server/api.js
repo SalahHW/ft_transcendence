@@ -516,27 +516,70 @@ export async function registerApiRoutes(fastify) {
       });
     }
   });
+
+  // GET /api/blockchain/queue-status: Get blockchain report queue status
+  fastify.get('/api/blockchain/queue-status', async (request, reply) => {
+    try {
+      const queueStatus = blockchainService.getQueueStatus();
+      
+      return reply.code(200).send({
+        status: 'success',
+        data: queueStatus
+      });
+    } catch (error) {
+      console.error('Error in GET /api/blockchain/queue-status:', error);
+      return reply.code(500).send({
+        status: 'error',
+        message: 'Internal server error',
+      });
+    }
+  });
+
+  // POST /api/blockchain/clear-queue: Clear blockchain report queue (admin only)
+  fastify.post('/api/blockchain/clear-queue', async (request, reply) => {
+    try {
+      blockchainService.clearReportQueue();
+      
+      return reply.code(200).send({
+        status: 'success',
+        message: 'Blockchain report queue cleared'
+      });
+    } catch (error) {
+      console.error('Error in POST /api/blockchain/clear-queue:', error);
+      return reply.code(500).send({
+        status: 'error',
+        message: 'Internal server error',
+      });
+    }
+  });
 }
 
 // Export function to call external services from gameState
 export async function reportMatchResultsToAPI(matchData, isMatch1v1 = true, tournamentId = null) {
   try {
-    // Report to blockchain service (winner only)
+    // Report to blockchain service (winner only) - non-blocking
     try {
-      await blockchainService.reportMatch(matchData, { isMatch1v1, tournamentId });
-      console.log(`✅ ${isMatch1v1 ? '1v1' : 'Tournament'} match reported to blockchain successfully (winner only)`);
+      const result = await blockchainService.reportMatch(matchData, { isMatch1v1, tournamentId });
+      if (result) {
+        console.log(`✅ ${isMatch1v1 ? '1v1' : 'Tournament'} match reported to blockchain successfully (winner only)`);
+      } else {
+        console.log(`📋 ${isMatch1v1 ? '1v1' : 'Tournament'} match queued for background blockchain reporting`);
+      }
+      return result; // Return the result for the caller
     } catch (blockchainError) {
       console.error('❌ Failed to report match to blockchain:', blockchainError.message);
+      return null;
     }
   } catch (error) {
     console.error('❌ Failed to process match results:', error.message);
+    return null;
   }
 }
 
 // Export function to report tournament completion to blockchain
 export async function reportTournamentResultsToAPI(tournamentData, tournamentId) {
   try {
-    // Report to blockchain service (simplified)
+    // Report to blockchain service (simplified) - blocking for tournaments
     try {
       await blockchainService.reportTournament(tournamentData, tournamentId);
       console.log(`✅ Tournament reported to blockchain successfully (simplified)`);

@@ -45,11 +45,20 @@ export class TournamentMatchManager {
     }
     
     try {
-      await reportMatchResultsToAPI(matchData, isTournamentMatch, waitingRoomId);
+      const result = await reportMatchResultsToAPI(matchData, isTournamentMatch, waitingRoomId);
+      // Mark as reported regardless of immediate success or queuing
+      // The blockchain service will handle retries in the background
       this._markMatchReported(matchData.matchId, matchData.roomId);
-      console.log(`✅ Tournament match reported to blockchain successfully (winner only)`);
+      
+      if (result !== null) {
+        console.log(`✅ Tournament match reported to blockchain successfully (winner only)`);
+      } else {
+        console.log(`📋 Tournament match queued for background blockchain reporting`);
+      }
     } catch (error) {
       console.error(`❌ Failed to report match to blockchain:`, error.message);
+      // Still mark as reported to prevent infinite retry loops
+      this._markMatchReported(matchData.matchId, matchData.roomId);
     }
   }
 
@@ -663,8 +672,9 @@ export class TournamentMatchManager {
   async _waitForTournamentMatchesToBeProcessed(waitingRoomId) {
     console.log(`🏆 Waiting for all individual tournament matches to be processed for tournament ${waitingRoomId}...`);
     
-    // Wait up to 10 seconds for all matches to be processed
-    const maxWaitTime = 10000; // 10 seconds
+    // With the new non-blocking system, we don't need to wait as long
+    // The matches are either reported immediately or queued for background processing
+    const maxWaitTime = 5000; // 5 seconds (reduced from 10)
     const checkInterval = 500; // Check every 500ms
     const maxChecks = maxWaitTime / checkInterval;
     
