@@ -7,7 +7,6 @@ export async function checkBlacklistedTokens(request, reply) {
   const token = authHeader.substring(7);
 
   if (!token) return;
-  console.log(token);
 
   const { redis } = request.server;
 
@@ -18,7 +17,7 @@ export async function checkBlacklistedTokens(request, reply) {
     console.error(err.message);
     return;
   }
-  console.log(isBlacklisted);
+  
   if (isBlacklisted) {
     return reply.code(401).send({ error: "Blacklisted token" });
   }
