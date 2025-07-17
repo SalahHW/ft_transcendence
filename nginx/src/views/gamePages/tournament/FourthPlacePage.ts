@@ -18,12 +18,8 @@ export default class FourthPlacePage {
             ? 'bg-gradient-to-br from-gray-600 via-gray-700 to-gray-800' 
             : 'bg-gradient-to-br from-gray-800 via-gray-700 to-gray-600';
             
-        const message = this.isDisrupted
-            ? '🏆 Tournament completed (some players disconnected)'
-            : '🏆 Tournament complete! You finished 4th place!';
-            
         const subtitle = this.isDisrupted
-            ? 'You finished 4th place'
+            ? 'You finished 4th place (TOURNAMENT INVALIDATED. NO SCORE RECORDED)'
             : 'Thanks for participating!';
         
         this.container.innerHTML = /* HTML */ `
@@ -41,7 +37,7 @@ export default class FourthPlacePage {
                     ${this.isDisrupted ? `
                     <div class="mt-4 mb-6">
                         <div class="text-lg text-gray-300 bg-gray-800 bg-opacity-50 px-4 py-2 rounded-lg">
-                            ⚠️ Some players disconnected during the tournament
+                            ⚠️ Tournament invalidated due to player disconnections
                         </div>
                     </div>
                     ` : ''}

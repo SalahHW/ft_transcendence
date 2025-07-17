@@ -202,6 +202,7 @@ export class TournamentMatchManager {
           playerPlacement: 1,
           isWinner: true,
           opponentName: loser.username,
+          isDisrupted: waitingRoomData.hasDisconnections, // ⭐ FIX: Include disruption status for proper splash screen styling
           message: winnerMessage,
           isForfeitWinner: isForfeitWinner
         }));
@@ -226,6 +227,7 @@ export class TournamentMatchManager {
           playerPlacement: 2,
           isWinner: false,
           opponentName: winner.username,
+          isDisrupted: waitingRoomData.hasDisconnections, // ⭐ FIX: Include disruption status for proper splash screen styling
           message: loserMessage,
           isForfeitWinner: isForfeitWinner
         }));

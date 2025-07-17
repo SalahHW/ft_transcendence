@@ -18,12 +18,8 @@ export default class FirstPlacePage {
             ? 'bg-gradient-to-br from-gray-600 via-gray-700 to-gray-800' 
             : 'bg-gradient-to-br from-yellow-900 via-yellow-800 to-yellow-700';
             
-        const message = this.isDisrupted
-            ? '🏆 Tournament completed (some players disconnected)'
-            : '🏆 Tournament complete! You are the CHAMPION! 🥇';
-            
         const subtitle = this.isDisrupted
-            ? 'You finished 1st place'
+            ? 'You finished 1st place (TOURNAMENT INVALIDATED. NO SCORE RECORDED)'
             : 'You are the ultimate champion!';
         
         this.container.innerHTML = /* HTML */ `
@@ -41,7 +37,7 @@ export default class FirstPlacePage {
                     ${this.isDisrupted ? `
                     <div class="mt-4 mb-6">
                         <div class="text-lg text-gray-300 bg-gray-800 bg-opacity-50 px-4 py-2 rounded-lg">
-                            ⚠️ Some players disconnected during the tournament
+                            ⚠️ Tournament invalidated due to player disconnections
                         </div>
                     </div>
                     ` : ''}

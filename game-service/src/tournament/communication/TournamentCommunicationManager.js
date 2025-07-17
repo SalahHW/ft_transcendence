@@ -204,6 +204,10 @@ export class TournamentCommunicationManager {
     const room = gameStateManager.getRoom(roomId);
     if (!room || !room.players) return;
     
+    // Get waiting room data to check for disconnections
+    const waitingRoomData = this.tournamentManager.waitingRooms.get(waitingRoomId);
+    const isDisrupted = waitingRoomData ? waitingRoomData.hasDisconnections : false;
+    
     // Determine placements based on room type
     let winnerPlacement, loserPlacement;
     if (roomType === 'winner_final') {
@@ -230,6 +234,7 @@ export class TournamentCommunicationManager {
             playerPlacement: placement,
             isWinner: isWinner,
             opponentName: isWinner ? loser.username : winner.username,
+            isDisrupted: isDisrupted, // ⭐ FIX: Include disruption status for proper splash screen styling
             message: `🏆 Final match complete! You finished ${this._getPlacementText(placement)}!`
           }));
           
