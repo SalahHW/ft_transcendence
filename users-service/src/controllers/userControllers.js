@@ -35,13 +35,25 @@ export async function createUser(request, reply) {
     const finalEmail =
       authenticationMethod === "credentials" ? createEmail(email) : null;
 
-    const user = await userModels.createUser({
-      username,
-      email: finalEmail,
-      password: hashedPassword,
-      authenticationMethod,
-      wallet,
-    });
+    if (authenticationMethod === "credentials") {
+      createEmail(finalEmail);
+      createPassword(hashedPassword);
+      const user = await userModels.createUser({
+        username,
+        email: finalEmail,
+        password: hashedPassword,
+        authenticationMethod,
+        wallet,
+      });
+    } else if (authenticationMethod === "wallet") {
+      const user = await userModels.createUser({
+        username,
+        email: null,
+        password: null,
+        authenticationMethod,
+        wallet,
+      });
+    }
 
     try {
       const response = await axios.post("http://blockchain:3001/add-player", {
