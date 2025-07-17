@@ -7,7 +7,7 @@ GEN_SECRET_SCRIPT=./generate-secret.sh
 prepare-jwt:
 	@echo "Checking if user DB exists at $(USER_DB_PATH)..."
 	@if [ ! -f $(USER_DB_PATH) ]; then \
-		echo "⚠️  DB not found. Running secret generation script..."; \
+		echo "DB not found. Running secret generation script..."; \
 		$(GEN_SECRET_SCRIPT); \
 	else \
 		echo "DB already present."; \
@@ -23,7 +23,7 @@ images: $(DOCKERFILES)
 stop:
 	@docker compose -f ./docker-compose.yml down
 
-restart: stop start prepare-jwt
+restart: stop start
 
 clean: stop
 	@docker system prune -af
