@@ -78,14 +78,13 @@ class NotificationService {
 			notificationElement.style.color = UI_THEME.colors.green.light;
 			notificationElement.style.backgroundColor = hexToRgba(
 				UI_THEME.colors.green.dark,
-				0.3
+				0.8
 			);
 		} else {
-			// error
 			notificationElement.style.color = UI_THEME.colors.red.light;
 			notificationElement.style.backgroundColor = hexToRgba(
 				UI_THEME.colors.red.dark,
-				0.3
+				0.8
 			);
 		}
 
