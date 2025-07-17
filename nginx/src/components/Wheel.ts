@@ -63,7 +63,7 @@ export default class Wheel {
       ],
     },
     {
-      /* label: "Register", */
+      label: "Register",
       icon: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M12 20q-.213 0-.357-.144T11.5 19.5v-7h-7q-.213 0-.356-.144T4 11.999t.144-.356t.356-.143h7v-7q0-.213.144-.356T12.001 4t.356.144t.143.356v7h7q.213 0 .356.144t.144.357t-.144.356t-.356.143h-7v7q0 .213-.144-.356t-.357-.144"/></svg>`,
       condition: () => !this._userIsLoggedIn,
       subMenu: [
@@ -84,7 +84,7 @@ export default class Wheel {
       ],
     },
     {
-      /* label: "Login", */
+      label: "Login",
       icon: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M12.48 20q-.213 0-.356-.143t-.143-.357t.143-.357t.357-.143h5.904q.23 0 .423-.192t.192-.424V5.616q0-.231-.192-.424T18.384 5h-5.903q-.214 0-.357-.143t-.143-.357t.143-.357t.357-.143h5.904q.69 0 1.153.463T20 5.616v12.769q0 .69-.462 1.153T18.384 20zm.407-7.5H4.518q-.213 0-.356-.143T4.019 12t.144-.357t.356-.143h8.368l-1.968-1.971q-.14-.14-.15-.338q-.009-.199.15-.364t.352-.168t.358.162l2.613 2.613q.243.243.243.566t-.243.566l-2.613 2.613q-.146.146-.347.153t-.367-.159q-.16-.165-.156-.357q.003-.191.162-.35z"/></svg>`,
       condition: () => !this._userIsLoggedIn,
       subMenu: [
@@ -473,7 +473,7 @@ export default class Wheel {
 				"SF Pro Display, system-ui, -apple-system, sans-serif"
 			);
 			backIndicator.setAttribute("font-weight", "400");
-			backIndicator.textContent = "← ESC";
+			backIndicator.textContent = "←";
 			svg.appendChild(backIndicator);
 		}
 	}
