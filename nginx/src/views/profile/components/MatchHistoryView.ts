@@ -56,7 +56,7 @@ export class MatchHistoryView {
 	private static renderEmptyState(): string {
 		return /* HTML */`
 			<div class="flex flex-col h-full justify-center items-center">
-				<p class="text-gray-400">No match history.</p>
+				<p class="text-gray-400">No match history</p>
 			</div>
 		`;
 	}
