@@ -20,11 +20,11 @@ export const updateUsername = async (id, newUsername) => {
   SET username = ?
   WHERE id = ?`;
   try {
-    const result = await database.run(query, [newUsername.toLowerCase(), id]);
+    const result = await database.run(query, [newUsername, id]);
     if (result.changes === 0) {
       return null;
     }
-    return { username: newUsername.toLowerCase() };
+    return { username: newUsername };
   } catch (err) {
     throw translateSqliteError(err);
   }
@@ -37,7 +37,7 @@ export const usernameExists = async (username) => {
     LIMIT 1
   `;
   try {
-    const result = await database.get(query, [username.toLowerCase()]);
+    const result = await database.get(query, [username]);
     return !!result;
   } catch (error) {
     throw translateSqliteError(error);
