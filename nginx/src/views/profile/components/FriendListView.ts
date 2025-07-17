@@ -19,6 +19,11 @@ export class FriendListView {
     private static presenceService = PresenceService.getInstance();
     private static presenceCallback: PresenceCallback | null = null;
 
+    private static truncateWallet(wallet: string): string {
+        if (!wallet || wallet.length <= 10) return wallet;
+        return `${wallet.slice(0, 6)}...${wallet.slice(-4)}`;
+    }
+
     public static async render(): Promise<string> {
         try {
             if (this.friends.length === 0) {
@@ -99,7 +104,10 @@ export class FriendListView {
                         <img src="${friend.avatarUrl}" alt="${friend.username} avatar" class="text-white w-12 h-12 rounded-lg object-cover">
                         <span class="status-indicator absolute bottom-0 right-0 block h-3 w-3 rounded-full border-2 border-gray-800" style="background-color: ${statusColor}"></span>
                     </div>
-                    <span class="text-white font-medium truncate">${friend.username}</span>
+                    <div class="flex flex-col min-w-0">
+                        <span class="text-white font-medium truncate">${friend.username}</span>
+                        ${friend.wallet ? `<a href="https://testnet.snowtrace.io/address/${friend.wallet}/tokentxns" target="_blank" rel="noopener noreferrer" class="text-gray-500 hover:text-gray-400 underline text-xs truncate transition-colors duration-200">${this.truncateWallet(friend.wallet)}</a>` : ''}
+                    </div>
                 </div>
                 <div class="w-12 h-12 flex-shrink-0">
                     ${createWinRateDonutChart({ wins: friend.wins, losses: friend.losses }, false)}

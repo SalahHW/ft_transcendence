@@ -473,7 +473,7 @@ export default class Wheel {
 				"SF Pro Display, system-ui, -apple-system, sans-serif"
 			);
 			backIndicator.setAttribute("font-weight", "400");
-			backIndicator.textContent = "← ESC";
+			backIndicator.textContent = "←";
 			svg.appendChild(backIndicator);
 		}
 	}
