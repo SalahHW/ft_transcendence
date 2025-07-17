@@ -13,7 +13,7 @@ export class UserProfileView {
 
 	private static truncateWallet(wallet: string): string {
 		if (!wallet || wallet.length <= 10) return wallet;
-		return `${wallet.slice(0, 5)}...${wallet.slice(-5)}`;
+		return `${wallet.slice(0, 6)}...${wallet.slice(-4)}`;
 	}
 
 	public static async render(): Promise<string> {
@@ -40,7 +40,10 @@ export class UserProfileView {
 								: ''
 						}
 						<div class="flex items-center gap-2 mb-4">
-							<p class="text-gray-500">${user.wallet ? UserProfileView.truncateWallet(user.wallet) : 'No wallet'}</p>
+							${user.wallet
+								? `<a href="https://testnet.snowtrace.io/address/${user.wallet}/tokentxns" target="_blank" rel="noopener noreferrer" class="text-gray-500 hover:text-gray-400 underline transition-colors duration-200">${UserProfileView.truncateWallet(user.wallet)}</a>`
+								: `<p class="text-gray-500">No wallet</p>`
+							}
 						</div>
 					</div>
 					<div class="flex flex-col gap-2 p-4 w-12">
