@@ -122,7 +122,7 @@ export default class Router {
   private _executeHandler(path: string) {
     var route = this._routes.find((route) => route.path === path);
     if (route?.handler) {
-      route.handler();
+      route.handler.call(route);
       return true;
     }
     console.warn(`No handler found for route: ${path}`);
