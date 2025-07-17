@@ -8,8 +8,11 @@ interface Route {
 }
 
 export default class Router {
-  private constructor() {}
+  private constructor() {
+    this._currentPath = this.getCurrentPath();
+  }
   private static _instance: Router;
+  private _currentPath: string;
 
   private _routes: Route[] = [
     {
@@ -25,7 +28,6 @@ export default class Router {
     {
       path: "/api-test",
       handler: async function () {
-        window.history.back();
         if (!this.cache) {
           const module = await import("../views/apiTestPage/APITestPage.js");
           this.cache = new module.default();
@@ -36,7 +38,6 @@ export default class Router {
     {
       path: "/login",
       handler: async function () {
-        window.history.back();
         if (!this.cache) {
           const module = await import("../components/LoginPopup.js");
           this.cache = new module.default();
@@ -47,7 +48,6 @@ export default class Router {
     {
       path: "/register",
       handler: async function () {
-        window.history.back();
         if (!this.cache) {
           const module = await import("../components/RegisterPopup.js");
           this.cache = new module.default();
@@ -58,7 +58,6 @@ export default class Router {
     {
       path: "/profile",
       handler: async function () {
-        window.history.back();
         if (!this.cache) {
           const module = await import("../views/profile/ProfileView.js");
           this.cache = new module.default();
@@ -86,7 +85,6 @@ export default class Router {
     {
       path: "/wallet-register",
       handler: async function () {
-        window.history.back();
         if (!this.cache) {
           const module = await import("../components/walletRegisterPopUp.js");
           this.cache = new module.default();
@@ -122,14 +120,6 @@ export default class Router {
   }
 
   private _executeHandler(path: string) {
-    const currentPath = this.getCurrentPath();
-    const isLeavingRoute = path !== currentPath;
-    const isPopstateNavigation = (window as any).popstateInProgress;
-
-    if (isLeavingRoute && !isPopstateNavigation) {
-      this._cleanupCurrentRoute();
-    }
-
     var route = this._routes.find((route) => route.path === path);
     if (route?.handler) {
       route.handler();
@@ -139,42 +129,41 @@ export default class Router {
     return false;
   }
 
-  private _cleanupCurrentRoute(): void {
-    const currentPath = this.getCurrentPath();
-    if (!(window as any).routeCleanupInProgress) {
-      (window as any).routeCleanupInProgress = true;
-
-      const currentRoute = this._routes.find(
-        (route) => route.path === currentPath
-      );
-      if (currentRoute?.cache?.cleanup) {
-        try {
-          currentRoute.cache.cleanup();
-        } catch (error) {
-          console.error(`Error during ${currentPath} route cleanup:`, error);
-        }
-      }
-
-      if (currentPath === "/1v1" || currentPath === "/tournament") {
-        if ((window as any).leaveGame) {
-          try {
-            (window as any).leaveGame();
-          } catch (error) {
-            console.error("Error during global game cleanup:", error);
-          }
-        }
-        if ((window as any).gameControlsInitialized) {
-          (window as any).gameControlsInitialized = false;
-        }
-        if ((window as any).joinGameButtonSetup) {
-          (window as any).joinGameButtonSetup = false;
-        }
-      }
-
-      setTimeout(() => {
-        (window as any).routeCleanupInProgress = false;
-      }, 100);
+  private _cleanupCurrentRoute(path: string): void {
+    if ((window as any).routeCleanupInProgress) {
+      return;
     }
+    (window as any).routeCleanupInProgress = true;
+
+    const routeToCleanup = this._routes.find((route) => route.path === path);
+
+    if (routeToCleanup?.cache?.cleanup) {
+      try {
+        routeToCleanup.cache.cleanup();
+      } catch (error) {
+        console.error(`Error during ${path} route cleanup:`, error);
+      }
+    }
+
+    if (path === "/1v1" || path === "/tournament") {
+      if ((window as any).leaveGame) {
+        try {
+          (window as any).leaveGame();
+        } catch (error) {
+          console.error("Error during global game cleanup:", error);
+        }
+      }
+      if ((window as any).gameControlsInitialized) {
+        (window as any).gameControlsInitialized = false;
+      }
+      if ((window as any).joinGameButtonSetup) {
+        (window as any).joinGameButtonSetup = false;
+      }
+    }
+
+    setTimeout(() => {
+      (window as any).routeCleanupInProgress = false;
+    }, 100);
   }
 
   private _isValidRoute(path: string): boolean {
@@ -210,10 +199,18 @@ export default class Router {
 
     try {
       if (this._isValidRoute(path)) {
+        const previousPath = this._currentPath;
+
         if (replaceState) window.history.replaceState({ path }, "", path);
         else window.history.pushState({ path }, "", path);
 
+        this._currentPath = path;
+
+        if (path !== previousPath) {
+          this._cleanupCurrentRoute(previousPath);
+        }
         this._executeHandler(path);
+
         return true;
       } else {
         console.warn(`Route not found: ${path}`);
@@ -242,10 +239,14 @@ export default class Router {
     (window as any).popstateInProgress = true;
 
     try {
-      const path = this.getCurrentPath();
+      const previousPath = this._currentPath;
+      const newPath = this.getCurrentPath();
+      this._currentPath = newPath;
 
-      if (!this._executeHandler(path)) {
-        if (path !== "/") {
+      this._cleanupCurrentRoute(previousPath);
+
+      if (!this._executeHandler(newPath)) {
+        if (newPath !== "/") {
           window.history.replaceState({ path: "/" }, "", "/");
           window.location.pathname = "/";
         }
@@ -263,8 +264,8 @@ export default class Router {
   public init(): void {
     window.addEventListener("popstate", this._handlePopState);
 
-    const currentPath = this.getCurrentPath();
-    if (!this._isValidRoute(currentPath)) this.navigate("/", true);
-    else this.navigate(currentPath, true);
+    this._currentPath = this.getCurrentPath();
+    if (!this._isValidRoute(this._currentPath)) this.navigate("/", true);
+    else this.navigate(this._currentPath, true);
   }
 }

@@ -52,14 +52,14 @@ export default class ModalView {
 
 				if (!isInInputField) {
 					event.preventDefault();
-					this.hide();
+					window.history.back();
 				}
 			}
 		});
 
 		this._element.addEventListener('click', (e) => {
 			if (e.target === this._element) {
-				this.hide();
+				window.history.back();
 			}
 		});
 	}
@@ -89,6 +89,10 @@ export default class ModalView {
 			this._element.classList.remove("flex");
 		}, 150);
 	}
+
+    public cleanup(): void {
+        this.hide();
+    }
 
     public destroy(): void {
         this._element.remove();
