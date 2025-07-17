@@ -13,7 +13,7 @@ export function createWinRateDonutChart(stats: { wins: number, losses: number },
                         r="35"
                         fill="none"
                         stroke="#666666"
-                        stroke-width="14"
+                        stroke-width="10"
                         stroke-linecap="round"
                     />
                 </svg>
@@ -26,6 +26,54 @@ export function createWinRateDonutChart(stats: { wins: number, losses: number },
             </div>
         `;
     }
+
+	if (stats.losses === 0) {
+		return /* HTML */`
+			<div class="relative w-full h-full">
+				<svg class="w-full h-full" viewBox="0 0 100 100">
+					<circle
+						cx="50"
+						cy="50"
+						r="35"
+						fill="none"
+						stroke="${UI_THEME.colors.green.light}"
+						stroke-width="10"
+						stroke-linecap="round"
+					/>
+				</svg>
+				${showText ? `
+					<div class="absolute inset-0 flex flex-col items-center justify-center text-white">
+						<span class="font-bold text-xl">${stats.wins} W</span>
+						<span class="text-gray-400">0 L</span>
+					</div>
+				` : ''}
+			</div>
+		`;
+	}
+
+	if (stats.wins === 0) {
+		return /* HTML */`
+			<div class="relative w-full h-full">
+				<svg class="w-full h-full" viewBox="0 0 100 100">
+					<circle
+						cx="50"
+						cy="50"
+						r="35"
+						fill="none"
+						stroke="${UI_THEME.colors.red.light}"
+						stroke-width="10"
+						stroke-linecap="round"
+					/>
+				</svg>
+				${showText ? `
+					<div class="absolute inset-0 flex flex-col items-center justify-center text-white">
+						<span class="font-bold text-xl">0 W</span>
+						<span class="text-gray-400">${stats.losses} L</span>
+					</div>
+				` : ''}
+			</div>
+		`;
+	}
 
     const gapAngle = 40;
     const availableAngle = 360 - gapAngle;
