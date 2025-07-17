@@ -69,7 +69,7 @@ class NotificationService {
 		const notificationElement = document.createElement("div");
 
 		notificationElement.className =
-			"px-6 py-4 rounded-3xl text-2xl text-center shadow-lg transition-all duration-300 pointer-events-auto";
+			"px-4 py-2 text-base text-center transition-all duration-300 shadow-lg pointer-events-auto rounded-2xl";
 
 		const formattedMessage = this.formatMessage(message);
 		notificationElement.innerHTML = formattedMessage;
