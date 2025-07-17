@@ -1,13 +1,15 @@
 import * as usernameModels from "../models/usernameModels.js";
 
 export function createUsername(rawUsername) {
-	if (typeof rawUsername !== 'string') {
+  if (typeof rawUsername !== "string") {
 		throw new Error("Username must be a string");
 	}
   const username = rawUsername.trim();
 	const regexPattern = /^[a-zA-Z0-9_]{2,20}$/;
 	if (!username || !regexPattern.test(username)) {
-		throw new Error("Invalid username format. It must be 2 to 20 characters long and contain only letters, numbers, or underscores.");
+    throw new Error(
+      "Invalid username format. It must be 2 to 20 characters long and contain only letters, numbers, or underscores."
+    );
 	}
 	return username;
 }
