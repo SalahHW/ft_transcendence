@@ -26,15 +26,12 @@ export default class AvatarServiceAPI {
 		const response = await fetch(`${this._avatarsBaseUrl}/id/${userId}`, {
 			method: "GET"
 		});
-		if (response.status !== 200) {
+		if (!response.ok) {
 			const responseText = await response.text();
-			try {
-				const responseData = JSON.parse(responseText);
-				throw new Error(`Failed to retrieve avatar:\n${JSON.stringify(responseData, null, 2)}`);
-			} catch (jsonError) {
-				throw new Error(`Failed to retrieve avatar: ${response.status} ${response.statusText}. Response: ${responseText}`);
-			}
+			console.error(`Failed to retrieve avatar for user ${userId}: ${response.status} ${response.statusText}`, responseText);
+			throw new Error("Could not retrieve avatar. Please try again later.");
 		}
+		console.log(`Successfully retrieved avatar url for user ${userId}.`);
 		return `${this._avatarsBaseUrl}/id/${userId}`;
 	}
 
@@ -52,15 +49,12 @@ export default class AvatarServiceAPI {
 			method: "POST",
 			body: formData
 		});
-		if (response.status !== 201) {
+		if (!response.ok) {
 			const responseText = await response.text();
-			try {
-				const responseData = JSON.parse(responseText);
-				throw new Error(`Failed to upload avatar:\n${JSON.stringify(responseData, null, 2)}`);
-			} catch (jsonError) {
-				throw new Error(`Failed to upload avatar: ${response.status} ${response.statusText}. Response: ${responseText}`);
-			}
+			console.error(`Failed to upload avatar: ${response.status} ${response.statusText}`, responseText);
+			throw new Error("Failed to upload avatar. Please try again later.");
 		}
+		console.log("Avatar uploaded successfully.");
 	}
 
 	/**
@@ -77,15 +71,12 @@ export default class AvatarServiceAPI {
 			method: "PUT",
 			body: formData
 		});
-		if (response.status !== 200) {
+		if (!response.ok) {
 			const responseText = await response.text();
-			try {
-				const responseData = JSON.parse(responseText);
-				throw new Error(`Failed to update avatar:\n${JSON.stringify(responseData, null, 2)}`);
-			} catch (jsonError) {
-				throw new Error(`Failed to update avatar: ${response.status} ${response.statusText}. Response: ${responseText}`);
-			}
+			console.error(`Failed to update avatar: ${response.status} ${response.statusText}`, responseText);
+			throw new Error("Failed to update avatar. Please try again later.");
 		}
+		console.log("Avatar updated successfully.");
 	}
 
 	/**
@@ -97,14 +88,11 @@ export default class AvatarServiceAPI {
 		const response = await fetch(`${this._avatarsBaseUrl}`, {
 			method: "DELETE"
 		});
-		if (response.status !== 200) {
+		if (!response.ok) {
 			const responseText = await response.text();
-			try {
-				const responseData = JSON.parse(responseText);
-				throw new Error(`Failed to delete avatar:\n${JSON.stringify(responseData, null, 2)}`);
-			} catch (jsonError) {
-				throw new Error(`Failed to delete avatar: ${response.status} ${response.statusText}. Response: ${responseText}`);
-			}
+			console.error(`Failed to delete avatar: ${response.status} ${response.statusText}`, responseText);
+			throw new Error("Failed to delete avatar. Please try again later.");
 		}
+		console.log("Avatar deleted successfully.");
 	}
 }

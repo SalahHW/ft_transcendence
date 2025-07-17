@@ -62,12 +62,14 @@ export default class UsersApi {
     const response = await fetch(`${this._usersBaseUrl}`, {
       method: "GET",
     });
+    if (!response.ok) {
+      const responseText = await response.text();
+      console.error(`Failed to fetch users: ${response.status} ${response.statusText}`, responseText);
+      throw new Error("Failed to fetch users. Please try again later.");
+    }
     const responseData = await response.json();
-    if (response.status === 200) return responseData;
-    else
-      throw new Error(
-        `failed to fetch users:\n${JSON.stringify(responseData, null, 2)}`
-      );
+    console.log("Successfully fetched all users.");
+    return responseData;
   }
 
   /**
@@ -82,11 +84,14 @@ export default class UsersApi {
       body: JSON.stringify(user),
     });
     const responseData = await response.json();
-    if (response.status === 201) return responseData;
-    else
-      throw new Error(
-        `failed to create user:\n${JSON.stringify(responseData, null, 2)}`
-      );
+    if (response.ok) {
+      console.log("User created successfully:", responseData);
+      return responseData;
+    }
+    else {
+      console.error("Failed to create user:", responseData);
+      throw new Error("Failed to create user. Please try again later.");
+    }
   }
 
   /**
@@ -99,13 +104,18 @@ export default class UsersApi {
       method: "GET",
       credentials: "include",
     });
-    if (response.status === 404 || response.status === 401) return null;
+    if (response.status === 404 || response.status === 401) {
+      console.log("No current user logged in.");
+      return null;
+    }
+    if (!response.ok) {
+      const responseText = await response.text();
+      console.error(`Failed to get current user: ${response.status} ${response.statusText}`, responseText);
+      throw new Error("Failed to get current user. Please try again later.");
+    }
     const responseData: JwtResponse = await response.json();
-    if (response.status === 200) return responseData.user;
-    else
-      throw new Error(
-        `failed to get current user:\n${JSON.stringify(responseData, null, 2)}`
-      );
+    console.log("Successfully retrieved current user.");
+    return responseData.user;
   }
 
   /**
@@ -118,14 +128,17 @@ export default class UsersApi {
       method: "GET",
     });
     if (response.status === 404) {
+      console.log(`User with id ${id} not found.`);
       return null;
     }
+    if (!response.ok) {
+      const responseText = await response.text();
+      console.error(`Failed to get user by id ${id}: ${response.status} ${response.statusText}`, responseText);
+      throw new Error("Failed to get user. Please try again later.");
+    }
     const responseData = await response.json();
-    if (response.status === 200) return responseData;
-    else
-      throw new Error(
-        `failed to get user:\n${JSON.stringify(responseData, null, 2)}`
-      );
+    console.log(`Successfully retrieved user with id ${id}.`);
+    return responseData;
   }
 
   /**
@@ -141,11 +154,13 @@ export default class UsersApi {
       body: JSON.stringify({ username }),
     });
     const responseData = await response.json();
-    if (response.status === 200) return responseData;
-    else
-      throw new Error(
-        `failed to update username:\n${JSON.stringify(responseData, null, 2)}`
-      );
+    if (response.ok) {
+      console.log(`Username for user ${id} updated successfully.`);
+      return responseData;
+    } else {
+      console.error(`Failed to update username for user ${id}:`, responseData);
+      throw new Error("Failed to update username. Please try again later.");
+    }
   }
 
   /**
@@ -161,11 +176,13 @@ export default class UsersApi {
       body: JSON.stringify({ email }),
     });
     const responseData = await response.json();
-    if (response.status === 200) return responseData;
-    else
-      throw new Error(
-        `failed to update email:\n${JSON.stringify(responseData, null, 2)}`
-      );
+    if (response.ok) {
+      console.log(`Email for user ${id} updated successfully.`);
+      return responseData;
+    } else {
+      console.error(`Failed to update email for user ${id}:`, responseData);
+      throw new Error("Failed to update email. Please try again later.");
+    }
   }
 
   /**
@@ -180,11 +197,13 @@ export default class UsersApi {
       body: JSON.stringify({ username }),
     });
     const responseData = await response.json();
-    if (response.status === 200) return responseData;
-    else
-      throw new Error(
-        `failed to update username:\n${JSON.stringify(responseData, null, 2)}`
-      );
+    if (response.ok) {
+      console.log("Username updated successfully.");
+      return responseData;
+    } else {
+      console.error("Failed to update username:", responseData);
+      throw new Error("Failed to update username. Please try again later.");
+    }
   }
 
   /**
@@ -199,11 +218,13 @@ export default class UsersApi {
       body: JSON.stringify({ email }),
     });
     const responseData = await response.json();
-    if (response.status === 200) return responseData;
-    else
-      throw new Error(
-        `failed to update email:\n${JSON.stringify(responseData, null, 2)}`
-      );
+    if (response.ok) {
+      console.log("Email updated successfully.");
+      return responseData;
+    } else {
+      console.error("Failed to update email:", responseData);
+      throw new Error("Failed to update email. Please try again later.");
+    }
   }
 
   /**
@@ -215,12 +236,14 @@ export default class UsersApi {
     const response = await fetch(`${this._usersBaseUrl}/${id}`, {
       method: "DELETE",
     });
-    const responseData = await response.json();
-    if (response.status === 200 && responseData.success) return;
-    else
-      throw new Error(
-        `failed to delete user:\n${JSON.stringify(responseData, null, 2)}`
-      );
+    if (response.ok) {
+      console.log(`User with id ${id} deleted successfully.`);
+      return;
+    } else {
+      const responseText = await response.text();
+      console.error(`Failed to delete user ${id}: ${response.status} ${response.statusText}`, responseText);
+      throw new Error("Failed to delete user. Please try again later.");
+    }
   }
 
   /**
@@ -232,16 +255,14 @@ export default class UsersApi {
     const response = await fetch(`${this._usersBaseUrl}/username/${username}`, {
       method: "GET",
     });
+    if (!response.ok) {
+      const responseText = await response.text();
+      console.error(`Failed to get user by username ${username}: ${response.status} ${response.statusText}`, responseText);
+      throw new Error("Failed to get user. Please try again later.");
+    }
     const responseData = await response.json();
-    if (response.status === 200) return responseData;
-    else
-      throw new Error(
-        `failed to get users by username:\n${JSON.stringify(
-          responseData,
-          null,
-          2
-        )}`
-      );
+    console.log(`Successfully retrieved user ${username}.`);
+    return responseData;
   }
 
   /**
@@ -253,16 +274,14 @@ export default class UsersApi {
     const response = await fetch(`${this._usersBaseUrl}/wallet/${wallet}`, {
       method: "GET",
     });
+    if (!response.ok) {
+      const responseText = await response.text();
+      console.error(`Failed to get user by wallet ${wallet}: ${response.status} ${response.statusText}`, responseText);
+      throw new Error("Failed to get user by wallet. Please try again later.");
+    }
     const responseData = await response.json();
-    if (response.status === 200) return responseData;
-    else
-      throw new Error(
-        `failed to get user by wallet:\n${JSON.stringify(
-          responseData,
-          null,
-          2
-        )}`
-      );
+    console.log(`Successfully retrieved user with wallet ${wallet}.`);
+    return responseData;
   }
 
   /**
@@ -278,12 +297,12 @@ export default class UsersApi {
       credentials: "include",
       body: JSON.stringify({ username, password }),
     });
-    const responseData = await response.json();
-    if (response.status === 200) return;
-    else
-      throw new Error(
-        `failed to login:\n${JSON.stringify(responseData, null, 2)}`
-      );
+    if (!response.ok) {
+      const responseText = await response.text();
+      console.error(`Login failed for user ${username}: ${response.status} ${response.statusText}`, responseText);
+      throw new Error("Login failed. Please check your credentials and try again.");
+    }
+    console.log(`User ${username} logged in successfully.`);
   }
 
   /**
@@ -295,12 +314,12 @@ export default class UsersApi {
       method: "POST",
       credentials: "include",
     });
-    const responseData = await response.json();
-    if (response.status === 200) return;
-    else
-      throw new Error(
-        `failed to logout:\n${JSON.stringify(responseData, null, 2)}`
-      );
+    if (!response.ok) {
+      const responseText = await response.text();
+      console.error(`Logout failed: ${response.status} ${response.statusText}`, responseText);
+      throw new Error("Logout failed. Please try again later.");
+    }
+    console.log("User logged out successfully.");
   }
 
   /**
@@ -330,11 +349,14 @@ export default class UsersApi {
       }),
     });
     const responseData = await response.json();
-    if (response.status === 201) return responseData;
-    else
-      throw new Error(
-        `failed to register:\n${JSON.stringify(responseData, null, 2)}`
-      );
+    if (response.ok) {
+      console.log("User registered successfully:", responseData);
+      return responseData;
+    }
+    else {
+      console.error("Failed to register user:", responseData);
+      throw new Error("Registration failed. Please try again later.");
+    }
   }
 
   /**
@@ -358,15 +380,14 @@ export default class UsersApi {
       body: JSON.stringify({ username, wallet, signature, timestamp }),
     });
     const responseData = await response.json();
-    if (response.status === 201) return responseData;
-    else
-      throw new Error(
-        `failed to register with wallet:\n${JSON.stringify(
-          responseData,
-          null,
-          2
-        )}`
-      );
+    if (response.ok) {
+      console.log("User registered with wallet successfully:", responseData);
+      return responseData;
+    }
+    else {
+      console.error("Failed to register with wallet:", responseData);
+      throw new Error("Registration with wallet failed. Please try again later.");
+    }
   }
 
   /**
@@ -387,12 +408,12 @@ export default class UsersApi {
       credentials: "include",
       body: JSON.stringify({ wallet, signature, timestamp }),
     });
-    const responseData = await response.json();
-    if (response.status === 200) return;
-    else
-      throw new Error(
-        `failed to login with wallet:\n${JSON.stringify(responseData, null, 2)}`
-      );
+    if (!response.ok) {
+      const responseText = await response.text();
+      console.error(`Login with wallet failed for wallet ${wallet}: ${response.status} ${response.statusText}`, responseText);
+      throw new Error("Login with wallet failed. Please try again later.");
+    }
+    console.log(`User with wallet ${wallet} logged in successfully.`);
   }
 
   /**
@@ -410,15 +431,13 @@ export default class UsersApi {
         credentials: "include",
       }
     );
+    if (!response.ok) {
+      const responseText = await response.text();
+      console.error(`Failed to get wallet challenge for wallet ${wallet}: ${response.status} ${response.statusText}`, responseText);
+      throw new Error("Failed to get wallet challenge. Please try again later.");
+    }
     const responseData = await response.json();
-    if (response.status === 200) return responseData;
-    else
-      throw new Error(
-        `failed to get wallet challenge:\n${JSON.stringify(
-          responseData,
-          null,
-          2
-        )}`
-      );
+    console.log(`Successfully retrieved wallet challenge for wallet ${wallet}.`);
+    return responseData;
   }
 }
