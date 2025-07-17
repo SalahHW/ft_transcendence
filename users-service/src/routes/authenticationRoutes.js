@@ -1,5 +1,6 @@
 import * as authenticationControllers from "../controllers/authenticationControllers.js";
 import * as meControllers from "../controllers/meControllers.js";
+import * as redisControllers from "../controllers/redisControllers.js";
 
 export default async function authenticationRoutes(fastify) {
   fastify.route({
@@ -17,6 +18,7 @@ export default async function authenticationRoutes(fastify) {
   fastify.route({
     method: "POST",
     url: "/logout",
+    preHandler: redisControllers.invalidateToken,
     handler: authenticationControllers.logoutUser,
   });
 

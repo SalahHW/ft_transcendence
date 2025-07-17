@@ -46,7 +46,7 @@ export class PlayerManager {
   /**
    * Register player with username from API
    */
-  registerPlayerWithUsername(username, options = {}) {
+  registerPlayerWithUsername(username, userId = null, options = {}) {
     if (!username || typeof username !== 'string' || username.trim().length === 0 || username.length > 20) {
       throw new Error(`Invalid username: must be a string (1-20 characters)`);
     }
@@ -56,13 +56,14 @@ export class PlayerManager {
     
     const player = this.createPlayer(playerId, null, {
       username: username.trim(),
+      userId: userId, // Store real user ID for external services
       readyToPlay: false,
       ...options
     });
 
     player.setUsername(username.trim());
     
-    console.log(`Registered player ${playerId} with username ${username}`);
+    console.log(`Registered player ${playerId} with username ${username} and userId ${userId}`);
     return player;
   }
 

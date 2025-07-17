@@ -42,6 +42,17 @@ contract MasterContract is Ownable {
     }
 
     /**
+     * @dev Temporary struct to stock data in view to fill a tournament
+     */
+    struct MatchTemp {
+        address player1;
+        address player2;
+        address winner;
+        uint8 player1Score;
+        uint8 player2Score;
+    }
+
+    /**
      * @dev Struct to store tournament details
      */
     struct Tournament {
@@ -270,7 +281,8 @@ contract MasterContract is Ownable {
 
     function reportTournament(
         uint32 endTimestamp,
-        address winner
+        address winner,
+        MatchTemp[4] memory matches
     ) public onlyOwner {
         require(winner != address(0), "Winner address is invalid");
 
@@ -280,9 +292,19 @@ contract MasterContract is Ownable {
             }
         }
 
-        uint16[] memory matchIds = getMatchIdsByTimestamp(endTimestamp);
-
         tournamentNft.mintTnt(winner, tournamentIds);
+        for (uint i = 0; i < matches.length; i++) {
+            reportMatch(
+                matches[i].player1,
+                matches[i].player2,
+                matches[i].player1Score,
+                matches[i].player2Score,
+                matches[i].winner,
+                endTimestamp
+            );
+        }
+
+        uint16[] memory matchIds = getMatchIdsByTimestamp(endTimestamp);
 
         Tournament memory t = Tournament({
             endTimestamp: endTimestamp,
@@ -451,5 +473,14 @@ contract MasterContract is Ownable {
         }
 
         return result;
+    }
+
+    /**
+     * @dev Get PongToken balance of a player
+     * @param player: address of the player
+     * @return uint256: token balance
+     */
+    function getPongTokenBalance(address player) public view returns (uint256) {
+        return pongToken.balanceOf(player);
     }
 }

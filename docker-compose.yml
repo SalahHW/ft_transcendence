@@ -21,11 +21,12 @@ services:
     container_name: redis
     build: ./redis-service
     env_file:
+      - ./.env
       - ./redis-service/.env
     networks:
       - transcendence
     volumes:
-      - ./redis-data:/data
+      - ./redis-service/data:/data
     restart: unless-stopped
 
   users:
@@ -34,6 +35,7 @@ services:
     env_file:
       - ./.env
       - ./users-service/.env
+      - ./redis-service/.env
     networks:
       - transcendence
     volumes:
@@ -46,6 +48,7 @@ services:
     env_file:
       - ./.env
       - ./jwt-service/.env
+      - ./redis-service/.env
     networks:
       - transcendence
     restart: unless-stopped

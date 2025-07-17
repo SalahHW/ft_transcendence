@@ -3,31 +3,25 @@
 # Exit on any error
 set -e
 
-echo "Starting Redis configuration..."
-
 # Check if Redis configuration file exists
 if [ ! -f "/etc/redis/redis.conf" ]; then
   echo "ERROR: Redis configuration file not found at /etc/redis/redis.conf"
   exit 1
 fi
 
-# Configure Redis password if provided
-if [ -n "$REDIS_PASSWORD" ]; then
-  echo "Setting Redis password..."
-  if ! echo "" >> /etc/redis/redis.conf; then
-    echo "ERROR: Failed to write to Redis configuration file"
-    exit 1
-  fi
-  if ! echo "requirepass $REDIS_PASSWORD" >> /etc/redis/redis.conf; then
-    echo "ERROR: Failed to set Redis password in configuration"
-    exit 1
-  fi
-  echo "Redis password configured successfully"
-else
-  echo "No Redis password provided"
+# Check if required environment variables are present
+if [ -z "$REDIS_SERVICE_PORT" ]; then
+  echo "ERROR: REDIS_SERVICE_PORT environment variable is not set"
   exit 1
 fi
 
-echo "Redis configuration validated successfully"
+if [ -z "$REDIS_SERVICE_PASSWORD" ]; then
+  echo "ERROR: REDIS_SERVICE_PASSWORD environment variable is not set"
+  exit 1
+fi
+
+echo "" >> /etc/redis/redis.conf
+echo "port $REDIS_SERVICE_PORT" >> /etc/redis/redis.conf
+echo "requirepass $REDIS_SERVICE_PASSWORD" >> /etc/redis/redis.conf
 
 exec redis-server /etc/redis/redis.conf

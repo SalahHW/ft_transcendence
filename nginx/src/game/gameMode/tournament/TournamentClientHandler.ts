@@ -161,7 +161,7 @@ export class TournamentClientHandler {
       if (message.playerPlacement) {
         try {
           const { showTournamentEndSplashScreen } = await import('../../utils/tournamentSplashScreenUtils.js');
-          await showTournamentEndSplashScreen(message.playerPlacement);
+          await showTournamentEndSplashScreen(message.playerPlacement, 'app-container', message.isDisrupted);
         } catch (error) {
           console.error('Error showing tournament end splash screen:', error);
           updateGameStatus('🏆 Final match complete!');
@@ -172,6 +172,11 @@ export class TournamentClientHandler {
     } else if (message.status === 'tournament_complete') {
       // Tournament is complete (both finals finished)
       console.log('🏆 Tournament complete, stopping render loop...');
+      
+      // ⭐ NEW: Check if tournament was disrupted
+      if (message.isDisrupted) {
+        console.log('🏆 Tournament was disrupted (some players disconnected)');
+      }
       
       // ⭐ CRITICAL FIX: Remove any active splash screen first to prevent race conditions
       if (isSplashScreenActive()) {

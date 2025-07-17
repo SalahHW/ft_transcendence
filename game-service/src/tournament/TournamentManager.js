@@ -73,6 +73,14 @@ export class TournamentManager {
       console.error(`Waiting room data not found for ${waitingRoomId}`);
       return;
     }
+
+    // Store tournament start time for blockchain reporting
+    const { blockchainService } = await import('../services/blockchainService.js');
+    const tournamentStartTime = Math.floor(Date.now() / 1000);
+    blockchainService.storeTournamentStartTime(waitingRoomId, tournamentStartTime);
+    
+    // Initialize match collection for this tournament
+    waitingRoomData.tournamentMatches = [];
     
     const waitingRoom = gameStateManager.getRoom(waitingRoomId);
     if (!waitingRoom || waitingRoom.players.length !== TournamentConfig.MAX_PLAYERS_PER_WAITING_ROOM) {
@@ -120,6 +128,61 @@ export class TournamentManager {
     
     // Transfer WebSocket connections to semi-final rooms
     await this.transferManager.transferPlayersToSemiFinals(waitingRoomId, players);
+  }
+
+  /**
+   * Add match data to tournament collection
+   * @param {string} waitingRoomId - Tournament waiting room ID
+   * @param {Object} matchData - Match data to add
+   */
+  async addTournamentMatch(waitingRoomId, matchData) {
+    const waitingRoomData = this.waitingRooms.get(waitingRoomId);
+    if (!waitingRoomData) {
+      console.error(`🏆 Waiting room data not found for adding match to tournament ${waitingRoomId}`);
+      return;
+    }
+
+    if (!waitingRoomData.tournamentMatches) {
+      waitingRoomData.tournamentMatches = [];
+    }
+
+    // Get wallet addresses for both players
+    const { blockchainService } = await import('../services/blockchainService.js');
+    const [player1Wallet, player2Wallet] = await Promise.all([
+      blockchainService.getUserWallet(matchData.winner.userId || matchData.winner.id),
+      blockchainService.getUserWallet(matchData.loser.userId || matchData.loser.id)
+    ]);
+
+    if (!player1Wallet || !player2Wallet) {
+      console.error(`🏆 Could not retrieve wallet addresses for match: ${matchData.winner.username} vs ${matchData.loser.username}`);
+      return;
+    }
+
+    // Convert match data to the new format with wallet addresses
+    const tournamentMatchData = {
+      player1: player1Wallet,
+      player2: player2Wallet,
+      winner: player1Wallet, // Winner is always player1 in our format
+      player1Score: matchData.winner.score,
+      player2Score: matchData.loser.score
+    };
+
+    waitingRoomData.tournamentMatches.push(tournamentMatchData);
+    console.log(`🏆 Added match to tournament ${waitingRoomId}: ${matchData.winner.username} vs ${matchData.loser.username}`);
+    console.log(`🏆 Tournament ${waitingRoomId} now has ${waitingRoomData.tournamentMatches.length} matches`);
+  }
+
+  /**
+   * Get all tournament matches for reporting
+   * @param {string} waitingRoomId - Tournament waiting room ID
+   * @returns {Array} - Array of tournament matches
+   */
+  getTournamentMatches(waitingRoomId) {
+    const waitingRoomData = this.waitingRooms.get(waitingRoomId);
+    if (!waitingRoomData || !waitingRoomData.tournamentMatches) {
+      return [];
+    }
+    return waitingRoomData.tournamentMatches;
   }
 
   /**

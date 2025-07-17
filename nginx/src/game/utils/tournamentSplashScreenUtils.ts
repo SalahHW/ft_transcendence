@@ -16,7 +16,8 @@ let currentSplashScreen: any = null;
  */
 export async function showTournamentEndSplashScreen(
     playerPlacement: number,
-    containerId: string = 'app-container'
+    containerId: string = 'app-container',
+    isDisrupted: boolean = false
 ): Promise<void> {
     // Clean up any existing splash screen
     if (currentSplashScreen) {
@@ -28,19 +29,19 @@ export async function showTournamentEndSplashScreen(
     switch (playerPlacement) {
         case 1:
             soundManager.playSound('firstPlace', 1.0);
-            currentSplashScreen = new FirstPlacePage(containerId);
+            currentSplashScreen = new FirstPlacePage(containerId, isDisrupted);
             break;
         case 2:
             soundManager.playSound('secondPlace', 1.0);
-            currentSplashScreen = new SecondPlacePage(containerId);
+            currentSplashScreen = new SecondPlacePage(containerId, isDisrupted);
             break;
         case 3:
             soundManager.playSound('thirdPlace', 1.0);
-            currentSplashScreen = new ThirdPlacePage(containerId);
+            currentSplashScreen = new ThirdPlacePage(containerId, isDisrupted);
             break;
         case 4:
             soundManager.playSound('fourthPlace', 1.4);
-            currentSplashScreen = new FourthPlacePage(containerId);
+            currentSplashScreen = new FourthPlacePage(containerId, isDisrupted);
             break;
         default:
             console.error(`Invalid tournament placement: ${playerPlacement}`);

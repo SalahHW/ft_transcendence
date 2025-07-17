@@ -13,6 +13,7 @@ import { reportMatchResultsToAPI } from '../../server/api.js';
 import { GAME_CONFIG } from '../../core/constants.js';
 import { TournamentRoomTypes, TournamentPhases } from '../constants.js';
 import { tournamentManager } from '../TournamentManager.js';
+import { blockchainService } from '../../services/blockchainService.js';
 
 /**
  * Tournament Match Disconnect Handler
@@ -59,6 +60,14 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
         console.error(`🏆 Error checking player disconnection status:`, error);
       }
     }
+
+    // ⭐ NEW: Check if this is a legitimate tournament closure
+    if (this._isLegitimateTournamentClosure(reason)) {
+      console.log(`🏆 Legitimate tournament closure detected for player ${playerId}, skipping forfeit handling`);
+      this.removePlayerFromGame(playerId);
+      return;
+    }
+
     //TODO: CHECK 3 DISCONNECTED PLAYERS AND 1 CONNECTED PLAYER
     // Clean up player connection first
     this.cleanupPlayerConnection(playerId);
@@ -114,6 +123,9 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     
     const room = gameStateManager.getRoom(roomId);
     if (!room) return;
+
+    // Clear wallet cache for disconnected player
+    blockchainService.clearUserWalletCache(playerId);
 
     // DEBUG: Log room state to understand what's happening
     console.log(`🏆 DEBUG: Room ${roomId} state - gameStarted: ${room.gameStarted}, ready: ${room.ready}, players: ${room.players.length}`);
@@ -181,11 +193,23 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
 
     console.log(`🏆 Tournament match pre-game forfeit: ${remainingPlayer.username} wins, ${disconnectedPlayer.username} disconnected`);
 
+    // ⭐ FIX: Capture scores before disposing ball
+    let winnerScore = null;
+    let loserScore = null;
+    
+    if (room.ball) {
+      const isRemainingPlayer1 = remainingPlayer.id === room.players[0].id;
+      const isDisconnectedPlayer1 = disconnectedPlayer.id === room.players[0].id;
+      
+      winnerScore = GAME_CONFIG.WINNING_SCORE; // Winner always gets full score
+      loserScore = isDisconnectedPlayer1 ? room.ball.player1.playerScore : room.ball.player2.playerScore;
+    }
+
     // ⭐ CRITICAL FIX: Immediately dispose ball to prevent it from moving during finals
     await this.immediatelyDisposeBall(room, roomId);
 
-    // Award forfeit win and handle tournament advancement
-    await this.awardTournamentForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'pre_game');
+    // Award forfeit win and handle tournament advancement with captured scores
+    await this.awardTournamentForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'pre_game', winnerScore, loserScore);
   }
 
   /**
@@ -203,11 +227,24 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       return;
     }
     console.log(`🔴 Tournament match in-game forfeit: ${remainingPlayer.username} wins, ${disconnectedPlayer.username} disconnected`);
+    
+    // ⭐ FIX: Capture scores before disposing ball
+    let winnerScore = null;
+    let loserScore = null;
+    
+    if (room.ball) {
+      const isRemainingPlayer1 = remainingPlayer.id === room.players[0].id;
+      const isDisconnectedPlayer1 = disconnectedPlayer.id === room.players[0].id;
+      
+      winnerScore = GAME_CONFIG.WINNING_SCORE; // Winner always gets full score
+      loserScore = isDisconnectedPlayer1 ? room.ball.player1.playerScore : room.ball.player2.playerScore;
+    }
+    
     // ⭐ CRITICAL FIX: Immediately dispose ball to prevent it from moving during finals
     await this.immediatelyDisposeBall(room, roomId);
 
-    // Award forfeit win and handle tournament advancement
-    await this.awardTournamentForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'in_game');
+    // Award forfeit win and handle tournament advancement with captured scores
+    await this.awardTournamentForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'in_game', winnerScore, loserScore);
   }
 
   /**
@@ -235,7 +272,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   /**
    * Award forfeit win to remaining player in tournament matches
    */
-  async awardTournamentForfeitWin(room, roomId, winner, loser, reason, context) {
+  async awardTournamentForfeitWin(room, roomId, winner, loser, reason, context, winnerScore = null, loserScore = null) {
     console.log(`🏆 Awarding tournament forfeit win: ${winner.username} defeats ${loser.username} in ${room.metadata?.roomType}`);
     
     // Update disconnection tracking in waiting room data
@@ -257,7 +294,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     room.isGameOver = true;
     
     // Create tournament match data
-    const matchData = await this.createTournamentForfeitMatchData(room, roomId, winner, loser, reason, context);
+    const matchData = await this.createTournamentForfeitMatchData(room, roomId, winner, loser, reason, context, winnerScore, loserScore);
     
     // Log the tournament forfeit
     LogUtils.logMatchCompletion(matchData);
@@ -340,7 +377,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       console.log(`🏆 Found waiting loser: ${waitingLoser.username} (${waitingLoser.id})`);
       
       // Create match data for forfeit winner (1st place)
-      const winnerMatchData = await this.createTournamentForfeitMatchData(room, roomId, forfeitWinner, forfeitLoser, reason, context);
+      const winnerMatchData = await this.createTournamentForfeitMatchData(room, roomId, forfeitWinner, forfeitLoser, reason, context, null, null);
       
       // Create match data for waiting loser (3rd place)
       const thirdPlaceMatchData = await this.createTournamentThirdPlaceMatchData(room, roomId, waitingLoser, reason, context);
@@ -458,12 +495,27 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     }
     
     try {
+      // Get waiting room data to check for disconnections
+      const waitingRoomId = matchData.waitingRoomId;
+      let isDisrupted = false;
+      
+      if (waitingRoomId) {
+        try {
+          const { tournamentManager } = await import('../TournamentManager.js');
+          const waitingRoomData = tournamentManager.waitingRooms.get(waitingRoomId);
+          isDisrupted = waitingRoomData ? waitingRoomData.hasDisconnections : false;
+        } catch (error) {
+          console.error(`🏆 Error getting tournament disruption status:`, error);
+        }
+      }
+      
       const message = {
         type: 'tournamentAdvancement',
         status: 'final_match_complete',
         playerPlacement: tournamentPhase === 'winner_final' ? 1 : 3,
         isWinner: tournamentPhase === 'winner_final',
         opponentName: 'Tournament',
+        isDisrupted: isDisrupted, // ⭐ FIX: Include disruption status for proper splash screen styling
         message: tournamentPhase === 'winner_final' 
           ? '🏆 Tournament complete! You are the CHAMPION! 🥇'
           : '🏆 Tournament complete! You finished 3rd place!',
@@ -481,7 +533,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   /**
    * Create match data for tournament forfeit scenarios
    */
-  async createTournamentForfeitMatchData(room, roomId, winner, loser, reason, context) {
+  async createTournamentForfeitMatchData(room, roomId, winner, loser, reason, context, winnerScore = null, loserScore = null) {
     // Get tournament waiting room data for accurate player counts
     const waitingRoomId = room.metadata?.waitingRoomId;
     let numberOfDisconnectedPlayers = 0;
@@ -535,28 +587,70 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     }
     const matchStartTime = room.startTime || matchEndTime;
     
+    // ⭐ FIX: Use tournament start timestamp for tournament matches instead of real end time
+    let endTimestamp;
+    if (waitingRoomId) {
+      try {
+        const { blockchainService } = await import('../../services/blockchainService.js');
+        const tournamentStartTime = blockchainService.getTournamentStartTime(waitingRoomId);
+        endTimestamp = tournamentStartTime || Math.floor(Date.now() / 1000);
+        console.log(`🏆 Using tournament start timestamp ${endTimestamp} for forfeit match in room ${roomId}`);
+      } catch (error) {
+        console.error(`🏆 Error getting tournament start time, using current time:`, error);
+        endTimestamp = Math.floor(Date.now() / 1000);
+      }
+    } else {
+      endTimestamp = Math.floor(Date.now() / 1000);
+    }
+    
+    // ⭐ FIX: Use provided scores or calculate correct scores based on player positions
+    let finalWinnerScore = winnerScore;
+    let finalLoserScore = loserScore;
+    
+    if (finalWinnerScore === null || finalLoserScore === null) {
+      // Calculate scores based on which player is which
+      if (room.ball) {
+        const isWinnerPlayer1 = winner.id === room.players[0].id;
+        const isLoserPlayer1 = loser.id === room.players[0].id;
+        
+        finalWinnerScore = finalWinnerScore ?? GAME_CONFIG.WINNING_SCORE; // Winner always gets full score
+        finalLoserScore = finalLoserScore ?? ((isLoserPlayer1 ? room.ball.player1.playerScore : room.ball.player2.playerScore) || 0);
+      } else {
+        finalWinnerScore = finalWinnerScore ?? GAME_CONFIG.WINNING_SCORE;
+        finalLoserScore = finalLoserScore ?? 0;
+      }
+    }
+    
+    // Generate simple match ID for internal tracking
+    const matchId = Math.floor(Date.now() / 1000) % 1000000;
+    console.log(`🎯 Generated simple match ID ${matchId} for tournament forfeit in room ${roomId}`);
+    
     return {
       roomId,
+      matchId, // Add the generated match ID
       matchType: this.matchType,
       tournamentPhase: (isSinglePlayerForfeitSemi  ? 'winner_final' : room.metadata?.tournamentPhase),
       tournamentRoomType: (isSinglePlayerForfeitSemi ? 'winner_final' : room.metadata?.tournamentPhase),
       waitingRoomId: room.metadata?.waitingRoomId,
       matchStartTime,
       matchEndTime,
+      endTimestamp, // Add actual end timestamp as integer for blockchain
       matchDuration: TimeUtils.calculateMatchDuration(matchStartTime, matchEndTime),
       winner: {
         id: winner.id,
+        userId: winner.userId, // Include real user ID for blockchain operations
         username: winner.username || 'Anonymous',
-        score: GAME_CONFIG.WINNING_SCORE // Award full score for forfeit win
+        score: finalWinnerScore
       },
       loser: {
         id: loser.id,
+        userId: loser.userId, // Include real user ID for blockchain operations
         username: loser.username || 'Anonymous',
-        score: room.ball?.player2?.playerScore || 0
+        score: finalLoserScore
       },
       gameStats: {
         totalRebounds: room.ball?.rebounds || 0,
-        finalScore: `${GAME_CONFIG.WINNING_SCORE}-${room.ball?.player2?.playerScore || 0}`,
+        finalScore: `${finalWinnerScore}-${finalLoserScore}`,
         ballSpeed: room.ball?.speed || 0,
         lastHitBy: room.ball?.wasHitByPlayer || null,
         forfeitReason: this.getTournamentForfeitReasonText(reason, context, room.metadata?.roomType),
@@ -576,29 +670,53 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   async createTournamentThirdPlaceMatchData(room, roomId, waitingLoser, reason, context) {
     const matchEndTime = TimeUtils.getCurrentTimestamp();
     const matchStartTime = room.startTime || matchEndTime;
+    // ⭐ FIX: Use tournament start timestamp for tournament matches instead of real end time
+    let endTimestamp;
+    const waitingRoomId = room.metadata?.waitingRoomId;
+    if (waitingRoomId) {
+      try {
+        const { blockchainService } = await import('../../services/blockchainService.js');
+        const tournamentStartTime = blockchainService.getTournamentStartTime(waitingRoomId);
+        endTimestamp = tournamentStartTime || Math.floor(Date.now() / 1000);
+        console.log(`🏆 Using tournament start timestamp ${endTimestamp} for third place match in room ${roomId}`);
+      } catch (error) {
+        console.error(`🏆 Error getting tournament start time, using current time:`, error);
+        endTimestamp = Math.floor(Date.now() / 1000);
+      }
+    } else {
+      endTimestamp = Math.floor(Date.now() / 1000);
+    }
+    
+    // Generate simple match ID for internal tracking
+    const matchId = Math.floor(Date.now() / 1000) % 1000000;
+    console.log(`🎯 Generated simple match ID ${matchId} for tournament third place in room ${roomId}`);
     
     return {
       roomId,
+      matchId, // Add the generated match ID
       matchType: this.matchType,
       tournamentPhase: 'loser_final',
       tournamentRoomType: 'loser_final',
       waitingRoomId: room.metadata?.waitingRoomId,
       matchStartTime,
       matchEndTime,
+      endTimestamp, // Add actual end timestamp as integer for blockchain
       matchDuration: TimeUtils.calculateMatchDuration(matchStartTime, matchEndTime),
       winner: {
         id: waitingLoser.id,
+        userId: waitingLoser.userId, // Include real user ID for blockchain operations
         username: waitingLoser.username || 'Anonymous',
-        score: 0 // 3rd place gets 0 score
+        score: 1 // 3rd place gets 1 point instead of 0
       },
       loser: {
         id: waitingLoser.id,
+        userId: waitingLoser.userId, // Include real user ID for blockchain operations
         username: waitingLoser.username || 'Anonymous',
-        score: 0 // 3rd place gets 0 score
+        score: 1 // 3rd place gets 1 point instead of 0
       },
       gameStats: {
         totalRebounds: 0,
-        finalScore: '0-0',
+        finalScore: '1-1',
         ballSpeed: 0,
         lastHitBy: null,
         forfeitReason: this.getTournamentForfeitReasonText(reason, context, 'loser_final'),
@@ -739,6 +857,9 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       // Update disconnected players array
       if (disconnected && !waitingRoomData.disconnectedPlayers.includes(playerId)) {
         waitingRoomData.disconnectedPlayers.push(playerId);
+        // ⭐ NEW: Set tournament-wide disconnection flag
+        waitingRoomData.hasDisconnections = true;
+        console.log(`🏆 Tournament ${waitingRoomId} marked as disrupted due to player ${playerId} disconnection`);
       } else if (!disconnected) {
         waitingRoomData.disconnectedPlayers = waitingRoomData.disconnectedPlayers.filter(id => id !== playerId);
       }
@@ -755,10 +876,15 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
    */
   async reportTournamentForfeitResults(matchData) {
     try {
-      console.log(`🏆 Reporting tournament forfeit results for room ${matchData.roomId}`);
-      await reportMatchResultsToAPI(matchData);
+      console.log(`🏆 Collecting tournament forfeit match for room ${matchData.roomId}`);
+      // Collect match data for tournament reporting (NEW: collect instead of report individually)
+      const tournamentId = matchData.waitingRoomId;
+      
+      // Add match to tournament collection
+      const { tournamentManager } = await import('../TournamentManager.js');
+      await tournamentManager.addTournamentMatch(tournamentId, matchData);
     } catch (error) {
-      console.error('🏆 Failed to report tournament forfeit results:', error);
+      console.error('🏆 Failed to collect tournament forfeit match:', error);
     }
   }
 
@@ -981,6 +1107,38 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     }
     
     console.log(`🏆 Immediate ball disposal completed for room ${roomId}`);
+  }
+
+  /**
+   * ⭐ NEW: Check if disconnection reason indicates legitimate tournament closure
+   */
+  _isLegitimateTournamentClosure(reason) {
+    // Check for legitimate tournament closure reasons
+    const legitimateReasons = [
+      'Tournament completed',
+      'Tournament completed - 1st place',
+      'Tournament completed - 2nd place', 
+      'Tournament completed - 3rd place',
+      'Tournament completed - 4th place',
+      'Tournament placement determined',
+      'Tournament placement determined - 1st place',
+      'Tournament placement determined - 2nd place',
+      'Tournament placement determined - 3rd place',
+      'Tournament placement determined - 4th place',
+      'Tournament cleanup'
+    ];
+    
+    // Check if the reason indicates legitimate tournament completion
+    if (reason && legitimateReasons.some(legitReason => reason.includes(legitReason))) {
+      return true;
+    }
+    
+    // Also check for tournament-related reasons
+    if (reason && reason.toLowerCase().includes('tournament')) {
+      return true;
+    }
+    
+    return false;
   }
 }
 
