@@ -102,13 +102,16 @@ export default class AuthService {
   public async registerWithWallet(username: string): Promise<void> {
     try {
       const wallet = await this._getWalletAddress();
-      if (!wallet) throw new Error("No wallet detected");
+      if (!wallet)
+        throw new Error(
+          "No wallet account found. Please connect an account in your wallet extension."
+        );
 
       const { challenge, timestamp } = await this._usersApi.getWalletChallenge(
         wallet
       );
       if (!challenge || !timestamp)
-        throw new Error("Invalid challenge response");
+        throw new Error("Failed to get a login challenge from the server.");
 
       const signature = await this._signMessage(challenge, wallet);
 
@@ -136,7 +139,10 @@ export default class AuthService {
 
   private async _getWalletAddress(): Promise<string | null> {
     const ethereum = (window as any).ethereum;
-    if (!ethereum) throw new Error("MetaMask not detected");
+    if (!ethereum)
+      throw new Error(
+        "No wallet extension detected. Please install a wallet extension."
+      );
 
     const accounts: string[] = await ethereum.request({
       method: "eth_requestAccounts",
@@ -149,25 +155,42 @@ export default class AuthService {
     address: string
   ): Promise<string> {
     const ethereum = (window as any).ethereum;
-    if (!ethereum) throw new Error("Ethereum provider not available");
+    if (!ethereum)
+      throw new Error(
+        "No wallet extension is available. Please ensure it's installed and enabled."
+      );
 
-    const signature: string = await ethereum.request({
-      method: "personal_sign",
-      params: [message, address],
-    });
-    return signature;
+    try {
+      const signature: string = await ethereum.request({
+        method: "personal_sign",
+        params: [message, address],
+      });
+      return signature;
+    } catch (err: any) {
+      if (err.code === 4001) {
+        // EIP-1193 user rejection error
+        throw new Error("You rejected the signature request in your wallet.");
+      }
+      console.error("Error signing message:", err);
+      throw new Error(
+        "An unexpected error occurred while signing the message."
+      );
+    }
   }
 
   public async loginWithWallet(): Promise<void> {
     try {
       const wallet = await this._getWalletAddress();
-      if (!wallet) throw new Error("No wallet detected");
+      if (!wallet)
+        throw new Error(
+          "No wallet account found. Please connect an account in your wallet extension."
+        );
 
       const { challenge, timestamp } = await this._usersApi.getWalletChallenge(
         wallet
       );
       if (!challenge || !timestamp)
-        throw new Error("Invalid challenge response");
+        throw new Error("Failed to get a login challenge from the server.");
 
       const signature = await this._signMessage(challenge, wallet);
 
