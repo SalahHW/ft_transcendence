@@ -11,7 +11,9 @@ export const createUser = async ({
   authenticationMethod,
 }) => {
   createUsername(username);
-  createEmail(email);
+  if (authenticationMethod === "credentials") {
+    createEmail(email);
+  }
   const createUserQuery = `
     INSERT INTO users (username, authenticationMethod, wallet)
     VALUES (?, ?, ?);

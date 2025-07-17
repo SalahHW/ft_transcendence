@@ -7,7 +7,6 @@ export function createEmail(rawEmail) {
   }
   const email = rawEmail.trim();
 
-  // Simplified RFC 5322 standard
   if (!email || !validator.isEmail(email)) {
     throw new Error("Invalid email address");
   }
