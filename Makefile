@@ -1,6 +1,3 @@
-DOCKERFILES = ./nginx/Dockerfile					\
-			  			./users-service/Dockerfile
-
 start: images
 	@docker compose -f ./docker-compose.yml up -d
 
