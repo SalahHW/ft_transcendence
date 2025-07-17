@@ -44,7 +44,7 @@ export class UserProfileView {
 					</div>
 					<div class="flex flex-col gap-2 p-4 w-12">
 						<button id="edit-profile-btn" class="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center text-white transition-colors duration-200">
-							✏️
+							<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M7 7H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-1"/><path d="M20.385 6.585a2.1 2.1 0 0 0-2.97-2.97L9 12v3h3zM16 5l3 3"/></g></svg>
 						</button>
 					</div>
 					<div class="flex-[1] rounded-lg p-4 aspect-square flex">
@@ -167,7 +167,7 @@ export class UserProfileView {
 				avatarOverlay.addEventListener('click', handleAvatarClick);
 				avatarUploadInput.addEventListener('change', handleFileSelect);
 
-				editButton.innerHTML = '✔️';
+				editButton.innerHTML = '<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="m14.83 4.89l1.34.94l-5.81 8.38H9.02L5.78 9.67l1.34-1.25l2.57 2.4z"/></svg>';
 
 				let isFinishing = false;
 				const finishEditing = async (save: boolean) => {
@@ -243,7 +243,7 @@ export class UserProfileView {
 						avatarImg.src = `${newAvatarUrl}?t=${new Date().getTime()}`;
 					}
 
-					editButton.innerHTML = '✏️';
+					editButton.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M7 7H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-1"/><path d="M20.385 6.585a2.1 2.1 0 0 0-2.97-2.97L9 12v3h3zM16 5l3 3"/></g></svg>';
 					editButton.removeEventListener('click', saveHandler);
 					document.removeEventListener('keydown', keydownHandler);
 					setupEditListener();
