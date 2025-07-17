@@ -1,7 +1,9 @@
+
+
 start: images
 	@docker compose -f ./docker-compose.yml up -d
 
-images: $(DOCKERFILES)
+images:
 	@COMPOSE_BAKE=true docker compose -f ./docker-compose.yml build
 	@touch .images
 
