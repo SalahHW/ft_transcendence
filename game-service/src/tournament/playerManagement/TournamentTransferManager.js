@@ -559,6 +559,7 @@ export class TournamentTransferManager {
           playerPlacement: 3,
           isWinner: false,
           opponentName: 'Tournament',
+          isDisrupted: waitingRoomData.hasDisconnections, // ⭐ FIX: Include disruption status for proper splash screen styling
           message: '🏆 Tournament complete! You finished 3rd place!'
         }));
 
@@ -618,6 +619,7 @@ export class TournamentTransferManager {
           playerPlacement: 1,
           isWinner: true,
           opponentName: 'Tournament',
+          isDisrupted: waitingRoomData.hasDisconnections, // ⭐ FIX: Include disruption status for proper splash screen styling
           message: '🏆 Tournament complete! You are the CHAMPION! 🥇',
           showSplashScreen: true
         }));

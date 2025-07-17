@@ -474,4 +474,13 @@ contract MasterContract is Ownable {
 
         return result;
     }
+
+    /**
+     * @dev Get PongToken balance of a player
+     * @param player: address of the player
+     * @return uint256: token balance
+     */
+    function getPongTokenBalance(address player) public view returns (uint256) {
+        return pongToken.balanceOf(player);
+    }
 }

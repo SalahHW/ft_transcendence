@@ -202,6 +202,7 @@ export class TournamentMatchManager {
           playerPlacement: 1,
           isWinner: true,
           opponentName: loser.username,
+          isDisrupted: waitingRoomData.hasDisconnections, // ⭐ FIX: Include disruption status for proper splash screen styling
           message: winnerMessage,
           isForfeitWinner: isForfeitWinner
         }));
@@ -226,6 +227,7 @@ export class TournamentMatchManager {
           playerPlacement: 2,
           isWinner: false,
           opponentName: winner.username,
+          isDisrupted: waitingRoomData.hasDisconnections, // ⭐ FIX: Include disruption status for proper splash screen styling
           message: loserMessage,
           isForfeitWinner: isForfeitWinner
         }));
@@ -582,6 +584,12 @@ export class TournamentMatchManager {
     const waitingRoomData = this.tournamentManager.waitingRooms.get(waitingRoomId);
     if (!waitingRoomData) {
       console.error('🏆 No waiting room data found for tournament reporting');
+      return;
+    }
+
+    // ⭐ NEW: Skip blockchain reporting if tournament has disconnections
+    if (waitingRoomData.hasDisconnections) {
+      console.log(`🏆 Skipping blockchain reporting for tournament ${waitingRoomId} due to disconnections`);
       return;
     }
 
