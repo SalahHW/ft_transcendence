@@ -23,17 +23,37 @@ module.exports = async (fastify, opts) => {
 
       try {
         const match = await contract.getMatchesByMatchId(request.params.id);
-        reply.send(bigIntToString({ success: true, match }));
+
+        reply.send(
+          bigIntToString({
+            success: true,
+            match: [match].map(
+              ([
+                player1,
+                player2,
+                player1Score,
+                player2Score,
+                winner,
+                endTimestamp,
+              ]) => ({
+                player1,
+                player2,
+                player1Score,
+                player2Score,
+                winner,
+                endTimestamp,
+              })
+            )[0],
+          })
+        );
       } catch (error) {
         request.log.error(error);
         const { code, error: message, details } = parseContractError(error);
-        reply
-          .status(code)
-          .send({
-            success: false,
-            error: message,
-            ...(details && { details }),
-          });
+        reply.status(code).send({
+          success: false,
+          error: message,
+          ...(details && { details }),
+        });
       }
     }
   );
