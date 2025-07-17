@@ -28,7 +28,19 @@ module.exports = async (fastify) => {
 
       try {
         const tournaments = await contract.getTournamentsByPlayer(address);
-        reply.send(bigIntToString({ success: true, tournaments }));
+        reply.send(
+          bigIntToString({
+            success: true,
+            tournaments: tournaments.map(
+              ([endTimestamp, matchIds, tournamentId, winnerAddress]) => ({
+                endTimestamp,
+                matchIds,
+                tournamentId,
+                winnerAddress,
+              })
+            ),
+          })
+        );
       } catch (error) {
         request.log.error(error);
         const { code, error: message, details } = parseContractError(error);
