@@ -1,7 +1,5 @@
 import { database } from "./database.js";
 import { translateSqliteError } from "./errors/translateSqliteError.js";
-import { createUsername } from "../controllers/usernameControllers.js";
-import { createEmail } from "../controllers/emailControllers.js";
 
 export const createUser = async ({
   username,
@@ -10,8 +8,6 @@ export const createUser = async ({
   wallet,
   authenticationMethod,
 }) => {
-  createUsername(username);
-  createEmail(email);
   const createUserQuery = `
     INSERT INTO users (username, authenticationMethod, wallet)
     VALUES (?, ?, ?);
