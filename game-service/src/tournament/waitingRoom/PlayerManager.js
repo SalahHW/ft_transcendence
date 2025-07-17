@@ -83,7 +83,8 @@ export class TournamentPlayerManager {
         playerStatus: new Map(), // Track player connection status
         tournamentRooms: tournamentRooms,
         createdAt: Date.now(),
-        phase: TournamentPhases.WAITING
+        phase: TournamentPhases.WAITING,
+        hasDisconnections: false // Track if any player disconnected during tournament
       });
       
       console.log(`🏆 Created new tournament waiting room: ${waitingRoom.id}`);

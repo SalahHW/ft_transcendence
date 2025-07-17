@@ -3,25 +3,44 @@ import Router from "../../../router/Router.js";
 export default class FirstPlacePage {
     private container: HTMLElement;
     private countdownTimer: number | null = null;
+    private isDisrupted: boolean;
 
-    constructor(containerId: string) {
+    constructor(containerId: string, isDisrupted: boolean = false) {
         this.container = document.getElementById(containerId) as HTMLElement;
         if (!this.container) {
             throw new Error(`Container ${containerId} not found`);
         }
+        this.isDisrupted = isDisrupted;
     }
 
     render(): void {
+        const backgroundClass = this.isDisrupted 
+            ? 'bg-gradient-to-br from-gray-600 via-gray-700 to-gray-800' 
+            : 'bg-gradient-to-br from-yellow-900 via-yellow-800 to-yellow-700';
+            
+        const subtitle = this.isDisrupted
+            ? 'You finished 1st place (TOURNAMENT INVALIDATED. NO SCORE RECORDED)'
+            : 'You are the ultimate champion!';
+        
         this.container.innerHTML = /* HTML */ `
-            <div class="fixed inset-0 bg-gradient-to-br from-yellow-900 via-yellow-800 to-yellow-700 flex items-center justify-center z-50">
+            <div class="fixed inset-0 ${backgroundClass} flex items-center justify-center z-50">
                 <div class="text-center text-white animate-pulse">
                     <!-- Victory Icon -->
                     <div class="mb-8">
                         <div class="text-8xl mb-4">🥇</div>
                         <div class="text-6xl font-bold text-yellow-300 mb-2">CHAMPION!</div>
                         <div class="text-3xl text-yellow-200 mb-4">🏆 TOURNAMENT WINNER 🏆</div>
-                        <div class="text-2xl text-yellow-100">You are the ultimate champion!</div>
+                        <div class="text-2xl text-yellow-100">${subtitle}</div>
                     </div>
+                    
+                    <!-- Disruption Notice -->
+                    ${this.isDisrupted ? `
+                    <div class="mt-4 mb-6">
+                        <div class="text-lg text-gray-300 bg-gray-800 bg-opacity-50 px-4 py-2 rounded-lg">
+                            ⚠️ Tournament invalidated due to player disconnections
+                        </div>
+                    </div>
+                    ` : ''}
                     
                     <!-- Countdown -->
                     <div class="mt-8">

@@ -495,12 +495,27 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     }
     
     try {
+      // Get waiting room data to check for disconnections
+      const waitingRoomId = matchData.waitingRoomId;
+      let isDisrupted = false;
+      
+      if (waitingRoomId) {
+        try {
+          const { tournamentManager } = await import('../TournamentManager.js');
+          const waitingRoomData = tournamentManager.waitingRooms.get(waitingRoomId);
+          isDisrupted = waitingRoomData ? waitingRoomData.hasDisconnections : false;
+        } catch (error) {
+          console.error(`🏆 Error getting tournament disruption status:`, error);
+        }
+      }
+      
       const message = {
         type: 'tournamentAdvancement',
         status: 'final_match_complete',
         playerPlacement: tournamentPhase === 'winner_final' ? 1 : 3,
         isWinner: tournamentPhase === 'winner_final',
         opponentName: 'Tournament',
+        isDisrupted: isDisrupted, // ⭐ FIX: Include disruption status for proper splash screen styling
         message: tournamentPhase === 'winner_final' 
           ? '🏆 Tournament complete! You are the CHAMPION! 🥇'
           : '🏆 Tournament complete! You finished 3rd place!',
@@ -842,6 +857,9 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       // Update disconnected players array
       if (disconnected && !waitingRoomData.disconnectedPlayers.includes(playerId)) {
         waitingRoomData.disconnectedPlayers.push(playerId);
+        // ⭐ NEW: Set tournament-wide disconnection flag
+        waitingRoomData.hasDisconnections = true;
+        console.log(`🏆 Tournament ${waitingRoomId} marked as disrupted due to player ${playerId} disconnection`);
       } else if (!disconnected) {
         waitingRoomData.disconnectedPlayers = waitingRoomData.disconnectedPlayers.filter(id => id !== playerId);
       }
