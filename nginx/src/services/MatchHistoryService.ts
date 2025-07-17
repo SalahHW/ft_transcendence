@@ -110,14 +110,18 @@ export default class MatchHistoryService implements CacheableService {
 					})
 				);
 
-				const { userPlacement, isWin } = this.calculateUserPlacement(matches, walletAddress);
+				const { userPlacement } = this.calculateUserPlacement(
+					matches,
+					Array.from(playerWallets),
+					walletAddress
+				);
 
 				return {
 					id: tournament.tournamentId!,
 					endTimestamp: tournament.endTimestamp!,
 					players,
 					userPlacement,
-					isWin
+					isWin: tournament.winner === walletAddress,
 				};
 			})
 		);
@@ -126,28 +130,40 @@ export default class MatchHistoryService implements CacheableService {
 		return enrichedTournaments;
     }
 
-	private calculateUserPlacement(matches: Match[], userWallet: string): { userPlacement: number, isWin: boolean } {
-		const wins = matches.filter(m => m.winner === userWallet).length;
-        // TODO: Need to determine how to get the placement in the tournament when we get the api response format
-		// This is a simplified placement logic.
-		// A real implementation would need to understand the tournament bracket structure (e.g., final, semi-finals).
-		// For now, we'll base it on number of wins.
-		if (wins === 2) return { userPlacement: 1, isWin: true }; // Assuming 2 wins means 1st place in a 4-person tournament
-		if (wins === 1) return { userPlacement: 2, isWin: false }; // Assuming 1 win means 2nd place
+	private calculateUserPlacement(matches: Match[], players: string[], userWallet: string): { userPlacement: number } {
+		const winCounts: Map<string, number> = new Map();
+		players.forEach(p => winCounts.set(p, 0));
 
-		// For 0 wins, we need to differentiate 3rd and 4th.
-		// This requires more detail about the matches, like who they lost to.
-		// For now, let's simplify. We can't distinguish 3rd and 4th with this logic.
-		const losses = matches.filter(m => (m.player1 === userWallet || m.player2 === userWallet) && m.winner !== userWallet);
-		if (losses.length > 0) {
-			const opponentInLoss = losses[0].player1 === userWallet ? losses[0].player2 : losses[0].player1;
-			const opponentWins = matches.filter(m => m.winner === opponentInLoss).length;
-			if (opponentWins > 1) { // Lost to the winner or finalist
-				return { userPlacement: 3, isWin: false };
+		matches.forEach(match => {
+			if (match.winner) {
+				winCounts.set(match.winner, (winCounts.get(match.winner) ?? 0) + 1);
+			}
+		});
+
+		const tournamentWinner = [...winCounts.entries()].find(([, wins]) => wins === 2)?.[0];
+		const userWins = winCounts.get(userWallet) ?? 0;
+
+		if (userWins === 2 || tournamentWinner === userWallet) {
+			return { userPlacement: 1 };
+		}
+
+		if (userWins === 0) {
+			return { userPlacement: 4 };
+		}
+
+		if (userWins === 1) {
+			const userLostMatch = matches.find(m =>
+				(m.player1 === userWallet || m.player2 === userWallet) && m.winner !== userWallet
+			);
+
+			if (userLostMatch?.winner === tournamentWinner) {
+				return { userPlacement: 2 };
+			} else {
+				return { userPlacement: 3 };
 			}
 		}
 
-		return { userPlacement: 4, isWin: false };
+		return { userPlacement: 4 };
 	}
 
 

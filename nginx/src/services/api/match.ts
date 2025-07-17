@@ -32,15 +32,15 @@ export interface Match {
 	endTimestamp?: number;
 }
 
-const mapTournamentArrayToTournamentObject = (tournament: any[]): Tournament => {
-    if (!tournament || !Array.isArray(tournament)) {
+const mapRawTournamentObjectToTournamentObject = (tournament: any): Tournament => {
+    if (!tournament || typeof tournament !== 'object' || Array.isArray(tournament)) {
         return tournament as Tournament;
     }
     return {
-        endTimestamp: parseInt(tournament[0], 10),
-        matchIds: tournament[1].map((id: string) => parseInt(id, 10)),
-        tournamentId: parseInt(tournament[2], 10),
-        winner: tournament[3],
+        endTimestamp: parseInt(tournament.endTimestamp, 10),
+        matchIds: tournament.matchIds.map((id: string) => parseInt(id, 10)),
+        tournamentId: parseInt(tournament.tournamentId, 10),
+        winner: tournament.winnerAddress,
     };
 };
 
@@ -100,7 +100,6 @@ export default class MatchServiceAPI {
 	 * @param address - The player's address
 	 * @returns A promise that resolves to an array of tournaments
 	 */
-	 // ! Not implemented in the blockchain-service
 	async getTournamentsByPlayer(address: string): Promise<Tournament[]> {
 		const response = await fetch(`${this._baseUrl}/tournament/player/${address}`, {
 			method: "GET"
@@ -116,7 +115,7 @@ export default class MatchServiceAPI {
 		const data = await response.json();
 		if (response.ok && data.success) {
 			console.log(`Successfully fetched tournaments for player ${address}.`);
-			return data.tournaments.map(mapTournamentArrayToTournamentObject);
+			return data.tournaments.map(mapRawTournamentObjectToTournamentObject);
 		}
 		if (response.ok && !data.success) {
 			console.log(`No tournaments found for player ${address}.`);
@@ -279,7 +278,7 @@ export default class MatchServiceAPI {
 		const data = await response.json();
 		if (response.ok && data.success) {
 			console.log(`Successfully fetched tournaments for winner ${address}.`);
-			return data.tournaments.map(mapTournamentArrayToTournamentObject);
+			return data.tournaments.map(mapRawTournamentObjectToTournamentObject);
 		}
 		if (response.ok && !data.success) {
 			console.log(`No tournaments found for winner ${address}.`);
