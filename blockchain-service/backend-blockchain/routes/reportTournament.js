@@ -1,4 +1,5 @@
 const parseContractError = require("../utils/parseContractError");
+const retryUntilSuccess = require("../utils/retryUntilSuccess");
 
 module.exports = async (fastify, opts) => {
   const contract = fastify.masterContract;
@@ -70,13 +71,12 @@ module.exports = async (fastify, opts) => {
           winner: match.winner,
         }));
 
-        const tx = await contract.reportTournament(
-          endTimestamp,
-          winner,
-          matchStructs
+        const { tx } = await retryUntilSuccess(
+          () => contract.reportTournament(endTimestamp, winner, matchStructs),
+          10,
+          3000,
+          parseContractError
         );
-
-        await tx.wait();
 
         reply.send({ success: true, transactionHash: tx.hash });
       } catch (error) {

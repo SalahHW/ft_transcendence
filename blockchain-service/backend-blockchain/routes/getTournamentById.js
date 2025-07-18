@@ -1,7 +1,7 @@
 const parseContractError = require("../utils/parseContractError");
 const bigIntToString = require("../utils/bigIntToString");
 
-module.exports = async (fastify, opts) => {
+module.exports = async (fastify) => {
   const contract = fastify.masterContract;
 
   fastify.get(
@@ -18,22 +18,36 @@ module.exports = async (fastify, opts) => {
       },
     },
     async (request, reply) => {
-      if (!contract)
+      if (!contract) {
         return reply.status(503).send({ error: "Contract not initialized" });
+      }
+
+      const { id } = request.params;
 
       try {
-        const tournament = await contract.getTournamentById(request.params.id);
-        reply.send(bigIntToString({ success: true, tournament }));
+        const [endTimestamp, matchIds, tournamentId, winnerAddress] =
+          await contract.getTournamentById(id);
+
+        reply.send(
+          bigIntToString({
+            success: true,
+            tournament: {
+              endTimestamp,
+              matchIds,
+              tournamentId,
+              winnerAddress,
+            },
+          })
+        );
       } catch (error) {
         request.log.error(error);
         const { code, error: message, details } = parseContractError(error);
-        reply
-          .status(code)
-          .send({
-            success: false,
-            error: message,
-            ...(details && { details }),
-          });
+
+        reply.status(code).send({
+          success: false,
+          error: message,
+          ...(details && { details }),
+        });
       }
     }
   );
