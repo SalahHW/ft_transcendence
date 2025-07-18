@@ -49,6 +49,9 @@ module.exports = function parseContractError(error) {
   if (reason.includes("One or more matchIds do not exist")) {
     return { code: 422, error: "One or more provided match IDs do not exist." };
   }
+  if (reason.includes("Player already exists")) {
+    return { code: 409, error: "Player already exists." };
+  }
 
   return { code: 500, error: "Internal server error.", details: reason };
 };
