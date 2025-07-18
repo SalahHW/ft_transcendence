@@ -32,6 +32,7 @@ module.exports = async (fastify) => {
             player2,
             player1Score,
             player2Score,
+            matchId,
             winner,
             endTimestamp,
           ]) => ({
@@ -39,6 +40,7 @@ module.exports = async (fastify) => {
             player2,
             player1Score,
             player2Score,
+            matchId,
             winner,
             endTimestamp,
           })
