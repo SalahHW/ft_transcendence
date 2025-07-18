@@ -35,6 +35,7 @@ export default class Router {
         }
         this.cache.show();
       },
+      isModal: true,
     },
     {
       path: "/credential-login",
@@ -68,6 +69,7 @@ export default class Router {
         this.cache.show();
         this.cache.render();
       },
+      isModal: true,
     },
     {
       path: "/1v1",
