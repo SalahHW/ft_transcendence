@@ -130,7 +130,6 @@ export class UserProfileView {
 					if (objectUrlToRevoke) URL.revokeObjectURL(objectUrlToRevoke);
 					objectUrlToRevoke = URL.createObjectURL(file);
 					avatarImg.src = objectUrlToRevoke;
-					isDefaultAvatar = false;
 					updateAvatarOverlay();
 				}
 			};
@@ -215,6 +214,7 @@ export class UserProfileView {
 						if (avatarChanged && newAvatarFile) {
 							try {
 								await this._avatarService.uploadOrUpdateCurrentUserAvatar(newAvatarFile);
+								isDefaultAvatar = false;
 								NotificationService.show("Avatar updated successfully!", "success");
 							} catch (error) {
 								console.error("Error updating avatar:", error);
