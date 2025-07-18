@@ -18,34 +18,17 @@ module.exports = async (fastify, opts) => {
       },
     },
     async (request, reply) => {
-      if (!contract)
+      if (!contract) {
         return reply.status(503).send({ error: "Contract not initialized" });
+      }
 
       try {
         const match = await contract.getMatchesByMatchId(request.params.id);
 
-        reply.send(
-          bigIntToString({
-            success: true,
-            match: [match].map(
-              ([
-                player1,
-                player2,
-                player1Score,
-                player2Score,
-                winner,
-                endTimestamp,
-              ]) => ({
-                player1,
-                player2,
-                player1Score,
-                player2Score,
-                winner,
-                endTimestamp,
-              })
-            )[0],
-          })
-        );
+        reply.send({
+          success: true,
+          match: bigIntToString(match),
+        });
       } catch (error) {
         request.log.error(error);
         const { code, error: message, details } = parseContractError(error);
