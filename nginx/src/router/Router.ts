@@ -5,6 +5,7 @@ interface Route {
   path: string;
   cache?: any;
   handler: () => void | Promise<void>;
+  isModal?: boolean;
 }
 
 export default class Router {
@@ -44,6 +45,7 @@ export default class Router {
         }
         this.cache.show();
       },
+      isModal: true,
     },
     {
       path: "/credential-register",
@@ -54,6 +56,7 @@ export default class Router {
         }
         this.cache.show();
       },
+      isModal: true,
     },
     {
       path: "/profile",
@@ -91,6 +94,7 @@ export default class Router {
         }
         this.cache.show();
       },
+      isModal: true,
     },
   ];
 
@@ -198,7 +202,8 @@ export default class Router {
     (window as any).navigationInProgress = true;
 
     try {
-      if (this._isValidRoute(path)) {
+      const newRoute = this._routes.find(route => route.path === path);
+      if (newRoute) {
         const previousPath = this._currentPath;
 
         if (replaceState) window.history.replaceState({ path }, "", path);
@@ -206,7 +211,7 @@ export default class Router {
 
         this._currentPath = path;
 
-        if (path !== previousPath) {
+        if (path !== previousPath && !newRoute.isModal) {
           this._cleanupCurrentRoute(previousPath);
         }
         this._executeHandler(path);
@@ -242,8 +247,11 @@ export default class Router {
       const previousPath = this._currentPath;
       const newPath = this.getCurrentPath();
       this._currentPath = newPath;
+      const newRoute = this._routes.find(route => route.path === newPath);
 
-      this._cleanupCurrentRoute(previousPath);
+      if (!newRoute?.isModal) {
+        this._cleanupCurrentRoute(previousPath);
+      }
 
       if (!this._executeHandler(newPath)) {
         if (newPath !== "/") {

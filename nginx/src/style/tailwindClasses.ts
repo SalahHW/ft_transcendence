@@ -76,6 +76,9 @@ export const UI_THEME = {
 			addFriendInput: `flex-1 bg-black/20 border border-white/20 rounded-lg focus:outline-none focus:bg-black/30 transition-all duration-200 p-2 text-white placeholder-gray-400`,
 			addFriendButton: `w-16 h-8 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center text-white transition-colors duration-200`,
 			addFriendButtonCollapsed: `w-16 h-8 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center text-white transition-colors duration-200`
+		},
+		text: {
+			font: `Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"`,
 		}
 	},
 
