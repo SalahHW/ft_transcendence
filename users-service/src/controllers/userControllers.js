@@ -27,18 +27,14 @@ export async function createUser(request, reply) {
         return reply.code(409).send({ error: "Email already exists" });
     }
 
-    const hashedPassword =
-      authenticationMethod === "credentials"
-        ? await createPassword(password)
-        : null;
-
-    const finalEmail =
-      authenticationMethod === "credentials" ? createEmail(email) : null;
+    let hashedPassword;
+    let finalEmail;
+    let user;
 
     if (authenticationMethod === "credentials") {
-      createEmail(finalEmail);
-      createPassword(hashedPassword);
-      const user = await userModels.createUser({
+      hashedPassword = await createPassword(password);
+      finalEmail = await createEmail(email);
+      user = await userModels.createUser({
         username,
         email: finalEmail,
         password: hashedPassword,
@@ -46,7 +42,7 @@ export async function createUser(request, reply) {
         wallet,
       });
     } else if (authenticationMethod === "wallet") {
-      const user = await userModels.createUser({
+      user = await userModels.createUser({
         username,
         email: null,
         password: null,
