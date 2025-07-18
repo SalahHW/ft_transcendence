@@ -34,10 +34,10 @@ contract MasterContract is Ownable {
     struct Match {
         address player1;
         address player2;
-        address winner;
         uint8 player1Score;
         uint8 player2Score;
         uint16 matchId;
+        address winner;
         uint32 endTimestamp;
     }
 

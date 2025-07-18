@@ -23,11 +23,27 @@ module.exports = async (fastify, opts) => {
       }
 
       try {
-        const match = await contract.getMatchesByMatchId(request.params.id);
+        const [
+          player1,
+          player2,
+          player1Score,
+          player2Score,
+          matchId,
+          winner,
+          endTimestamp,
+        ] = await contract.getMatchesByMatchId(request.params.id);
 
         reply.send({
           success: true,
-          match: bigIntToString(match),
+          match: bigIntToString({
+            player1,
+            player2,
+            player1Score,
+            player2Score,
+            matchId,
+            winner,
+            endTimestamp,
+          }),
         });
       } catch (error) {
         request.log.error(error);
