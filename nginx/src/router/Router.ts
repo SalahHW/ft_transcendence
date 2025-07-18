@@ -36,7 +36,7 @@ export default class Router {
       },
     },
     {
-      path: "/login",
+      path: "/credential-login",
       handler: async function () {
         if (!this.cache) {
           const module = await import("../components/LoginPopup.js");
@@ -46,7 +46,7 @@ export default class Router {
       },
     },
     {
-      path: "/register",
+      path: "/credential-register",
       handler: async function () {
         if (!this.cache) {
           const module = await import("../components/RegisterPopup.js");
