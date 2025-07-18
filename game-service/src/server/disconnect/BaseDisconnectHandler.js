@@ -55,6 +55,7 @@ export const DisconnectionReasons = {
 export const WebSocketCloseCodes = {
   NORMAL: 1000,
   GOING_AWAY: 1001,
+  NO_STATUS: 1005,
   ABNORMAL: 1006
 };
 
@@ -246,6 +247,8 @@ export class BaseDisconnectHandler {
         return DisconnectionReasons.BROWSER_NAVIGATION;
       case WebSocketCloseCodes.GOING_AWAY:
         return DisconnectionReasons.BROWSER_CLOSE;
+      case WebSocketCloseCodes.NO_STATUS:
+        return DisconnectionReasons.PLAYER_LEFT;
       case WebSocketCloseCodes.ABNORMAL:
         return DisconnectionReasons.NETWORK_DISCONNECT;
       default:

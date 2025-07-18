@@ -150,6 +150,8 @@ export class WebSocketHandler {
         return 'player_left';
       case 1001: // Going away
         return 'browser_navigation';
+      case 1005: // No status received (browser closed without proper close frame)
+        return 'player_left';
       case 1006: // Abnormal closure
         return 'network_disconnect';
       default:
