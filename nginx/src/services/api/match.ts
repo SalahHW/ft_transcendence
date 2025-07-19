@@ -1,15 +1,15 @@
-const mapMatchArrayToMatchObject = (match: any[]): Match => {
-	if (!match || !Array.isArray(match)) {
-		return match as Match;
+const mapRawMatchToMatch = (rawMatch: any): Match => {
+	if (!rawMatch || typeof rawMatch !== 'object' || Array.isArray(rawMatch)) {
+		return rawMatch as Match;
 	}
 	return {
-		player1: match[0],
-		player2: match[1],
-		winner: match[2],
-		player1Score: parseInt(match[3], 10),
-		player2Score: parseInt(match[4], 10),
-		matchId: parseInt(match[5], 10),
-		endTimestamp: parseInt(match[6], 10),
+		player1: rawMatch.player1.toLowerCase(),
+		player2: rawMatch.player2.toLowerCase(),
+		winner: rawMatch.winner.toLowerCase(),
+		player1Score: parseInt(rawMatch.player1Score, 10),
+		player2Score: parseInt(rawMatch.player2Score, 10),
+		matchId: parseInt(rawMatch.matchId, 10),
+		endTimestamp: parseInt(rawMatch.endTimestamp, 10),
 	};
 };
 
@@ -89,7 +89,7 @@ export default class MatchServiceAPI {
 		}
 		if (response.ok && data.success) {
 			console.log(`Successfully fetched matches for player ${address}.`);
-			return data.matches.map(mapMatchArrayToMatchObject);
+			return data.matches.map(mapRawMatchToMatch);
 		}
 		console.error(`Failed to fetch matches for player ${address}:`, data);
 		throw new Error(`Failed to fetch matches. Please try again later.`);
@@ -145,7 +145,7 @@ export default class MatchServiceAPI {
 		const data = await response.json();
 		if (response.ok && data.success) {
 			console.log(`Successfully fetched matches for winner ${address}.`);
-			return data.matches.map(mapMatchArrayToMatchObject);
+			return data.matches.map(mapRawMatchToMatch);
 		}
 		if (response.ok && !data.success) {
 			console.log(`No matches found for winner ${address}.`);
@@ -167,7 +167,7 @@ export default class MatchServiceAPI {
 		const data = await response.json();
 		if (response.ok && data.success) {
 			console.log(`Successfully fetched match with id ${matchId}.`);
-			return mapMatchArrayToMatchObject(data.match);
+			return mapRawMatchToMatch(data.match);
 		}
 		else {
 			console.error(`Failed to fetch match with id ${matchId}:`, data);
