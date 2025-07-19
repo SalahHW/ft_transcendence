@@ -40,7 +40,7 @@ const mapRawTournamentObjectToTournamentObject = (tournament: any): Tournament =
         endTimestamp: parseInt(tournament.endTimestamp, 10),
         matchIds: tournament.matchIds.map((id: string) => parseInt(id, 10)),
         tournamentId: parseInt(tournament.tournamentId, 10),
-        winner: tournament.winnerAddress,
+        winner: tournament.winnerAddress.toLowerCase(),
     };
 };
 
@@ -101,7 +101,7 @@ export default class MatchServiceAPI {
 	 * @returns A promise that resolves to an array of tournaments
 	 */
 	async getTournamentsByPlayer(address: string): Promise<Tournament[]> {
-		const response = await fetch(`${this._baseUrl}/tournament/player/${address}`, {
+		const response = await fetch(`${this._baseUrl}/tournaments/byPlayer/${address}`, {
 			method: "GET"
 		});
 		if (response.status === 404) {

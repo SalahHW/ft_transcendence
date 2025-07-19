@@ -2,6 +2,8 @@ import MatchHistoryService, { EnrichedMatch, EnrichedTournament, PlayerInfo } fr
 import UserProfileService from "../../../services/UserProfileService.js";
 import { UI_THEME } from "../../../style/tailwindClasses.js";
 
+type HistoryItem = (EnrichedTournament & { type: 'tournament' }) | (EnrichedMatch & { type: 'match' });
+
 export class MatchHistoryView {
 
     private static _matchHistoryService = MatchHistoryService.getInstance();
@@ -26,23 +28,42 @@ export class MatchHistoryView {
 				return this.renderEmptyState();
 			}
 
-            const tournamentItemsHtml = (
-				await Promise.all(
-					enrichedTournamentHistory.map((tournament) => {
-						const currentUserInfo = tournament.players.find((p) => p.walletAddress === user.wallet);
-						return MatchHistoryView.createTournamentHistoryItem(tournament, currentUserInfo!);
-					})
-				)
-			).join("");
+			const combinedHistory: HistoryItem[] = [
+                ...enrichedTournamentHistory.map((tournament): HistoryItem => ({ ...tournament, type: 'tournament' })),
+                ...enrichedMatches.map((match): HistoryItem => ({ ...match, type: 'match' }))
+            ];
 
-            const matchesHtmlPromises = enrichedMatches.map((enrichedMatch: EnrichedMatch) => this.createMatchHistoryItem(enrichedMatch, currentUser));
-            const matchesHtml = (await Promise.all(matchesHtmlPromises)).join('');
+			combinedHistory.sort((a, b) => {
+				const aTimestamp = a.type === 'tournament' ? a.endTimestamp : a.match.endTimestamp!;
+				const bTimestamp = b.type === 'tournament' ? b.endTimestamp : b.match.endTimestamp!;
+
+				if (bTimestamp > aTimestamp) return 1;
+				if (bTimestamp < aTimestamp) return -1;
+
+				if (a.type === 'tournament' && b.type !== 'tournament') return -1;
+				if (a.type !== 'tournament' && b.type === 'tournament') return 1;
+
+				return 0;
+			});
+
+            const historyHtml = (
+                await Promise.all(
+                    combinedHistory.map(item => {
+                        if (item.type === 'tournament') {
+                            const currentUserInfo = item.players.find((p: PlayerInfo) => p.walletAddress === user.wallet);
+                            return MatchHistoryView.createTournamentHistoryItem(item, currentUserInfo!);
+                        } else {
+                            return MatchHistoryView.createMatchHistoryItem(item, currentUser);
+                        }
+                    })
+                )
+            ).join('');
+
             return /* HTML */`
                 <div class="flex flex-col h-full">
                     <div class="overflow-auto flex-[1] [mask-image:linear-gradient(to_bottom,transparent,black_2%,black_98%,transparent)] pt-2 overflow-x-auto">
                         <div class="min-w-[600px]">
-                            ${tournamentItemsHtml}
-                            ${matchesHtml}
+                            ${historyHtml}
                         </div>
                     </div>
                 </div>
@@ -96,6 +117,7 @@ export class MatchHistoryView {
         const month = date.toLocaleString('en-GB', { month: 'short' });
         const year = date.getFullYear().toString().slice(-2);
         const formattedDate = `${day} ${month} ${year}`;
+		const formattedTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 
         const otherPlayers = players.filter((p) => p.username !== currentUser.username);
         const otherPlayersHtml = otherPlayers.map((player) => /* HTML */ `
@@ -131,11 +153,11 @@ export class MatchHistoryView {
 						${otherPlayersHtml}
 					</div>
 				</div>
-				<div class="flex items-center justify-center w-6" style="background-color: ${bgColor};">
+				<div class="flex items-center justify-center w-10" style="background-color: ${bgColor};">
 					<span
 						class="text-white font-semibold text-xs opacity-80"
-						style="writing-mode: vertical-rl; text-orientation: mixed;"
-						>${formattedDate}</span
+						style="writing-mode: vertical-rl; text-orientation: mixed; text-align: center;"
+						>${formattedDate}<br />${formattedTime}</span
 					>
 				</div>
 			</div>
@@ -155,6 +177,7 @@ export class MatchHistoryView {
         const month = date.toLocaleString("en-US", { month: "short" });
         const year = date.getFullYear().toString().slice(-2);
         const formattedDate = `${day} ${month} ${year}`;
+		const formattedTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 
         return /* HTML */ `
             <div
@@ -195,11 +218,11 @@ export class MatchHistoryView {
 						</div>
 					</div>
 				</div>
-				<div class="flex items-center justify-center w-6" style="background-color: ${bgColor};">
+				<div class="flex items-center justify-center w-10" style="background-color: ${bgColor};">
 					<span
 						class="text-white font-semibold text-xs opacity-80"
-						style="writing-mode: vertical-rl; text-orientation: mixed;"
-						>${formattedDate}</span
+						style="writing-mode: vertical-rl; text-orientation: mixed; text-align: center;"
+						>${formattedDate}<br />${formattedTime}</span
 					>
 				</div>
 			</div>
