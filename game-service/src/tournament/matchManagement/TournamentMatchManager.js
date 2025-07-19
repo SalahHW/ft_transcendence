@@ -330,6 +330,12 @@ export class TournamentMatchManager {
       return;
     }
     
+    // ⭐ NEW: Check if tournament is already finished to prevent duplicate processing
+    if (waitingRoomData.phase === 'FINISHED') {
+      console.log(`🏆 Tournament ${waitingRoomId} already finished, skipping duplicate final match end processing`);
+      return;
+    }
+    
     const winner = matchData.winner;
     const loser = matchData.loser;
     const roomType = gameStateManager.getRoom(roomId)?.metadata?.roomType;
@@ -353,6 +359,9 @@ export class TournamentMatchManager {
     if (winnerFinalResult && loserFinalResult) {
       console.log(`🏆 Both finals complete, ending tournament`);
       
+      // ⭐ NEW: Mark tournament as finished BEFORE processing to prevent race conditions
+      waitingRoomData.phase = 'FINISHED';
+      
       // Report tournament to blockchain (NEW: with all matches)
       try {
         await this._reportTournamentToBlockchain(waitingRoomId, winnerFinalResult.winner);
@@ -362,9 +371,6 @@ export class TournamentMatchManager {
       
       // Send tournament completion message to all players
       this.tournamentManager.communicationManager._sendTournamentCompletionMessage(waitingRoomId, matchData);
-      
-      // Mark tournament as finished
-      waitingRoomData.phase = 'FINISHED';
       
       // Schedule cleanup
       setTimeout(() => {
@@ -404,6 +410,9 @@ export class TournamentMatchManager {
             
             console.log(`🏆 Tournament completed with forfeit: ${thirdPlace.username} gets 3rd place, ${fourthPlace.username} gets 4th place`);
             
+            // ⭐ NEW: Mark tournament as finished BEFORE processing to prevent race conditions
+            waitingRoomData.phase = 'FINISHED';
+            
             // Report tournament to blockchain (NEW: with all matches)
             try {
               await this._reportTournamentToBlockchain(waitingRoomId, winnerFinalResult.winner);
@@ -413,9 +422,6 @@ export class TournamentMatchManager {
             
             // Send tournament completion message to all players
             this.tournamentManager.communicationManager._sendTournamentCompletionMessage(waitingRoomId, matchData);
-            
-            // Mark tournament as finished
-            waitingRoomData.phase = 'FINISHED';
             
             // Schedule cleanup
             setTimeout(() => {
