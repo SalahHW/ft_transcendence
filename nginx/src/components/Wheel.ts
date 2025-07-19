@@ -21,6 +21,7 @@ export default class Wheel {
   private _element: HTMLElement;
   private _optionHistory: Option[][] = [];
   private _selectedIndex: number = 0;
+  private _hoveredIndex: number = -1;
   private _isVisible: boolean = false;
   private _userIsLoggedIn: boolean = false;
   private _router: Router = Router.getInstance();
@@ -64,7 +65,7 @@ export default class Wheel {
     },
     {
       label: "Register",
-      icon: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M12 20q-.213 0-.357-.144T11.5 19.5v-7h-7q-.213 0-.356-.144T4 11.999t.144-.356t.356-.143h7v-7q0-.213.144-.356T12.001 4t.356.144t.143.356v7h7q.213 0 .356.144t.144.357t-.144.356t-.356.143h-7v7q0 .213-.144-.356t-.357-.144"/></svg>`,
+      icon: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M12 20q-.213 0-.357-.144T11.5 19.5v-7h-7q-.213 0-.356-.144T4 11.999t.144-.356t.356-.143h7v-7q0-.213.144-.356T12.001 4t.356.144t.143.356v7h7q.213 0 .356.144t.144.357t-.144.357t-.356.143h-7v7q0 .213-.144-.356t-.357-.144"/></svg>`,
       condition: () => !this._userIsLoggedIn,
       subMenu: [
         {
@@ -255,7 +256,7 @@ export default class Wheel {
 
     this._element.innerHTML = `
 			<div class="wheel-content relative select-none">
-				<svg class="wheel-svg select-none" width="960" height="960" viewBox="0 0 960 960" style="user-select: none; -webkit-user-select: none; -moz-user-select: none;">
+				<svg class="wheel-svg select-none" width="720" height="720" viewBox="0 0 960 960" style="user-select: none; -webkit-user-select: none; -moz-user-select: none;">
 				</svg>
 			</div>
 		`;
@@ -273,6 +274,40 @@ export default class Wheel {
 
 		svg.innerHTML = "";
 
+    const style = document.createElementNS("http://www.w3.org/2000/svg", "style");
+    style.textContent = `
+      .wheel-path {
+        transition: d 0.15s cubic-bezier(0.4, 0, 0.2, 1), fill 0.15s ease;
+      }
+      .wheel-text-group {
+        transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+    `;
+    svg.appendChild(style);
+
+    const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    const filter = document.createElementNS("http://www.w3.org/2000/svg", "filter");
+    filter.setAttribute("id", "wheel-shadow");
+    filter.setAttribute("x", "-50%");
+    filter.setAttribute("y", "-50%");
+    filter.setAttribute("width", "200%");
+    filter.setAttribute("height", "200%");
+    const feDropShadow = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "feDropShadow"
+    );
+    feDropShadow.setAttribute("dx", "0");
+    feDropShadow.setAttribute("dy", "0");
+    feDropShadow.setAttribute("stdDeviation", "20");
+    feDropShadow.setAttribute("flood-color", "rgba(0,0,0,0.75)");
+    filter.appendChild(feDropShadow);
+    defs.appendChild(filter);
+    svg.appendChild(defs);
+
+    const wheelGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    wheelGroup.setAttribute("filter", "url(#wheel-shadow)");
+    svg.appendChild(wheelGroup);
+
     if (optionCount === 0) return;
 
     const angleStep = (2 * Math.PI) / optionCount;
@@ -287,91 +322,67 @@ export default class Wheel {
 		centerCircle.setAttribute("r", innerRadius.toString());
 		centerCircle.setAttribute("fill", UI_THEME.wheel.svg.fill.center);
 		centerCircle.setAttribute("stroke", UI_THEME.wheel.svg.stroke.normal);
-		centerCircle.setAttribute("stroke-width", "1");
+		centerCircle.setAttribute("stroke-width", "2");
 		centerCircle.setAttribute(
 			"class",
-			"cursor-pointer transition-all duration-200 hover:fill-gray-600/90"
+			"cursor-pointer transition-all duration-200"
 		);
 
 		centerCircle.addEventListener("click", () => {
 			this._goBack();
 		});
 
-    svg.appendChild(centerCircle);
+    wheelGroup.appendChild(centerCircle);
 
     this._wheelOptions.forEach((option, index) => {
       const angle1 = startAngle + index * angleStep;
       const angle2 = startAngle + (index + 1) * angleStep;
-
-      const isSelected = index === this._selectedIndex;
-
-      const x1 = centerX + Math.cos(angle1) * innerRadius;
-      const y1 = centerY + Math.sin(angle1) * innerRadius;
-      const x2 = centerX + Math.cos(angle1) * radius;
-      const y2 = centerY + Math.sin(angle1) * radius;
-      const x3 = centerX + Math.cos(angle2) * radius;
-      const y3 = centerY + Math.sin(angle2) * radius;
-      const x4 = centerX + Math.cos(angle2) * innerRadius;
-      const y4 = centerY + Math.sin(angle2) * innerRadius;
-
-			const path = document.createElementNS(
-				"http://www.w3.org/2000/svg",
-				"path"
-			);
-			const largeArcFlag = angleStep > Math.PI ? 1 : 0;
-
-			const pathData = [
-				`M ${x1} ${y1}`,
-				`L ${x2} ${y2}`,
-				`A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x3} ${y3}`,
-				`L ${x4} ${y4}`,
-				`A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${x1} ${y1}`,
-				"Z",
-			].join(" ");
-
-			path.setAttribute("d", pathData);
-			path.setAttribute(
-				"fill",
-				isSelected
-					? UI_THEME.wheel.svg.fill.selected
-					: UI_THEME.wheel.svg.fill.normal
-			);
-			path.setAttribute(
-				"stroke",
-				isSelected
-					? UI_THEME.wheel.svg.stroke.selected
-					: UI_THEME.wheel.svg.stroke.normal
-			);
-			path.setAttribute("stroke-width", "1");
-			path.setAttribute(
-				"class",
-				"cursor-pointer transition-all duration-200 hover:fill-gray-600/90"
-			);
-
-			path.addEventListener("click", async () => {
-				this._selectedIndex = index;
-				await this._selectOption();
-			});
-
-			path.addEventListener("mouseenter", () => {
-				if (!isSelected) {
-					this._selectedIndex = index;
-					this._updateSelection();
-				}
-			});
-
-      svg.appendChild(path);
-
       const textAngle = angle1 + angleStep / 2;
+
+      const hoverRadius = radius * 1.05;
+
+      const getPathData = (r: number) => {
+        const x1 = centerX + Math.cos(angle1) * innerRadius;
+        const y1 = centerY + Math.sin(angle1) * innerRadius;
+        const x2 = centerX + Math.cos(angle1) * r;
+        const y2 = centerY + Math.sin(angle1) * r;
+        const x3 = centerX + Math.cos(angle2) * r;
+        const y3 = centerY + Math.sin(angle2) * r;
+        const x4 = centerX + Math.cos(angle2) * innerRadius;
+        const y4 = centerY + Math.sin(angle2) * innerRadius;
+        const largeArcFlag = angleStep > Math.PI ? 1 : 0;
+
+        return [
+          `M ${x1} ${y1}`, `L ${x2} ${y2}`,
+          `A ${r} ${r} 0 ${largeArcFlag} 1 ${x3} ${y3}`,
+          `L ${x4} ${y4}`,
+          `A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${x1} ${y1}`,
+          "Z",
+        ].join(" ");
+      };
+
+      const normalPathData = getPathData(radius);
+      const hoverPathData = getPathData(hoverRadius);
+
+			const path = document.createElementNS( "http://www.w3.org/2000/svg", "path" );
+			path.setAttribute("d", normalPathData);
+			path.setAttribute("fill", UI_THEME.wheel.svg.fill.normal);
+			path.setAttribute("stroke", UI_THEME.wheel.svg.stroke.normal);
+			path.setAttribute("stroke-width", "2");
+			path.setAttribute("class", "wheel-path cursor-pointer");
+
+      wheelGroup.appendChild(path);
+
       const textRadius = (radius + innerRadius) / 2;
       const textX = centerX + Math.cos(textAngle) * textRadius;
       const textY = centerY + Math.sin(textAngle) * textRadius;
 
-			const textGroup = document.createElementNS(
-				"http://www.w3.org/2000/svg",
-				"g"
-			);
-			textGroup.setAttribute("class", "pointer-events-none");
+      const hoverTextRadius = (hoverRadius + innerRadius) / 2;
+      const hoverTextX = centerX + Math.cos(textAngle) * hoverTextRadius;
+      const hoverTextY = centerY + Math.sin(textAngle) * hoverTextRadius;
+
+			const textGroup = document.createElementNS( "http://www.w3.org/2000/svg", "g" );
+			textGroup.setAttribute("class", "pointer-events-none wheel-text-group");
 			textGroup.style.userSelect = "none";
 			textGroup.style.webkitUserSelect = "none";
 			(textGroup.style as any).MozUserSelect = "none";
@@ -381,24 +392,16 @@ export default class Wheel {
 
 			if (hasIcon) {
 				if (option.icon!.startsWith("<svg")) {
-					const foreignObject = document.createElementNS(
-						"http://www.w3.org/2000/svg",
-						"foreignObject"
-					);
+					const foreignObject = document.createElementNS( "http://www.w3.org/2000/svg", "foreignObject" );
 					const iconSize = 48;
 					foreignObject.setAttribute("x", (textX - iconSize / 2).toString());
-					foreignObject.setAttribute(
-						"y",
-						(textY - (hasLabel ? 18 : 0) - iconSize / 2).toString()
-					);
+					foreignObject.setAttribute( "y", (textY - (hasLabel ? 18 : 0) - iconSize / 2).toString() );
 					foreignObject.setAttribute("width", iconSize.toString());
 					foreignObject.setAttribute("height", iconSize.toString());
 
-					const div = document.createElement("div"); // No NS for HTML elements
+					const div = document.createElement("div");
 					div.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
-					div.style.color = isSelected
-						? UI_THEME.wheel.svg.text.selected
-						: UI_THEME.wheel.svg.text.normal;
+					div.style.color = UI_THEME.wheel.svg.text.normal;
 					div.innerHTML = option.icon!;
 					const svgInDiv = div.querySelector('svg');
 					if (svgInDiv) {
@@ -409,21 +412,12 @@ export default class Wheel {
 					foreignObject.appendChild(div);
 					textGroup.appendChild(foreignObject);
 				} else {
-					// Fallback for emojis
-					const iconText = document.createElementNS(
-						"http://www.w3.org/2000/svg",
-						"text"
-					);
+					const iconText = document.createElementNS( "http://www.w3.org/2000/svg", "text" );
 					iconText.setAttribute("x", textX.toString());
 					iconText.setAttribute("y", (textY - (hasLabel ? 18 : 0)).toString());
 					iconText.setAttribute("text-anchor", "middle");
 					iconText.setAttribute("dominant-baseline", "middle");
-					iconText.setAttribute(
-						"fill",
-						isSelected
-							? UI_THEME.wheel.svg.text.selected
-							: UI_THEME.wheel.svg.text.normal
-					);
+					iconText.setAttribute("fill", UI_THEME.wheel.svg.text.normal);
 					iconText.setAttribute("font-size", "48");
 					iconText.setAttribute("font-family", UI_THEME.wheel.svg.text.font);
 					iconText.setAttribute("font-weight", "300");
@@ -433,28 +427,39 @@ export default class Wheel {
 			}
 
 			if (hasLabel) {
-				const label = document.createElementNS(
-					"http://www.w3.org/2000/svg",
-					"text"
-				);
+				const label = document.createElementNS( "http://www.w3.org/2000/svg", "text" );
 				label.setAttribute("x", textX.toString());
 				label.setAttribute("y", (textY + (hasIcon ? 18 : 0)).toString());
 				label.setAttribute("text-anchor", "middle");
 				label.setAttribute("dominant-baseline", "middle");
-				label.setAttribute(
-					"fill",
-					isSelected
-						? UI_THEME.wheel.svg.text.selected
-						: UI_THEME.wheel.svg.text.normal
-				);
+				label.setAttribute("fill", UI_THEME.wheel.svg.text.normal);
 				label.setAttribute("font-size", "16");
-				label.setAttribute("font-weight", isSelected ? "500" : "400");
+				label.setAttribute("font-weight", "400");
 				label.setAttribute("font-family", UI_THEME.wheel.svg.text.font);
 				label.textContent = option.label!;
 				textGroup.appendChild(label);
 			}
 
-      svg.appendChild(textGroup);
+      wheelGroup.appendChild(textGroup);
+
+      path.addEventListener("click", async () => {
+        this._selectedIndex = index;
+        await this._selectOption();
+      });
+
+      path.addEventListener("mouseenter", () => {
+        path.setAttribute("d", hoverPathData);
+        path.setAttribute("fill", "#424242");
+        const dx = hoverTextX - textX;
+        const dy = hoverTextY - textY;
+        textGroup.style.transform = `translate(${dx}px, ${dy}px)`;
+      });
+
+      path.addEventListener("mouseleave", () => {
+        path.setAttribute("d", normalPathData);
+        path.setAttribute("fill", UI_THEME.wheel.svg.fill.normal);
+        textGroup.style.transform = "none";
+      });
     });
 
 		if (this._optionHistory.length > 0) {
