@@ -34,7 +34,6 @@ export const loginUser = async (request, reply) => {
       sub: user.id,
       username: user.username,
       aud: "users-service",
-      exp: "5m",
       type: "accessToken",
     });
 
@@ -42,7 +41,6 @@ export const loginUser = async (request, reply) => {
       sub: user.id,
       username: user.username,
       aud: "users-service",
-      exp: "7d",
       type: "refreshToken",
     });
 
