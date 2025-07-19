@@ -67,18 +67,25 @@ export default class MatchHistoryService implements CacheableService {
      * Implements a simple cache-on-read strategy.
      * @returns A promise that resolves to the user's enriched tournament history.
      */
-	public async getEnrichedTournamentHistory(walletAddress: string): Promise<EnrichedTournament[]> {
+	public async getEnrichedTournamentHistory(
+        walletAddress: string,
+        onUpdate: (updatedData: EnrichedTournament[]) => void
+    ): Promise<EnrichedTournament[]> {
         if (this._enrichedTournamentHistoryCache) {
-            return this._enrichedTournamentHistoryCache;
+            // Return cached data immediately
+            Promise.resolve().then(() => onUpdate(this._enrichedTournamentHistoryCache!));
         }
 
         if (!walletAddress) {
             throw new Error("Wallet address is missing.");
         }
 
+        // Fetch new data in the background
         const rawTournaments = await this._matchApi.getTournamentsByPlayer(walletAddress);
 
         if (rawTournaments.length === 0) {
+            this._enrichedTournamentHistoryCache = [];
+            onUpdate([]);
             return [];
         }
 
@@ -125,6 +132,7 @@ export default class MatchHistoryService implements CacheableService {
 		);
 
 		this._enrichedTournamentHistoryCache = enrichedTournaments;
+        onUpdate(enrichedTournaments);
 		return enrichedTournaments;
     }
 
@@ -170,9 +178,12 @@ export default class MatchHistoryService implements CacheableService {
      * Implements a simple cache-on-read strategy.
      * @returns A promise that resolves to the user's enriched match history.
      */
-    public async getEnrichedMatchHistory(walletAddress: string): Promise<EnrichedMatchHistory> {
+    public async getEnrichedMatchHistory(
+        walletAddress: string,
+        onUpdate: (updatedData: EnrichedMatchHistory) => void
+    ): Promise<void> {
         if (this._enrichedMatchHistoryCache) {
-            return this._enrichedMatchHistoryCache;
+            Promise.resolve().then(() => onUpdate(this._enrichedMatchHistoryCache!));
         }
         if (!walletAddress) {
             throw new Error("Wallet address is missing.");
@@ -184,7 +195,8 @@ export default class MatchHistoryService implements CacheableService {
         if (matches.length === 0) {
             const result = { enrichedMatches: [], currentUser };
             this._enrichedMatchHistoryCache = result;
-            return result;
+            onUpdate(result);
+            return;
         }
 
         const enrichedMatches = await Promise.all(
@@ -197,19 +209,19 @@ export default class MatchHistoryService implements CacheableService {
 
         const result = { enrichedMatches, currentUser };
         this._enrichedMatchHistoryCache = result;
-        return result;
+        onUpdate(result);
     }
 
 	private async _getCurrentPlayerInfo(walletAddress: string): Promise<PlayerInfo> {
-		const enrichedCurrentUser = await this._userProfileService.getEnrichedUserProfile();
-		if (!enrichedCurrentUser) {
+		const user = await this._usersApi.getUserByWallet(walletAddress);
+		if (!user) {
 			throw new Error("Current user profile not found.");
 		}
-		const avatarUrl = await this._avatarApi.getUserAvatarUrl(enrichedCurrentUser.id!)
+		const avatarUrl = await this._avatarApi.getUserAvatarUrl(user.id!)
 			.catch(() => '/assets/defaultAvatar.jpg');
 		return {
-			id: enrichedCurrentUser.id!,
-			username: enrichedCurrentUser.username!,
+			id: user.id!,
+			username: user.username!,
 			avatarUrl,
 			walletAddress,
 		};
