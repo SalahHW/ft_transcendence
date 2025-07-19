@@ -255,6 +255,18 @@ export class WebSocketHandler {
    * ⭐ NEW: Check if WebSocket closure is a legitimate tournament completion
    */
   _isLegitimateTournamentClosure(code, reason) {
+    // ⭐ FIX: Handle reason as either string or Buffer
+    let reasonString = '';
+    if (reason) {
+      if (typeof reason === 'string') {
+        reasonString = reason;
+      } else if (Buffer.isBuffer(reason)) {
+        reasonString = reason.toString('utf8');
+      } else {
+        reasonString = String(reason);
+      }
+    }
+    
     // Check for legitimate tournament closure reasons
     const legitimateReasons = [
       'Tournament completed',
@@ -271,12 +283,12 @@ export class WebSocketHandler {
     ];
     
     // Check if the close reason indicates legitimate tournament completion
-    if (reason && legitimateReasons.some(legitReason => reason.includes(legitReason))) {
+    if (reasonString && legitimateReasons.some(legitReason => reasonString.includes(legitReason))) {
       return true;
     }
     
     // Also check for normal closure code with tournament-related reasons
-    if (code === 1000 && reason && reason.toLowerCase().includes('tournament')) {
+    if (code === 1000 && reasonString && reasonString.toLowerCase().includes('tournament')) {
       return true;
     }
     
