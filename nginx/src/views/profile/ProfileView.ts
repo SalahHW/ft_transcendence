@@ -62,7 +62,7 @@ export default class ProfileView extends ModalView {
 			return;
 		}
 
-		matchHistoryContainer.innerHTML = await MatchHistoryView.render();
+		await MatchHistoryView.render(matchHistoryContainer as HTMLElement);
 	}
 
 	public async updateFriendList(): Promise<void> {
