@@ -4,26 +4,24 @@ import UsersApi from './api/user.js';
 import AvatarServiceAPI from './api/avatar.js';
 import CacheManager, { CacheableService } from './CacheManager.js';
 
-export interface EnrichedMatch {
-	match: Match;
-	opponent: {
-		id: number;
-		username: string;
-		avatarUrl: string;
-	};
-	isWin: boolean;
-}
-
-export interface EnrichedMatchHistory {
-	enrichedMatches: EnrichedMatch[];
-	currentUserAvatarUrl: string;
-}
-
 export interface PlayerInfo {
     id: number;
     username: string;
     avatarUrl: string;
     walletAddress: string;
+}
+
+export interface EnrichedMatch {
+	match: Match;
+	opponent: PlayerInfo;
+	isWin: boolean;
+    userScore: number;
+    opponentScore: number;
+}
+
+export interface EnrichedMatchHistory {
+	enrichedMatches: EnrichedMatch[];
+	currentUser: PlayerInfo;
 }
 
 export interface EnrichedTournament {
@@ -110,14 +108,18 @@ export default class MatchHistoryService implements CacheableService {
 					})
 				);
 
-				const { userPlacement, isWin } = this.calculateUserPlacement(matches, walletAddress);
+				const { userPlacement } = this.calculateUserPlacement(
+					matches,
+					Array.from(playerWallets),
+					walletAddress
+				);
 
 				return {
 					id: tournament.tournamentId!,
 					endTimestamp: tournament.endTimestamp!,
 					players,
 					userPlacement,
-					isWin
+					isWin: tournament.winner === walletAddress,
 				};
 			})
 		);
@@ -126,28 +128,40 @@ export default class MatchHistoryService implements CacheableService {
 		return enrichedTournaments;
     }
 
-	private calculateUserPlacement(matches: Match[], userWallet: string): { userPlacement: number, isWin: boolean } {
-		const wins = matches.filter(m => m.winner === userWallet).length;
-        // TODO: Need to determine how to get the placement in the tournament when we get the api response format
-		// This is a simplified placement logic.
-		// A real implementation would need to understand the tournament bracket structure (e.g., final, semi-finals).
-		// For now, we'll base it on number of wins.
-		if (wins === 2) return { userPlacement: 1, isWin: true }; // Assuming 2 wins means 1st place in a 4-person tournament
-		if (wins === 1) return { userPlacement: 2, isWin: false }; // Assuming 1 win means 2nd place
+	private calculateUserPlacement(matches: Match[], players: string[], userWallet: string): { userPlacement: number } {
+		const winCounts: Map<string, number> = new Map();
+		players.forEach(p => winCounts.set(p, 0));
 
-		// For 0 wins, we need to differentiate 3rd and 4th.
-		// This requires more detail about the matches, like who they lost to.
-		// For now, let's simplify. We can't distinguish 3rd and 4th with this logic.
-		const losses = matches.filter(m => (m.player1 === userWallet || m.player2 === userWallet) && m.winner !== userWallet);
-		if (losses.length > 0) {
-			const opponentInLoss = losses[0].player1 === userWallet ? losses[0].player2 : losses[0].player1;
-			const opponentWins = matches.filter(m => m.winner === opponentInLoss).length;
-			if (opponentWins > 1) { // Lost to the winner or finalist
-				return { userPlacement: 3, isWin: false };
+		matches.forEach(match => {
+			if (match.winner) {
+				winCounts.set(match.winner, (winCounts.get(match.winner) ?? 0) + 1);
+			}
+		});
+
+		const tournamentWinner = [...winCounts.entries()].find(([, wins]) => wins === 2)?.[0];
+		const userWins = winCounts.get(userWallet) ?? 0;
+
+		if (userWins === 2 || tournamentWinner === userWallet) {
+			return { userPlacement: 1 };
+		}
+
+		if (userWins === 0) {
+			return { userPlacement: 4 };
+		}
+
+		if (userWins === 1) {
+			const userLostMatch = matches.find(m =>
+				(m.player1 === userWallet || m.player2 === userWallet) && m.winner !== userWallet
+			);
+
+			if (userLostMatch?.winner === tournamentWinner) {
+				return { userPlacement: 2 };
+			} else {
+				return { userPlacement: 3 };
 			}
 		}
 
-		return { userPlacement: 4, isWin: false };
+		return { userPlacement: 4 };
 	}
 
 
@@ -160,66 +174,81 @@ export default class MatchHistoryService implements CacheableService {
         if (this._enrichedMatchHistoryCache) {
             return this._enrichedMatchHistoryCache;
         }
-
         if (!walletAddress) {
             throw new Error("Wallet address is missing.");
         }
 
-		const currentUser = await this._userProfileService.getEnrichedUserProfile();
-		if (!currentUser) {
-			throw new Error("Current user profile not found.");
-		}
-
-		const currentUserAvatarUrl = await this._avatarApi.getUserAvatarUrl(currentUser.id!)
-			.catch(() => '/assets/defaultAvatar.jpg');
-
+        const currentUser = await this._getCurrentPlayerInfo(walletAddress);
         const matches = await this._matchApi.getMatchesByPlayer(walletAddress);
+
         if (matches.length === 0) {
-			const result = {
-				enrichedMatches: [],
-				currentUserAvatarUrl: currentUserAvatarUrl
-			};
-			this._enrichedMatchHistoryCache = result;
+            const result = { enrichedMatches: [], currentUser };
+            this._enrichedMatchHistoryCache = result;
             return result;
         }
 
         const enrichedMatches = await Promise.all(
-            matches.map(async (match): Promise<EnrichedMatch> => {
-                const opponentAddress = match.player1 === walletAddress ? match.player2 : match.player1;
-                let opponentData = { id: 0, username: 'Unknown', avatarUrl: '/assets/defaultAvatar.jpg' };
-
-                if (opponentAddress) {
-                    try {
-                        const opponentUser = await this._usersApi.getUserByWallet(opponentAddress);
-                        const opponentAvatar = await this._avatarApi.getUserAvatarUrl(opponentUser.id!)
-                            .catch(() => '/assets/defaultAvatar.jpg');
-
-                        opponentData = {
-                            id: opponentUser.id!,
-                            username: opponentUser.username!,
-                            avatarUrl: opponentAvatar,
-                        };
-                    } catch (error) {
-                        console.error(`Failed to get opponent details for wallet ${opponentAddress}`, error);
-                    }
-                }
-
-                return {
-                    match,
-                    opponent: opponentData,
-                    isWin: match.winner === walletAddress,
-                };
+            matches.map(async (match) => {
+                const opponentAddress = match.player1 === walletAddress ? match.player2! : match.player1!;
+                const opponent = await this._getOpponentPlayerInfo(opponentAddress);
+                return this._enrichSingleMatch(match, walletAddress, opponent);
             })
         );
 
-		const result = {
-			enrichedMatches,
-			currentUserAvatarUrl
-		};
-
+        const result = { enrichedMatches, currentUser };
         this._enrichedMatchHistoryCache = result;
         return result;
     }
+
+	private async _getCurrentPlayerInfo(walletAddress: string): Promise<PlayerInfo> {
+		const enrichedCurrentUser = await this._userProfileService.getEnrichedUserProfile();
+		if (!enrichedCurrentUser) {
+			throw new Error("Current user profile not found.");
+		}
+		const avatarUrl = await this._avatarApi.getUserAvatarUrl(enrichedCurrentUser.id!)
+			.catch(() => '/assets/defaultAvatar.jpg');
+		return {
+			id: enrichedCurrentUser.id!,
+			username: enrichedCurrentUser.username!,
+			avatarUrl,
+			walletAddress,
+		};
+	}
+
+	private async _getOpponentPlayerInfo(opponentAddress: string): Promise<PlayerInfo> {
+		if (!opponentAddress) {
+			return { id: 0, username: 'Unknown', avatarUrl: '/assets/defaultAvatar.jpg', walletAddress: '' };
+		}
+		try {
+			const opponentUser = await this._usersApi.getUserByWallet(opponentAddress);
+			const opponentAvatar = await this._avatarApi.getUserAvatarUrl(opponentUser.id!)
+				.catch(() => '/assets/defaultAvatar.jpg');
+
+			return {
+				id: opponentUser.id!,
+				username: opponentUser.username!,
+				avatarUrl: opponentAvatar,
+				walletAddress: opponentAddress,
+			};
+		} catch (error) {
+			console.error(`Failed to get opponent details for wallet ${opponentAddress}`, error);
+			return { id: 0, username: 'Unknown', avatarUrl: '/assets/defaultAvatar.jpg', walletAddress: opponentAddress };
+		}
+	}
+
+	private _enrichSingleMatch(match: Match, currentUserWallet: string, opponent: PlayerInfo): EnrichedMatch {
+		const isPlayer1 = match.player1 === currentUserWallet;
+		const userScore = isPlayer1 ? match.player1Score : match.player2Score;
+		const opponentScore = isPlayer1 ? match.player2Score : match.player1Score;
+
+		return {
+			match,
+			opponent,
+			isWin: match.winner === currentUserWallet,
+			userScore: userScore!,
+			opponentScore: opponentScore!,
+		};
+	}
 
     /**
      * Gets the full match history for the current user.
