@@ -14,13 +14,14 @@ import { webSocketClient } from '../webSocketClient/webSocketClient.js';
 import { gameMap } from '../map/gameMap.js';
 import { playerPaddle } from '../player/player.js';
 import { Ball } from '../ball/ball.js';
-import { handleWaitingForPlayers } from '../ui/waitingStatusHandler.js';
+import { handleWaitingForPlayers, stopForfeitWinnerPing } from '../ui/waitingStatusHandler.js';
 import { TournamentClientHandler } from '../gameMode/tournament/TournamentClientHandler.js';
 import { cameraManager } from '../camera/cameraManager.js';
 import { updatePlayerNamesVersus, updateScoresUIVersus, updatePowerUpStatus } from '../playerUi/playerUi.js';
 import { frontendAssetDisposalManager } from '../assetManagement/FrontendAssetDisposalManager.js';
 import { soundManager } from '../audio/soundManager.js';
 import { PlayerPowerup } from '../player/playerPowerup.js';
+import { browserEventHandler } from '../webSocketClient/BrowserEventHandler.js';
 import * as BABYLON from '@babylonjs/core';
 
 export class GameClient {
@@ -569,6 +570,22 @@ export class GameClient {
                     console.log('🏆 Received gameInit message:', message);
                     // Handle game initialization for tournament matches
                     TournamentClientHandler.handleGameInit(message, this.updateGameStatus.bind(this), this);
+                } else if (message.type === 'connectionClose') {
+                    // ⭐ NEW: Handle connection close notification from server
+                    console.log('🔌 Received connection close notification:', message);
+                    
+                    // Stop all keep-alive mechanisms immediately
+                    browserEventHandler.stopHeartbeatPublic();
+                    stopForfeitWinnerPing();
+                    console.log('💓 IMMEDIATE: Stopped all keep-alive mechanisms due to connection close notification');
+                    
+                    // Update game status
+                    if (message.message) {
+                        this.updateGameStatus(message.message);
+                    }
+                    
+                    // Don't close the connection manually - let the server close it
+                    // This prevents race conditions where client closes before server
                 }
             } catch (error) {
                 console.error('Error parsing message:', error);

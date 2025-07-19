@@ -59,6 +59,8 @@ export class TournamentCommunicationManager {
           if (player.ws && player.ws.readyState === 1) {
             try {
               const playerPlacement = finalStandings.find(p => p.id === player.id)?.placement || 4;
+              
+              // ⭐ NEW: Send completion message first
               player.ws.send(JSON.stringify({
                 type: 'tournamentAdvancement',
                 status: 'tournament_complete',
@@ -69,8 +71,21 @@ export class TournamentCommunicationManager {
                 message: `🏆 Tournament complete! You finished ${this._getPlacementText(playerPlacement)}!`
               }));
               
+              // ⭐ NEW: Send connection close notification before actually closing
+              player.ws.send(JSON.stringify({
+                type: 'connectionClose',
+                reason: 'Tournament completed',
+                message: 'WebSocket connection will close in 2 seconds'
+              }));
+              
               console.log(`🏆 Closing WebSocket connection for player ${player.username} (${player.id}) after tournament completion`);
-              player.ws.close(1000, 'Tournament completed');
+              
+              // ⭐ NEW: Close connection after a short delay to ensure message delivery
+              setTimeout(() => {
+                if (player.ws && player.ws.readyState === 1) {
+                  player.ws.close(1000, 'Tournament completed');
+                }
+              }, 2000);
               
             } catch (error) {
               console.error(`Failed to send tournament completion to ${player.username}:`, error);
