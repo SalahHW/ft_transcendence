@@ -18,7 +18,9 @@ export default class AuthService {
     return AuthService._instance;
   }
 
-  public async _ensureAuthStatusChecked(forceRefresh: boolean = false): Promise<void> {
+  public async _ensureAuthStatusChecked(
+    forceRefresh: boolean = false
+  ): Promise<void> {
     if (this._isLoggedIn === null || forceRefresh) {
       try {
         this._user = await this._usersApi.getCurrentUser();
@@ -42,7 +44,9 @@ export default class AuthService {
     return this._isLoggedIn!;
   }
 
-  public async getJwtPayload(forceRefresh: boolean = false): Promise<JwtUserPayload | null> {
+  public async getJwtPayload(
+    forceRefresh: boolean = false
+  ): Promise<JwtUserPayload | null> {
     await this._ensureAuthStatusChecked(forceRefresh);
     return this._user;
   }
@@ -240,7 +244,7 @@ export default class AuthService {
           err
         );
       }
-    }, 240_000); // 4 minutes
+    }, 120_000); // 2 minutes
   }
 
   private _stopRefreshLoop() {
