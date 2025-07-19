@@ -1,15 +1,15 @@
-const mapMatchArrayToMatchObject = (match: any[]): Match => {
-	if (!match || !Array.isArray(match)) {
-		return match as Match;
+const mapRawMatchToMatch = (rawMatch: any): Match => {
+	if (!rawMatch || typeof rawMatch !== 'object' || Array.isArray(rawMatch)) {
+		return rawMatch as Match;
 	}
 	return {
-		player1: match[0],
-		player2: match[1],
-		winner: match[2],
-		player1Score: parseInt(match[3], 10),
-		player2Score: parseInt(match[4], 10),
-		matchId: parseInt(match[5], 10),
-		endTimestamp: parseInt(match[6], 10),
+		player1: rawMatch.player1.toLowerCase(),
+		player2: rawMatch.player2.toLowerCase(),
+		winner: rawMatch.winner.toLowerCase(),
+		player1Score: parseInt(rawMatch.player1Score, 10),
+		player2Score: parseInt(rawMatch.player2Score, 10),
+		matchId: parseInt(rawMatch.matchId, 10),
+		endTimestamp: parseInt(rawMatch.endTimestamp, 10),
 	};
 };
 
@@ -32,15 +32,15 @@ export interface Match {
 	endTimestamp?: number;
 }
 
-const mapTournamentArrayToTournamentObject = (tournament: any[]): Tournament => {
-    if (!tournament || !Array.isArray(tournament)) {
+const mapRawTournamentObjectToTournamentObject = (tournament: any): Tournament => {
+    if (!tournament || typeof tournament !== 'object' || Array.isArray(tournament)) {
         return tournament as Tournament;
     }
     return {
-        endTimestamp: parseInt(tournament[0], 10),
-        matchIds: tournament[1].map((id: string) => parseInt(id, 10)),
-        tournamentId: parseInt(tournament[2], 10),
-        winner: tournament[3],
+        endTimestamp: parseInt(tournament.endTimestamp, 10),
+        matchIds: tournament.matchIds.map((id: string) => parseInt(id, 10)),
+        tournamentId: parseInt(tournament.tournamentId, 10),
+        winner: tournament.winnerAddress,
     };
 };
 
@@ -89,7 +89,7 @@ export default class MatchServiceAPI {
 		}
 		if (response.ok && data.success) {
 			console.log(`Successfully fetched matches for player ${address}.`);
-			return data.matches.map(mapMatchArrayToMatchObject);
+			return data.matches.map(mapRawMatchToMatch);
 		}
 		console.error(`Failed to fetch matches for player ${address}:`, data);
 		throw new Error(`Failed to fetch matches. Please try again later.`);
@@ -100,7 +100,6 @@ export default class MatchServiceAPI {
 	 * @param address - The player's address
 	 * @returns A promise that resolves to an array of tournaments
 	 */
-	 // ! Not implemented in the blockchain-service
 	async getTournamentsByPlayer(address: string): Promise<Tournament[]> {
 		const response = await fetch(`${this._baseUrl}/tournament/player/${address}`, {
 			method: "GET"
@@ -116,7 +115,7 @@ export default class MatchServiceAPI {
 		const data = await response.json();
 		if (response.ok && data.success) {
 			console.log(`Successfully fetched tournaments for player ${address}.`);
-			return data.tournaments.map(mapTournamentArrayToTournamentObject);
+			return data.tournaments.map(mapRawTournamentObjectToTournamentObject);
 		}
 		if (response.ok && !data.success) {
 			console.log(`No tournaments found for player ${address}.`);
@@ -146,7 +145,7 @@ export default class MatchServiceAPI {
 		const data = await response.json();
 		if (response.ok && data.success) {
 			console.log(`Successfully fetched matches for winner ${address}.`);
-			return data.matches.map(mapMatchArrayToMatchObject);
+			return data.matches.map(mapRawMatchToMatch);
 		}
 		if (response.ok && !data.success) {
 			console.log(`No matches found for winner ${address}.`);
@@ -168,7 +167,7 @@ export default class MatchServiceAPI {
 		const data = await response.json();
 		if (response.ok && data.success) {
 			console.log(`Successfully fetched match with id ${matchId}.`);
-			return mapMatchArrayToMatchObject(data.match);
+			return mapRawMatchToMatch(data.match);
 		}
 		else {
 			console.error(`Failed to fetch match with id ${matchId}:`, data);
@@ -279,7 +278,7 @@ export default class MatchServiceAPI {
 		const data = await response.json();
 		if (response.ok && data.success) {
 			console.log(`Successfully fetched tournaments for winner ${address}.`);
-			return data.tournaments.map(mapTournamentArrayToTournamentObject);
+			return data.tournaments.map(mapRawTournamentObjectToTournamentObject);
 		}
 		if (response.ok && !data.success) {
 			console.log(`No tournaments found for winner ${address}.`);

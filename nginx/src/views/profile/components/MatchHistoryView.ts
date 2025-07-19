@@ -20,7 +20,7 @@ export class MatchHistoryView {
 				this._matchHistoryService.getEnrichedTournamentHistory(user.wallet)
 			]);
 
-			const { enrichedMatches, currentUserAvatarUrl } = enrichedHistory;
+			const { enrichedMatches, currentUser } = enrichedHistory;
 
             if (enrichedMatches.length === 0 && enrichedTournamentHistory.length === 0) {
 				return this.renderEmptyState();
@@ -35,7 +35,7 @@ export class MatchHistoryView {
 				)
 			).join("");
 
-            const matchesHtmlPromises = enrichedMatches.map((enrichedMatch: EnrichedMatch) => this.createMatchHistoryItem(enrichedMatch, user, currentUserAvatarUrl));
+            const matchesHtmlPromises = enrichedMatches.map((enrichedMatch: EnrichedMatch) => this.createMatchHistoryItem(enrichedMatch, currentUser));
             const matchesHtml = (await Promise.all(matchesHtmlPromises)).join('');
             return /* HTML */`
                 <div class="flex flex-col h-full">
@@ -142,12 +142,8 @@ export class MatchHistoryView {
 		`;
     }
 
-    private static async createMatchHistoryItem(enrichedMatch: EnrichedMatch, currentUser: any, userAvatar: string): Promise<string> {
-		const { match, opponent, isWin } = enrichedMatch;
-        const userScore = match.player1 === currentUser.wallet ? match.player1Score : match.player2Score;
-        const opponentScore = match.player1 === currentUser.wallet ? match.player2Score : match.player1Score;
-		const opponentUsername = opponent.username;
-		const opponentAvatar = opponent.avatarUrl;
+    private static async createMatchHistoryItem(enrichedMatch: EnrichedMatch, currentUser: PlayerInfo): Promise<string> {
+		const { opponent, isWin, userScore, opponentScore, match } = enrichedMatch;
 
         const resultText = isWin ? "VICTORY" : "DEFEAT";
         const resultColor = isWin ? UI_THEME.colors.green.light : UI_THEME.colors.red.light;
@@ -169,7 +165,7 @@ export class MatchHistoryView {
 					<div class="flex items-center w-1/3">
 						<div>
 							<img
-								src="${userAvatar}"
+								src="${currentUser.avatarUrl}"
 								alt="${currentUser.username} avatar"
 								class="text-white w-10 h-10 rounded-lg object-cover"
 							/>
@@ -188,12 +184,12 @@ export class MatchHistoryView {
 					</div>
 					<div class="flex items-center justify-end w-1/3">
 						<div class="mr-4">
-							<span class="text-white">${opponentUsername}</span>
+							<span class="text-white">${opponent.username}</span>
 						</div>
 						<div>
 							<img
-								src="${opponentAvatar}"
-								alt="${opponentUsername} avatar"
+								src="${opponent.avatarUrl}"
+								alt="${opponent.username} avatar"
 								class=" text-white w-10 h-10 rounded-lg object-cover"
 							/>
 						</div>

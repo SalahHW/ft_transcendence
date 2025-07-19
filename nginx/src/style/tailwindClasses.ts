@@ -36,9 +36,9 @@ export const UI_THEME = {
 	},
 
 	components: {
-		overlay: `fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xl select-none opacity-0 scale-95 transition-all duration-150 ease-out`,
+		overlay: `fixed inset-0 z-50 hidden items-center justify-center backdrop-blur-md select-none opacity-0 scale-95 transition-all duration-150 ease-out`,
 
-		popupContainer: `relative bg-custom-dark/90 backdrop-blur-xl rounded-2xl shadow-2xl border-2 border-custom-gray select-none`,
+		popupContainer: `relative bg-custom-dark/90 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black border-2 border-custom-gray select-none`,
 
 		input: `w-full px-4 py-3 bg-black/20 border border-custom-gray rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:border-gray-500 focus:bg-black/30 transition-all duration-200`,
 
@@ -85,17 +85,17 @@ export const UI_THEME = {
 	wheel: {
 		svg: {
 			fill: {
-				normal: '#313131',
+				normal: '#313131CC',
 				selected: '#444444',
 				hover: '#444444',
-				center: '#313131',
+				center: '#313131CC',
 			},
 			stroke: {
 				normal: '#5A5A5A',
 				selected: '#888888',
 			},
 			text: {
-				normal: '#9CA3AF',
+				normal: '#D1D5DB',
 				selected: '#F3F4F6',
 				font: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',
 			}
