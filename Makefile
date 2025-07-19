@@ -1,53 +1,43 @@
-COMPOSE_FILE = ./docker-compose.yml
-DOCKER_COMPOSE = COMPOSE_BAKE=true  docker compose -f $(COMPOSE_FILE)
+SERVICE_DIRS := $(shell find . -maxdepth 1 -type d -name '*-service' -o -name 'nginx' -o -name 'redis' -o -name 'game' -o -name 'jwt' -o -name 'blockchain' -o -name 'presences' -o -name 'avatars' -o -name 'friends')
+SERVICE_DOCK := $(shell find . $(SERVICE_DIRS) -name 'Dockerfile' -type f)
+SERVICE_SRC := $(shell find $(SERVICE_DIRS) -type f \( -name '*.js' -o -name '*.ts' -o -name '*.json' -o -name '*.sol' \))
+DIRS := $(shell find . -type d)
 
-start:
-	@$(DOCKER_COMPOSE) up -d
+start: envs dbs .images
+	@docker compose -f ./docker-compose.yml up -d
+	@./launch-scripts/openBrowser.sh
+
+envs:
+	@./launch-scripts/initEnvs.sh
+	chmod +x ./launch-scripts/openBrowser.sh
+
+dbs:
+	@rm -rf ./avatars-service/database
+	@rm -rf ./friends-service/database
+	@rm -rf ./users-service/database
+
+.images: envs $(SERVICE_SRC) $(SERVICE_DOCK) docker-compose.yml .env
+	@COMPOSE_BAKE=true docker compose -f ./docker-compose.yml build
+	@touch .images
 
 stop:
-	@$(DOCKER_COMPOSE) down
+	@if [ ! -f ./jwt-service/.env ]; then \
+		echo "SECRET_KEY=very_long_password_or_not_because_basic_one" > ./jwt-service/.env; \
+	fi
+	@docker compose -f ./docker-compose.yml down
 
 restart: stop start
 
-build:
-	@$(DOCKER_COMPOSE) build
-
-rebuild-%:
-	@$(DOCKER_COMPOSE) up -d --build $*
-
-rebuild-nginx:
-	@$(DOCKER_COMPOSE) up -d --build nginx
-
-rebuild-users:
-	@$(DOCKER_COMPOSE) up -d --build users
-
-rebuild-jwt:
-	@$(DOCKER_COMPOSE) up -d --build jwt
-
-rebuild-redis:
-	@$(DOCKER_COMPOSE) up -d --build redis
-
-rebuild-game:
-	@$(DOCKER_COMPOSE) up -d --build game
-
-rebuild-blockchain:
-	@$(DOCKER_COMPOSE) up -d --build blockchain
-
-rebuild-avatars:
-	@$(DOCKER_COMPOSE) up -d --build avatars
-
-rebuild-friends:
-	@$(DOCKER_COMPOSE) up -d --build friends
-
-rebuild-presences:
-	@$(DOCKER_COMPOSE) up -d --build presences
-		
-clean: stop
-	@$(DOCKER_COMPOSE) down --remove-orphans
-
-clean-images: clean
-	@$(DOCKER_COMPOSE) down --rmi local
+clean: stop dbs
+	@if [ -f ./jwt-service/.env ]; then \
+		echo "Jwt key removed"; \
+		rm ./jwt-service/.env; \
+	else \
+		echo "no jwt .env found"; \
+	fi
+	@docker system prune -af
+	@rm -f .images
 
 re: clean start
 
-.PHONY: start images stop restart clean re
+.PHONY: start stop images restart clean re
