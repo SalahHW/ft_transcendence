@@ -65,12 +65,8 @@ export default class WalletLoginPopup extends ModalView {
 				this.hide();
 			}, 1500);
 		} catch (error: any) {
-			NotificationService.show(
-				error instanceof Error
-					? error.message
-					: "Wallet login failed",
-				"error"
-			);
+			console.log(error);
+			NotificationService.show("Wallet login failed", "error");
 		} finally {
 			this._setLoading(false);
 		}
