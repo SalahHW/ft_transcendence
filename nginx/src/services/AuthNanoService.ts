@@ -66,6 +66,7 @@ export default class AuthService {
       data: { userId: this._user?.sub, username: this._user?.username },
     });
 
+    window.location.reload();
     return this._user!;
   }
 
@@ -81,6 +82,7 @@ export default class AuthService {
         type: "USER_LOGOUT",
         data: { timestamp: Date.now() },
       });
+      window.location.reload();
     } catch (error) {
       console.error("Logout API call failed:", error);
       throw new Error("Logout failed. Please try again.");
