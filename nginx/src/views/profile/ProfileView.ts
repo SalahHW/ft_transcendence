@@ -54,8 +54,7 @@ export default class ProfileView extends ModalView {
 				</div>
 			`;
 
-			profileContainer.innerHTML = await UserProfileView.render();
-			await UserProfileView.addEventListeners();
+			await UserProfileView.render(profileContainer as HTMLElement);
 		} catch (error) {
 			console.error('Error updating profile:', error);
 			profileContainer.innerHTML = /* HTML */`

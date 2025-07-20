@@ -45,9 +45,11 @@ export default class UserProfileService implements CacheableService {
      * Implements a simple cache-on-read strategy.
      * @returns A promise that resolves to the enriched user profile.
      */
-    public async getEnrichedUserProfile(): Promise<EnrichedUser> {
-        if (this._enrichedUserProfileCache) {
-            return this._enrichedUserProfileCache;
+    public async getEnrichedUserProfile(
+        onUpdate?: (updatedData: EnrichedUser) => void
+    ): Promise<EnrichedUser> {
+        if (this._enrichedUserProfileCache && onUpdate) {
+            onUpdate(this._enrichedUserProfileCache);
         }
 
         const jwtPayload = await this._authService.getJwtPayload();
@@ -85,6 +87,9 @@ export default class UserProfileService implements CacheableService {
         };
 
         this._enrichedUserProfileCache = enrichedUser;
+        if (onUpdate) {
+            onUpdate(enrichedUser);
+        }
         return enrichedUser;
     }
 
