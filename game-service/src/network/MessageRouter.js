@@ -366,6 +366,31 @@ export class MessageRouter {
       return;
     }
     
+    // ⭐ NEW: Check if this is a tournament room that has completed
+    if (room.metadata?.waitingRoomId) {
+      try {
+        // Import tournament manager dynamically to avoid circular dependencies
+        import('../tournament/TournamentManager.js').then(({ tournamentManager }) => {
+          const waitingRoomData = tournamentManager.waitingRooms.get(room.metadata.waitingRoomId);
+          if (waitingRoomData && waitingRoomData.phase === 'FINISHED') {
+            console.log(`🏆 Keep-alive ping from ${playerId}: tournament ${room.metadata.waitingRoomId} has finished, closing connection`);
+            if (ws && ws.readyState === 1) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Tournament has ended. Please refresh the page to join a new game.'
+              }));
+              ws.close(1000, 'Tournament ended');
+            }
+            return;
+          }
+        }).catch(error => {
+          console.error(`Error checking tournament state for ${playerId}:`, error);
+        });
+      } catch (error) {
+        console.error(`Error importing tournament manager for ${playerId}:`, error);
+      }
+    }
+    
     console.log(`🏆 Keep-alive ping ignored from ${playerId}: ${msg.reason || 'no reason specified'}`);
     // Disabled - only explicit leave button handling
   }

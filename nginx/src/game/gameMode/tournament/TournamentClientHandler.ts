@@ -114,6 +114,11 @@ export class TournamentClientHandler {
       // Individual final match is complete
       console.log('🏆 Final match complete, stopping render loop...');
       
+      // ⭐ CRITICAL FIX: Stop ALL keep-alive mechanisms IMMEDIATELY to prevent race conditions
+      browserEventHandler.stopHeartbeatPublic();
+      stopForfeitWinnerPing();
+      console.log('💓 IMMEDIATE: Stopped all keep-alive mechanisms for final match completion');
+      
       // ⭐ CRITICAL FIX: Remove any active splash screen first to prevent race conditions
       if (isSplashScreenActive()) {
         console.log('🏆 Active splash screen detected, removing it immediately');
@@ -172,6 +177,11 @@ export class TournamentClientHandler {
     } else if (message.status === 'tournament_complete') {
       // Tournament is complete (both finals finished)
       console.log('🏆 Tournament complete, stopping render loop...');
+      
+      // ⭐ CRITICAL FIX: Stop ALL keep-alive mechanisms IMMEDIATELY to prevent race conditions
+      browserEventHandler.stopHeartbeatPublic();
+      stopForfeitWinnerPing();
+      console.log('💓 IMMEDIATE: Stopped all keep-alive mechanisms for tournament completion');
       
       // ⭐ NEW: Check if tournament was disrupted
       if (message.isDisrupted) {
