@@ -143,6 +143,7 @@ export default class Wheel {
 	private async _handleKeyDown(event: KeyboardEvent): Promise<void> {
 		if (event.key === "Escape" && !event.shiftKey && this._isVisible) {
 			event.preventDefault();
+      event.stopPropagation();
 			this.hideWheel();
 			return;
 		}
