@@ -1,4 +1,3 @@
-import UserProfileService from './UserProfileService.js';
 import MatchServiceAPI, { Match, Tournament } from './api/match.js';
 import UsersApi from './api/user.js';
 import AvatarServiceAPI from './api/avatar.js';
@@ -34,12 +33,10 @@ export interface EnrichedTournament {
 
 export default class MatchHistoryService implements CacheableService {
     private static _instance: MatchHistoryService;
-    private _userProfileService = UserProfileService.getInstance();
     private _matchApi = new MatchServiceAPI();
 	private _usersApi = new UsersApi();
 	private _avatarApi = new AvatarServiceAPI();
     private _enrichedMatchHistoryCache: EnrichedMatchHistory | null = null;
-    private _tournamentHistoryCache: Tournament[] | null = null;
 	private _enrichedTournamentHistoryCache: EnrichedTournament[] | null = null;
     private _userNameCache: Map<string, string> = new Map();
     public readonly serviceName = 'MatchHistoryService';
@@ -69,11 +66,10 @@ export default class MatchHistoryService implements CacheableService {
      */
 	public async getEnrichedTournamentHistory(
         walletAddress: string,
-        onUpdate: (updatedData: EnrichedTournament[]) => void
+        onUpdate?: (updatedData: EnrichedTournament[]) => void
     ): Promise<EnrichedTournament[]> {
-        if (this._enrichedTournamentHistoryCache) {
-            // Return cached data immediately
-            Promise.resolve().then(() => onUpdate(this._enrichedTournamentHistoryCache!));
+        if (this._enrichedTournamentHistoryCache && onUpdate) {
+            onUpdate(this._enrichedTournamentHistoryCache);
         }
 
         if (!walletAddress) {
@@ -85,7 +81,7 @@ export default class MatchHistoryService implements CacheableService {
 
         if (rawTournaments.length === 0) {
             this._enrichedTournamentHistoryCache = [];
-            onUpdate([]);
+            if (onUpdate) onUpdate([]);
             return [];
         }
 
@@ -132,7 +128,9 @@ export default class MatchHistoryService implements CacheableService {
 		);
 
 		this._enrichedTournamentHistoryCache = enrichedTournaments;
-        onUpdate(enrichedTournaments);
+        if (onUpdate) {
+            onUpdate(enrichedTournaments);
+        }
 		return enrichedTournaments;
     }
 
@@ -180,10 +178,10 @@ export default class MatchHistoryService implements CacheableService {
      */
     public async getEnrichedMatchHistory(
         walletAddress: string,
-        onUpdate: (updatedData: EnrichedMatchHistory) => void
-    ): Promise<void> {
-        if (this._enrichedMatchHistoryCache) {
-            Promise.resolve().then(() => onUpdate(this._enrichedMatchHistoryCache!));
+        onUpdate?: (updatedData: EnrichedMatchHistory) => void
+    ): Promise<EnrichedMatchHistory> {
+        if (this._enrichedMatchHistoryCache && onUpdate) {
+            onUpdate(this._enrichedMatchHistoryCache);
         }
         if (!walletAddress) {
             throw new Error("Wallet address is missing.");
@@ -195,8 +193,8 @@ export default class MatchHistoryService implements CacheableService {
         if (matches.length === 0) {
             const result = { enrichedMatches: [], currentUser };
             this._enrichedMatchHistoryCache = result;
-            onUpdate(result);
-            return;
+            if (onUpdate) onUpdate(result);
+            return result;
         }
 
         const enrichedMatches = await Promise.all(
@@ -209,7 +207,8 @@ export default class MatchHistoryService implements CacheableService {
 
         const result = { enrichedMatches, currentUser };
         this._enrichedMatchHistoryCache = result;
-        onUpdate(result);
+        if (onUpdate) onUpdate(result);
+        return result;
     }
 
 	private async _getCurrentPlayerInfo(walletAddress: string): Promise<PlayerInfo> {
@@ -249,47 +248,27 @@ export default class MatchHistoryService implements CacheableService {
 	}
 
 	private _enrichSingleMatch(match: Match, currentUserWallet: string, opponent: PlayerInfo): EnrichedMatch {
-		const isPlayer1 = match.player1 === currentUserWallet;
-		const userScore = isPlayer1 ? match.player1Score : match.player2Score;
-		const opponentScore = isPlayer1 ? match.player2Score : match.player1Score;
+		const isWin = match.winner === currentUserWallet;
+		const userScore = match.player1 === currentUserWallet ? match.player1Score! : match.player2Score!;
+		const opponentScore = match.player1 === currentUserWallet ? match.player2Score! : match.player1Score!;
 
 		return {
 			match,
 			opponent,
-			isWin: match.winner === currentUserWallet,
-			userScore: userScore!,
-			opponentScore: opponentScore!,
+			isWin,
+			userScore,
+			opponentScore
 		};
-	}
-
-    /**
-     * Gets the full match history for the current user.
-     * Implements a simple cache-on-read strategy.
-     * @returns A promise that resolves to the user's match history.
-     */
-    public async getMatchHistory(walletAddress: string): Promise<Match[]> {
-        const enrichedHistory = await this.getEnrichedMatchHistory(walletAddress);
-        return enrichedHistory.enrichedMatches.map(enriched => enriched.match);
     }
 
-    /**
-     * Gets the full tournament history for the current user.
-     * Implements a simple cache-on-read strategy.
-     * @returns A promise that resolves to the user's tournament history.
-     */
+    public async getMatchHistory(walletAddress: string): Promise<Match[]> {
+        const enrichedHistory = await this.getEnrichedMatchHistory(walletAddress);
+        return enrichedHistory.enrichedMatches.map((enriched: EnrichedMatch) => enriched.match);
+    }
+
     public async getTournamentHistory(walletAddress: string): Promise<Tournament[]> {
-        if (this._tournamentHistoryCache) {
-            return this._tournamentHistoryCache;
-        }
-
-        if (!walletAddress) {
-            throw new Error("Wallet address is missing.");
-        }
-
-        const tournamentHistory = await this._matchApi.getTournamentsByWinner(walletAddress);
-        this._tournamentHistoryCache = tournamentHistory;
-
-        return tournamentHistory;
+        const tournaments = await this.getEnrichedTournamentHistory(walletAddress);
+        return tournaments;
     }
 
     /**
@@ -297,7 +276,6 @@ export default class MatchHistoryService implements CacheableService {
      */
     public clearCache(): void {
         this._enrichedMatchHistoryCache = null;
-        this._tournamentHistoryCache = null;
 		this._enrichedTournamentHistoryCache = null;
         this._userNameCache.clear();
     }

@@ -21,7 +21,6 @@ export default class Wheel {
   private _element: HTMLElement;
   private _optionHistory: Option[][] = [];
   private _selectedIndex: number = 0;
-  private _hoveredIndex: number = -1;
   private _isVisible: boolean = false;
   private _userIsLoggedIn: boolean = false;
   private _router: Router = Router.getInstance();
@@ -201,10 +200,6 @@ export default class Wheel {
     } else {
       this.hideWheel();
     }
-  }
-
-  private _updateSelection(): void {
-    this._renderWheel();
   }
 
     public async showWheel(): Promise<void> {

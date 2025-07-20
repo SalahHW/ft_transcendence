@@ -4,106 +4,185 @@ import { UI_THEME } from "../../../style/tailwindClasses.js";
 
 type HistoryItem = (EnrichedTournament & { type: 'tournament' }) | (EnrichedMatch & { type: 'match' });
 
-export class MatchHistoryView {
+interface RenderableHistoryItem {
+    id: string;
+    type: 'tournament' | 'match';
+    data: EnrichedTournament | EnrichedMatch;
+    isNested: boolean;
+    needsSeparator: boolean;
+}
 
+export class MatchHistoryView {
     private static _matchHistoryService = MatchHistoryService.getInstance();
     private static _userProfileService = UserProfileService.getInstance();
 
-    public static async render(
-        container: HTMLElement
-    ): Promise<void> {
-        container.innerHTML = this.renderLoadingState();
+    private static _container: HTMLElement | null = null;
+    private static _enrichedMatches: EnrichedMatch[] = [];
+    private static _enrichedTournaments: EnrichedTournament[] = [];
+    private static _currentUser: PlayerInfo | null = null;
+    private static _userWallet: string | null = null;
+    private static _dataReadyFlags = { matches: false, tournaments: false };
+
+    public static async render(container: HTMLElement): Promise<void> {
+        this._container = container;
+        this._container.innerHTML = this.renderLoadingState();
 
         const user = await this._userProfileService.getEnrichedUserProfile();
         if (!user || !user.wallet) {
             console.error("User not authenticated or wallet address is missing.");
-            container.innerHTML = this.renderErrorState();
+            if (this._container) this._container.innerHTML = this.renderErrorState();
             return;
         }
 
-        let enrichedMatches: EnrichedMatch[] = [];
-        let enrichedTournamentHistory: EnrichedTournament[] = [];
-        let currentUser: PlayerInfo | null = null;
-
-        const updateView = async () => {
-            if (!currentUser) return;
-
-            if (enrichedMatches.length === 0 && enrichedTournamentHistory.length === 0) {
-                container.innerHTML = this.renderEmptyState();
-                return;
-            }
-
-            const combinedHistory: HistoryItem[] = [
-                ...enrichedTournamentHistory.map((tournament): HistoryItem => ({ ...tournament, type: 'tournament' })),
-                ...enrichedMatches.map((match): HistoryItem => ({ ...match, type: 'match' }))
-            ];
-
-            combinedHistory.sort((a, b) => {
-                const aTimestamp = a.type === 'tournament' ? a.endTimestamp : a.match.endTimestamp!;
-                const bTimestamp = b.type === 'tournament' ? b.endTimestamp : b.match.endTimestamp!;
-
-                if (bTimestamp > aTimestamp) return 1;
-                if (bTimestamp < aTimestamp) return -1;
-
-                if (a.type === 'tournament' && b.type !== 'tournament') return -1;
-                if (a.type !== 'tournament' && b.type === 'tournament') return 1;
-
-                return 0;
-            });
-
-            let lastSeenTournamentTimestampForNesting: number | null = null;
-
-            const historyHtml = (
-                await Promise.all(
-                    combinedHistory.map(async (item, index) => {
-                        if (item.type === 'tournament') {
-                            lastSeenTournamentTimestampForNesting = item.endTimestamp;
-                            if (!user.wallet) return '';
-                            const currentUserInfo = item.players.find((p: PlayerInfo) => p.walletAddress === user.wallet);
-                            return MatchHistoryView.createTournamentHistoryItem(item, currentUserInfo!);
-                        } else {
-                            const isNested = item.match.endTimestamp === lastSeenTournamentTimestampForNesting;
-                            return MatchHistoryView.createMatchHistoryItem(item, currentUser!, isNested);
-                        }
-                    })
-                )
-            ).join('');
-
-            container.innerHTML = /* HTML */`
-                <div class="flex flex-col h-full">
-                    <div class="overflow-auto flex-[1] [mask-image:linear-gradient(to_bottom,transparent,black_2%,black_98%,transparent)] pt-2 overflow-x-auto">
-                        <div class="min-w-[600px] px-4">
-                            ${historyHtml}
-                        </div>
-                    </div>
-                </div>
-            `;
-        };
-
-        try {
-            if (!user.wallet) {
-                container.innerHTML = this.renderErrorState();
-                return;
-            }
-
-            this._matchHistoryService.getEnrichedTournamentHistory(user.wallet, (tournaments) => {
-                enrichedTournamentHistory = tournaments;
-                updateView();
-            });
-
-            this._matchHistoryService.getEnrichedMatchHistory(user.wallet, (matches) => {
-                enrichedMatches = matches.enrichedMatches;
-                currentUser = matches.currentUser;
-                updateView();
-            });
-
-        } catch (error) {
-            console.error("Error rendering MatchHistory:", error);
-            container.innerHTML = this.renderErrorState();
-        }
+        this._userWallet = user.wallet;
+        this._resetState();
+        this._initDataFetch();
     }
 
-    private static renderLoadingState(): string {
+    private static _resetState(): void {
+        this._enrichedMatches = [];
+        this._enrichedTournaments = [];
+        this._currentUser = null;
+        this._dataReadyFlags = { matches: false, tournaments: false };
+    }
+
+    private static _initDataFetch(): void {
+        if (!this._userWallet) return;
+
+        this._matchHistoryService.getEnrichedTournamentHistory(this._userWallet, (tournaments) => {
+            this._enrichedTournaments = tournaments;
+            this._dataReadyFlags.tournaments = true;
+            this._onDataUpdate();
+        });
+
+        this._matchHistoryService.getEnrichedMatchHistory(this._userWallet, (matchHistory) => {
+            this._enrichedMatches = matchHistory.enrichedMatches;
+            this._currentUser = matchHistory.currentUser;
+            this._dataReadyFlags.matches = true;
+            this._onDataUpdate();
+        });
+    }
+
+    private static _onDataUpdate(): void {
+        if (!this._dataReadyFlags.matches || !this._dataReadyFlags.tournaments) {
+            return;
+        }
+        this._renderToDOM();
+    }
+
+    private static _prepareRenderableHistory(): RenderableHistoryItem[] {
+        const combinedHistory: HistoryItem[] = [
+            ...this._enrichedTournaments.map((tournament): HistoryItem => ({ ...tournament, type: 'tournament' })),
+            ...this._enrichedMatches.map((match): HistoryItem => ({ ...match, type: 'match' }))
+        ];
+
+        combinedHistory.sort((a, b) => {
+            const aTimestamp = a.type === 'tournament' ? a.endTimestamp : a.match.endTimestamp!;
+            const bTimestamp = b.type === 'tournament' ? b.endTimestamp : b.match.endTimestamp!;
+            if (bTimestamp > aTimestamp) return 1;
+            if (bTimestamp < aTimestamp) return -1;
+            if (a.type === 'tournament' && b.type !== 'tournament') return -1;
+            if (a.type !== 'tournament' && b.type === 'tournament') return 1;
+            return 0;
+        });
+
+        const validGroupTimestamps = this._getValidGroupTimestamps(combinedHistory);
+        let lastSeenTournamentTimestampForNesting: number | null = null;
+
+        return combinedHistory.map((item, index) => {
+            const currentTimestamp = item.type === 'tournament' ? item.endTimestamp : item.match.endTimestamp!;
+            if (item.type === 'tournament') {
+                lastSeenTournamentTimestampForNesting = item.endTimestamp;
+            }
+
+            const isNested = item.type === 'match' && item.match.endTimestamp === lastSeenTournamentTimestampForNesting;
+
+            let needsSeparator = false;
+            if (index > 0) {
+                const prevItem = combinedHistory[index - 1];
+                const prevTimestamp = prevItem.type === 'tournament' ? prevItem.endTimestamp : prevItem.match.endTimestamp!;
+                const isCurrentInGroup = validGroupTimestamps.has(currentTimestamp);
+                const isPrevInGroup = validGroupTimestamps.has(prevTimestamp);
+
+                if (isCurrentInGroup !== isPrevInGroup) {
+                    needsSeparator = true;
+                } else if (isCurrentInGroup && currentTimestamp !== prevTimestamp) {
+                    needsSeparator = true;
+                }
+            }
+
+            return {
+                id: `${item.type}-${item.type === 'tournament' ? item.id : item.match.matchId}`,
+                type: item.type,
+                data: item,
+                isNested,
+                needsSeparator,
+            };
+        });
+    }
+
+    private static _getValidGroupTimestamps(history: HistoryItem[]): Set<number> {
+        const itemsByTimestamp = new Map<number, HistoryItem[]>();
+        history.forEach(item => {
+            const timestamp = item.type === 'tournament' ? item.endTimestamp : item.match.endTimestamp!;
+            if (!itemsByTimestamp.has(timestamp)) {
+                itemsByTimestamp.set(timestamp, []);
+            }
+            itemsByTimestamp.get(timestamp)!.push(item);
+        });
+
+        const validGroupTimestamps = new Set<number>();
+        for (const [timestamp, items] of itemsByTimestamp.entries()) {
+            if (items.some(i => i.type === 'tournament') && items.some(i => i.type === 'match')) {
+                validGroupTimestamps.add(timestamp);
+            }
+        }
+        return validGroupTimestamps;
+    }
+
+    private static async _renderToDOM(): Promise<void> {
+        if (!this._container || !this._currentUser) return;
+
+        if (this._enrichedMatches.length === 0 && this._enrichedTournaments.length === 0) {
+            this._container.innerHTML = this.renderEmptyState();
+            return;
+        }
+
+        const renderableItems = this._prepareRenderableHistory();
+        const htmlFragments = await Promise.all(renderableItems.map(item => this._renderItem(item)));
+
+        const historyHtml = htmlFragments.join('');
+
+        this._container.innerHTML = /* HTML */`
+            <div class="flex flex-col h-full">
+                <div class="overflow-auto flex-[1] [mask-image:linear-gradient(to_bottom,transparent,black_2%,black_98%,transparent)] pt-2 overflow-x-auto">
+                    <div class="min-w-[600px] px-4">
+                        ${historyHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    private static async _renderItem(item: RenderableHistoryItem): Promise<string> {
+        const separatorHtml = item.needsSeparator ? `<div class="h-px w-full my-4 bg-white/10"></div>` : '';
+        let itemHtml = '';
+
+        if (item.type === 'tournament' && this._userWallet) {
+            const tournament = item.data as EnrichedTournament;
+            const currentUserInfo = tournament.players.find((p: PlayerInfo) => p.walletAddress === this._userWallet);
+            if (currentUserInfo) {
+                itemHtml = await MatchHistoryView.createTournamentHistoryItem(tournament, currentUserInfo);
+            }
+        } else {
+            const match = item.data as EnrichedMatch;
+            itemHtml = await MatchHistoryView.createMatchHistoryItem(match, this._currentUser!, item.isNested);
+        }
+
+        return separatorHtml + itemHtml;
+    }
+
+	private static renderLoadingState(): string {
         return /* HTML */`
             <div class="flex flex-col h-full justify-center items-center">
                 <p class="text-gray-400">Loading match history...</p>
@@ -137,15 +216,9 @@ export class MatchHistoryView {
         const bgColor = isWin ? UI_THEME.colors.green.dark : UI_THEME.colors.red.dark;
         const placementSuffix = (placement: number) => {
             const j = placement % 10, k = placement % 100;
-            if (j == 1 && k != 11) {
-                return "st";
-            }
-            if (j == 2 && k != 12) {
-                return "nd";
-            }
-            if (j == 3 && k != 13) {
-                return "rd";
-            }
+            if (j == 1 && k != 11) { return "st"; }
+            if (j == 2 && k != 12) { return "nd"; }
+            if (j == 3 && k != 13) { return "rd"; }
             return "th";
         };
 
