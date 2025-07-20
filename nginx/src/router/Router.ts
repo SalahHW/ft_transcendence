@@ -98,6 +98,17 @@ export default class Router {
       },
       isModal: true,
     },
+    {
+      path: "/wallet-login",
+      handler: async function () {
+        if (!this.cache) {
+          const module = await import("../components/walletLoginPopUp.js");
+          this.cache = new module.default();
+        }
+        this.cache.show();
+      },
+      isModal: true,
+    },
   ];
 
   public static getInstance(): Router {
