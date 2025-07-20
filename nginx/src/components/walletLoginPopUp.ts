@@ -61,9 +61,7 @@ export default class WalletLoginPopup extends ModalView {
 			await this._authService.loginWithWallet();
 			NotificationService.show("Logged in successfully!", "success");
 
-			setTimeout(() => {
-				this.hide();
-			}, 1500);
+			this.hide();
 		} catch (error: any) {
 			console.log(error);
 			NotificationService.show("Wallet login failed", "error");

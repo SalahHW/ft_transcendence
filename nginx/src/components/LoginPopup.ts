@@ -101,9 +101,7 @@ export default class LoginPopup extends ModalView {
 
 			NotificationService.show("Login successful!", "success");
 
-			setTimeout(() => {
-				this.hide();
-			}, 1500);
+			this.hide();
 		} catch (error) {
 			console.log(error);
 			NotificationService.show("Login failed. Please try again.", "error");

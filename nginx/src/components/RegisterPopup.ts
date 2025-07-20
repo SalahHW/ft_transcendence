@@ -127,9 +127,7 @@ export default class RegisterPopup extends ModalView {
 
 			NotificationService.show("Account created successfully!", "success");
 
-			setTimeout(() => {
-				this.hide();
-			}, 1500);
+			this.hide();
 		} catch (error: any) {
 			console.log(error);
 			if (error?.response?.status === 409) {

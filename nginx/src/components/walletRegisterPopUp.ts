@@ -82,9 +82,7 @@ export default class WalletRegisterPopup extends ModalView {
 			await this._authService.registerWithWallet(username);
 			NotificationService.show(`Welcome, ${username}!`, "success");
 
-			setTimeout(() => {
-				this.hide();
-			}, 1500);
+			this.hide();
 		} catch (error: any) {
 			NotificationService.show(
 				error instanceof Error
