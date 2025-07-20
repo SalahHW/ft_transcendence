@@ -3,7 +3,7 @@ SERVICE_DOCK := $(shell find . $(SERVICE_DIRS) -name 'Dockerfile' -type f)
 SERVICE_SRC := $(shell find $(SERVICE_DIRS) -type f \( -name '*.js' -o -name '*.ts' -o -name '*.json' -o -name '*.sol' \))
 DIRS := $(shell find . -type d)
 
-start: envs dbs .images
+start: envs .images
 	@docker compose -f ./docker-compose.yml up -d
 	@./launch-scripts/openBrowser.sh
 
