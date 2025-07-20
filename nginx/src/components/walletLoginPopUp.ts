@@ -33,7 +33,7 @@ export default class WalletLoginPopup extends ModalView {
 					${buttonHTML({
 						id: "wallet-login-button",
 						type: "submit",
-						label: "Sign in with MetaMask",
+						label: "Login",
 						style: UI_THEME.components.button.primary,
 					})}
 				</div>
