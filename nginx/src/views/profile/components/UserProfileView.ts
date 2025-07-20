@@ -50,19 +50,23 @@ export class UserProfileView {
                 ${user.username || "Unknown"}
               </h2>
             </div>
-            ${user.authenticationMethod === "credentials" && user.email
-              ? `<div id="email-wrapper" class="flex items-center gap-2 mb-4">
+            ${
+              user.authenticationMethod === "credentials" && user.email
+                ? `<div id="email-wrapper" class="flex items-center gap-2 mb-4">
 									<p class="text-gray-500">${user.email}</p>
 								</div>`
-              : ""}
+                : ""
+            }
             <div class="flex items-center gap-2 mb-4">
-              ${user.wallet
-                ? `<a href="https://testnet.snowtrace.io/address/${
-                    user.wallet
-                  }/tokentxns" target="_blank" rel="noopener noreferrer" class="text-gray-500 hover:text-gray-400 underline transition-colors duration-200">${UserProfileView.truncateWallet(
-                    user.wallet
-                  )}</a>`
-                : `<p class="text-gray-500">No wallet</p>`}
+              ${
+                user.wallet
+                  ? `<a href="https://testnet.snowtrace.io/address/${
+                      user.wallet
+                    }/tokentxns" target="_blank" rel="noopener noreferrer" class="text-gray-500 hover:text-gray-400 underline transition-colors duration-200">${UserProfileView.truncateWallet(
+                      user.wallet
+                    )}</a>`
+                  : `<p class="text-gray-500">No wallet</p>`
+              }
             </div>
           </div>
           <div class="flex flex-col gap-2 p-4 w-12">
@@ -136,65 +140,58 @@ export class UserProfileView {
 
     try {
       let user = await this._userProfileService.getEnrichedUserProfile();
-      let originalAvatarSrc = user.avatarUrl;
-
-      let newAvatarFile: File | null = null;
-      let objectUrlToRevoke: string | null = null;
-      let isDefaultAvatar = originalAvatarSrc.includes("defaultAvatar.jpg");
-
-      const updateAvatarOverlay = () => {
-        if (avatarOverlay) {
-          avatarOverlay.innerHTML = isDefaultAvatar
-            ? UPLOAD_ICON_SVG
-            : DELETE_ICON_SVG;
-        }
-      };
-
-      updateAvatarOverlay();
-
-      const handleAvatarClick = () => {
-        if (isDefaultAvatar) {
-          avatarUploadInput.click();
-        } else {
-          if (
-            confirm(
-              "Are you sure you want to delete your avatar and use the default one?"
-            )
-          ) {
-            deleteAvatar();
-          }
-        }
-      };
-
-      const deleteAvatar = async () => {
-        try {
-          await this._avatarService.deleteCurrentUserAvatar();
-          const newAvatarUrl =
-            await this._avatarService.getCurrentUserAvatarUrl();
-          avatarImg.src = `${newAvatarUrl}?t=${new Date().getTime()}`;
-          isDefaultAvatar = true;
-          updateAvatarOverlay();
-          NotificationService.show("Avatar deleted successfully!", "success");
-        } catch (error) {
-          console.error("Error deleting avatar:", error);
-          NotificationService.show("Error deleting avatar", "error");
-        }
-      };
-
-      const handleFileSelect = () => {
-        const file = avatarUploadInput.files?.[0];
-        if (file) {
-          newAvatarFile = file;
-          if (objectUrlToRevoke) URL.revokeObjectURL(objectUrlToRevoke);
-          objectUrlToRevoke = URL.createObjectURL(file);
-          avatarImg.src = objectUrlToRevoke;
-          updateAvatarOverlay();
-        }
-      };
 
       const editHandler = () => {
         const originalUsername = user.username || "";
         const originalEmail = user.email || "";
+        const originalAvatarSrc = avatarImg.src;
+        const isInitiallyDefaultAvatar =
+          originalAvatarSrc.includes("defaultAvatar.jpg");
+
+        type AvatarAction =
+          | { type: "none" }
+          | { type: "upload"; file: File; previewUrl: string }
+          | { type: "delete" };
+
+        let avatarAction: AvatarAction = { type: "none" };
+        let isCurrentlyDefaultAvatar = isInitiallyDefaultAvatar;
+
+        const updateAvatarOverlay = () => {
+          if (avatarOverlay) {
+            avatarOverlay.innerHTML = isCurrentlyDefaultAvatar
+              ? UPLOAD_ICON_SVG
+              : DELETE_ICON_SVG;
+          }
+        };
+
+        const handleAvatarClick = () => {
+          if (isCurrentlyDefaultAvatar) {
+            avatarUploadInput.click();
+          } else {
+            if (avatarAction.type === "upload") {
+              URL.revokeObjectURL(avatarAction.previewUrl);
+            }
+            avatarAction = { type: "delete" };
+            avatarImg.src = "./assets/defaultAvatar.jpg";
+            isCurrentlyDefaultAvatar = true;
+            updateAvatarOverlay();
+          }
+        };
+
+        const handleFileSelect = (event: Event) => {
+          const input = event.target as HTMLInputElement;
+          const file = input.files?.[0];
+          if (file) {
+            if (avatarAction.type === "upload") {
+              URL.revokeObjectURL(avatarAction.previewUrl);
+            }
+            const previewUrl = URL.createObjectURL(file);
+            avatarAction = { type: "upload", file, previewUrl };
+            avatarImg.src = previewUrl;
+            isCurrentlyDefaultAvatar = false;
+            updateAvatarOverlay();
+          }
+        };
 
         const usernameH2 = usernameWrapper.querySelector("h2");
         if (usernameH2) {
@@ -228,6 +225,7 @@ export class UserProfileView {
         avatarImg.style.filter = "brightness(50%)";
         avatarOverlay.style.opacity = "1";
         avatarOverlay.style.pointerEvents = "auto";
+        updateAvatarOverlay();
         avatarOverlay.addEventListener("click", handleAvatarClick);
         avatarUploadInput.addEventListener("change", handleFileSelect);
 
@@ -252,9 +250,9 @@ export class UserProfileView {
           const newUsername = usernameInput?.value?.trim();
           const newEmail = emailInput?.value?.trim();
 
-          if (save) {
-            const avatarChanged = newAvatarFile !== null;
+          let changesAppliedSuccessfully = true;
 
+          if (save) {
             if (newUsername && newUsername !== originalUsername) {
               try {
                 await this._userProfileService.updateUsername(newUsername);
@@ -265,7 +263,7 @@ export class UserProfileView {
               } catch (error) {
                 console.error("Username not conform:", error);
                 NotificationService.show("Username not conform", "error");
-                save = false;
+                changesAppliedSuccessfully = false;
               }
             }
 
@@ -279,32 +277,40 @@ export class UserProfileView {
               } catch (error) {
                 console.error("Email not conform:", error);
                 NotificationService.show("Email not conform", "error");
-                save = false;
+                changesAppliedSuccessfully = false;
               }
             }
 
-            if (avatarChanged && newAvatarFile) {
-              try {
+            try {
+              if (avatarAction.type === "upload") {
                 await this._avatarService.uploadOrUpdateCurrentUserAvatar(
-                  newAvatarFile
+                  avatarAction.file
                 );
-                isDefaultAvatar = false;
                 NotificationService.show(
                   "Avatar updated successfully!",
                   "success"
                 );
-              } catch (error) {
-                console.error("Avatar not conform:", error);
-                NotificationService.show("Avatar not conform", "error");
-                save = false;
+              } else if (avatarAction.type === "delete") {
+                await this._avatarService.deleteCurrentUserAvatar();
+                NotificationService.show(
+                  "Avatar deleted successfully!",
+                  "success"
+                );
               }
+            } catch (error) {
+              console.error("Avatar update failed:", error);
+              NotificationService.show("Avatar update failed.", "error");
+              changesAppliedSuccessfully = false;
             }
+          }
+
+          if (avatarAction.type === "upload") {
+            URL.revokeObjectURL(avatarAction.previewUrl);
           }
 
           user = await this._userProfileService.getEnrichedUserProfile();
 
           usernameWrapper.innerHTML = `<h2 class="text-4xl font-bold text-white">${user.username}</h2>`;
-
           if (emailWrapper && user.email) {
             emailWrapper.innerHTML = `<p class="text-gray-500">${user.email}</p>`;
           }
@@ -315,14 +321,10 @@ export class UserProfileView {
           avatarOverlay.removeEventListener("click", handleAvatarClick);
           avatarUploadInput.removeEventListener("change", handleFileSelect);
 
-          if (objectUrlToRevoke) URL.revokeObjectURL(objectUrlToRevoke);
-
-          if (!save) {
-            avatarImg.src = originalAvatarSrc;
+          if (save && changesAppliedSuccessfully) {
+            avatarImg.src = `${user.avatarUrl}?t=${new Date().getTime()}`;
           } else {
-            const newAvatarUrl =
-              await this._avatarService.getCurrentUserAvatarUrl();
-            avatarImg.src = `${newAvatarUrl}?t=${new Date().getTime()}`;
+            avatarImg.src = originalAvatarSrc;
           }
 
           editButton.innerHTML =

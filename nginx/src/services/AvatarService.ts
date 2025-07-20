@@ -99,17 +99,16 @@ export default class AvatarService implements CacheableService {
      */
     public async uploadOrUpdateCurrentUserAvatar(file: File | Blob): Promise<void> {
         const userId = await this._getUserId();
+        const cacheManager = CacheManager.getInstance();
+        cacheManager.triggerEvent({
+            type: 'AVATAR_UPDATED',
+        });
         try {
             await this._avatarApi.getUserAvatarUrl(userId);
             await this._avatarApi.updateUserAvatar(file);
         } catch (error) {
             await this._avatarApi.uploadUserAvatar(file);
         }
-
-        const cacheManager = CacheManager.getInstance();
-        cacheManager.triggerEvent({
-            type: 'AVATAR_UPDATED',
-        });
     }
 
     /**
