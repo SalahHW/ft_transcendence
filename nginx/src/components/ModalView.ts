@@ -1,8 +1,12 @@
+import AuthService from "../services/AuthNanoService.js";
+import NotificationService from "../services/NotificationService.js";
+
 export interface ModalViewOptions {
     width?: string;
     height?: string;
     maxWidth?: string;
     contentContainerClasses?: string;
+    authRequirement?: 'loggedIn' | 'loggedOut' | 'none';
 }
 
 export default class ModalView {
@@ -10,11 +14,13 @@ export default class ModalView {
     protected _contentContainer: HTMLElement;
     public _isVisible: boolean = false;
     private static _instances: Set<ModalView> = new Set();
+    private _authRequirement: 'loggedIn' | 'loggedOut' | 'none';
 
     constructor(options?: ModalViewOptions) {
         const container = document.createElement('div');
         document.body.appendChild(container);
         this._element = container;
+        this._authRequirement = options?.authRequirement || 'none';
 
         this._renderBase(options);
         this._contentContainer = this._element.querySelector('.modal-content-container') as HTMLElement;
@@ -64,7 +70,23 @@ export default class ModalView {
 		});
 	}
 
-    public show(): void {
+    public async show(): Promise<void> {
+		if (this._authRequirement !== 'none') {
+            const authService = AuthService.getInstance();
+            const isLoggedIn = await authService.isLoggedIn();
+
+            if (this._authRequirement === 'loggedIn' && !isLoggedIn) {
+                NotificationService.show('You must be logged in to view this page.', 'error');
+                this.hide();
+                return;
+            }
+            if (this._authRequirement === 'loggedOut' && isLoggedIn) {
+                NotificationService.show('You are already logged in.', 'error');
+                this.hide();
+                return;
+            }
+        }
+
 		if (this._isVisible) return;
 		this._isVisible = true;
 
@@ -77,7 +99,12 @@ export default class ModalView {
 		});
 	}
 
-	public hide(): void {
+	public hide(shouldNavigateBack: boolean = true): void {
+		if (shouldNavigateBack) {
+			window.history.back();
+			return;
+		}
+
 		if (!this._isVisible) return;
 		this._isVisible = false;
 
@@ -91,17 +118,11 @@ export default class ModalView {
 	}
 
     public cleanup(): void {
-        this.hide();
+        this.hide(false);
     }
 
     public destroy(): void {
         this._element.remove();
         ModalView._instances.delete(this);
-    }
-
-    public static hideAll(): void {
-        for (const instance of this._instances) {
-            instance.hide();
-        }
     }
 }

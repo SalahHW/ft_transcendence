@@ -1,7 +1,6 @@
 import Router from "../router/Router.js";
 import { UI_THEME } from "../style/tailwindClasses.js";
 import AuthService from "../services/AuthNanoService.js";
-import ModalView from "./ModalView.js";
 
 interface Option {
   label?: string;
@@ -98,12 +97,8 @@ export default class Wheel {
         {
           /* label: "Wallet", */
           icon: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 8h4"/><path stroke-width="1.5" d="M20.833 9h-2.602C16.446 9 15 10.343 15 12s1.447 3 3.23 3h2.603c.084 0 .125 0 .16-.002c.54-.033.97-.432 1.005-.933c.002-.032.002-.071.002-.148v-3.834c0-.077 0-.116-.002-.148c-.036-.501-.465-.9-1.005-.933C20.959 9 20.918 9 20.834 9Z"/><path stroke-width="1.5" d="M20.965 9c-.078-1.872-.328-3.02-1.137-3.828C18.657 4 16.771 4 13 4h-3C6.229 4 4.343 4 3.172 5.172S2 8.229 2 12s0 5.657 1.172 6.828S6.229 20 10 20h3c3.771 0 5.657 0 6.828-1.172c.809-.808 1.06-1.956 1.137-3.828"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.991 12h.01"/></g></svg>`,
-          onClick: async () => {
-            try {
-              await this._authService.loginWithWallet();
-            } catch (error) {
-              console.error("Wallet Login failed:", error);
-            }
+          onClick: () => {
+            this._router.navigate("/wallet-login");
           },
         },
       ],
@@ -130,51 +125,48 @@ export default class Wheel {
 			throw new Error(`Element with id ${elementId} not found`);
 		}
 
-    this._setupKeyboardEvents();
-    this._setupMouseEvents();
+		this._setupEventListeners();
+		this.render();
+	}
 
-    this.render();
-  }
+	private _setupEventListeners(): void {
+		document.addEventListener("keydown", (e) => this._handleKeyDown(e));
+		document.addEventListener("keyup", (e) => this._handleKeyUp(e));
+		window.addEventListener("blur", () => this.hideWheel());
+		document.addEventListener("contextmenu", () => this.hideWheel());
 
-		private _setupKeyboardEvents(): void {
-		document.addEventListener("keydown", async (event: KeyboardEvent) => {
-			if (event.key === 'Shift') {
-				const target = event.target as HTMLElement;
-
-				if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
-					return;
-				}
-
-				if (this._isVisible) {
-					return;
-				}
-
-				const currentPath = this._router.getCurrentPath();
-				if (currentPath.includes('/tournament') || currentPath.includes('/1v1')) {
-					return;
-				}
-
-				event.preventDefault();
-				await this.showWheel();
-			}
-		});
-
-		document.addEventListener("keyup", (event: KeyboardEvent) => {
-			if (event.key === 'Shift') {
-				this.hideWheel();
-			}
+		this._element.addEventListener("click", (event: MouseEvent) => {
+			event.stopPropagation();
 		});
 	}
 
-  private _setupMouseEvents(): void {
-    this._element.addEventListener("click", (event: MouseEvent) => {
+	private async _handleKeyDown(event: KeyboardEvent): Promise<void> {
+		if (event.key === "Escape" && !event.shiftKey && this._isVisible) {
+			event.preventDefault();
       event.stopPropagation();
-    });
-  }
+			this.hideWheel();
+			return;
+		}
 
-  private _closeAllModals(): void {
-    ModalView.hideAll();
-  }
+		if (event.key !== "Shift" || this._isVisible)
+      return;
+
+		const target = event.target as HTMLElement;
+		if ( target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable))
+			return;
+
+		const currentPath = this._router.getCurrentPath();
+		if (currentPath.includes("/tournament") || currentPath.includes("/1v1"))
+			return;
+
+		event.preventDefault();
+		await this.showWheel();
+	}
+
+	private _handleKeyUp(event: KeyboardEvent): void {
+		if (event.key === "Shift")
+			this.hideWheel();
+	}
 
   private async _selectOption(): Promise<void> {
     const selectedOption = this._wheelOptions[this._selectedIndex];
@@ -186,9 +178,8 @@ export default class Wheel {
       this._selectedIndex = 0;
       this._renderWheel();
     } else if (selectedOption.onClick) {
-      this._closeAllModals();
-      await selectedOption.onClick();
       this.hideWheel();
+      await selectedOption.onClick();
     }
   }
 

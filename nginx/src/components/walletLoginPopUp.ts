@@ -13,14 +13,15 @@ export default class WalletLoginPopup extends ModalView {
 			width: "100%",
 			maxWidth: "28rem",
 			contentContainerClasses: "p-6 mx-4",
+			authRequirement: 'loggedOut'
 		});
 		this._authService = AuthService.getInstance();
 	}
 
-	public show(): void {
+	public async show(): Promise<void> {
 		if (this._isVisible) return;
 		this.render();
-		super.show();
+		await super.show();
 	}
 
 	public render(): void {
@@ -33,7 +34,7 @@ export default class WalletLoginPopup extends ModalView {
 					${buttonHTML({
 						id: "wallet-login-button",
 						type: "submit",
-						label: "Sign in with MetaMask",
+						label: "Login",
 						style: UI_THEME.components.button.primary,
 					})}
 				</div>
@@ -61,16 +62,10 @@ export default class WalletLoginPopup extends ModalView {
 			await this._authService.loginWithWallet();
 			NotificationService.show("Logged in successfully!", "success");
 
-			setTimeout(() => {
-				this.hide();
-			}, 1500);
+			this.hide();
 		} catch (error: any) {
-			NotificationService.show(
-				error instanceof Error
-					? error.message
-					: "Wallet login failed",
-				"error"
-			);
+			console.log(error);
+			NotificationService.show("Wallet login failed", "error");
 		} finally {
 			this._setLoading(false);
 		}

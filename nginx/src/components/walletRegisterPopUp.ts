@@ -13,14 +13,15 @@ export default class WalletRegisterPopup extends ModalView {
 			width: "100%",
 			maxWidth: "28rem",
 			contentContainerClasses: "p-6 mx-4",
+			authRequirement: 'loggedOut'
 		});
 		this._authService = AuthService.getInstance();
 	}
 
-	public show(): void {
+	public async show(): Promise<void> {
 		if (this._isVisible) return;
 		this.render();
-		super.show();
+		await super.show();
 	}
 
 	public render(): void {
@@ -82,9 +83,7 @@ export default class WalletRegisterPopup extends ModalView {
 			await this._authService.registerWithWallet(username);
 			NotificationService.show(`Welcome, ${username}!`, "success");
 
-			setTimeout(() => {
-				this.hide();
-			}, 1500);
+			this.hide();
 		} catch (error: any) {
 			NotificationService.show(
 				error instanceof Error
