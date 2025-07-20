@@ -51,23 +51,65 @@ export class MatchHistoryView {
                 return 0;
             });
 
-            let lastSeenTournamentTimestampForNesting: number | null = null;
+            // --- Group Identification Logic ---
+            const itemsByTimestamp = new Map<number, HistoryItem[]>();
+            combinedHistory.forEach(item => {
+                const timestamp = item.type === 'tournament' ? item.endTimestamp : item.match.endTimestamp!;
+                if (!itemsByTimestamp.has(timestamp)) {
+                    itemsByTimestamp.set(timestamp, []);
+                }
+                itemsByTimestamp.get(timestamp)!.push(item);
+            });
 
-            const historyHtml = (
-                await Promise.all(
-                    combinedHistory.map(async (item, index) => {
-                        if (item.type === 'tournament') {
-                            lastSeenTournamentTimestampForNesting = item.endTimestamp;
-                            if (!user.wallet) return '';
-                            const currentUserInfo = item.players.find((p: PlayerInfo) => p.walletAddress === user.wallet);
-                            return MatchHistoryView.createTournamentHistoryItem(item, currentUserInfo!);
-                        } else {
-                            const isNested = item.match.endTimestamp === lastSeenTournamentTimestampForNesting;
-                            return MatchHistoryView.createMatchHistoryItem(item, currentUser!, isNested);
-                        }
-                    })
-                )
-            ).join('');
+            const validGroupTimestamps = new Set<number>();
+            for (const [timestamp, items] of itemsByTimestamp.entries()) {
+                const isTournamentPresent = items.some(item => item.type === 'tournament');
+                const isMatchPresent = items.some(item => item.type === 'match');
+                if (isTournamentPresent && isMatchPresent) {
+                    validGroupTimestamps.add(timestamp);
+                }
+            }
+            // --- End Group Identification ---
+
+            let lastSeenTournamentTimestampForNesting: number | null = null;
+            const htmlFragments = [];
+
+            for (const [index, item] of combinedHistory.entries()) {
+                const currentTimestamp = item.type === 'tournament' ? item.endTimestamp : item.match.endTimestamp!;
+                const isCurrentInGroup = validGroupTimestamps.has(currentTimestamp);
+                const separatorHtml = `<div class="h-px w-full my-4 bg-white/10"></div>`;
+
+                // --- Separator Rendering Logic ---
+                let needsSeparatorBefore = false;
+                if (index > 0) {
+                    const prevItem = combinedHistory[index - 1];
+                    const prevTimestamp = prevItem.type === 'tournament' ? prevItem.endTimestamp : prevItem.match.endTimestamp!;
+                    const isPrevInGroup = validGroupTimestamps.has(prevTimestamp);
+
+                    if (isCurrentInGroup && !isPrevInGroup) needsSeparatorBefore = true;
+                    if (!isCurrentInGroup && isPrevInGroup) needsSeparatorBefore = true;
+                    if (isCurrentInGroup && isPrevInGroup && currentTimestamp !== prevTimestamp) needsSeparatorBefore = true;
+                }
+
+                if (needsSeparatorBefore) {
+                    htmlFragments.push(separatorHtml);
+                }
+                // --- End Separator Logic ---
+
+                // --- Item Rendering ---
+                if (item.type === 'tournament') {
+                    lastSeenTournamentTimestampForNesting = item.endTimestamp;
+                    if (user.wallet) {
+                        const currentUserInfo = item.players.find((p: PlayerInfo) => p.walletAddress === user.wallet);
+                        htmlFragments.push(await MatchHistoryView.createTournamentHistoryItem(item, currentUserInfo!));
+                    }
+                } else {
+                    const isNested = item.match.endTimestamp === lastSeenTournamentTimestampForNesting;
+                    htmlFragments.push(await MatchHistoryView.createMatchHistoryItem(item, currentUser!, isNested));
+                }
+            }
+
+            const historyHtml = htmlFragments.join('');
 
             container.innerHTML = /* HTML */`
                 <div class="flex flex-col h-full">
