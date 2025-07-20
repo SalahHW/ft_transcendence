@@ -130,49 +130,49 @@ export default class Wheel {
 			throw new Error(`Element with id ${elementId} not found`);
 		}
 
-    this._setupKeyboardEvents();
-    this._setupMouseEvents();
+		this._setupEventListeners();
+		this.render();
+	}
 
-    this.render();
-  }
+	private _setupEventListeners(): void {
+		document.addEventListener("keydown", (e) => this._handleKeyDown(e));
+		document.addEventListener("keyup", (e) => this._handleKeyUp(e));
+		window.addEventListener("blur", () => this.hideWheel());
+		document.addEventListener("contextmenu", () => this.hideWheel());
 
-		private _setupKeyboardEvents(): void {
-		document.addEventListener("keydown", async (event: KeyboardEvent) => {
-			if (event.key === 'Shift') {
-				const target = event.target as HTMLElement;
-
-				if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
-					return;
-				}
-
-				if (this._isVisible) {
-					return;
-				}
-
-				const currentPath = this._router.getCurrentPath();
-				if (currentPath.includes('/tournament') || currentPath.includes('/1v1')) {
-					return;
-				}
-
-				event.preventDefault();
-				await this.showWheel();
-			}
-		});
-
-		document.addEventListener("keyup", (event: KeyboardEvent) => {
-			if (event.key === 'Shift') {
-				this.hideWheel();
-			}
+		this._element.addEventListener("click", (event: MouseEvent) => {
+			event.stopPropagation();
 		});
 	}
 
-  private _setupMouseEvents(): void {
-    this._element.addEventListener("click", (event: MouseEvent) => {
-      event.stopPropagation();
-    });
-  }
+	private async _handleKeyDown(event: KeyboardEvent): Promise<void> {
+		if (event.key === "Escape" && !event.shiftKey && this._isVisible) {
+			event.preventDefault();
+			this.hideWheel();
+			return;
+		}
 
-  private _closeAllModals(): void {
+		if (event.key !== "Shift" || this._isVisible)
+      return;
+
+		const target = event.target as HTMLElement;
+		if ( target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable))
+			return;
+
+		const currentPath = this._router.getCurrentPath();
+		if (currentPath.includes("/tournament") || currentPath.includes("/1v1"))
+			return;
+
+		event.preventDefault();
+		await this.showWheel();
+	}
+
+	private _handleKeyUp(event: KeyboardEvent): void {
+		if (event.key === "Shift")
+			this.hideWheel();
+	}
+
+	private _closeAllModals(): void {
     ModalView.hideAll();
   }
 
