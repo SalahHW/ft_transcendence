@@ -63,7 +63,7 @@ export default class UserProfileService implements CacheableService {
         }
 
         const [avatarUrl, matches] = await Promise.all([
-            this._avatarService.getCurrentUserAvatarUrl(),
+            this._avatarService.getAvatarUrlForUser(baseUser.id!),
             baseUser.wallet ? this._matchApi.getMatchesByPlayer(baseUser.wallet) : Promise.resolve([])
         ]);
 

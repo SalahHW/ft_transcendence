@@ -24,25 +24,19 @@ export default class Tabs {
 	 * @param tabTitles Array of tab titles
 	 */
 	private _render(tabTitles: string[]): void {
-		// Create the base structure
 		this._createBaseStructure();
 
-		// Get the containers for the tabs and the content, relative to this component's container
 		const tabHeadersContainer = this._container.querySelector('#tab-headers') as HTMLElement;
 		const tabContentsContainer = this._container.querySelector('#tab-contents') as HTMLElement;
 
-		// Check if containers were found
 		if (!tabHeadersContainer || !tabContentsContainer) {
 			console.error("Tabs component internal structure not found within:", this._container);
 			return;
 		}
 
-		// Create the tabs and the content containers
 		tabTitles.forEach((title, index) => {
-			// Create the tab elements
 			this._createTabElement(title, index, tabHeadersContainer);
 
-			// Create the content containers
 			this._createContentElement(index, tabContentsContainer);
 		});
 	}
@@ -70,7 +64,6 @@ export default class Tabs {
 	private _createTabElement(title: string, index: number, container: HTMLElement): void {
 		const tab = document.createElement('div');
 
-		// Apply the appropriate styles based on the state (active/inactive)
 		tab.className = index === this._activeIndex
 			? UI_THEME.components.tabs.activeTab
 			: UI_THEME.components.tabs.inactiveTab;
@@ -106,14 +99,11 @@ export default class Tabs {
 	private _activateTab(index: number): void {
 		if (index === this._activeIndex) return;
 
-		// Deactivate the currently active tab
 		this._deactivateTab(this._activeIndex);
 
-		// Activate the new tab
 		this._tabs[index].className = UI_THEME.components.tabs.activeTab;
 		this._contents[index].className = UI_THEME.components.tabs.visibleContent;
 
-		// Update the active index
 		this._activeIndex = index;
 	}
 

@@ -1,7 +1,7 @@
 import MatchServiceAPI, { Match, Tournament } from './api/match.js';
 import UsersApi from './api/user.js';
-import AvatarServiceAPI from './api/avatar.js';
 import CacheManager, { CacheableService } from './CacheManager.js';
+import AvatarService from './AvatarService.js';
 
 export interface PlayerInfo {
     id: number;
@@ -35,7 +35,7 @@ export default class MatchHistoryService implements CacheableService {
     private static _instance: MatchHistoryService;
     private _matchApi = new MatchServiceAPI();
 	private _usersApi = new UsersApi();
-	private _avatarApi = new AvatarServiceAPI();
+	private _avatarService = AvatarService.getInstance();
     private _enrichedMatchHistoryCache: EnrichedMatchHistory | null = null;
 	private _enrichedTournamentHistoryCache: EnrichedTournament[] | null = null;
     private _userNameCache: Map<string, string> = new Map();
@@ -76,7 +76,6 @@ export default class MatchHistoryService implements CacheableService {
             throw new Error("Wallet address is missing.");
         }
 
-        // Fetch new data in the background
         const rawTournaments = await this._matchApi.getTournamentsByPlayer(walletAddress);
 
         if (rawTournaments.length === 0) {
@@ -100,12 +99,12 @@ export default class MatchHistoryService implements CacheableService {
 				const players = await Promise.all(
 					Array.from(playerWallets).map(async (wallet): Promise<PlayerInfo> => {
 						const user = await this._usersApi.getUserByWallet(wallet);
-						const avatarUrl = await this._avatarApi.getUserAvatarUrl(user.id!)
-							.catch(() => '/assets/defaultAvatar.jpg');
+						const avatarUrl = await this._avatarService.getAvatarUrlForUser(user.id!);
+
 						return {
 							id: user.id!,
 							username: user.username!,
-							avatarUrl: avatarUrl,
+							avatarUrl,
 							walletAddress: wallet
 						};
 					})
@@ -216,8 +215,9 @@ export default class MatchHistoryService implements CacheableService {
 		if (!user) {
 			throw new Error("Current user profile not found.");
 		}
-		const avatarUrl = await this._avatarApi.getUserAvatarUrl(user.id!)
-			.catch(() => '/assets/defaultAvatar.jpg');
+
+		const avatarUrl = await this._avatarService.getAvatarUrlForUser(user.id!);
+
 		return {
 			id: user.id!,
 			username: user.username!,
@@ -232,13 +232,12 @@ export default class MatchHistoryService implements CacheableService {
 		}
 		try {
 			const opponentUser = await this._usersApi.getUserByWallet(opponentAddress);
-			const opponentAvatar = await this._avatarApi.getUserAvatarUrl(opponentUser.id!)
-				.catch(() => '/assets/defaultAvatar.jpg');
+			const avatarUrl = await this._avatarService.getAvatarUrlForUser(opponentUser.id!);
 
 			return {
 				id: opponentUser.id!,
 				username: opponentUser.username!,
-				avatarUrl: opponentAvatar,
+				avatarUrl,
 				walletAddress: opponentAddress,
 			};
 		} catch (error) {

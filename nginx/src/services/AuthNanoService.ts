@@ -174,7 +174,6 @@ export default class AuthService {
       return signature;
     } catch (err: any) {
       if (err.code === 4001) {
-        // EIP-1193 user rejection error
         throw new Error("You rejected the signature request in your wallet.");
       }
       console.error("Error signing message:", err);
@@ -246,7 +245,7 @@ export default class AuthService {
           err
         );
       }
-    }, 120_000); // 2 minutes
+    }, 120_000);
   }
 
   private _stopRefreshLoop() {
