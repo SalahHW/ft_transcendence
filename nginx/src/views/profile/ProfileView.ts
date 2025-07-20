@@ -8,8 +8,19 @@ export default class ProfileView extends ModalView {
 	constructor() {
 		super({
 			width: '70vw',
-			height: '70vh'
+			height: '70vh',
+			authRequirement: 'loggedIn',
+			contentContainerClasses: "w-full h-full"
 		});
+	}
+
+	public async show(): Promise<void> {
+		if (this._isVisible)
+			return;
+		await super.show();
+		if (this._isVisible) {
+			await this.render();
+		}
 	}
 
 	public async render(): Promise<void> {

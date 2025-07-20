@@ -41,10 +41,10 @@ export default class APITestPage extends ModalView {
 		});
 	}
 
-	public show(): void {
+	public async show(): Promise<void> {
 		if (this._isVisible) return;
 		this.render();
-		super.show();
+		await super.show();
 	}
 
 	public render(): void {

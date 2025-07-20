@@ -13,14 +13,15 @@ export default class WalletLoginPopup extends ModalView {
 			width: "100%",
 			maxWidth: "28rem",
 			contentContainerClasses: "p-6 mx-4",
+			authRequirement: 'loggedOut'
 		});
 		this._authService = AuthService.getInstance();
 	}
 
-	public show(): void {
+	public async show(): Promise<void> {
 		if (this._isVisible) return;
 		this.render();
-		super.show();
+		await super.show();
 	}
 
 	public render(): void {

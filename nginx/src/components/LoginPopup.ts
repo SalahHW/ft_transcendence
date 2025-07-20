@@ -13,13 +13,14 @@ export default class LoginPopup extends ModalView {
 			width: "100%",
 			maxWidth: "36rem",
 			contentContainerClasses: "p-8 mx-4",
+			authRequirement: 'loggedOut'
 		});
 	}
 
-	public show(): void {
+	public async show(): Promise<void> {
 		if (this._isVisible) return;
 		this.render();
-		super.show();
+		await super.show();
 	}
 
 	public render(): void {
