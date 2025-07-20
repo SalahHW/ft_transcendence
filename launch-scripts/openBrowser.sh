@@ -2,7 +2,7 @@
 
 	until curl -k -sSf https://elsalmatjori.com:16443 > /dev/null; do \
 		echo "Cannot connect yet, waiting..."; \
-		sleep 2; \
+		sleep 2;
 	done
 	if command -v xdg-open >/dev/null 2>&1; then \
 		xdg-open "https://elsalmatjori.com:16443"; \

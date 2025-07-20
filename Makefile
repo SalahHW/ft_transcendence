@@ -5,11 +5,11 @@ DIRS := $(shell find . -type d)
 
 start: envs .images
 	@docker compose -f ./docker-compose.yml up -d
+	chmod +x ./launch-scripts/openBrowser.sh
 	@./launch-scripts/openBrowser.sh
 
 envs:
 	@./launch-scripts/initEnvs.sh
-	chmod +x ./launch-scripts/openBrowser.sh
 
 dbs:
 	@rm -rf ./avatars-service/database
@@ -17,8 +17,7 @@ dbs:
 	@rm -rf ./users-service/database
 
 .images: envs $(SERVICE_SRC) $(SERVICE_DOCK) docker-compose.yml .env
-	@COMPOSE_BAKE=true docker compose -f ./docker-compose.yml build
-	@touch .images
+	@COMPOSE_BAKE=true docker compose -f ./docker-compose.yml build && touch .images
 
 stop:
 	@if [ ! -f ./jwt-service/.env ]; then \
