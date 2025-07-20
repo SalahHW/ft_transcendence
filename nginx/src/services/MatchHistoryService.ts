@@ -72,7 +72,6 @@ export default class MatchHistoryService implements CacheableService {
         onUpdate: (updatedData: EnrichedTournament[]) => void
     ): Promise<EnrichedTournament[]> {
         if (this._enrichedTournamentHistoryCache) {
-            // Return cached data immediately
             Promise.resolve().then(() => onUpdate(this._enrichedTournamentHistoryCache!));
         }
 
@@ -80,7 +79,6 @@ export default class MatchHistoryService implements CacheableService {
             throw new Error("Wallet address is missing.");
         }
 
-        // Fetch new data in the background
         const rawTournaments = await this._matchApi.getTournamentsByPlayer(walletAddress);
 
         if (rawTournaments.length === 0) {
