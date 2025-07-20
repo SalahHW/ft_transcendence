@@ -24,7 +24,7 @@ export default class LoginPopup extends ModalView {
 
 	public render(): void {
 		this._contentContainer.innerHTML = /* HTML */ `
-			<h2 class="${UI_THEME.components.title} mb-6">Sign In</h2>
+			<h2 class="${UI_THEME.components.title} mb-6">Login with Credentials</h2>
 
 			<form
 				id="popup-container-form-login"
@@ -54,7 +54,7 @@ export default class LoginPopup extends ModalView {
 					${buttonHTML({
 						id: "popup-container-submit-login",
 						type: "submit",
-						label: "Sign In",
+						label: "Login",
 						style: UI_THEME.components.button.primary,
 					})}
 				</div>
@@ -105,14 +105,10 @@ export default class LoginPopup extends ModalView {
 				this.hide();
 			}, 1500);
 		} catch (error) {
-			NotificationService.show(
-				error instanceof Error
-					? error.message
-					: "Login failed. Please try again.",
-				"error"
-			);
+			console.log(error);
+			NotificationService.show("Login failed. Please try again.", "error");
 		} finally {
-			setButtonLoading(submitBtn, false, "Sign In");
+			setButtonLoading(submitBtn, false, "Login");
 		}
 	}
 }
