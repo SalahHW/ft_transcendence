@@ -77,7 +77,12 @@ export default class ModalView {
 		});
 	}
 
-	public hide(): void {
+	public hide(shouldNavigateBack: boolean = true): void {
+		if (shouldNavigateBack) {
+			window.history.back();
+			return;
+		}
+
 		if (!this._isVisible) return;
 		this._isVisible = false;
 
@@ -91,17 +96,11 @@ export default class ModalView {
 	}
 
     public cleanup(): void {
-        this.hide();
+        this.hide(false);
     }
 
     public destroy(): void {
         this._element.remove();
         ModalView._instances.delete(this);
-    }
-
-    public static hideAll(): void {
-        for (const instance of this._instances) {
-            instance.hide();
-        }
     }
 }

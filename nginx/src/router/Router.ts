@@ -147,11 +147,6 @@ export default class Router {
   }
 
   private _cleanupCurrentRoute(path: string): void {
-    if ((window as any).routeCleanupInProgress) {
-      return;
-    }
-    (window as any).routeCleanupInProgress = true;
-
     const routeToCleanup = this._routes.find((route) => route.path === path);
 
     if (routeToCleanup?.cache?.cleanup) {
@@ -177,10 +172,6 @@ export default class Router {
         (window as any).joinGameButtonSetup = false;
       }
     }
-
-    setTimeout(() => {
-      (window as any).routeCleanupInProgress = false;
-    }, 100);
   }
 
   private _isValidRoute(path: string): boolean {
@@ -188,43 +179,33 @@ export default class Router {
   }
 
   private _redirectToHome(): void {
-    if ((window as any).redirectingToHome) {
-      return;
-    }
-
-    (window as any).redirectingToHome = true;
-
     try {
       window.history.replaceState({ path: "/" }, "", "/");
       this._executeHandler("/");
     } catch (error) {
       console.error("Error redirecting to home:", error);
       window.location.pathname = "/";
-    } finally {
-      setTimeout(() => {
-        (window as any).redirectingToHome = false;
-      }, 100);
     }
   }
 
   public navigate(path: string, replaceState: boolean = false): boolean {
-    if ((window as any).navigationInProgress) {
-      return false;
-    }
-
-    (window as any).navigationInProgress = true;
-
     try {
       const newRoute = this._routes.find(route => route.path === path);
       if (newRoute) {
         const previousPath = this._currentPath;
+        const previousRoute = this._routes.find(r => r.path === previousPath);
 
-        if (replaceState) window.history.replaceState({ path }, "", path);
-        else window.history.pushState({ path }, "", path);
+        const shouldReplace = replaceState || (newRoute.isModal && previousRoute?.isModal);
+
+        if (shouldReplace) {
+          window.history.replaceState({ path }, "", path);
+        } else {
+          window.history.pushState({ path }, "", path);
+        }
 
         this._currentPath = path;
 
-        if (path !== previousPath && !newRoute.isModal) {
+        if (path !== previousPath && (!newRoute.isModal || (previousRoute && previousRoute.isModal))) {
           this._cleanupCurrentRoute(previousPath);
         }
         this._executeHandler(path);
@@ -238,10 +219,6 @@ export default class Router {
     } catch (error) {
       console.error(`Error navigating to ${path}:`, error);
       return false;
-    } finally {
-      setTimeout(() => {
-        (window as any).navigationInProgress = false;
-      }, 100);
     }
   }
 
@@ -250,12 +227,6 @@ export default class Router {
   }
 
   private _handlePopState = (): void => {
-    if ((window as any).popstateInProgress) {
-      return;
-    }
-
-    (window as any).popstateInProgress = true;
-
     try {
       const previousPath = this._currentPath;
       const newPath = this.getCurrentPath();
@@ -275,10 +246,6 @@ export default class Router {
     } catch (error) {
       console.error("Error in popstate handler:", error);
       window.location.pathname = "/";
-    } finally {
-      setTimeout(() => {
-        (window as any).popstateInProgress = false;
-      }, 100);
     }
   };
 
