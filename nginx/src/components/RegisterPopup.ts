@@ -131,11 +131,39 @@ export default class RegisterPopup extends ModalView {
 			this.hide();
 		} catch (error: any) {
 			console.log(error);
-			if (error?.response?.status === 409) {
-				NotificationService.show("Username or email already exists.", "error");
-			} else {
-				NotificationService.show("Password must be 8-60 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character.", "error");
-			}
+			NotificationService.show(
+				"Registration failed. Please check your information:",
+				"error",
+				5000
+			);
+			setTimeout(() => {
+				NotificationService.show(
+					"Username: /^[a-zA-Z0-9_]{2,20}$/",
+					"error",
+					5000
+				);
+			}, 500);
+			setTimeout(() => {
+				NotificationService.show(
+					"Password: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+=\\[{{}}\\]};:<>|./?,-]).{8,64}$/",
+					"error",
+					5000
+				);
+			}, 1000);
+			setTimeout(() => {
+				NotificationService.show(
+					"Wallet: /^0x[a-fA-F0-9]{40}$/",
+					"error",
+					5000
+				);
+			}, 1500);
+			setTimeout(() => {
+				NotificationService.show(
+					"Username, email or wallet might already be in use.",
+					"error",
+					5000
+				);
+			}, 2000);
 		} finally {
 			this._setLoading(false);
 		}
