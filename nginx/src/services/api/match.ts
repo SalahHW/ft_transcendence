@@ -71,61 +71,59 @@ export default class MatchServiceAPI {
 	 * @returns A promise that resolves to an array of matches
 	 */
 	async getMatchesByPlayer(address: string): Promise<Match[]> {
-		try {
-			const response = await fetch(`${this._baseUrl}/match/player/${address}`, {
-				method: "GET"
-			});
-			if (response.status === 404) {
-				return [];
-			}
-			if (!response.headers.get('content-type')?.includes('application/json')) {
-				return [];
-			}
-			const data = await response.json();
-			if (response.ok && !data.success) {
-				return [];
-			}
-			if (response.ok && data.success) {
-				return data.matches.map(mapRawMatchToMatch);
-			}
-			console.error(`Failed to fetch matches for player ${address}:`, data);
-			throw new Error(`Failed to fetch matches. Please try again later.`);
-		} catch (error) {
-			console.error(`Error fetching matches for player ${address}:`, error);
-			throw error;
+		const response = await fetch(`${this._baseUrl}/match/player/${address}`, {
+			method: "GET"
+		});
+		if (response.status === 404) {
+			console.log(`No matches found for player ${address}.`);
+			return [];
 		}
+		if (!response.headers.get('content-type')?.includes('application/json')) {
+			console.log(`No matches found for player ${address}.`);
+			return [];
+		}
+		const data = await response.json();
+		if (response.ok && !data.success) {
+			console.log(`No matches found for player ${address}.`);
+			return [];
+		}
+		if (response.ok && data.success) {
+			console.log(`Successfully fetched matches for player ${address}.`);
+			return data.matches.map(mapRawMatchToMatch);
+		}
+		console.error(`Failed to fetch matches for player ${address}:`, data);
+		throw new Error(`Failed to fetch matches. Please try again later.`);
 	}
-
 	/**
 	 * Get all tournaments a player participated in.
 	 * @param address - The player's address
 	 * @returns A promise that resolves to an array of tournaments
 	 */
 	async getTournamentsByPlayer(address: string): Promise<Tournament[]> {
-		try {
-			const response = await fetch(`${this._baseUrl}/tournaments/byPlayer/${address}`, {
-				method: "GET"
-			});
-			if (response.status === 404) {
-				return [];
-			}
-			if (!response.headers.get('content-type')?.includes('application/json')) {
-				return [];
-			}
-			const data = await response.json();
-			if (response.ok && data.success) {
-				return data.tournaments.map(mapRawTournamentObjectToTournamentObject);
-			}
-			if (response.ok && !data.success) {
-				return [];
-			}
-			console.error(`Failed to fetch tournaments for player ${address}:`, data);
-			throw new Error(`Failed to fetch tournaments. Please try again later.`);
-		} catch (error) {
-			console.error(`Error fetching tournaments for player ${address}:`, error);
-			throw error;
+		const response = await fetch(`${this._baseUrl}/tournaments/byPlayer/${address}`, {
+			method: "GET"
+		});
+		if (response.status === 404) {
+			console.log(`No tournaments found for player ${address}.`);
+			return [];
 		}
+		if (!response.headers.get('content-type')?.includes('application/json')) {
+			console.log(`No tournaments found for player ${address}.`);
+			return [];
+		}
+		const data = await response.json();
+		if (response.ok && data.success) {
+			console.log(`Successfully fetched tournaments for player ${address}.`);
+			return data.tournaments.map(mapRawTournamentObjectToTournamentObject);
+		}
+		if (response.ok && !data.success) {
+			console.log(`No tournaments found for player ${address}.`);
+			return [];
+		}
+		console.error(`Failed to fetch tournaments for player ${address}:`, data);
+		throw new Error(`Failed to fetch tournaments. Please try again later.`);
 	}
+
 
 	/**
 	 * Get all matches won by an address
@@ -133,29 +131,28 @@ export default class MatchServiceAPI {
 	 * @returns A promise that resolves to an array of matches
 	 */
 	async getMatchesByWinner(address: string): Promise<Match[]> {
-		try {
-			const response = await fetch(`${this._baseUrl}/match/winner/${address}`, {
-				method: "GET"
-			});
-			if (response.status === 404) {
-				return [];
-			}
-			if (!response.headers.get('content-type')?.includes('application/json')) {
-				return [];
-			}
-			const data = await response.json();
-			if (response.ok && data.success) {
-				return data.matches.map(mapRawMatchToMatch);
-			}
-			if (response.ok && !data.success) {
-				return [];
-			}
-			console.error(`Failed to fetch matches for winner ${address}:`, data);
-			throw new Error(`Failed to fetch matches. Please try again later.`);
-		} catch (error) {
-			console.error(`Error fetching matches for winner ${address}:`, error);
-			throw error;
+		const response = await fetch(`${this._baseUrl}/match/winner/${address}`, {
+			method: "GET"
+		});
+		if (response.status === 404) {
+			console.log(`No matches found for winner ${address}.`);
+			return [];
 		}
+		if (!response.headers.get('content-type')?.includes('application/json')) {
+			console.log(`No matches found for winner ${address}.`);
+			return [];
+		}
+		const data = await response.json();
+		if (response.ok && data.success) {
+			console.log(`Successfully fetched matches for winner ${address}.`);
+			return data.matches.map(mapRawMatchToMatch);
+		}
+		if (response.ok && !data.success) {
+			console.log(`No matches found for winner ${address}.`);
+			return [];
+		}
+		console.error(`Failed to fetch matches for winner ${address}:`, data);
+		throw new Error(`Failed to fetch matches. Please try again later.`);
 	}
 
 	/**
@@ -164,21 +161,17 @@ export default class MatchServiceAPI {
 	 * @returns A promise that resolves to the match
 	 */
 	async getMatchById(matchId: number): Promise<Match> {
-		try {
-			const response = await fetch(`${this._baseUrl}/match/${matchId}`, {
-				method: "GET"
-			});
-			const data = await response.json();
-			if (response.ok && data.success) {
-				return mapRawMatchToMatch(data.match);
-			}
-			else {
-				console.error(`Failed to fetch match with id ${matchId}:`, data);
-				throw new Error(`Failed to fetch match details. Please try again later.`);
-			}
-		} catch (error) {
-			console.error(`Error fetching match with id ${matchId}:`, error);
-			throw error;
+		const response = await fetch(`${this._baseUrl}/match/${matchId}`, {
+			method: "GET"
+		});
+		const data = await response.json();
+		if (response.ok && data.success) {
+			console.log(`Successfully fetched match with id ${matchId}.`);
+			return mapRawMatchToMatch(data.match);
+		}
+		else {
+			console.error(`Failed to fetch match with id ${matchId}:`, data);
+			throw new Error(`Failed to fetch match details. Please try again later.`);
 		}
 	}
 
@@ -198,25 +191,21 @@ export default class MatchServiceAPI {
 		player2Score: number;
 		winner: string;
 	}): Promise<string> {
-		try {
-			const response = await fetch(`${this._baseUrl}/report-match`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json"
-				},
-				body: JSON.stringify(match)
-			});
-			const data = await response.json();
-			if (response.status === 200 && data.success) {
-				return data.transactionHash;
-			}
-			else {
-				console.error("Failed to report match:", data);
-				throw new Error(`Failed to report match. Please try again later.`);
-			}
-		} catch (error) {
-			console.error("Error reporting match:", error);
-			throw error;
+		const response = await fetch(`${this._baseUrl}/report-match`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify(match)
+		});
+		const data = await response.json();
+		if (response.status === 200 && data.success) {
+			console.log("Match reported successfully.");
+			return data.transactionHash;
+		}
+		else {
+			console.error("Failed to report match:", data);
+			throw new Error(`Failed to report match. Please try again later.`);
 		}
 	}
 
@@ -231,25 +220,21 @@ export default class MatchServiceAPI {
 		winner: string;
 		tournamentTokenIds: number[];
 	}): Promise<string> {
-		try {
-			const response = await fetch(`${this._baseUrl}/report-tournament`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json"
-				},
-				body: JSON.stringify(tournament)
-			});
-			const data = await response.json();
-			if (response.status === 200 && data.success) {
-				return data.transactionHash;
-			}
-			else {
-				console.error("Failed to report tournament:", data);
-				throw new Error(`Failed to report tournament. Please try again later.`);
-			}
-		} catch (error) {
-			console.error("Error reporting tournament:", error);
-			throw error;
+		const response = await fetch(`${this._baseUrl}/report-tournament`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify(tournament)
+		});
+		const data = await response.json();
+		if (response.status === 200 && data.success) {
+			console.log("Tournament reported successfully.");
+			return data.transactionHash;
+		}
+		else {
+			console.error("Failed to report tournament:", data);
+			throw new Error(`Failed to report tournament. Please try again later.`);
 		}
 	}
 
@@ -259,21 +244,17 @@ export default class MatchServiceAPI {
 	 * @returns A promise that resolves to the tournament
 	 */
 	async getTournamentById(tournamentId: number): Promise<Tournament> {
-		try {
-			const response = await fetch(`${this._baseUrl}/tournament/${tournamentId}`, {
-				method: "GET"
-			});
-			const data = await response.json();
-			if (response.status === 200 && data.success) {
-				return data.tournament;
-			}
-			else {
-				console.error(`Failed to fetch tournament with id ${tournamentId}:`, data);
-				throw new Error(`Failed to fetch tournament details. Please try again later.`);
-			}
-		} catch (error) {
-			console.error(`Error fetching tournament with id ${tournamentId}:`, error);
-			throw error;
+		const response = await fetch(`${this._baseUrl}/tournament/${tournamentId}`, {
+			method: "GET"
+		});
+		const data = await response.json();
+		if (response.status === 200 && data.success) {
+			console.log(`Successfully fetched tournament with id ${tournamentId}.`);
+			return data.tournament;
+		}
+		else {
+			console.error(`Failed to fetch tournament with id ${tournamentId}:`, data);
+			throw new Error(`Failed to fetch tournament details. Please try again later.`);
 		}
 	}
 
@@ -283,29 +264,28 @@ export default class MatchServiceAPI {
 	 * @returns A promise that resolves to an array of tournaments
 	 */
 	async getTournamentsByWinner(address: string): Promise<Tournament[]> {
-		try {
-			const response = await fetch(`${this._baseUrl}/tournament/winner/${address}`, {
-				method: "GET"
-			});
-			if (response.status === 404) {
-				return [];
-			}
-			if (!response.headers.get('content-type')?.includes('application/json')) {
-				return [];
-			}
-			const data = await response.json();
-			if (response.ok && data.success) {
-				return data.tournaments.map(mapRawTournamentObjectToTournamentObject);
-			}
-			if (response.ok && !data.success) {
-				return [];
-			}
-			console.error(`Failed to fetch tournaments for winner ${address}:`, data);
-			throw new Error(`Failed to fetch tournaments. Please try again later.`);
-		} catch (error) {
-			console.error(`Error fetching tournaments for winner ${address}:`, error);
-			throw error;
+		const response = await fetch(`${this._baseUrl}/tournament/winner/${address}`, {
+			method: "GET"
+		});
+		if (response.status === 404) {
+			console.log(`No tournaments found for winner ${address}.`);
+			return [];
 		}
+		if (!response.headers.get('content-type')?.includes('application/json')) {
+			console.log(`No tournaments found for winner ${address}.`);
+			return [];
+		}
+		const data = await response.json();
+		if (response.ok && data.success) {
+			console.log(`Successfully fetched tournaments for winner ${address}.`);
+			return data.tournaments.map(mapRawTournamentObjectToTournamentObject);
+		}
+		if (response.ok && !data.success) {
+			console.log(`No tournaments found for winner ${address}.`);
+			return [];
+		}
+		console.error(`Failed to fetch tournaments for winner ${address}:`, data);
+		throw new Error(`Failed to fetch tournaments. Please try again later.`);
 	}
 
 	/**
@@ -314,24 +294,17 @@ export default class MatchServiceAPI {
 	 * @returns A promise that resolves to the player's name
 	 */
 	async getPlayerNameByAddress(address: string): Promise<string> {
-		try {
-			const response = await fetch(`${this._baseUrl}/player/${address}`, {
-				method: "GET"
-			});
-			const data = await response.json();
-			if (response.status === 200 && data.success) {
-				return data.name;
-			}
-			else {
-				console.error(`Failed to fetch player name for address ${address}:`, data);
-				throw new Error(`Failed to fetch player name. Please try again later.`);
-			}
-		} catch (error) {
-			console.error(
-				`Error fetching player name for address ${address}:`,
-				error
-			);
-			throw error;
+		const response = await fetch(`${this._baseUrl}/player/${address}`, {
+			method: "GET"
+		});
+		const data = await response.json();
+		if (response.status === 200 && data.success) {
+			console.log(`Successfully fetched player name for address ${address}.`);
+			return data.name;
+		}
+		else {
+			console.error(`Failed to fetch player name for address ${address}:`, data);
+			throw new Error(`Failed to fetch player name. Please try again later.`);
 		}
 	}
 }
