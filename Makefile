@@ -6,7 +6,6 @@ DIRS := $(shell find . -type d)
 start: envs .images
 	@docker compose -f ./docker-compose.yml up -d
 	chmod +x ./launch-scripts/openBrowser.sh
-	@./launch-scripts/openBrowser.sh
 
 envs:
 	@./launch-scripts/initEnvs.sh
@@ -15,6 +14,9 @@ dbs:
 	@rm -rf ./avatars-service/database
 	@rm -rf ./friends-service/database
 	@rm -rf ./users-service/database
+
+web: start
+	@./launch-scripts/openBrowser.sh
 
 .images: envs $(SERVICE_SRC) $(SERVICE_DOCK) docker-compose.yml .env
 	@COMPOSE_BAKE=true docker compose -f ./docker-compose.yml build && touch .images
@@ -39,4 +41,4 @@ clean: stop dbs
 
 re: clean start
 
-.PHONY: start stop images restart clean re
+.PHONY: start stop images restart clean re web
