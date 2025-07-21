@@ -110,11 +110,7 @@ export default class MatchHistoryService implements CacheableService {
 					})
 				);
 
-				const { userPlacement } = this.calculateUserPlacement(
-					matches,
-					Array.from(playerWallets),
-					walletAddress
-				);
+				const userPlacement = this.getUserPlacementFromTournament(tournament, walletAddress);
 
 				return {
 					id: tournament.tournamentId!,
@@ -133,40 +129,20 @@ export default class MatchHistoryService implements CacheableService {
 		return enrichedTournaments;
     }
 
-	private calculateUserPlacement(matches: Match[], players: string[], userWallet: string): { userPlacement: number } {
-		const winCounts: Map<string, number> = new Map();
-		players.forEach(p => winCounts.set(p, 0));
-
-		matches.forEach(match => {
-			if (match.winner) {
-				winCounts.set(match.winner, (winCounts.get(match.winner) ?? 0) + 1);
-			}
-		});
-
-		const tournamentWinner = [...winCounts.entries()].find(([, wins]) => wins === 2)?.[0];
-		const userWins = winCounts.get(userWallet) ?? 0;
-
-		if (userWins === 2 || tournamentWinner === userWallet) {
-			return { userPlacement: 1 };
+	private getUserPlacementFromTournament(tournament: Tournament, userWallet: string): number {
+		if (tournament.winner === userWallet) {
+			return 1;
 		}
-
-		if (userWins === 0) {
-			return { userPlacement: 4 };
+		if (tournament.second === userWallet) {
+			return 2;
 		}
-
-		if (userWins === 1) {
-			const userLostMatch = matches.find(m =>
-				(m.player1 === userWallet || m.player2 === userWallet) && m.winner !== userWallet
-			);
-
-			if (userLostMatch?.winner === tournamentWinner) {
-				return { userPlacement: 2 };
-			} else {
-				return { userPlacement: 3 };
-			}
+		if (tournament.third === userWallet) {
+			return 3;
 		}
-
-		return { userPlacement: 4 };
+		if (tournament.fourth === userWallet) {
+			return 4;
+		}
+		return 4;
 	}
 
 
