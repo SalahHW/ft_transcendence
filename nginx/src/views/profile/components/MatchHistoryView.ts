@@ -253,7 +253,7 @@ export class MatchHistoryView {
 
         return /* HTML */ `
             <div
-				class="flex items-stretch justify-between rounded-lg mb-2 overflow-hidden"
+				class="flex items-stretch justify-between rounded-lg mb-2 overflow-hidden shadow-lg"
 				style="background-color: ${bgColor}95;"
 			>
 				<div class="flex items-center p-4 flex-grow">
@@ -310,7 +310,7 @@ export class MatchHistoryView {
 
         return /* HTML */ `
             <div
-				class="flex items-stretch justify-between rounded-lg mb-2 overflow-hidden transition-all duration-300"
+				class="flex items-stretch justify-between rounded-lg mb-2 overflow-hidden transition-all duration-300 shadow-lg"
 				style="background-color: ${bgColor}95; ${dynamicStyle}"
 			>
 				<div class="flex items-center justify-between p-4 flex-grow">
