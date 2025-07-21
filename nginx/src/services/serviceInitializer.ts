@@ -7,8 +7,6 @@ import PresenceService from "./webSocket/PresenceService.js";
 import AuthService from "./AuthNanoService.js";
 
 export function initializeServices(): void {
-  console.log("Initializing services...");
-
   try {
     CacheManager.getInstance();
 
@@ -16,19 +14,14 @@ export function initializeServices(): void {
     FriendsService.getInstance();
     MatchHistoryService.getInstance();
     UserProfileService.getInstance();
+    CacheManager.getInstance();
     const presenceService = PresenceService.getInstance();
     const authService = AuthService.getInstance();
 
     authService.isLoggedIn().then((loggedIn) => {
       if (loggedIn) presenceService.connect();
     });
-
-    console.log("Services initialized and registered with CacheManager.");
-    const cacheStats = CacheManager.getInstance().getStats();
-    console.log(
-      `[CacheManager] Initial Stats: ${cacheStats.services} services registered, monitoring ${cacheStats.events} events.`
-    );
   } catch (error) {
-    console.log(error);
+    console.error("Failed to initialize services:", error);
   }
 }

@@ -59,17 +59,21 @@ export default class UsersApi {
   private _usersBaseUrl: string = `${this._host}${this._userPath}`;
 
   async getAllUsers(): Promise<User[]> {
-    const response = await fetch(`${this._usersBaseUrl}`, {
-      method: "GET",
-    });
-    if (!response.ok) {
-      const responseText = await response.text();
-      console.error(`Failed to fetch users: ${response.status} ${response.statusText}`, responseText);
-      throw new Error("Failed to fetch users. Please try again later.");
+    try {
+      const response = await fetch(`${this._usersBaseUrl}`, {
+        method: "GET",
+      });
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.error(`Failed to fetch users: ${response.status} ${response.statusText}`, responseText);
+        throw new Error("Failed to fetch users. Please try again later.");
+      }
+      const responseData = await response.json();
+      return responseData;
+    } catch (error) {
+      console.error("Error fetching all users:", error);
+      throw error;
     }
-    const responseData = await response.json();
-    console.log("Successfully fetched all users.");
-    return responseData;
   }
 
   /**
@@ -78,19 +82,24 @@ export default class UsersApi {
    * @returns A promise that resolves to the created user
    */
   async createUser(user: User): Promise<User> {
-    const response = await fetch(`${this._usersBaseUrl}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(user),
-    });
-    const responseData = await response.json();
-    if (response.ok) {
-      console.log("User created successfully:", responseData);
-      return responseData;
-    }
-    else {
-      console.error("Failed to create user:", responseData);
-      throw new Error("Failed to create user. Please try again later.");
+    try {
+      const response = await fetch(`${this._usersBaseUrl}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(user),
+      });
+      const responseData = await response.json();
+      if (response.ok) {
+        return responseData;
+      }
+      else {
+        const errorData = await response.json();
+        console.error("Failed to create user:", errorData);
+        throw new Error("Failed to create user. Please try again later.");
+      }
+    } catch (error) {
+      console.error("Error creating user:", error);
+      throw error;
     }
   }
 
@@ -100,22 +109,25 @@ export default class UsersApi {
    * @returns `null` if the user is not logged in
    */
   async getCurrentUser(): Promise<JwtUserPayload | null> {
-    const response = await fetch(`${this._host}${this._mePath}`, {
-      method: "GET",
-      credentials: "include",
-    });
-    if (response.status === 404 || response.status === 401) {
-      console.log("No current user logged in.");
-      return null;
+    try {
+      const response = await fetch(`${this._host}${this._mePath}`, {
+        method: "GET",
+        credentials: "include",
+      });
+      if (response.status === 404 || response.status === 401) {
+        return null;
+      }
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.error(`Failed to get current user: ${response.status} ${response.statusText}`, responseText);
+        throw new Error("Failed to get current user. Please try again later.");
+      }
+      const responseData: JwtResponse = await response.json();
+      return responseData.user;
+    } catch (error) {
+      console.error("Error getting current user:", error);
+      throw error;
     }
-    if (!response.ok) {
-      const responseText = await response.text();
-      console.error(`Failed to get current user: ${response.status} ${response.statusText}`, responseText);
-      throw new Error("Failed to get current user. Please try again later.");
-    }
-    const responseData: JwtResponse = await response.json();
-    console.log("Successfully retrieved current user.");
-    return responseData.user;
   }
 
   /**
@@ -124,21 +136,24 @@ export default class UsersApi {
    * @returns A promise that resolves to the user
    */
   async getUserById(id: number): Promise<User | null> {
-    const response = await fetch(`${this._usersBaseUrl}/id/${id}`, {
-      method: "GET",
-    });
-    if (response.status === 404) {
-      console.log(`User with id ${id} not found.`);
-      return null;
+    try {
+      const response = await fetch(`${this._usersBaseUrl}/id/${id}`, {
+        method: "GET",
+      });
+      if (response.status === 404) {
+        return null;
+      }
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.error(`Failed to get user by id ${id}: ${response.status} ${response.statusText}`, responseText);
+        throw new Error("Failed to get user. Please try again later.");
+      }
+      const responseData = await response.json();
+      return responseData;
+    } catch (error) {
+      console.error(`Error retrieving user with id ${id}:`, error);
+      throw error;
     }
-    if (!response.ok) {
-      const responseText = await response.text();
-      console.error(`Failed to get user by id ${id}: ${response.status} ${response.statusText}`, responseText);
-      throw new Error("Failed to get user. Please try again later.");
-    }
-    const responseData = await response.json();
-    console.log(`Successfully retrieved user with id ${id}.`);
-    return responseData;
   }
 
   /**
@@ -148,18 +163,23 @@ export default class UsersApi {
    * @returns A promise that resolves to the updated user
    */
   async updateUsernameById(id: number, username: string): Promise<User> {
-    const response = await fetch(`${this._usersBaseUrl}/${id}/username`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username }),
-    });
-    const responseData = await response.json();
-    if (response.ok) {
-      console.log(`Username for user ${id} updated successfully.`);
-      return responseData;
-    } else {
-      console.error(`Failed to update username for user ${id}:`, responseData);
-      throw new Error("Failed to update username. Please try again later.");
+    try {
+      const response = await fetch(`${this._usersBaseUrl}/${id}/username`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username }),
+      });
+      const responseData = await response.json();
+      if (response.ok) {
+        return responseData;
+      } else {
+        const errorData = await response.json();
+        console.error(`Failed to update username for user ${id}:`, errorData);
+        throw new Error("Failed to update username. Please try again later.");
+      }
+    } catch (error) {
+      console.error(`Error updating username for user ${id}:`, error);
+      throw error;
     }
   }
 
@@ -170,18 +190,23 @@ export default class UsersApi {
    * @returns A promise that resolves to the updated user
    */
   async updateEmailById(id: number, email: string): Promise<User> {
-    const response = await fetch(`${this._usersBaseUrl}/${id}/email`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
-    const responseData = await response.json();
-    if (response.ok) {
-      console.log(`Email for user ${id} updated successfully.`);
-      return responseData;
-    } else {
-      console.error(`Failed to update email for user ${id}:`, responseData);
-      throw new Error("Failed to update email. Please try again later.");
+    try {
+      const response = await fetch(`${this._usersBaseUrl}/${id}/email`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const responseData = await response.json();
+      if (response.ok) {
+        return responseData;
+      } else {
+        const errorData = await response.json();
+        console.error(`Failed to update email for user ${id}:`, errorData);
+        throw new Error("Failed to update email. Please try again later.");
+      }
+    } catch (error) {
+      console.error(`Error updating email for user ${id}:`, error);
+      throw error;
     }
   }
 
@@ -191,18 +216,23 @@ export default class UsersApi {
    * @returns A promise that resolves to the updated user
    */
   async updateUsername(username: string): Promise<User> {
-    const response = await fetch(`${this._usersBaseUrl}/username`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username }),
-    });
-    const responseData = await response.json();
-    if (response.ok) {
-      console.log("Username updated successfully.");
-      return responseData;
-    } else {
-      console.error("Failed to update username:", responseData);
-      throw new Error("Failed to update username. Please try again later.");
+    try {
+      const response = await fetch(`${this._usersBaseUrl}/username`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username }),
+      });
+      const responseData = await response.json();
+      if (response.ok) {
+        return responseData;
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to update username:", errorData);
+        throw new Error("Failed to update username. Please try again later.");
+      }
+    } catch (error) {
+      console.error("Error updating username:", error);
+      throw error;
     }
   }
 
@@ -212,18 +242,23 @@ export default class UsersApi {
    * @returns A promise that resolves to the updated user
    */
   async updateEmail(email: string): Promise<User> {
-    const response = await fetch(`${this._usersBaseUrl}/email`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
-    const responseData = await response.json();
-    if (response.ok) {
-      console.log("Email updated successfully.");
-      return responseData;
-    } else {
-      console.error("Failed to update email:", responseData);
-      throw new Error("Failed to update email. Please try again later.");
+    try {
+      const response = await fetch(`${this._usersBaseUrl}/email`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const responseData = await response.json();
+      if (response.ok) {
+        return responseData;
+      } else {
+        const errorData = await response.json();
+        console.error("Failed to update email:", errorData);
+        throw new Error("Failed to update email. Please try again later.");
+      }
+    } catch (error) {
+      console.error("Error updating email:", error);
+      throw error;
     }
   }
 
@@ -233,16 +268,20 @@ export default class UsersApi {
    * @returns A promise that resolves when the user is deleted
    */
   async deleteUser(id: number): Promise<void> {
-    const response = await fetch(`${this._usersBaseUrl}/${id}`, {
-      method: "DELETE",
-    });
-    if (response.ok) {
-      console.log(`User with id ${id} deleted successfully.`);
-      return;
-    } else {
-      const responseText = await response.text();
-      console.error(`Failed to delete user ${id}: ${response.status} ${response.statusText}`, responseText);
-      throw new Error("Failed to delete user. Please try again later.");
+    try {
+      const response = await fetch(`${this._usersBaseUrl}/${id}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        return;
+      } else {
+        const responseText = await response.text();
+        console.error(`Failed to delete user ${id}: ${response.status} ${response.statusText}`, responseText);
+        throw new Error("Failed to delete user. Please try again later.");
+      }
+    } catch (error) {
+      console.error(`Error deleting user with id ${id}:`, error);
+      throw error;
     }
   }
 
@@ -252,17 +291,21 @@ export default class UsersApi {
    * @returns A promise that resolves to the users
    */
   async getUserByUsername(username: string): Promise<User> {
-    const response = await fetch(`${this._usersBaseUrl}/username/${username}`, {
-      method: "GET",
-    });
-    if (!response.ok) {
-      const responseText = await response.text();
-      console.error(`Failed to get user by username ${username}: ${response.status} ${response.statusText}`, responseText);
-      throw new Error("Failed to get user. Please try again later.");
+    try {
+      const response = await fetch(`${this._usersBaseUrl}/username/${username}`, {
+        method: "GET",
+      });
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.error(`Failed to get user by username ${username}: ${response.status} ${response.statusText}`, responseText);
+        throw new Error("Failed to get user. Please try again later.");
+      }
+      const responseData = await response.json();
+      return responseData;
+    } catch (error) {
+      console.error(`Error retrieving user ${username}:`, error);
+      throw error;
     }
-    const responseData = await response.json();
-    console.log(`Successfully retrieved user ${username}.`);
-    return responseData;
   }
 
   /**
@@ -271,17 +314,21 @@ export default class UsersApi {
    * @returns A promise that resolves to the user
    */
   async getUserByWallet(wallet: string): Promise<User> {
-    const response = await fetch(`${this._usersBaseUrl}/wallet/${wallet}`, {
-      method: "GET",
-    });
-    if (!response.ok) {
-      const responseText = await response.text();
-      console.error(`Failed to get user by wallet ${wallet}: ${response.status} ${response.statusText}`, responseText);
-      throw new Error("Failed to get user by wallet. Please try again later.");
+    try {
+      const response = await fetch(`${this._usersBaseUrl}/wallet/${wallet}`, {
+        method: "GET",
+      });
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.error(`Failed to get user by wallet ${wallet}: ${response.status} ${response.statusText}`, responseText);
+        throw new Error("Failed to get user by wallet. Please try again later.");
+      }
+      const responseData = await response.json();
+      return responseData;
+    } catch (error) {
+      console.error(`Error retrieving user with wallet ${wallet}:`, error);
+      throw error;
     }
-    const responseData = await response.json();
-    console.log(`Successfully retrieved user with wallet ${wallet}.`);
-    return responseData;
   }
 
   /**
@@ -291,18 +338,22 @@ export default class UsersApi {
    * @returns A promise that resolves when login is successful
    */
   async login(username: string, password: string): Promise<void> {
-    const response = await fetch(`${this._host}${this._loginPath}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ username, password }),
-    });
-    if (!response.ok) {
-      const responseText = await response.text();
-      console.error(`Login failed for user ${username}: ${response.status} ${response.statusText}`, responseText);
-      throw new Error("Login failed. Please check your credentials and try again.");
+    try {
+      const response = await fetch(`${this._host}${this._loginPath}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ username, password }),
+      });
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.error(`Login failed for user ${username}: ${response.status} ${response.statusText}`, responseText);
+        throw new Error("Login failed. Please check your credentials and try again.");
+      }
+    } catch (error) {
+      console.error(`Error logging in user ${username}:`, error);
+      throw error;
     }
-    console.log(`User ${username} logged in successfully.`);
   }
 
   /**
@@ -310,16 +361,20 @@ export default class UsersApi {
    * @returns A promise that resolves when logout is successful
    */
   async logout(): Promise<void> {
-    const response = await fetch(`${this._host}${this._logoutPath}`, {
-      method: "POST",
-      credentials: "include",
-    });
-    if (!response.ok) {
-      const responseText = await response.text();
-      console.error(`Logout failed: ${response.status} ${response.statusText}`, responseText);
-      throw new Error("Logout failed. Please try again later.");
+    try {
+      const response = await fetch(`${this._host}${this._logoutPath}`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.error(`Logout failed: ${response.status} ${response.statusText}`, responseText);
+        throw new Error("Logout failed. Please try again later.");
+      }
+    } catch (error) {
+      console.error("Error logging out user:", error);
+      throw error;
     }
-    console.log("User logged out successfully.");
   }
 
   /**
@@ -336,26 +391,31 @@ export default class UsersApi {
     password: string,
     wallet: string
   ): Promise<User> {
-    const response = await fetch(`${this._host}${this._registerPath}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        username,
-        email,
-        password,
-        authenticationMethod: "credentials",
-        wallet,
-      }),
-    });
-    const responseData = await response.json();
-    if (response.ok) {
-      console.log("User registered successfully:", responseData);
-      return responseData;
-    }
-    else {
-      console.error("Failed to register user:", responseData);
-      throw new Error("Registration failed. Please try again later.");
+    try {
+      const response = await fetch(`${this._host}${this._registerPath}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          username,
+          email,
+          password,
+          authenticationMethod: "credentials",
+          wallet,
+        }),
+      });
+      const responseData = await response.json();
+      if (response.ok) {
+        return responseData;
+      }
+      else {
+        const errorData = await response.json();
+        console.error("Failed to register user:", errorData);
+        throw new Error("Registration failed. Please try again later.");
+      }
+    } catch (error) {
+      console.error("Error registering user:", error);
+      throw error;
     }
   }
 
@@ -373,20 +433,25 @@ export default class UsersApi {
     signature: string,
     timestamp: string
   ): Promise<User> {
-    const response = await fetch(`${this._host}/register/wallet`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ username, wallet, signature, timestamp }),
-    });
-    const responseData = await response.json();
-    if (response.ok) {
-      console.log("User registered with wallet successfully:", responseData);
-      return responseData;
-    }
-    else {
-      console.error("Failed to register with wallet:", responseData);
-      throw new Error("Registration with wallet failed. Please try again later.");
+    try {
+      const response = await fetch(`${this._host}/register/wallet`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ username, wallet, signature, timestamp }),
+      });
+      const responseData = await response.json();
+      if (response.ok) {
+        return responseData;
+      }
+      else {
+        const errorData = await response.json();
+        console.error("Failed to register with wallet:", errorData);
+        throw new Error("Registration with wallet failed. Please try again later.");
+      }
+    } catch (error) {
+      console.error("Error registering user with wallet:", error);
+      throw error;
     }
   }
 
@@ -402,18 +467,22 @@ export default class UsersApi {
     signature: string,
     timestamp: string
   ): Promise<void> {
-    const response = await fetch(`${this._host}/login/wallet`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ wallet, signature, timestamp }),
-    });
-    if (!response.ok) {
-      const responseText = await response.text();
-      console.error(`Login with wallet failed for wallet ${wallet}: ${response.status} ${response.statusText}`, responseText);
-      throw new Error("Login with wallet failed. Please try again later.");
+    try {
+      const response = await fetch(`${this._host}/login/wallet`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ wallet, signature, timestamp }),
+      });
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.error(`Login with wallet failed for wallet ${wallet}: ${response.status} ${response.statusText}`, responseText);
+        throw new Error("Login with wallet failed. Please try again later.");
+      }
+    } catch (error) {
+      console.error(`Error logging in user with wallet ${wallet}:`, error);
+      throw error;
     }
-    console.log(`User with wallet ${wallet} logged in successfully.`);
   }
 
   /**
@@ -424,20 +493,27 @@ export default class UsersApi {
   async getWalletChallenge(
     wallet: string
   ): Promise<{ challenge: string; timestamp: string }> {
-    const response = await fetch(
-      `${this._host}/wallet/challenge?wallet=${wallet}`,
-      {
-        method: "GET",
-        credentials: "include",
+    try {
+      const response = await fetch(
+        `${this._host}/wallet/challenge?wallet=${wallet}`,
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      );
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.error(`Failed to get wallet challenge for wallet ${wallet}: ${response.status} ${response.statusText}`, responseText);
+        throw new Error("Failed to get wallet challenge. Please try again later.");
       }
-    );
-    if (!response.ok) {
-      const responseText = await response.text();
-      console.error(`Failed to get wallet challenge for wallet ${wallet}: ${response.status} ${response.statusText}`, responseText);
-      throw new Error("Failed to get wallet challenge. Please try again later.");
+      const responseData = await response.json();
+      return responseData;
+    } catch (error) {
+      console.error(
+        `Error retrieving wallet challenge for wallet ${wallet}:`,
+        error
+      );
+      throw error;
     }
-    const responseData = await response.json();
-    console.log(`Successfully retrieved wallet challenge for wallet ${wallet}.`);
-    return responseData;
   }
 }
