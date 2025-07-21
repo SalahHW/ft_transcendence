@@ -60,6 +60,9 @@ contract MasterContract is Ownable {
         uint16[] matchIds;
         uint16 tournamentIds;
         address winner;
+        address second;
+        address third;
+        address fourth;
     }
 
     /**
@@ -282,6 +285,9 @@ contract MasterContract is Ownable {
     function reportTournament(
         uint32 endTimestamp,
         address winner,
+        address second,
+        address third,
+        address fourth,
         MatchTemp[4] memory matches
     ) public onlyOwner {
         require(winner != address(0), "Winner address is invalid");
@@ -310,7 +316,10 @@ contract MasterContract is Ownable {
             endTimestamp: endTimestamp,
             matchIds: matchIds,
             tournamentIds: tournamentIds,
-            winner: winner
+            winner: winner,
+            second: second,
+            third: third,
+            fourth: fourth
         });
 
         globalTournamentsArray.push(t);

@@ -10,7 +10,14 @@ module.exports = async (fastify, opts) => {
       schema: {
         body: {
           type: "object",
-          required: ["endTimestamp", "winner", "matches"],
+          required: [
+            "endTimestamp",
+            "winner",
+            "second",
+            "third",
+            "fourth",
+            "matches",
+          ],
           properties: {
             endTimestamp: { type: "integer", minimum: 0 },
             winner: { type: "string", pattern: "^0x[a-fA-F0-9]{40}$" },
@@ -24,6 +31,9 @@ module.exports = async (fastify, opts) => {
                   "player1",
                   "player2",
                   "winner",
+                  "second",
+                  "third",
+                  "fourth",
                   "player1Score",
                   "player2Score",
                 ],
@@ -40,6 +50,18 @@ module.exports = async (fastify, opts) => {
                     type: "string",
                     pattern: "^0x[a-fA-F0-9]{40}$",
                   },
+                  second: {
+                    type: "string",
+                    pattern: "^0x[a-fA-F0-9]{40}$",
+                  },
+                  third: {
+                    type: "string",
+                    pattern: "^0x[a-fA-F0-9]{40}$",
+                  },
+                  fourth: {
+                    type: "string",
+                    pattern: "^0x[a-fA-F0-9]{40}$",
+                  },
                   player1Score: { type: "integer", minimum: 0 },
                   player2Score: { type: "integer", minimum: 0 },
                 },
@@ -53,9 +75,9 @@ module.exports = async (fastify, opts) => {
       if (!contract)
         return reply.status(503).send({ error: "Contract not initialized" });
 
-      const { endTimestamp, winner, matches } = request.body;
+      const { endTimestamp, winner, second, third, fourth, matches } =
+        request.body;
 
-      // Vérification manuelle côté JS pour éviter une perte de temps côté Solidity
       if (matches.length !== 4) {
         return reply
           .status(400)
@@ -72,7 +94,15 @@ module.exports = async (fastify, opts) => {
         }));
 
         const { tx } = await retryUntilSuccess(
-          () => contract.reportTournament(endTimestamp, winner, matchStructs),
+          () =>
+            contract.reportTournament(
+              endTimestamp,
+              winner,
+              second,
+              third,
+              fourth,
+              matchStructs
+            ),
           10,
           3000,
           parseContractError

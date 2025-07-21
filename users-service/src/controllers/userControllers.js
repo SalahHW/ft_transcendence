@@ -75,7 +75,7 @@ export async function createUser(request, reply) {
     return reply.code(201).send(user);
   } catch (error) {
     return reply
-      .code(500)
+      .code(400)
       .send({ error: "Failed to create user", cause: error.message });
   }
 }

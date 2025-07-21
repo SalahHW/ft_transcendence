@@ -34,6 +34,9 @@ module.exports = function parseContractError(error) {
   if (reason.includes("No tournaments found for the winner")) {
     return { code: 404, error: "No tournaments found for this wallet." };
   }
+  if (reason.includes("No tournaments found for the player")) {
+    return { code: 404, error: "No tournaments found for this player." };
+  }
   if (reason.includes("Only admin can transfer tokens")) {
     return { code: 403, error: "Only the admin can transfer the GOAT NFT." };
   }
