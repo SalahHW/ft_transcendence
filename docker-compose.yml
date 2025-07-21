@@ -34,7 +34,6 @@ services:
     env_file:
       - ./.env
       - ./users-service/.env
-      - ./redis-service/.env
     networks:
       - transcendence
     volumes:
@@ -47,7 +46,6 @@ services:
     env_file:
       - ./.env
       - ./jwt-service/.env
-      - ./redis-service/.env
     networks:
       - transcendence
     restart: unless-stopped
