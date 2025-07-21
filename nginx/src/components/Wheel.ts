@@ -10,12 +10,6 @@ interface Option {
   condition?: () => boolean;
 }
 
-/*
-	TODO: À l'ouverture d'une page, les autres pages doivent se fermer
-*	IDEA: Avoir un point qui suit la souris.
-*	maintenir right-click, le point s'agrandit et affiche les options.
-*/
-
 export default class Wheel {
   private _element: HTMLElement;
   private _optionHistory: Option[][] = [];
@@ -25,13 +19,15 @@ export default class Wheel {
   private _router: Router = Router.getInstance();
   private _authService: AuthService = AuthService.getInstance();
   private _baseWheelOptions: Option[] = [
+    /*
     {
-    /*   label: "API Test page", */
+      label: "API Test page",
       icon: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="none" stroke="currentColor" stroke-width="2" d="M9 1v7L2 20v3h20v-3L15 8V1m0 17a1 1 0 1 0 0-2a1 1 0 0 0 0 2Zm-6 2a1 1 0 1 0 0-2a1 1 0 0 0 0 2Zm9-7c-7-3-6 4-12 1M6 1h12"/></svg>`,
       onClick: () => {
         this._router.navigate("/api-test");
       },
     },
+    */
     {
       /* label: "Profile", */
       icon: `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linejoin="round" d="M4 18a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><circle cx="12" cy="7" r="3"/></g></svg>`,

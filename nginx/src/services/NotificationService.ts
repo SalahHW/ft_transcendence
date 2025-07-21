@@ -23,7 +23,7 @@ class NotificationService {
 	private constructor() {
 		this.notificationContainer = document.createElement("div");
 		this.notificationContainer.className =
-			"fixed top-3/4 left-1/2 -translate-x-1/2 z-[1000] flex flex-col-reverse items-center gap-2 pointer-events-none";
+			"fixed top-3/4 left-1/2 -translate-x-1/2 z-[1000] flex flex-col-reverse items-center gap-2 pointer-events-none transition-all duration-300 ease-in-out";
 		document.body.appendChild(this.notificationContainer);
 	}
 
@@ -52,6 +52,28 @@ class NotificationService {
 		}
 
 		return lines.join("<br>");
+	}
+
+	private adjustContainerPosition(): void {
+		const containerRect = this.notificationContainer.getBoundingClientRect();
+		const windowHeight = window.innerHeight;
+
+		const overflow = containerRect.bottom - windowHeight;
+
+		if (overflow > 0) {
+			const currentTop = parseFloat(this.notificationContainer.style.top) || 75;
+			const newTop = currentTop - (overflow / windowHeight) * 100;
+			this.notificationContainer.style.top = `${newTop}%`;
+		} else {
+			const currentTop = parseFloat(this.notificationContainer.style.top);
+			if (currentTop < 75) {
+				const containerHeight = containerRect.height;
+				const potentialBottom = (windowHeight * 0.75) + containerHeight;
+				if (potentialBottom < windowHeight) {
+					this.notificationContainer.style.top = `75%`;
+				}
+			}
+		}
 	}
 
 	public show(
@@ -90,18 +112,25 @@ class NotificationService {
 		this.notificationContainer.prepend(notificationElement);
 
 		let timeoutId: number;
+		let removalTimeoutId: number;
 
 		const startTimeout = () => {
+			clearTimeout(timeoutId);
+			clearTimeout(removalTimeoutId);
+
 			timeoutId = window.setTimeout(() => {
 				notificationElement.style.opacity = "0";
-				notificationElement.addEventListener("transitionend", () => {
+
+				removalTimeoutId = window.setTimeout(() => {
 					notificationElement.remove();
-				});
+					this.adjustContainerPosition();
+				}, 350);
 			}, duration);
 		};
 
 		const pauseTimeout = () => {
 			clearTimeout(timeoutId);
+			clearTimeout(removalTimeoutId);
 		};
 
 		notificationElement.addEventListener("mouseenter", pauseTimeout);
@@ -112,6 +141,7 @@ class NotificationService {
 			notificationElement.style.opacity = "1";
 		});
 
+		this.adjustContainerPosition();
 		startTimeout();
 	}
 }

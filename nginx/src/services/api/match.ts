@@ -94,7 +94,6 @@ export default class MatchServiceAPI {
 		console.error(`Failed to fetch matches for player ${address}:`, data);
 		throw new Error(`Failed to fetch matches. Please try again later.`);
 	}
-
 	/**
 	 * Get all tournaments a player participated in.
 	 * @param address - The player's address
@@ -124,6 +123,7 @@ export default class MatchServiceAPI {
 		console.error(`Failed to fetch tournaments for player ${address}:`, data);
 		throw new Error(`Failed to fetch tournaments. Please try again later.`);
 	}
+
 
 	/**
 	 * Get all matches won by an address

@@ -45,8 +45,6 @@ export default class CacheManager {
             }
             this._eventHandlers.get(event)!.push(service.serviceName);
         });
-
-        console.log(`[CacheManager] Registered service: ${service.serviceName} for events: ${events.join(', ')}`);
     }
 
     /**
@@ -62,8 +60,6 @@ export default class CacheManager {
                 services.splice(index, 1);
             }
         });
-
-        console.log(`[CacheManager] Unregistered service: ${serviceName}`);
     }
 
     /**
@@ -74,9 +70,6 @@ export default class CacheManager {
         const service = this._services.get(serviceName);
         if (service) {
             service.clearCache();
-            console.log(`[CacheManager] Cleared cache for service: ${serviceName}`);
-        } else {
-            console.warn(`[CacheManager] Service not found: ${serviceName}`);
         }
     }
 
@@ -88,7 +81,6 @@ export default class CacheManager {
             service.clearCache();
         });
         this._cache.clear();
-        console.log('[CacheManager] Cleared all caches');
     }
 
     /**
@@ -100,7 +92,6 @@ export default class CacheManager {
         servicesToClear.forEach(serviceName => {
             this.clearServiceCache(serviceName);
         });
-        console.log(`[CacheManager] Cleared caches for event '${event}': ${servicesToClear.join(', ')}`);
     }
 
     /**
@@ -108,7 +99,6 @@ export default class CacheManager {
      * @param event - The event to trigger
      */
     public triggerEvent(event: CacheEvent): void {
-        console.log(`[CacheManager] Triggering event: ${event.type}`, event.data);
         this.clearCachesForEvent(event.type);
 
         const eventSubscribers = this._subscribers.get(event.type) || [];
@@ -149,7 +139,6 @@ export default class CacheManager {
             this._subscribers.set(eventName, []);
         }
         this._subscribers.get(eventName)!.push(callback);
-        console.log(`[CacheManager] Registered subscriber for event: ${eventName}`);
     }
 
     public off(eventName: string, callback: Function): void {

@@ -35,12 +35,10 @@ export default class PresenceService {
     const cacheManager = CacheManager.getInstance();
 
     cacheManager.on('USER_LOGIN', () => {
-        console.log('[PresenceService] Login event detected, connecting...');
         this.connect();
     });
 
     cacheManager.on('USER_LOGOUT', () => {
-        console.log('[PresenceService] Logout event detected, disconnecting...');
         this.disconnect();
     });
   }
@@ -54,7 +52,6 @@ export default class PresenceService {
 
   public async connect(): Promise<void> {
     if (this._webSocket && this._webSocket.readyState === WebSocket.OPEN) {
-      console.log('[PresenceService] Already connected.');
       return;
     }
     if (this._webSocket) {
@@ -65,11 +62,9 @@ export default class PresenceService {
     try {
       const jwtPayload = await this._authService.getJwtPayload();
       if (!jwtPayload?.sub) {
-        console.warn('[PresenceService] User not authenticated, connection aborted.');
         return;
       }
 
-      console.log(`[PresenceService] Attempting to connect to ${this._url} for user ${jwtPayload.sub}`);
       this._webSocket = new WebSocket(this._url);
       this._setupWebSocketHandlers(jwtPayload.sub);
 
@@ -82,13 +77,11 @@ export default class PresenceService {
     if (!this._webSocket) return;
 
     this._webSocket.onopen = () => {
-      console.log('[PresenceService] WebSocket connection established.');
       this._reconnectAttempts = 0;
       this._webSocket!.send(JSON.stringify({ userId, message: 'init' }));
     };
 
     this._webSocket.onmessage = (event) => {
-      console.log('[PresenceService] Received data from server:', event.data);
       try {
         const data: Payload = JSON.parse(event.data);
         this._handlePresenceEvent(data);
@@ -98,7 +91,6 @@ export default class PresenceService {
     };
 
     this._webSocket.onclose = () => {
-      console.warn('[PresenceService] WebSocket connection closed.');
       this._webSocket = null;
       this._connectedUsers.forEach(id => this._notifyCallbacks(id, 'offline'));
       this._connectedUsers.clear();
@@ -114,19 +106,16 @@ export default class PresenceService {
   }
 
   private _handlePresenceEvent(event: Payload): void {
-    console.log(`[PresenceService] Handling event of type "${event.type}"`, event);
     switch (event.type) {
       case 'connection_success':
         this._connectedUsers = new Set(event.connectedUsers);
         this._connectedUsers.forEach(id => this._notifyCallbacks(id, 'online'));
         break;
       case 'user_connected':
-        console.log(`[PresenceService] User ${event.userId} has come online.`);
         this._connectedUsers.add(event.userId);
         this._notifyCallbacks(event.userId, 'online');
         break;
       case 'user_disconnected':
-        console.log(`[PresenceService] User ${event.userId} has gone offline.`);
         this._connectedUsers.delete(event.userId);
         this._notifyCallbacks(event.userId, 'offline');
         break;
@@ -152,7 +141,6 @@ export default class PresenceService {
     this._reconnectAttempts++;
     const delay = this._reconnectDelay * Math.pow(2, this._reconnectAttempts - 1);
 
-    console.log(`[PresenceService] Reconnecting in ${delay}ms...`);
     setTimeout(() => this.connect(), delay);
   }
 

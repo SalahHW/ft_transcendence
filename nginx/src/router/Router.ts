@@ -1,6 +1,3 @@
-// TODO: Clean up this class
-// TODO: (opt) Add views for different forms in APITestPage
-
 interface Route {
   path: string;
   cache?: any;
@@ -26,6 +23,7 @@ export default class Router {
         this.cache.render();
       },
     },
+    /*
     {
       path: "/api-test",
       handler: async function () {
@@ -37,6 +35,7 @@ export default class Router {
       },
       isModal: true,
     },
+    */
     {
       path: "/credential-login",
       handler: async function () {
