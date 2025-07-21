@@ -134,8 +134,7 @@ export default class RegisterPopup extends ModalView {
 			if (error?.response?.status === 409) {
 				NotificationService.show("Username or email already exists.", "error");
 			} else {
-				// TODO: Add more specific error messages
-				NotificationService.show("An error occurred during registration.", "error");
+				NotificationService.show("Password must be 8-60 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character.", "error");
 			}
 		} finally {
 			this._setLoading(false);
