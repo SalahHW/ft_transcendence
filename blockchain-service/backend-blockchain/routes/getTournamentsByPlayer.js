@@ -32,11 +32,22 @@ module.exports = async (fastify) => {
           bigIntToString({
             success: true,
             tournaments: tournaments.map(
-              ([endTimestamp, matchIds, tournamentId, winnerAddress]) => ({
+              ([
                 endTimestamp,
                 matchIds,
                 tournamentId,
                 winnerAddress,
+                second,
+                third,
+                fourth,
+              ]) => ({
+                endTimestamp,
+                matchIds,
+                tournamentId,
+                winnerAddress,
+                second,
+                third,
+                fourth,
               })
             ),
           })
