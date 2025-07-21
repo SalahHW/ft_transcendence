@@ -62,8 +62,14 @@ export default class FriendsService implements CacheableService {
 					if (!friendUser) {
 						throw new Error(`User with id ${friendship.friend_id} not found`);
 					}
-                    const avatarUrl = await this._avatarApi.getUserAvatarUrl(friendUser.id!)
-                        .catch(() => '/assets/defaultAvatar.jpg');
+
+					let avatarUrl: string;
+					try {
+						const baseAvatarUrl = await this._avatarApi.getUserAvatarUrl(friendUser.id!);
+						avatarUrl = this._addCacheBusting(baseAvatarUrl);
+					} catch (error) {
+						avatarUrl = '/assets/defaultAvatar.jpg';
+					}
 
                     let wins = 0;
                     let losses = 0;
@@ -118,6 +124,18 @@ export default class FriendsService implements CacheableService {
      */
     public clearCache(): void {
         this._enrichedFriendsCache = null;
+    }
+
+    /**
+     * Adds cache-busting parameter to an avatar URL
+     * @param url - The base avatar URL
+     * @returns The URL with cache-busting parameter
+     */
+    private _addCacheBusting(url: string): string {
+        if (url === '/assets/defaultAvatar.jpg') {
+        }
+        const separator = url.includes('?') ? '&' : '?';
+        return `${url}${separator}t=${Date.now()}`;
     }
 
     /**

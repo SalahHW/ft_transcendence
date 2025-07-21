@@ -59,7 +59,6 @@ class NotificationService {
 		type: "success" | "error",
 		duration: number = 3000
 	): void {
-		// Log to console for debugging
 		if (type === "success") {
 			console.log(`[Notification] ${message}`);
 		} else {

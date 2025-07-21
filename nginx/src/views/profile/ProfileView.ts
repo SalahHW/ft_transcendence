@@ -2,14 +2,27 @@ import ModalView from "../../components/ModalView.js";
 import { UserProfileView } from "./components/UserProfileView.js";
 import { MatchHistoryView } from "./components/MatchHistoryView.js";
 import { FriendListView } from "./components/FriendListView.js";
+import AvatarService from "../../services/AvatarService.js";
 
 export default class ProfileView extends ModalView {
+	private _avatarService = AvatarService.getInstance();
 
 	constructor() {
 		super({
 			width: '70vw',
-			height: '70vh'
+			height: '70vh',
+			authRequirement: 'loggedIn',
+			contentContainerClasses: "w-full h-full"
 		});
+	}
+
+	public async show(): Promise<void> {
+		if (this._isVisible)
+			return;
+		await super.show();
+		if (this._isVisible) {
+			await this.render();
+		}
 	}
 
 	public async render(): Promise<void> {
@@ -36,14 +49,17 @@ export default class ProfileView extends ModalView {
 			return;
 		}
 
+		this._avatarService.clearCache();
+
 		try {
 			profileContainer.innerHTML = /* HTML */`
 				<div class="flex items-center justify-center h-full">
-					<div class="text-white">Chargement du profil...</div>
+					<div class="text-gray-400">Profile loading...</div>
 				</div>
 			`;
 
-			profileContainer.innerHTML = await UserProfileView.render();
+			const profileHtml = await UserProfileView.render();
+			profileContainer.innerHTML = profileHtml;
 			await UserProfileView.addEventListeners();
 		} catch (error) {
 			console.error('Error updating profile:', error);
@@ -62,7 +78,7 @@ export default class ProfileView extends ModalView {
 			return;
 		}
 
-		matchHistoryContainer.innerHTML = await MatchHistoryView.render();
+		await MatchHistoryView.render(matchHistoryContainer as HTMLElement);
 	}
 
 	public async updateFriendList(): Promise<void> {

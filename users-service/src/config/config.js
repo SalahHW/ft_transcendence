@@ -52,4 +52,5 @@ if (!REDIS_SERVICE_PASSWORD) {
   console.error(
     "Unable to load redis service password from environment variables"
   );
+  process.exit(1);
 }

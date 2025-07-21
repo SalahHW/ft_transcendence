@@ -13,18 +13,19 @@ export default class RegisterPopup extends ModalView {
 			width: "100%",
 			maxWidth: "36rem",
 			contentContainerClasses: "p-8 mx-4",
+			authRequirement: 'loggedOut'
 		});
 	}
 
-	public show(): void {
+	public async show(): Promise<void> {
 		if (this._isVisible) return;
 		this.render();
-		super.show();
+		await super.show();
 	}
 
 	public render(): void {
 		this._contentContainer.innerHTML = /* HTML */ `
-			<h2 class="${UI_THEME.components.title} mb-6">Register</h2>
+			<h2 class="${UI_THEME.components.title} mb-6">Register with Credentials</h2>
 
 			<form
 				id="popup-container-form-register"
@@ -71,7 +72,7 @@ export default class RegisterPopup extends ModalView {
 					${buttonHTML({
 						id: "popup-container-submit-register",
 						type: "submit",
-						label: "Create Account",
+						label: "Register",
 						style: UI_THEME.components.button.primary,
 					})}
 				</div>
@@ -127,19 +128,14 @@ export default class RegisterPopup extends ModalView {
 
 			NotificationService.show("Account created successfully!", "success");
 
-			setTimeout(() => {
-				this.hide();
-			}, 1500);
+			this.hide();
 		} catch (error: any) {
+			console.log(error);
 			if (error?.response?.status === 409) {
 				NotificationService.show("Username or email already exists.", "error");
 			} else {
-				NotificationService.show(
-					error instanceof Error
-						? error.message
-						: "An error occurred during registration.",
-					"error"
-				);
+				// TODO: Add more specific error messages
+				NotificationService.show("An error occurred during registration.", "error");
 			}
 		} finally {
 			this._setLoading(false);

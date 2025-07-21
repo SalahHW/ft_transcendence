@@ -1,5 +1,3 @@
-import { UI_THEME } from '../style/tailwindClasses.js';
-
 export default class HomePage {
 	private _container: HTMLElement;
 	private _video: HTMLVideoElement | null = null;
