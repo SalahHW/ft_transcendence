@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import WebSocketPlugin from '@fastify/websocket';
 import fastifyStatic from '@fastify/static';
+import fastifyCookie from '@fastify/cookie';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
@@ -38,6 +39,9 @@ function registerCommonComponents(server) {
     allowedHeaders: SERVER_CONFIG.ALLOWED_HEADERS,
     credentials: true
   });
+
+  // Register cookie plugin for JWT authentication
+  server.register(fastifyCookie);
 
   // Register static file serving for sounds
   server.register(fastifyStatic, {

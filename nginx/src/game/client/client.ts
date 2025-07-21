@@ -116,6 +116,7 @@ async function setPlayerReady(playerId: string): Promise<boolean> {
             headers: {
                 'Content-Type': 'application/json',
             },
+            credentials: 'include',
             body: JSON.stringify({}),
         });
         

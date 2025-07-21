@@ -7,6 +7,7 @@ import { gameEngine } from '../game/GameEngine.js';
 import { roomManager } from '../room/RoomManager.js';
 import { tournamentManager } from '../tournament/TournamentManager.js';
 import { blockchainService } from '../services/blockchainService.js';
+import * as jwtControllers from '../controllers/jwtControllers.js';
 
 // Constants for paddle movement
 const PADDLE_PULSE_DISTANCE = 1.0;
@@ -65,10 +66,21 @@ export async function registerApiRoutes(fastify) {
   });
 
   // POST /api/players: Create a new player with a username
-  fastify.post('/api/players', async (request, reply) => {
+  fastify.post('/api/players', {
+    preHandler: [jwtControllers.verifyAuthentication]
+  }, async (request, reply) => {
     try {
       console.log('API request: POST /api/players');
       const { username, userId } = request.body || {};
+      const authenticatedUserId = request.user.sub;
+      
+      // Verify user is registering themselves
+      if (userId !== authenticatedUserId) {
+        return reply.code(403).send({ 
+          status: 'error',
+          message: 'Can only register yourself' 
+        });
+      }
       
       const player = playerManager.registerPlayerWithUsername(username, userId);
       
@@ -98,10 +110,21 @@ export async function registerApiRoutes(fastify) {
   });
 
   // POST /api/tournaments: Create a new player for tournament with a username
-  fastify.post('/api/tournaments', async (request, reply) => {
+  fastify.post('/api/tournaments', {
+    preHandler: [jwtControllers.verifyAuthentication]
+  }, async (request, reply) => {
     try {
       console.log('🎯 TOURNAMENT BUTTON CLICKED: API request: POST /api/tournaments');
       const { username, userId } = request.body || {};
+      const authenticatedUserId = request.user.sub;
+      
+      // Verify user is registering themselves
+      if (userId !== authenticatedUserId) {
+        return reply.code(403).send({ 
+          status: 'error',
+          message: 'Can only register yourself' 
+        });
+      }
       
       console.log(`🏆 Player ${username} clicked the tournament button!`);
       
@@ -215,10 +238,13 @@ export async function registerApiRoutes(fastify) {
   });
 
   // DELETE /api/tournaments/players/:id: Remove player from tournament waiting room
-  fastify.delete('/api/tournaments/players/:id', async (request, reply) => {
+  fastify.delete('/api/tournaments/players/:id', {
+    preHandler: [jwtControllers.verifyAuthentication, jwtControllers.verifyTournamentPlayerOwnership]
+  }, async (request, reply) => {
     try {
       const { id } = request.params;
       const { username } = request.body || {};
+      const player = request.player; // Already validated by middleware
       
       console.log(`API request: DELETE /api/tournaments/players/${id} (username: ${username})`);
       
@@ -252,10 +278,13 @@ export async function registerApiRoutes(fastify) {
   });
 
   // POST /api/tournaments/players/:id/leave: Explicitly leave tournament waiting room
-  fastify.post('/api/tournaments/players/:id/leave', async (request, reply) => {
+  fastify.post('/api/tournaments/players/:id/leave', {
+    preHandler: [jwtControllers.verifyAuthentication, jwtControllers.verifyTournamentPlayerOwnership]
+  }, async (request, reply) => {
     try {
       const { id } = request.params;
       const { username } = request.body || {};
+      const player = request.player; // Already validated by middleware
       
       console.log(`API request: POST /api/tournaments/players/${id}/leave (username: ${username})`);
       
@@ -306,10 +335,13 @@ export async function registerApiRoutes(fastify) {
   });
 
   // POST /api/tournaments/players/:id/browser-event: Handle browser events for tournament waiting rooms
-  fastify.post('/api/tournaments/players/:id/browser-event', async (request, reply) => {
+  fastify.post('/api/tournaments/players/:id/browser-event', {
+    preHandler: [jwtControllers.verifyAuthentication, jwtControllers.verifyTournamentPlayerOwnership]
+  }, async (request, reply) => {
     try {
       const { id } = request.params;
       const { username, eventType } = request.body || {};
+      const player = request.player; // Already validated by middleware
       
       console.log(`API request: POST /api/tournaments/players/${id}/browser-event (username: ${username}, event: ${eventType})`);
       
@@ -360,10 +392,13 @@ export async function registerApiRoutes(fastify) {
   });
 
   // POST /api/tournaments/players/:id/activity: Update player activity in tournament waiting room
-  fastify.post('/api/tournaments/players/:id/activity', async (request, reply) => {
+  fastify.post('/api/tournaments/players/:id/activity', {
+    preHandler: [jwtControllers.verifyAuthentication, jwtControllers.verifyTournamentPlayerOwnership]
+  }, async (request, reply) => {
     try {
       const { id } = request.params;
       const { username } = request.body || {};
+      const player = request.player; // Already validated by middleware
       
       console.log(`API request: POST /api/tournaments/players/${id}/activity (username: ${username})`);
       
@@ -419,10 +454,12 @@ export async function registerApiRoutes(fastify) {
         type: 'object',
         additionalProperties: true  // Allow empty object
       }
-    }
+    },
+    preHandler: [jwtControllers.verifyAuthentication, jwtControllers.verifyPlayerOwnership]
   }, async (request, reply) => {
     try {
       const { id } = request.params;
+      const player = request.player; // Already validated by middleware
       
       const isReady = playerManager.setPlayerReady(id);
       
@@ -460,24 +497,27 @@ export async function registerApiRoutes(fastify) {
   };
 
   // POST /api/players/:id/paddle/up - Move paddle up
-  fastify.post('/api/players/:id/paddle/up', async (request, reply) => {
+  fastify.post('/api/players/:id/paddle/up', {
+    preHandler: [jwtControllers.verifyAuthentication, jwtControllers.verifyPlayerOwnership]
+  }, async (request, reply) => {
     try {
       const { id } = request.params;
-      const validation = validatePaddleRequest(id);
+      const player = request.player; // Already validated by middleware
       
-      if (validation.error) {
-        return reply.code(validation.error.status).send({
+      // Additional validation for paddle movement
+      if (!player.username) {
+        return reply.code(400).send({
           status: 'error',
-          message: validation.error.message
+          message: 'Player must have a username'
         });
       }
 
-      movePaddle(validation.player, 'up');
+      movePaddle(player, 'up');
       
       return reply.code(200).send({
         status: 'success',
         message: 'Paddle moved up',
-        data: { playerId: id, direction: 'up', roomId: validation.player.roomId }
+        data: { playerId: id, direction: 'up', roomId: player.roomId }
       });
     } catch (error) {
       console.error('Error in POST /api/players/:id/paddle/up:', error);
@@ -489,24 +529,27 @@ export async function registerApiRoutes(fastify) {
   });
 
   // POST /api/players/:id/paddle/down - Move paddle down
-  fastify.post('/api/players/:id/paddle/down', async (request, reply) => {
+  fastify.post('/api/players/:id/paddle/down', {
+    preHandler: [jwtControllers.verifyAuthentication, jwtControllers.verifyPlayerOwnership]
+  }, async (request, reply) => {
     try {
       const { id } = request.params;
-      const validation = validatePaddleRequest(id);
+      const player = request.player; // Already validated by middleware
       
-      if (validation.error) {
-        return reply.code(validation.error.status).send({
+      // Additional validation for paddle movement
+      if (!player.username) {
+        return reply.code(400).send({
           status: 'error',
-          message: validation.error.message
+          message: 'Player must have a username'
         });
       }
 
-      movePaddle(validation.player, 'down');
+      movePaddle(player, 'down');
       
       return reply.code(200).send({
         status: 'success',
         message: 'Paddle moved down',
-        data: { playerId: id, direction: 'down', roomId: validation.player.roomId }
+        data: { playerId: id, direction: 'down', roomId: player.roomId }
       });
     } catch (error) {
       console.error('Error in POST /api/players/:id/paddle/down:', error);
