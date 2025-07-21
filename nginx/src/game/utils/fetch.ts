@@ -82,6 +82,7 @@ export async function registerCurrentUserForGame(): Promise<{
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include",
     body: JSON.stringify({ username, userId }),
   });
 
@@ -116,6 +117,7 @@ export async function registerCurrentUserForTournament(): Promise<{
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include",
     body: JSON.stringify({ username, userId }),
   });
 
