@@ -2,6 +2,7 @@ import * as userModels from "../models/userModels.js";
 import * as emailModels from "../models/emailModels.js";
 import { createEmail } from "./emailControllers.js";
 import { createPassword } from "./passwordControllers.js";
+import { createUsername } from "./usernameControllers.js";
 import axios from "axios";
 
 export async function createUser(request, reply) {
@@ -35,7 +36,7 @@ export async function createUser(request, reply) {
       hashedPassword = await createPassword(password);
       finalEmail = await createEmail(email);
       user = await userModels.createUser({
-        username,
+        username: await createUsername(username),
         email: finalEmail,
         password: hashedPassword,
         authenticationMethod,
@@ -43,7 +44,7 @@ export async function createUser(request, reply) {
       });
     } else if (authenticationMethod === "wallet") {
       user = await userModels.createUser({
-        username,
+        username: await createUsername(username),
         email: null,
         password: null,
         authenticationMethod,
