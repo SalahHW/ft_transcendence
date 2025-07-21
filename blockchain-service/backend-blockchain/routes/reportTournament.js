@@ -21,6 +21,18 @@ module.exports = async (fastify, opts) => {
           properties: {
             endTimestamp: { type: "integer", minimum: 0 },
             winner: { type: "string", pattern: "^0x[a-fA-F0-9]{40}$" },
+            second: {
+              type: "string",
+              pattern: "^0x[a-fA-F0-9]{40}$",
+            },
+            third: {
+              type: "string",
+              pattern: "^0x[a-fA-F0-9]{40}$",
+            },
+            fourth: {
+              type: "string",
+              pattern: "^0x[a-fA-F0-9]{40}$",
+            },
             matches: {
               type: "array",
               minItems: 4,
@@ -31,9 +43,6 @@ module.exports = async (fastify, opts) => {
                   "player1",
                   "player2",
                   "winner",
-                  "second",
-                  "third",
-                  "fourth",
                   "player1Score",
                   "player2Score",
                 ],
@@ -47,18 +56,6 @@ module.exports = async (fastify, opts) => {
                     pattern: "^0x[a-fA-F0-9]{40}$",
                   },
                   winner: {
-                    type: "string",
-                    pattern: "^0x[a-fA-F0-9]{40}$",
-                  },
-                  second: {
-                    type: "string",
-                    pattern: "^0x[a-fA-F0-9]{40}$",
-                  },
-                  third: {
-                    type: "string",
-                    pattern: "^0x[a-fA-F0-9]{40}$",
-                  },
-                  fourth: {
                     type: "string",
                     pattern: "^0x[a-fA-F0-9]{40}$",
                   },
