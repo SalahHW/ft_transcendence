@@ -262,11 +262,11 @@ export class BlockchainService {
 
       // Register all placed players if needed
       const winnerRegistered = await this.registerPlayerIfNeeded(winnerWallet, `Tournament_Winner_${tournamentId}`);
-      const secondRegistered = await this.registerPlayerIfNeeded(secondWallet, `Tournament_Second_${tournamentId}`);
-      const thirdRegistered = await this.registerPlayerIfNeeded(thirdWallet, `Tournament_Third_${tournamentId}`);
-      const fourthRegistered = await this.registerPlayerIfNeeded(fourthWallet, `Tournament_Fourth_${tournamentId}`);
+      //const secondRegistered = await this.registerPlayerIfNeeded(secondWallet, `Tournament_Second_${tournamentId}`);
+      //const thirdRegistered = await this.registerPlayerIfNeeded(thirdWallet, `Tournament_Third_${tournamentId}`);
+      //const fourthRegistered = await this.registerPlayerIfNeeded(fourthWallet, `Tournament_Fourth_${tournamentId}`);
 
-      if (!winnerRegistered || !secondRegistered || !thirdRegistered || !fourthRegistered) {
+      if (!winnerRegistered) {
         throw new Error(`Failed to register all placed players in blockchain contract`);
       }
 

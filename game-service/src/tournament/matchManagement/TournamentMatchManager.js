@@ -667,38 +667,6 @@ export class TournamentMatchManager {
     const loserFinalResult = waitingRoomData.finalResults?.loser_final;
     
     if (winnerFinalResult && loserFinalResult) {
-      // Check if this is a single semi-final scenario (only 2 players)
-      if (winnerFinalResult.isSingleSemiFinal && loserFinalResult.isSingleSemiFinal) {
-        // Single semi-final: only 1st and 2nd place are determined
-        standings.push({
-          id: winnerFinalResult.winner.id,
-          userId: winnerFinalResult.winner.userId,
-          username: winnerFinalResult.winner.username,
-          placement: 1
-        });
-        
-        standings.push({
-          id: winnerFinalResult.loser.id,
-          userId: winnerFinalResult.loser.userId,
-          username: winnerFinalResult.loser.username,
-          placement: 2
-        });
-        
-        // For 3rd and 4th place, use the same players (since no actual loser final)
-        standings.push({
-          id: loserFinalResult.winner.id,
-          userId: loserFinalResult.winner.userId,
-          username: loserFinalResult.winner.username,
-          placement: 3
-        });
-        
-        standings.push({
-          id: loserFinalResult.loser.id,
-          userId: loserFinalResult.loser.userId,
-          username: loserFinalResult.loser.username,
-          placement: 4
-        });
-      } else {
         // Normal tournament: all 4 placements determined
         standings.push({
           id: winnerFinalResult.winner.id,
@@ -728,8 +696,6 @@ export class TournamentMatchManager {
           placement: 4
         });
       }
-    }
-    
     return standings;
   }
 }
