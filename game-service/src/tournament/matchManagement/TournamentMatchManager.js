@@ -582,7 +582,7 @@ export class TournamentMatchManager {
   }
 
   /**
-   * Report tournament completion to blockchain (NEW FORMAT: with all matches)
+   * Report tournament completion to blockchain (NEW FORMAT: with all matches and placements)
    * @param {string} waitingRoomId - The tournament waiting room ID
    * @param {Object} winner - The tournament winner (1st place)
    */
@@ -605,24 +605,44 @@ export class TournamentMatchManager {
     // Get tournament start timestamp for endTimestamp
     const endTimestamp = Math.floor(Date.now() / 1000);
     
-    // Get winner wallet address
+    // Calculate tournament standings to get all placements
+    const finalStandings = this._calculateTournamentStandings(waitingRoomData);
+    if (finalStandings.length !== 4) {
+      console.error('🏆 Tournament standings incomplete, cannot report to blockchain');
+      return;
+    }
+
+    // Get wallet addresses for all placed players
     const { blockchainService } = await import('../../services/blockchainService.js');
     const winnerWallet = await blockchainService.getUserWallet(winner.userId || winner.id);
     if (!winnerWallet) {
       console.error('🏆 Could not retrieve wallet address for tournament winner');
       return;
     }
+
+    // Find players by placement
+    const secondPlace = finalStandings.find(p => p.placement === 2);
+    const thirdPlace = finalStandings.find(p => p.placement === 3);
+    const fourthPlace = finalStandings.find(p => p.placement === 4);
+
+    if (!secondPlace || !thirdPlace || !fourthPlace) {
+      console.error('🏆 Could not determine all tournament placements');
+      return;
+    }
     
     const tournamentData = {
       endTimestamp: endTimestamp,
       winner: winnerWallet,
+      second: secondPlace,
+      third: thirdPlace,
+      fourth: fourthPlace,
       matches: matches
     };
 
-    console.log(`🏆 Reporting tournament to blockchain (NEW FORMAT):`, tournamentData);
+    console.log(`🏆 Reporting tournament to blockchain (NEW FORMAT with placements):`, tournamentData);
     console.log(`🏆 Tournament has ${matches.length} matches`);
     
-    // Set timeout to 25 seconds for blockchain calls
+    // Set timeout to 45 seconds for blockchain calls
     try {
       await Promise.race([
         reportTournamentResultsToAPI(tournamentData, waitingRoomId),
@@ -634,5 +654,82 @@ export class TournamentMatchManager {
       console.error('🏆 Failed to report tournament to blockchain:', error.message);
       throw error;
     }
+  }
+
+  /**
+   * Calculate final tournament standings based on match results
+   */
+  _calculateTournamentStandings(waitingRoomData) {
+    const standings = [];
+    
+    // Get final results
+    const winnerFinalResult = waitingRoomData.finalResults?.winner_final;
+    const loserFinalResult = waitingRoomData.finalResults?.loser_final;
+    
+    if (winnerFinalResult && loserFinalResult) {
+      // Check if this is a single semi-final scenario (only 2 players)
+      if (winnerFinalResult.isSingleSemiFinal && loserFinalResult.isSingleSemiFinal) {
+        // Single semi-final: only 1st and 2nd place are determined
+        standings.push({
+          id: winnerFinalResult.winner.id,
+          userId: winnerFinalResult.winner.userId,
+          username: winnerFinalResult.winner.username,
+          placement: 1
+        });
+        
+        standings.push({
+          id: winnerFinalResult.loser.id,
+          userId: winnerFinalResult.loser.userId,
+          username: winnerFinalResult.loser.username,
+          placement: 2
+        });
+        
+        // For 3rd and 4th place, use the same players (since no actual loser final)
+        standings.push({
+          id: loserFinalResult.winner.id,
+          userId: loserFinalResult.winner.userId,
+          username: loserFinalResult.winner.username,
+          placement: 3
+        });
+        
+        standings.push({
+          id: loserFinalResult.loser.id,
+          userId: loserFinalResult.loser.userId,
+          username: loserFinalResult.loser.username,
+          placement: 4
+        });
+      } else {
+        // Normal tournament: all 4 placements determined
+        standings.push({
+          id: winnerFinalResult.winner.id,
+          userId: winnerFinalResult.winner.userId,
+          username: winnerFinalResult.winner.username,
+          placement: 1
+        });
+        
+        standings.push({
+          id: winnerFinalResult.loser.id,
+          userId: winnerFinalResult.loser.userId,
+          username: winnerFinalResult.loser.username,
+          placement: 2
+        });
+        
+        standings.push({
+          id: loserFinalResult.winner.id,
+          userId: loserFinalResult.winner.userId,
+          username: loserFinalResult.winner.username,
+          placement: 3
+        });
+        
+        standings.push({
+          id: loserFinalResult.loser.id,
+          userId: loserFinalResult.loser.userId,
+          username: loserFinalResult.loser.username,
+          placement: 4
+        });
+      }
+    }
+    
+    return standings;
   }
 }
