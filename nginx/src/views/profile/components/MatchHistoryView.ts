@@ -53,11 +53,19 @@ export class MatchHistoryView {
             this._enrichedTournaments = tournaments;
             this._dataReadyFlags.tournaments = true;
             this._onDataUpdate();
+        }).catch(error => {
+            console.error("Failed to load tournament history:", error);
+            this._dataReadyFlags.tournaments = true;
+            this._onDataUpdate();
         });
 
         this._matchHistoryService.getEnrichedMatchHistory(this._userWallet, (matchHistory) => {
             this._enrichedMatches = matchHistory.enrichedMatches;
             this._currentUser = matchHistory.currentUser;
+            this._dataReadyFlags.matches = true;
+            this._onDataUpdate();
+        }).catch(error => {
+            console.error("Failed to load match history:", error);
             this._dataReadyFlags.matches = true;
             this._onDataUpdate();
         });
@@ -67,6 +75,12 @@ export class MatchHistoryView {
         if (!this._dataReadyFlags.matches || !this._dataReadyFlags.tournaments) {
             return;
         }
+
+        if (!this._currentUser) {
+            if (this._container) this._container.innerHTML = this.renderErrorState();
+            return;
+        }
+
         this._renderToDOM();
     }
 
@@ -140,7 +154,7 @@ export class MatchHistoryView {
         return validGroupTimestamps;
     }
 
-    private static async _renderToDOM(): Promise<void> {
+    private static _renderToDOM(): void {
         if (!this._container || !this._currentUser) return;
 
         if (this._enrichedMatches.length === 0 && this._enrichedTournaments.length === 0) {
@@ -149,7 +163,7 @@ export class MatchHistoryView {
         }
 
         const renderableItems = this._prepareRenderableHistory();
-        const htmlFragments = await Promise.all(renderableItems.map(item => this._renderItem(item)));
+        const htmlFragments = renderableItems.map(item => this._renderItem(item));
 
         const historyHtml = htmlFragments.join('');
 
@@ -164,7 +178,7 @@ export class MatchHistoryView {
         `;
     }
 
-    private static async _renderItem(item: RenderableHistoryItem): Promise<string> {
+    private static _renderItem(item: RenderableHistoryItem): string {
         const separatorHtml = item.needsSeparator ? `<div class="h-px w-full my-4 bg-white/10"></div>` : '';
         let itemHtml = '';
 
@@ -172,11 +186,11 @@ export class MatchHistoryView {
             const tournament = item.data as EnrichedTournament;
             const currentUserInfo = tournament.players.find((p: PlayerInfo) => p.walletAddress === this._userWallet);
             if (currentUserInfo) {
-                itemHtml = await MatchHistoryView.createTournamentHistoryItem(tournament, currentUserInfo);
+                itemHtml = MatchHistoryView.createTournamentHistoryItem(tournament, currentUserInfo);
             }
         } else {
             const match = item.data as EnrichedMatch;
-            itemHtml = await MatchHistoryView.createMatchHistoryItem(match, this._currentUser!, item.isNested);
+            itemHtml = MatchHistoryView.createMatchHistoryItem(match, this._currentUser!, item.isNested);
         }
 
         return separatorHtml + itemHtml;
@@ -206,10 +220,10 @@ export class MatchHistoryView {
 		`;
 	}
 
-    private static async createTournamentHistoryItem(
+    private static createTournamentHistoryItem(
         enrichedTournament: EnrichedTournament,
         currentUser: PlayerInfo
-    ): Promise<string> {
+    ): string {
         const { players, userPlacement, isWin, endTimestamp } = enrichedTournament;
         const resultText = isWin ? 'VICTORY' : 'DEFEAT';
         const resultColor = isWin ? UI_THEME.colors.green.light : UI_THEME.colors.red.light;
@@ -274,11 +288,11 @@ export class MatchHistoryView {
 		`;
     }
 
-    private static async createMatchHistoryItem(
+    private static createMatchHistoryItem(
         enrichedMatch: EnrichedMatch,
         currentUser: PlayerInfo,
         isNested: boolean = false
-    ): Promise<string> {
+    ): string {
 		const { opponent, isWin, userScore, opponentScore, match } = enrichedMatch;
 
         const resultText = isWin ? "VICTORY" : "DEFEAT";

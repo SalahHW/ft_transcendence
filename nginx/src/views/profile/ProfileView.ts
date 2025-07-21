@@ -2,8 +2,10 @@ import ModalView from "../../components/ModalView.js";
 import { UserProfileView } from "./components/UserProfileView.js";
 import { MatchHistoryView } from "./components/MatchHistoryView.js";
 import { FriendListView } from "./components/FriendListView.js";
+import AvatarService from "../../services/AvatarService.js";
 
 export default class ProfileView extends ModalView {
+	private _avatarService = AvatarService.getInstance();
 
 	constructor() {
 		super({
@@ -47,14 +49,17 @@ export default class ProfileView extends ModalView {
 			return;
 		}
 
+		this._avatarService.clearCache();
+
 		try {
 			profileContainer.innerHTML = /* HTML */`
 				<div class="flex items-center justify-center h-full">
-					<div class="text-white">Chargement du profil...</div>
+					<div class="text-gray-400">Profile loading...</div>
 				</div>
 			`;
 
-			profileContainer.innerHTML = await UserProfileView.render();
+			const profileHtml = await UserProfileView.render();
+			profileContainer.innerHTML = profileHtml;
 			await UserProfileView.addEventListeners();
 		} catch (error) {
 			console.error('Error updating profile:', error);

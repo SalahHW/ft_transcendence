@@ -99,7 +99,7 @@ export default class AuthService {
       data.username,
       data.email,
       data.password,
-      data.wallet
+      data.wallet.toLowerCase()
     );
     await this.login(data.username, data.password);
     return this._user!;
@@ -153,7 +153,7 @@ export default class AuthService {
     const accounts: string[] = await ethereum.request({
       method: "eth_requestAccounts",
     });
-    return accounts[0] || null;
+    return accounts[0] ? accounts[0].toLowerCase() : null;
   }
 
   private async _signMessage(
@@ -174,7 +174,6 @@ export default class AuthService {
       return signature;
     } catch (err: any) {
       if (err.code === 4001) {
-        // EIP-1193 user rejection error
         throw new Error("You rejected the signature request in your wallet.");
       }
       console.error("Error signing message:", err);
@@ -246,7 +245,7 @@ export default class AuthService {
           err
         );
       }
-    }, 120_000); // 2 minutes
+    }, 120_000);
   }
 
   private _stopRefreshLoop() {

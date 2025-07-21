@@ -9,7 +9,7 @@ export default class AvatarService implements CacheableService {
     private static _instance: AvatarService;
     private _authService = AuthService.getInstance();
     private _avatarApi = new AvatarServiceAPI();
-    private _avatarUrlCache: string | null = null;
+    private _avatarCache: Map<number, string> = new Map();
     private _defaultAvatarUrl: string = '/assets/defaultAvatar.jpg';
     public readonly serviceName = 'AvatarService';
 
@@ -44,20 +44,41 @@ export default class AvatarService implements CacheableService {
      * @returns A promise that resolves to the avatar URL.
      */
     public async getCurrentUserAvatarUrl(): Promise<string> {
-        if (this._avatarUrlCache) {
-            return this._avatarUrlCache;
-        }
-
         const userId = await this._getUserId();
+        return this.getAvatarUrlForUser(userId);
+    }
+
+    /**
+     * Gets a user's avatar URL by their ID, with caching and cache-busting.
+     * @param userId - The ID of the user.
+     * @returns A promise that resolves to the avatar URL.
+     */
+    public async getAvatarUrlForUser(userId: number): Promise<string> {
+        if (this._avatarCache.has(userId)) {
+            const cachedUrl = this._avatarCache.get(userId)!;
+            return this._addCacheBusting(cachedUrl);
+        }
 
         try {
             const avatarUrl = await this._avatarApi.getUserAvatarUrl(userId);
-            this._avatarUrlCache = avatarUrl;
-            return avatarUrl;
+            this._avatarCache.set(userId, avatarUrl);
+            return this._addCacheBusting(avatarUrl);
         } catch (error) {
-            console.warn("Could not retrieve user avatar. Using default avatar.", error);
+            console.warn(`Could not retrieve avatar for user ${userId}. Using default avatar.`, error);
             return this._defaultAvatarUrl;
         }
+    }
+
+    /**
+     * Adds cache-busting parameter to an avatar URL
+     * @param url - The base avatar URL
+     * @returns The URL with cache-busting parameter
+     */
+    private _addCacheBusting(url: string): string {
+        if (url === this._defaultAvatarUrl) {
+        }
+        const separator = url.includes('?') ? '&' : '?';
+        return `${url}${separator}t=${Date.now()}`;
     }
 
     /**
@@ -126,9 +147,10 @@ export default class AvatarService implements CacheableService {
     }
 
     /**
-     * Clears the local cache for the avatar URL.
+     * Clears the local cache for all avatar URLs.
      */
     public clearCache(): void {
-        this._avatarUrlCache = null;
+        this._avatarCache.clear();
+        console.log("Avatar cache cleared.");
     }
 }
