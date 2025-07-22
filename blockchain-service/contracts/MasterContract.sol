@@ -124,7 +124,7 @@ contract MasterContract is Ownable {
     function addPlayer(string memory _name, address _player) public onlyOwner {
         require(!players[_player].exists, "Player already exists");
         players[_player] = Player({name: _name, exists: true});
-        pongToken.mint(_player, 100);
+        pongToken.mint(_player, 100 * 10 ** pongToken.decimals());
         emit PlayerAdded(_name, _player);
     }
 
@@ -161,7 +161,7 @@ contract MasterContract is Ownable {
             }
         }
 
-        pongToken.mint(winner, 10);
+        pongToken.mint(winner, 10 * 10 ** pongToken.decimals());
 
         if (
             pongToken.balanceOf(goatNft.getGoatAddress()) <
@@ -272,10 +272,12 @@ contract MasterContract is Ownable {
      */
     function calculateBurnAmount(
         uint256 balance
-    ) internal pure returns (uint256) {
-        if (balance <= 10) return 0;
-        if (balance < 20) return balance - 10;
-        return 10;
+    ) internal view returns (uint256) {
+        uint256 unit = 10 ** pongToken.decimals();
+
+        if (balance <= 10 * unit) return 0;
+        if (balance < 20 * unit) return balance - 10 * unit;
+        return 10 * unit;
     }
 
     /**
