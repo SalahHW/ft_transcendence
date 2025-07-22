@@ -250,6 +250,30 @@ export class TournamentClientHandler {
       if (message.message) {
         updateGameStatus(message.message);
       }
+    } else if (message.status === 'tournament_cancelled') {
+      // Tournament was cancelled due to player disconnection - simple redirect like 1v1
+      console.log('🏆 Tournament cancelled due to player disconnection, redirecting to homepage...');
+      
+      // Stop keep-alive mechanisms
+      browserEventHandler.stopHeartbeatPublic();
+      stopForfeitWinnerPing();
+      
+      // Remove any active splash screen
+      if (isSplashScreenActive()) {
+        removeSplashScreen();
+      }
+      
+      // Stop render loop if running
+      if (gameState.map?.getEngine) {
+        gameState.map.getEngine.stopRenderLoop();
+      }
+      
+      gameState.isGameOver = true;
+      gameState.isGameLoopRunning = false;
+      
+      // Simple redirect to homepage (like 1v1 disconnect)
+      updateGameStatus('🏆 Tournament ended due to player disconnection');
+      window.location.href = '/';
     }
   }
 
