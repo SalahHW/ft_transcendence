@@ -240,6 +240,10 @@ export class TournamentClientHandler {
         console.error('🧹 Frontend: Error disposing assets at tournament end:', error);
       }
       
+      // ⭐ CRITICAL FIX: Clean up browser event handler to prevent popup on navigation/refresh
+      browserEventHandler.cleanup();
+      console.log('🧹 Browser event handler cleaned up for tournament completion');
+      
       // Stop all keep-alive mechanisms to prevent keep-alive messages
       browserEventHandler.stopHeartbeatPublic();
       stopForfeitWinnerPing();
@@ -250,6 +254,34 @@ export class TournamentClientHandler {
       if (message.message) {
         updateGameStatus(message.message);
       }
+    } else if (message.status === 'tournament_cancelled') {
+      // Tournament was cancelled due to player disconnection - simple redirect like 1v1
+      console.log('🏆 Tournament cancelled due to player disconnection, redirecting to homepage...');
+      
+      // Stop keep-alive mechanisms
+      browserEventHandler.stopHeartbeatPublic();
+      stopForfeitWinnerPing();
+      
+      // ⭐ CRITICAL FIX: Clean up browser event handler to prevent popup on navigation/refresh
+      browserEventHandler.cleanup();
+      console.log('🧹 Browser event handler cleaned up for tournament cancellation');
+      
+      // Remove any active splash screen
+      if (isSplashScreenActive()) {
+        removeSplashScreen();
+      }
+      
+      // Stop render loop if running
+      if (gameState.map?.getEngine) {
+        gameState.map.getEngine.stopRenderLoop();
+      }
+      
+      gameState.isGameOver = true;
+      gameState.isGameLoopRunning = false;
+      
+      // Simple redirect to homepage (like 1v1 disconnect)
+      updateGameStatus('🏆 Tournament ended due to player disconnection');
+      window.location.href = '/';
     }
   }
 

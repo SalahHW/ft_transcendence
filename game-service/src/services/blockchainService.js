@@ -228,8 +228,8 @@ export class BlockchainService {
   }
 
   /**
-   * Report tournament result to blockchain (NEW FORMAT: with all matches)
-   * @param {Object} tournamentData - Tournament data with winner and matches
+   * Report tournament result to blockchain (NEW FORMAT: with all matches and placements)
+   * @param {Object} tournamentData - Tournament data with winner, matches, and standings
    * @param {string} tournamentId - Tournament identifier
    * @returns {Promise<string>} - Transaction hash
    */
@@ -244,10 +244,30 @@ export class BlockchainService {
         throw new Error(`Invalid wallet address format for tournament winner: ${winnerWallet}`);
       }
 
-      // Register winner if needed (only if not already registered)
+      // Get wallet addresses for 2nd, 3rd, and 4th place players
+      const secondWallet = await this.getUserWallet(tournamentData.second?.userId || tournamentData.second?.id);
+      const thirdWallet = await this.getUserWallet(tournamentData.third?.userId || tournamentData.third?.id);
+      const fourthWallet = await this.getUserWallet(tournamentData.fourth?.userId || tournamentData.fourth?.id);
+
+      // Validate all placement wallet addresses
+      if (!secondWallet || !walletRegex.test(secondWallet)) {
+        throw new Error(`Invalid wallet address for 2nd place: ${secondWallet}`);
+      }
+      if (!thirdWallet || !walletRegex.test(thirdWallet)) {
+        throw new Error(`Invalid wallet address for 3rd place: ${thirdWallet}`);
+      }
+      if (!fourthWallet || !walletRegex.test(fourthWallet)) {
+        throw new Error(`Invalid wallet address for 4th place: ${fourthWallet}`);
+      }
+
+      // Register all placed players if needed
       const winnerRegistered = await this.registerPlayerIfNeeded(winnerWallet, `Tournament_Winner_${tournamentId}`);
+      //const secondRegistered = await this.registerPlayerIfNeeded(secondWallet, `Tournament_Second_${tournamentId}`);
+      //const thirdRegistered = await this.registerPlayerIfNeeded(thirdWallet, `Tournament_Third_${tournamentId}`);
+      //const fourthRegistered = await this.registerPlayerIfNeeded(fourthWallet, `Tournament_Fourth_${tournamentId}`);
+
       if (!winnerRegistered) {
-        throw new Error(`Failed to register tournament winner in blockchain contract`);
+        throw new Error(`Failed to register all placed players in blockchain contract`);
       }
 
       // Get tournament start timestamp
@@ -292,14 +312,17 @@ export class BlockchainService {
         }
       }
 
-      // Prepare blockchain data format (flat structure as expected by API)
+      // Prepare blockchain data format with all placements
       const blockchainData = {
         endTimestamp: tournamentStartTime,
         winner: winnerWallet,
+        second: secondWallet,
+        third: thirdWallet,
+        fourth: fourthWallet,
         matches: validatedMatches
       };
 
-      console.log(`🔗 Reporting tournament to blockchain (NEW FORMAT):`, blockchainData);
+      console.log(`🔗 Reporting tournament to blockchain (NEW FORMAT with placements):`, blockchainData);
       console.log(`🔗 Tournament has ${validatedMatches.length} matches`);
 
       const response = await axios.post(`${BLOCKCHAIN_SERVICE_URL}/report-tournament`, blockchainData, {

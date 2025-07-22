@@ -62,7 +62,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
     }
 
     // ⭐ NEW: Check if this is a legitimate tournament closure
-    if (this._isLegitimateTournamentClosure(reason)) {
+    if (await this._isLegitimateTournamentClosure(reason, playerId)) {
       console.log(`🏆 Legitimate tournament closure detected for player ${playerId}, skipping forfeit handling`);
       this.removePlayerFromGame(playerId);
       return;
@@ -137,16 +137,7 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       await this.updateTournamentDisconnectionStatus(waitingRoomId, playerId, true);
     }
 
-    // Check if game has started but is in animation phase
-    if (room.gameStarted && room.ready) {
-      console.log(`🏆 Tournament match game started but in animation phase, handling as pre-game disconnect`);
-      this.handlePreGameDisconnect(playerId, roomId, reason);
-      return;
-    }
-
-    // Check if this is a tournament match room with both players assigned
-    // Even if the game hasn't started yet, if both players were assigned to the match,
-    // a disconnect should result in a forfeit win for the remaining player
+    // ⭐ SIMPLE: For any tournament match room, just disconnect everyone immediately
     if (room.metadata?.roomType && 
         (room.metadata.roomType.includes('semi_final') || 
          room.metadata.roomType.includes('final'))) {
@@ -155,8 +146,36 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       const disconnectedPlayer = room.players.find(p => p.id === playerId);
       
       if (remainingPlayer && disconnectedPlayer) {
-        console.log(`🏆 Tournament match waiting state forfeit: ${remainingPlayer.username} wins, ${disconnectedPlayer.username} disconnected before game start`);
-        this.handlePreGameDisconnect(playerId, roomId, reason);
+        console.log(`🔴 Tournament match waiting state disconnect: ${disconnectedPlayer.username} disconnected, ending tournament for all players`);
+        
+        // ⭐ FIX: Let cleanupAllTournamentRooms handle all messaging consistently
+        
+        // Clean up all tournament rooms immediately
+        const waitingRoomId = room.metadata?.waitingRoomId;
+        if (waitingRoomId) {
+          try {
+            const { tournamentManager } = await import('../TournamentManager.js');
+            const waitingRoomData = tournamentManager.waitingRooms.get(waitingRoomId);
+            if (waitingRoomData) {
+              // Mark tournament as cancelled
+              waitingRoomData.phase = 'CANCELLED';
+              
+              // Clean up all tournament rooms immediately
+              console.log(`🏆 Cleaning up all tournament rooms due to player disconnection`);
+              await this.cleanupAllTournamentRooms(waitingRoomId);
+            }
+          } catch (error) {
+            console.error(`🏆 Error cleaning up tournament due to disconnection:`, error);
+          }
+        }
+        
+        // Clean up the current room
+        this.cleanupPlayerConnection(playerId);
+        this.cleanupPlayerConnection(remainingPlayer.id);
+        
+        // Remove room immediately
+        gameStateManager.removeRoom(roomId);
+        console.log(`🏆 Tournament room ${roomId} removed due to player disconnection`);
         return;
       }
     }
@@ -191,25 +210,58 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       return;
     }
 
-    console.log(`🏆 Tournament match pre-game forfeit: ${remainingPlayer.username} wins, ${disconnectedPlayer.username} disconnected`);
-
-    // ⭐ FIX: Capture scores before disposing ball
-    let winnerScore = null;
-    let loserScore = null;
+    console.log(`🔴 Tournament match pre-game disconnect: ${disconnectedPlayer.username} disconnected, ending tournament for all players`);
     
-    if (room.ball) {
-      const isRemainingPlayer1 = remainingPlayer.id === room.players[0].id;
-      const isDisconnectedPlayer1 = disconnectedPlayer.id === room.players[0].id;
-      
-      winnerScore = GAME_CONFIG.WINNING_SCORE; // Winner always gets full score
-      loserScore = isDisconnectedPlayer1 ? room.ball.player1.playerScore : room.ball.player2.playerScore;
+    // ⭐ SIMPLE: Just disconnect all remaining players and send them back to homepage
+    console.log(`🏆 Disconnecting all remaining players due to tournament disruption`);
+    
+    // Send simple disconnect message to remaining player
+    if (remainingPlayer.ws && remainingPlayer.ws.readyState === 1) {
+      try {
+        remainingPlayer.ws.send(JSON.stringify({
+          type: 'tournamentAdvancement',
+          status: 'tournament_cancelled',
+          message: 'Tournament ended due to player disconnection. Returning to homepage.',
+          reason: 'player_disconnection'
+        }));
+        
+        // Close connection - this will trigger frontend redirect
+        console.log(`🏆 Closing connection for remaining player ${remainingPlayer.username} due to tournament cancellation`);
+        remainingPlayer.ws.close(1000, 'Tournament cancelled - player disconnection');
+      } catch (error) {
+        console.error(`🏆 Error sending tournament cancellation message to ${remainingPlayer.username}:`, error);
+      }
     }
-
-    // ⭐ CRITICAL FIX: Immediately dispose ball to prevent it from moving during finals
+    
+    // ⭐ CRITICAL FIX: Immediately dispose ball to prevent it from moving
     await this.immediatelyDisposeBall(room, roomId);
 
-    // Award forfeit win and handle tournament advancement with captured scores
-    await this.awardTournamentForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'pre_game', winnerScore, loserScore);
+    // ⭐ SIMPLE: Clean up all tournament rooms immediately
+    const waitingRoomId = room.metadata?.waitingRoomId;
+    if (waitingRoomId) {
+      try {
+        const { tournamentManager } = await import('../TournamentManager.js');
+        const waitingRoomData = tournamentManager.waitingRooms.get(waitingRoomId);
+        if (waitingRoomData) {
+          // Mark tournament as cancelled
+          waitingRoomData.phase = 'CANCELLED';
+          
+          // Clean up all tournament rooms immediately
+          console.log(`🏆 Cleaning up all tournament rooms due to player disconnection`);
+          await this.cleanupAllTournamentRooms(waitingRoomId);
+        }
+      } catch (error) {
+        console.error(`🏆 Error cleaning up tournament due to disconnection:`, error);
+      }
+    }
+    
+    // Clean up the current room
+    this.cleanupPlayerConnection(playerId);
+    this.cleanupPlayerConnection(remainingPlayer.id);
+    
+    // Remove room immediately
+    gameStateManager.removeRoom(roomId);
+    console.log(`🏆 Tournament room ${roomId} removed due to player disconnection`);
   }
 
   /**
@@ -226,25 +278,40 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       console.error(`🏆 Could not find players in tournament room ${roomId} for in-game disconnect handling`);
       return;
     }
-    console.log(`🔴 Tournament match in-game forfeit: ${remainingPlayer.username} wins, ${disconnectedPlayer.username} disconnected`);
+    console.log(`🔴 Tournament match in-game disconnect: ${disconnectedPlayer.username} disconnected, ending tournament for all players`);
     
-    // ⭐ FIX: Capture scores before disposing ball
-    let winnerScore = null;
-    let loserScore = null;
+    // ⭐ FIX: Let cleanupAllTournamentRooms handle all messaging consistently
+    console.log(`🏆 Ending tournament for all players due to tournament disruption`);
     
-    if (room.ball) {
-      const isRemainingPlayer1 = remainingPlayer.id === room.players[0].id;
-      const isDisconnectedPlayer1 = disconnectedPlayer.id === room.players[0].id;
-      
-      winnerScore = GAME_CONFIG.WINNING_SCORE; // Winner always gets full score
-      loserScore = isDisconnectedPlayer1 ? room.ball.player1.playerScore : room.ball.player2.playerScore;
-    }
-    
-    // ⭐ CRITICAL FIX: Immediately dispose ball to prevent it from moving during finals
+    // ⭐ CRITICAL FIX: Immediately dispose ball to prevent it from moving
     await this.immediatelyDisposeBall(room, roomId);
 
-    // Award forfeit win and handle tournament advancement with captured scores
-    await this.awardTournamentForfeitWin(room, roomId, remainingPlayer, disconnectedPlayer, reason, 'in_game', winnerScore, loserScore);
+    // ⭐ SIMPLE: Clean up all tournament rooms immediately
+    const waitingRoomId = room.metadata?.waitingRoomId;
+    if (waitingRoomId) {
+      try {
+        const { tournamentManager } = await import('../TournamentManager.js');
+        const waitingRoomData = tournamentManager.waitingRooms.get(waitingRoomId);
+        if (waitingRoomData) {
+          // Mark tournament as cancelled
+          waitingRoomData.phase = 'CANCELLED';
+          
+          // Clean up all tournament rooms immediately
+          console.log(`🏆 Cleaning up all tournament rooms due to player disconnection`);
+          await this.cleanupAllTournamentRooms(waitingRoomId);
+        }
+      } catch (error) {
+        console.error(`🏆 Error cleaning up tournament due to disconnection:`, error);
+      }
+    }
+    
+    // Clean up the current room
+    this.cleanupPlayerConnection(playerId);
+    this.cleanupPlayerConnection(remainingPlayer.id);
+    
+    // Remove room immediately
+    gameStateManager.removeRoom(roomId);
+    console.log(`🏆 Tournament room ${roomId} removed due to player disconnection`);
   }
 
   /**
@@ -1110,10 +1177,114 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
   }
 
   /**
+   * ⭐ NEW: Clean up all tournament rooms when tournament is cancelled
+   */
+  async cleanupAllTournamentRooms(waitingRoomId) {
+    console.log(`🏆 Cleaning up all tournament rooms for cancelled tournament ${waitingRoomId}`);
+    
+    try {
+      const { tournamentManager } = await import('../TournamentManager.js');
+      const waitingRoomData = tournamentManager.waitingRooms.get(waitingRoomId);
+      if (!waitingRoomData) {
+        console.error(`🏆 Waiting room data not found for cleanup: ${waitingRoomId}`);
+        return;
+      }
+      
+      // ⭐ FIX: Use broadcastToRoom to properly notify all players in all tournament rooms
+      const { broadcastToRoom } = await import('../../server/gameState.js');
+      
+      const rooms = [
+        waitingRoomData.tournamentRooms.semiFinalA,
+        waitingRoomData.tournamentRooms.semiFinalB,
+        waitingRoomData.tournamentRooms.winnerFinal,
+        waitingRoomData.tournamentRooms.loserFinal
+      ];
+      
+      // ⭐ FIX: Also broadcast to waiting room to ensure all players get the message
+      const waitingRoom = gameStateManager.getRoom(waitingRoomId);
+      if (waitingRoom) {
+        console.log(`🏆 Broadcasting tournament cancellation to waiting room ${waitingRoomId}`);
+        broadcastToRoom(waitingRoomId, {
+          type: 'tournamentStatus',
+          status: 'tournament_cancelled',
+          message: 'Tournament cancelled due to player disconnection'
+        });
+      }
+      
+      // Send cancellation message to all tournament rooms using broadcastToRoom
+      rooms.forEach(room => {
+        if (room && room.id) {
+          console.log(`🏆 Broadcasting tournament cancellation to room ${room.id}`);
+          broadcastToRoom(room.id, {
+            type: 'tournamentStatus',
+            status: 'tournament_cancelled',
+            message: 'Tournament cancelled due to player disconnection'
+          });
+          
+          // ⭐ FIX: Also send message directly to each player in the room as backup
+          if (room.players) {
+            room.players.forEach(player => {
+              if (player.ws && player.ws.readyState === 1) {
+                try {
+                  console.log(`🏆 Sending direct tournament cancellation message to player ${player.username} (${player.id})`);
+                  player.ws.send(JSON.stringify({
+                    type: 'tournamentStatus',
+                    status: 'tournament_cancelled',
+                    message: 'Tournament cancelled due to player disconnection'
+                  }));
+                } catch (error) {
+                  console.error(`🏆 Failed to send direct cancellation message to player ${player.username}:`, error);
+                }
+              }
+            });
+          }
+          
+          // Close all WebSocket connections in this room after sending message
+          setTimeout(() => {
+            if (room.players) {
+              room.players.forEach(player => {
+                if (player.ws && player.ws.readyState === 1) {
+                  try {
+                    console.log(`🏆 Closing WebSocket connection for player ${player.username} (${player.id}) during tournament cancellation cleanup`);
+                    player.ws.close(1000, 'Tournament cancelled - player disconnection');
+                  } catch (error) {
+                    console.error(`🏆 Failed to close WebSocket for player ${player.username}:`, error);
+                  }
+                }
+              });
+            }
+          }, 300); // Longer delay to ensure all messages are sent
+        }
+      });
+      
+      // Remove all tournament rooms
+      const roomIds = [
+        waitingRoomId,
+        `${waitingRoomId}SA`,
+        `${waitingRoomId}SB`,
+        `${waitingRoomId}winFin`,
+        `${waitingRoomId}winLos`
+      ];
+      
+      roomIds.forEach(roomId => {
+        gameStateManager.removeRoom(roomId);
+        console.log(`🏆 Removed tournament room: ${roomId}`);
+      });
+      
+      // Remove waiting room data
+      tournamentManager.waitingRooms.delete(waitingRoomId);
+      
+      console.log(`🏆 Tournament cancellation cleanup completed for ${waitingRoomId}`);
+    } catch (error) {
+      console.error(`🏆 Error during tournament cancellation cleanup:`, error);
+    }
+  }
+
+  /**
    * ⭐ NEW: Check if disconnection reason indicates legitimate tournament closure
    */
-  _isLegitimateTournamentClosure(reason) {
-    // Check for legitimate tournament closure reasons
+  async _isLegitimateTournamentClosure(reason, playerId) {
+    // Check for legitimate tournament closure reasons (server-initiated only)
     const legitimateReasons = [
       'Tournament completed',
       'Tournament completed - 1st place',
@@ -1125,7 +1296,9 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       'Tournament placement determined - 2nd place',
       'Tournament placement determined - 3rd place',
       'Tournament placement determined - 4th place',
-      'Tournament cleanup'
+      'Tournament cleanup',
+      'Tournament cancelled - player disconnection'
+      // ⭐ REMOVED: 'Tournament player left' - this is player-initiated, should trigger disconnect handling
     ];
     
     // Check if the reason indicates legitimate tournament completion
@@ -1133,9 +1306,53 @@ export class TournamentMatchDisconnectHandler extends BaseDisconnectHandler {
       return true;
     }
     
-    // Also check for tournament-related reasons
+    // Also check for tournament-related reasons (but exclude player-initiated)
     if (reason && reason.toLowerCase().includes('tournament')) {
+      // ⭐ FIX: Exclude player-initiated disconnections
+      if (reason.toLowerCase().includes('player left') || reason.toLowerCase().includes('left tournament')) {
+        return false;
+      }
       return true;
+    }
+    
+    // ⭐ NEW: Check for explicit leave requests
+    if (reason === 'player_left' || reason === 'no_status_received') {
+      // Check if the player has explicitly requested to leave
+      try {
+        const player = gameStateManager.getPlayer(playerId);
+        if (player && player.isLeaving) {
+          console.log(`🏆 Player ${playerId} had explicit leave request, treating as legitimate`);
+          return true;
+        }
+        
+        // ⭐ NEW: Also check if this is a tournament room and the player recently left
+        // This handles the case where the API leave request was processed but the WebSocket disconnect happens later
+        const room = gameStateManager.getRoom(player?.roomId);
+        if (room && room.metadata?.waitingRoomId) {
+          try {
+            const { tournamentManager } = await import('../TournamentManager.js');
+            const waitingRoomData = tournamentManager.waitingRooms.get(room.metadata.waitingRoomId);
+            if (waitingRoomData) {
+              // ⭐ NEW: Check if tournament has already finished
+              if (waitingRoomData.phase === 'FINISHED') {
+                console.log(`🏆 Tournament ${room.metadata.waitingRoomId} already finished, treating as legitimate`);
+                return true;
+              }
+              
+              const tournamentPlayer = waitingRoomData.players.find(p => p.id === playerId);
+              // If player is not in the waiting room data anymore, they likely left explicitly
+              if (!tournamentPlayer) {
+                console.log(`🏆 Player ${playerId} not found in tournament waiting room data, likely left explicitly, treating as legitimate`);
+                return true;
+              }
+            }
+          } catch (error) {
+            console.error(`🏆 Error checking tournament waiting room data:`, error);
+          }
+        }
+      } catch (error) {
+        console.error(`🏆 Error checking player leave status:`, error);
+      }
     }
     
     return false;

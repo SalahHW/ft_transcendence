@@ -89,14 +89,14 @@ export class WebSocketHandler {
    */
   _setupWebSocketEventListeners(ws, playerId, roomId) {
     // Handle WebSocket close events
-    ws.on('close', (code, reason) => {
+    ws.on('close', async (code, reason) => {
       // Use the current room ID from the WebSocket connection, not the original room ID
       // This is important for tournament transfers where players move between rooms
       const currentRoomId = ws.roomId || roomId;
       console.log(`🔌 WebSocket closed for player ${playerId} in room ${currentRoomId}: code=${code}, reason=${reason}`);
       
       // ⭐ FIX: Check if this is a legitimate tournament closure before treating as disconnect
-      if (this._isLegitimateTournamentClosure(code, reason)) {
+      if (await this._isLegitimateTournamentClosure(code, reason, playerId)) {
         console.log(`🏆 Legitimate tournament closure detected for player ${playerId}, skipping disconnect handling`);
         return;
       }
@@ -150,6 +150,8 @@ export class WebSocketHandler {
         return 'player_left';
       case 1001: // Going away
         return 'browser_navigation';
+      case 1005: // No status received - can be legitimate in some cases
+        return 'no_status_received';
       case 1006: // Abnormal closure
         return 'network_disconnect';
       default:
@@ -254,7 +256,7 @@ export class WebSocketHandler {
   /**
    * ⭐ NEW: Check if WebSocket closure is a legitimate tournament completion
    */
-  _isLegitimateTournamentClosure(code, reason) {
+  async _isLegitimateTournamentClosure(code, reason, playerId) {
     // ⭐ FIX: Handle reason as either string or Buffer
     let reasonString = '';
     if (reason) {
@@ -267,7 +269,7 @@ export class WebSocketHandler {
       }
     }
     
-    // Check for legitimate tournament closure reasons
+    // Check for legitimate tournament closure reasons (server-initiated only)
     const legitimateReasons = [
       'Tournament completed',
       'Tournament completed - 1st place',
@@ -279,7 +281,9 @@ export class WebSocketHandler {
       'Tournament placement determined - 2nd place',
       'Tournament placement determined - 3rd place',
       'Tournament placement determined - 4th place',
-      'Tournament cleanup'
+      'Tournament cleanup',
+      'Tournament cancelled - player disconnection'
+      // ⭐ REMOVED: 'Tournament player left' - this is player-initiated, should trigger disconnect handling
     ];
     
     // Check if the close reason indicates legitimate tournament completion
@@ -287,9 +291,54 @@ export class WebSocketHandler {
       return true;
     }
     
-    // Also check for normal closure code with tournament-related reasons
+    // Also check for normal closure code with tournament-related reasons (but exclude player-initiated)
     if (code === 1000 && reasonString && reasonString.toLowerCase().includes('tournament')) {
+      // ⭐ FIX: Exclude player-initiated disconnections
+      if (reasonString.toLowerCase().includes('player left') || reasonString.toLowerCase().includes('left tournament')) {
+        return false;
+      }
       return true;
+    }
+    
+    // ⭐ NEW: Check for code 1005 (No Status Received) - this can be legitimate after explicit leave
+    if (code === 1005) {
+      // Check if the player has explicitly requested to leave
+      try {
+        const { gameStateManager } = await import('../game/GameStateManager.js');
+        const player = gameStateManager.getPlayer(playerId);
+        if (player && player.isLeaving) {
+          console.log(`🏆 Player ${playerId} had explicit leave request, treating code 1005 as legitimate`);
+          return true;
+        }
+        
+        // ⭐ NEW: Also check if this is a tournament room and the player recently left
+        // This handles the case where the API leave request was processed but the WebSocket disconnect happens later
+        const room = gameStateManager.getRoom(player?.roomId);
+        if (room && room.metadata?.waitingRoomId) {
+          try {
+            const { tournamentManager } = await import('../tournament/TournamentManager.js');
+            const waitingRoomData = tournamentManager.waitingRooms.get(room.metadata.waitingRoomId);
+            if (waitingRoomData) {
+              // ⭐ NEW: Check if tournament has already finished
+              if (waitingRoomData.phase === 'FINISHED') {
+                console.log(`🏆 Tournament ${room.metadata.waitingRoomId} already finished, treating code 1005 as legitimate`);
+                return true;
+              }
+              
+              const tournamentPlayer = waitingRoomData.players.find(p => p.id === playerId);
+              // If player is not in the waiting room data anymore, they likely left explicitly
+              if (!tournamentPlayer) {
+                console.log(`🏆 Player ${playerId} not found in tournament waiting room data, likely left explicitly, treating code 1005 as legitimate`);
+                return true;
+              }
+            }
+          } catch (error) {
+            console.error(`🏆 Error checking tournament waiting room data:`, error);
+          }
+        }
+      } catch (error) {
+        console.error(`🏆 Error checking player leave status:`, error);
+      }
     }
     
     return false;

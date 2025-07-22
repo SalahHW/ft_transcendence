@@ -41,6 +41,9 @@ const mapRawTournamentObjectToTournamentObject = (tournament: any): Tournament =
         matchIds: tournament.matchIds.map((id: string) => parseInt(id, 10)),
         tournamentId: parseInt(tournament.tournamentId, 10),
         winner: tournament.winnerAddress.toLowerCase(),
+        second: tournament.second ? tournament.second.toLowerCase() : undefined,
+        third: tournament.third ? tournament.third.toLowerCase() : undefined,
+        fourth: tournament.fourth ? tournament.fourth.toLowerCase() : undefined,
     };
 };
 
@@ -49,13 +52,19 @@ const mapRawTournamentObjectToTournamentObject = (tournament: any): Tournament =
  * @property `tournamentId` - The tournament's ID
  * @property `endTimestamp` - The end timestamp of the tournament
  * @property `matchIds` - The IDs of the matches in the tournament
- * @property `winner` - The address of the winner
+ * @property `winner` - The address of the winner (1st place)
+ * @property `second` - The address of the 2nd place player
+ * @property `third` - The address of the 3rd place player
+ * @property `fourth` - The address of the 4th place player
  */
 export interface Tournament {
 	tournamentId?: number;
 	endTimestamp?: number;
 	matchIds?: number[];
 	winner?: string;
+	second?: string;
+	third?: string;
+	fourth?: string;
 }
 
 /**

@@ -147,6 +147,13 @@ export class TournamentPlayerManager {
     for (const [waitingRoomId, waitingRoomData] of this.waitingRooms) {
       const playerIndex = waitingRoomData.players.findIndex(p => p.id === playerId);
       if (playerIndex !== -1) {
+        // ⭐ FIX: Mark player as leaving before handling disconnect
+        const player = gameStateManager.getPlayer(playerId);
+        if (player) {
+          player.isLeaving = true;
+          console.log(`🏆 Marked player ${playerId} as leaving for explicit tournament leave`);
+        }
+        
         // Found the player, remove them
         const disconnectHandler = await this.getDisconnectHandler();
         disconnectHandler.handleWaitingRoomDisconnect(playerId, waitingRoomId, 'player_left');
@@ -287,6 +294,13 @@ export class TournamentPlayerManager {
     if (!waitingRoomData) {
       console.log(`🏆 Waiting room ${waitingRoomId} not found, player may have already left`);
       return;
+    }
+    
+    // ⭐ FIX: Mark player as leaving before removing from waiting room
+    const player = gameStateManager.getPlayer(playerId);
+    if (player) {
+      player.isLeaving = true;
+      console.log(`🏆 Marked player ${playerId} as leaving for explicit tournament leave`);
     }
     
     // Remove player from waiting room

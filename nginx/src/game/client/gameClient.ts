@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   gameClient.ts                                      :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: edelarbr <edelarbr@student.42mulhouse.fr>  +#+  +:+       +#+        */
+/*   By: rvan-den <rvan-den@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/09 15:00:00 by edelarbr          #+#    #+#             */
-/*   Updated: 2025/06/09 15:00:00 by edelarbr         ###   ########.fr       */
+/*   Updated: 2025/07/22 12:42:48 by rvan-den         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,6 +41,9 @@ export class GameClient {
     
     // ⭐ NEW: Track if tournament advancement has been received to prevent race conditions
     private tournamentAdvancementReceived: boolean = false;
+    
+    // ⭐ NEW: Track if tournament was cancelled due to player disconnection
+    private tournamentCancelled: boolean = false;
     
     // Render loop management
     private renderLoopStopping: boolean = false;
@@ -473,7 +476,12 @@ export class GameClient {
         });
 
         this.clientConnection.socket.addEventListener('close', async () => {
-            this.updateGameStatus('Connection closed');
+            // ⭐ FIX: Show appropriate message based on tournament cancellation
+            if (this.tournamentCancelled) {
+                this.updateGameStatus('Not enough players, tournament cancelled, please leave the game.');
+            } else {
+                this.updateGameStatus('Connection closed');
+            }
             await this.cleanup();
         });
 
@@ -570,6 +578,18 @@ export class GameClient {
                     console.log('🏆 Received gameInit message:', message);
                     // Handle game initialization for tournament matches
                     TournamentClientHandler.handleGameInit(message, this.updateGameStatus.bind(this), this);
+                } else if (message.type === 'tournamentStatus' && message.status === 'tournament_cancelled') {
+                    // ⭐ NEW: Handle tournament cancellation due to player disconnection
+                    console.log('🏆 Tournament cancelled due to player disconnection');
+                    this.tournamentCancelled = true;
+                    
+                    // Stop all keep-alive mechanisms immediately
+                    browserEventHandler.stopHeartbeatPublic();
+                    stopForfeitWinnerPing();
+                    console.log('💓 IMMEDIATE: Stopped all keep-alive mechanisms due to tournament cancellation');
+                    
+                    // Update game status immediately
+                    this.updateGameStatus('Not enough players, tournament cancelled, please leave the game.');
                 } else if (message.type === 'connectionClose') {
                     // ⭐ NEW: Handle connection close notification from server
                     console.log('🔌 Received connection close notification:', message);

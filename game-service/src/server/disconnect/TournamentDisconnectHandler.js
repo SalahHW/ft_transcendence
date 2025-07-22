@@ -22,7 +22,7 @@ export class TournamentDisconnectHandler extends BaseDisconnectHandler {
   /**
    * Handle unexpected disconnection
    */
-  handleDisconnection(playerId, roomId, reason) {
+  async handleDisconnection(playerId, roomId, reason) {
     console.log(`🏆 TOURNAMENT DISCONNECT: Player ${playerId} from room ${roomId} (${reason})`);
     
     const room = gameStateManager.getRoom(roomId);
@@ -40,9 +40,10 @@ export class TournamentDisconnectHandler extends BaseDisconnectHandler {
       console.log(`🏆 Tournament waiting room disconnect detected for player ${playerId}`);
       this.handleWaitingRoomDisconnect(playerId, roomId, reason);
     } else {
-      // For all other tournament rooms (semi-finals, finals), delegate to 1v1 handler
-      console.log(`🏆 Delegating tournament room disconnect to 1v1 handler for player ${playerId}`);
-      oneVOneDisconnectHandler.handleDisconnection(playerId, roomId, reason);
+      // For all other tournament rooms (semi-finals, finals), delegate to tournament match handler
+      console.log(`🏆 Delegating tournament room disconnect to tournament match handler for player ${playerId}`);
+      const { tournamentMatchDisconnectHandler } = await import('../../tournament/disconnect/disconnectHandler.js');
+      tournamentMatchDisconnectHandler.handleDisconnection(playerId, roomId, reason);
     }
   }
 

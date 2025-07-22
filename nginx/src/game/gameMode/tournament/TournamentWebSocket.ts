@@ -81,8 +81,10 @@ export class TournamentWebSocket {
         type: 'leaveTournament',
         playerId: this.playerData.id
       });
-      this.tournamentWs.socket.close();
-      console.log('🏆 Left tournament');
+      
+      // ⭐ FIX: Close WebSocket with proper code 1000 and reason
+      this.tournamentWs.socket.close(1000, 'Player left tournament');
+      console.log('🏆 Left tournament with proper close code');
     }
   }
 
@@ -118,7 +120,8 @@ export class TournamentWebSocket {
     }
     
     if (this.tournamentWs) {
-      this.tournamentWs.socket.close();
+      // ⭐ FIX: Close WebSocket with proper code 1000 and reason
+      this.tournamentWs.socket.close(1000, 'Player left tournament');
       this.tournamentWs = null;
     }
   }
