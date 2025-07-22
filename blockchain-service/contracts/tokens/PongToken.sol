@@ -39,4 +39,8 @@ contract PongToken is ERC20, Ownable {
     function burn(address from, uint256 amount) public onlyOwner {
         _burn(from, amount);
     }
+
+    function decimals() public pure override returns (uint8) {
+        return 2;
+    }
 }
