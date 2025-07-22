@@ -240,6 +240,10 @@ export class TournamentClientHandler {
         console.error('🧹 Frontend: Error disposing assets at tournament end:', error);
       }
       
+      // ⭐ CRITICAL FIX: Clean up browser event handler to prevent popup on navigation/refresh
+      browserEventHandler.cleanup();
+      console.log('🧹 Browser event handler cleaned up for tournament completion');
+      
       // Stop all keep-alive mechanisms to prevent keep-alive messages
       browserEventHandler.stopHeartbeatPublic();
       stopForfeitWinnerPing();
@@ -257,6 +261,10 @@ export class TournamentClientHandler {
       // Stop keep-alive mechanisms
       browserEventHandler.stopHeartbeatPublic();
       stopForfeitWinnerPing();
+      
+      // ⭐ CRITICAL FIX: Clean up browser event handler to prevent popup on navigation/refresh
+      browserEventHandler.cleanup();
+      console.log('🧹 Browser event handler cleaned up for tournament cancellation');
       
       // Remove any active splash screen
       if (isSplashScreenActive()) {
